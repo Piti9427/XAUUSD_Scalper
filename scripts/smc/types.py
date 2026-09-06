@@ -14,6 +14,7 @@ class OrderIntentType(Enum):
     PLACE_LIMIT = "PLACE_LIMIT"
     CANCEL_LIMIT = "CANCEL_LIMIT"
     MOVE_SL_TO_BE = "MOVE_SL_TO_BE"
+    PARTIAL_CLOSE = "PARTIAL_CLOSE"
     CLOSE_MARKET = "CLOSE_MARKET"
 
 
@@ -24,6 +25,8 @@ class LiquidityLevels:
     pdh: float
     pdl: float
     date_str: str
+    london_high: Optional[float] = None
+    london_low: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,9 @@ class Position:
     be_moved: bool = False
     fill_alerted: bool = False
     be_alerted: bool = False
+    partial_closed: bool = False
+    partial_alerted: bool = False
+    remaining_ratio: float = 1.0
 
 
 @dataclass

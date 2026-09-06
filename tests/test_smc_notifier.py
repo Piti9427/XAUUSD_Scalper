@@ -5,6 +5,7 @@ from scripts.smc.notifier import (
     format_smc_trade_card,
     format_order_filled_card,
     format_be_moved_card,
+    format_partial_tp_card,
     format_trade_closed_card,
     format_circuit_breaker_card,
 )
@@ -97,6 +98,19 @@ class TestSMCNotifier(unittest.TestCase):
         self.assertIn("CIRCUIT BREAKER ACTIVATED", card)
         self.assertIn("2/2", card)
         self.assertIn("30 minutes", card)
+
+    def test_format_partial_tp_card(self):
+        card = format_partial_tp_card(
+            direction=Direction.BUY,
+            closed_lot=0.04,
+            remaining_lot=0.04,
+            r_multiple=1.0,
+            entry_price=2014.0,
+        )
+        self.assertIn("PARTIAL TAKE PROFIT HIT!", card)
+        self.assertIn("+1.0R Profit Locked In", card)
+        self.assertIn("0.04 lots", card)
+        self.assertIn("2014.00", card)
 
 
 if __name__ == "__main__":

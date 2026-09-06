@@ -188,6 +188,36 @@ class SMCExecutionAdapter:
                 message=f"Moved SL to BE ({intent.sl_price}) for {self.symbol}",
             )
 
+        elif intent.intent_type == OrderIntentType.PARTIAL_CLOSE:
+            positions = mt5.positions_get(symbol=self.symbol)
+            if positions:
+                for pos in positions:
+                    close_type = (
+                        mt5.ORDER_TYPE_SELL
+                        if pos.type == mt5.ORDER_TYPE_BUY
+                        else mt5.ORDER_TYPE_BUY
+                    )
+                    tick = mt5.symbol_info_tick(self.symbol)
+                    price = tick.bid if close_type == mt5.ORDER_TYPE_SELL else tick.ask
+                    vol = min(pos.volume, intent.lot_size or pos.volume)
+                    req = {
+                        "action": mt5.TRADE_ACTION_DEAL,
+                        "position": pos.ticket,
+                        "symbol": self.symbol,
+                        "volume": vol,
+                        "type": close_type,
+                        "price": price,
+                        "deviation": 20,
+                        "type_time": mt5.ORDER_TIME_GTC,
+                        "comment": f"SMC_Partial_{intent.reason[:15]}",
+                    }
+                    mt5.order_send(req)
+            return ExecutionResult(
+                success=True,
+                order_id=None,
+                message=f"Partially closed {intent.lot_size} lots for {self.symbol}",
+            )
+
         elif intent.intent_type == OrderIntentType.CLOSE_MARKET:
             positions = mt5.positions_get(symbol=self.symbol)
             if positions:

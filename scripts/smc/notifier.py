@@ -81,6 +81,27 @@ def format_be_moved_card(position: Position, symbol: str = "XAUUSD") -> str:
     return card
 
 
+def format_partial_tp_card(
+    direction: Direction,
+    closed_lot: float,
+    remaining_lot: float,
+    r_multiple: float,
+    entry_price: float,
+    symbol: str = "XAUUSD",
+) -> str:
+    """Formats a milestone card when a partial take profit target is reached."""
+    direction_emoji = "🟢 BUY" if direction == Direction.BUY else "🔴 SELL"
+    card = f"""🎯 *{symbol} PARTIAL TAKE PROFIT HIT!* {direction_emoji}
+━━━━━━━━━━━━━━━━━━━━━
+💰 *Milestone:* `+{r_multiple:.1f}R Profit Locked In`
+📦 *Closed Volume:* `{closed_lot:.2f} lots`
+🛡️ *Remaining Volume:* `{remaining_lot:.2f} lots`
+🔒 *Risk Management:* `SL Moved to Breakeven ({entry_price:.2f})`
+🚀 *Target:* Final TP (Risk-Free Runner)
+━━━━━━━━━━━━━━━━━━━━━"""
+    return card
+
+
 def format_trade_closed_card(
     direction: Direction,
     exit_price: float,

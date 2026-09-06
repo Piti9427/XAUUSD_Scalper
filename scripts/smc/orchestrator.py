@@ -24,12 +24,140 @@ class StrategyOrchestrator:
         ttl_expire_bars: int = 3,
         rollover_hour_utc: int = 20,
         rollover_minute_utc: int = 55,
+        max_sl_cap: float = 25.00,
+        partial_tp_enabled: bool = False,
+        partial_tp_r: float = 1.2,
+        partial_tp_ratio: float = 0.5,
+        be_trigger_r: float = 1.0,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
         self.ttl_expire_bars = ttl_expire_bars
         self.rollover_hour_utc = rollover_hour_utc
         self.rollover_minute_utc = rollover_minute_utc
+        self.max_sl_cap = max_sl_cap
+        self.partial_tp_enabled = partial_tp_enabled
+        self.partial_tp_r = partial_tp_r
+        self.partial_tp_ratio = partial_tp_ratio
+        self.be_trigger_r = be_trigger_r
+
+    def _evaluate_open_position(
+        self,
+        account: AccountState,
+        bar: Dict[str, Any],
+        bar_time: datetime,
+    ) -> List[OrderIntent]:
+        intents: List[OrderIntent] = []
+        pos = account.open_position
+        if pos is None:
+            return intents
+
+        # Rollover Flat Check (ADR-007: Flat before 21:00 UTC)
+        if (bar_time.hour > self.rollover_hour_utc) or (
+            bar_time.hour == self.rollover_hour_utc
+            and bar_time.minute >= self.rollover_minute_utc
+        ):
+            intents.append(
+                OrderIntent(
+                    intent_type=OrderIntentType.CLOSE_MARKET,
+                    direction=pos.direction,
+                    reason="Rollover Flat Rule: Closing all positions before 21:00 UTC",
+                )
+            )
+            account.open_position = None
+            return intents
+
+        # Check Stop Loss first (Conservative Financial Safety: SL takes priority over TP/BE if both hit)
+        sl_hit = False
+        if pos.direction == Direction.BUY:
+            if float(bar["low"]) <= pos.sl_price:
+                sl_hit = True
+        else:  # SELL
+            if float(bar["high"]) >= pos.sl_price:
+                sl_hit = True
+
+        if sl_hit:
+            if not pos.be_moved:
+                account.daily_loss_count += 1
+                account.last_loss_time = bar_time
+            account.open_position = None
+            return intents
+
+        # Partial Take Profit Check (Gold Profit Maximizer)
+        if self.partial_tp_enabled and not pos.partial_closed:
+            partial_hit = False
+            if pos.direction == Direction.BUY:
+                if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.partial_tp_r):
+                    partial_hit = True
+            else:  # SELL
+                if float(bar["low"]) <= (pos.entry_price - pos.initial_sl_distance * self.partial_tp_r):
+                    partial_hit = True
+
+            if partial_hit:
+                pos.partial_closed = True
+                partial_lot = round(pos.lot_size * self.partial_tp_ratio, 2)
+                pos.lot_size = max(0.01, round(pos.lot_size - partial_lot, 2))
+                pos.remaining_ratio = 1.0 - self.partial_tp_ratio
+                intents.append(
+                    OrderIntent(
+                        intent_type=OrderIntentType.PARTIAL_CLOSE,
+                        direction=pos.direction,
+                        lot_size=partial_lot,
+                        reason=f"Partial TP hit (+{self.partial_tp_r}R): Closed {partial_lot} lots",
+                    )
+                )
+                # Automatically lock in breakeven
+                if not pos.be_moved:
+                    pos.be_moved = True
+                    pos.sl_price = pos.entry_price
+                    intents.append(
+                        OrderIntent(
+                            intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                            direction=pos.direction,
+                            limit_price=pos.entry_price,
+                            sl_price=pos.entry_price,
+                            reason="Partial TP reached: SL moved to Breakeven",
+                        )
+                    )
+
+        # Breakeven Relocation Check (Move SL to BE at be_trigger_r if partial TP disabled or didn't move it)
+        if not pos.be_moved:
+            if pos.direction == Direction.BUY:
+                if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.be_trigger_r):
+                    pos.be_moved = True
+                    pos.sl_price = pos.entry_price
+                    intents.append(
+                        OrderIntent(
+                            intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                            direction=Direction.BUY,
+                            limit_price=pos.entry_price,
+                            sl_price=pos.entry_price,
+                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven",
+                        )
+                    )
+            else:  # SELL
+                if float(bar["low"]) <= (pos.entry_price - pos.initial_sl_distance * self.be_trigger_r):
+                    pos.be_moved = True
+                    pos.sl_price = pos.entry_price
+                    intents.append(
+                        OrderIntent(
+                            intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                            direction=Direction.SELL,
+                            limit_price=pos.entry_price,
+                            sl_price=pos.entry_price,
+                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven",
+                        )
+                    )
+
+        # Check Full TP hits
+        if pos.direction == Direction.BUY:
+            if float(bar["high"]) >= pos.tp_price:
+                account.open_position = None
+        else:  # SELL
+            if float(bar["low"]) <= pos.tp_price:
+                account.open_position = None
+
+        return intents
 
     def on_bar(
         self,
@@ -55,75 +183,7 @@ class StrategyOrchestrator:
 
         # 2. Check Open Position Lifecycle
         if account.open_position is not None:
-            pos = account.open_position
-
-            # Rollover Flat Check (ADR-007: Flat before 21:00 UTC)
-            if (bar_time.hour > self.rollover_hour_utc) or (
-                bar_time.hour == self.rollover_hour_utc
-                and bar_time.minute >= self.rollover_minute_utc
-            ):
-                intents.append(
-                    OrderIntent(
-                        intent_type=OrderIntentType.CLOSE_MARKET,
-                        direction=pos.direction,
-                        reason="Rollover Flat Rule: Closing all positions before 21:00 UTC",
-                    )
-                )
-                account.open_position = None
-                return intents
-
-            # Breakeven Relocation Check (ADR-008: Move SL to BE at +1.0R)
-            if not pos.be_moved:
-                if pos.direction == Direction.BUY:
-                    if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance):
-                        pos.be_moved = True
-                        pos.sl_price = pos.entry_price
-                        intents.append(
-                            OrderIntent(
-                                intent_type=OrderIntentType.MOVE_SL_TO_BE,
-                                direction=Direction.BUY,
-                                limit_price=pos.entry_price,
-                                sl_price=pos.entry_price,
-                                reason="1.0R profit reached: SL moved to Breakeven",
-                            )
-                        )
-                else:  # SELL
-                    if float(bar["low"]) <= (pos.entry_price - pos.initial_sl_distance):
-                        pos.be_moved = True
-                        pos.sl_price = pos.entry_price
-                        intents.append(
-                            OrderIntent(
-                                intent_type=OrderIntentType.MOVE_SL_TO_BE,
-                                direction=Direction.SELL,
-                                limit_price=pos.entry_price,
-                                sl_price=pos.entry_price,
-                                reason="1.0R profit reached: SL moved to Breakeven",
-                            )
-                        )
-
-            # Check SL/TP hits
-            if pos.direction == Direction.BUY:
-                if float(bar["low"]) <= pos.sl_price:
-                    # Stopped out
-                    if not pos.be_moved:
-                        account.daily_loss_count += 1
-                        account.last_loss_time = bar_time
-                    account.open_position = None
-                elif float(bar["high"]) >= pos.tp_price:
-                    # TP hit
-                    account.open_position = None
-            else:  # SELL
-                if float(bar["high"]) >= pos.sl_price:
-                    # Stopped out
-                    if not pos.be_moved:
-                        account.daily_loss_count += 1
-                        account.last_loss_time = bar_time
-                    account.open_position = None
-                elif float(bar["low"]) <= pos.tp_price:
-                    # TP hit
-                    account.open_position = None
-
-            return intents
+            return self._evaluate_open_position(account, bar, bar_time)
 
         # 3. Check Pending Order Lifecycle
         if account.pending_order is not None:
@@ -156,7 +216,8 @@ class StrategyOrchestrator:
                     )
                     account.pending_order = None
                     account.pending_bars_held = 0
-                    return []
+                    # Immediate SL/TP evaluation on fill bar
+                    return self._evaluate_open_position(account, bar, bar_time)
 
             # Not filled: Increment TTL held bars
             account.pending_bars_held += 1
@@ -190,6 +251,7 @@ class StrategyOrchestrator:
                 balance=account.balance,
                 entry_price=setup_signal.entry_price,
                 sl_price=setup_signal.sweep_wick,
+                max_sl_cap=self.max_sl_cap,
             )
             if lot_res.is_valid and lot_res.lot_size > 0:
                 new_order = OrderIntent(

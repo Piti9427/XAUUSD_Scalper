@@ -44,7 +44,8 @@ class TestSMCRiskCalculator(unittest.TestCase):
         # Balance = $500, Risk = 0.5% ($2.50)
         # SL distance = $5.00 * 100 = 500
         # Raw lot = 2.50 / 500 = 0.005 -> below min_lot (0.01)
-        # Should be clamped to 0.01 if valid or handled gracefully
+        # Min lot 0.01 * 5.00 * 100 = $5.00 risk (1.0% <= 1.5% max cap)
+        # Should clamp to 0.01 safely
         result = calculate_lot_size(
             balance=500.0,
             entry_price=2000.00,
@@ -55,6 +56,23 @@ class TestSMCRiskCalculator(unittest.TestCase):
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 0.01)
+
+    def test_strict_small_account_risk_gate_rejects_over_risk(self):
+        # Balance = $500. SL distance = $10.30.
+        # Min lot 0.01 * 10.30 * 100 = $10.30 risk (2.06% > 1.5% max cap = $7.50).
+        # ADR-020: Must reject setup to protect small account!
+        result = calculate_lot_size(
+            balance=500.0,
+            entry_price=2000.00,
+            sl_price=1990.00,
+            risk_pct=0.005,
+            spread_buffer=0.30,
+            min_lot=0.01,
+            max_risk_cap_pct=0.015
+        )
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.lot_size, 0.0)
+        self.assertIn("Small-account protection", result.reason)
 
     def test_max_lot_clamping(self):
         # Large account $500,000 with very small SL distance ($1.00)

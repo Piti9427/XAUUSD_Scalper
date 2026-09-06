@@ -27,48 +27,57 @@ class TestSMCBacktester(unittest.TestCase):
             minute = ts.minute
             
             if hour < 7:
+                o = 2020.0
                 h = 2040.0 if hour == 3 and minute == 0 else 2035.0
                 l = 2010.0 if hour == 5 and minute == 0 else 2015.0
                 c = 2020.0
             elif hour == 7 and minute < 50:
+                o = 2011.5
                 h = 2014.0 if minute == 25 else 2012.0
                 l = 2011.0
                 c = 2011.5
             elif hour == 7 and minute == 50:
                 # Sweep Asian Low (2010.0) -> wick 2008.5, close 2011.0
+                o = 2011.0
                 h = 2011.5
                 l = 2008.5
                 c = 2011.0
             elif hour == 7 and minute == 55:
+                o = 2011.0
                 h = 2013.0
                 l = 2010.8
                 c = 2012.8
             elif hour == 8 and minute == 0:
                 # MSS Displacement Candle: close 2016.0 > 2014.0
+                o = 2012.8
                 h = 2016.2
                 l = 2012.7
                 c = 2016.0
             elif hour == 8 and minute == 5:
                 # FVG confirmation bar: low 2015.0 > 2013.0. FVG 2013-2015 -> 50% CE = 2014.0
+                o = 2016.0
                 h = 2018.0
                 l = 2015.0
                 c = 2017.5
             elif hour == 8 and minute == 10:
                 # Price retraces to 2013.5 -> fills Limit order at 2014.0!
-                h = 2016.0
+                o = 2017.5
+                h = 2017.5
                 l = 2013.5
                 c = 2015.0
             elif hour == 8 and minute == 15:
                 # Price rallies to 2030.0 -> hits TP (2025.60)
+                o = 2015.0
                 h = 2030.0
                 l = 2014.5
                 c = 2028.0
             else:
+                o = 2022.0
                 h = 2025.0
                 l = 2020.0
                 c = 2022.0
                 
-            m5_records.append({"time": ts, "open": 2020.0, "high": h, "low": l, "close": c, "tick_volume": 100})
+            m5_records.append({"time": ts, "open": o, "high": h, "low": l, "close": c, "tick_volume": 100})
             
         self.df_m5 = pd.DataFrame(m5_records)
 

@@ -44,12 +44,34 @@ class SMCBacktester:
         spread_buffer: float = 0.30,
         max_sl_cap: float = 6.00,
         contract_size: float = 100.0,
+        partial_tp_enabled: bool = False,
+        partial_tp_r: float = 1.2,
+        partial_tp_ratio: float = 0.5,
+        be_trigger_r: float = 1.0,
+        extended_killzones: bool = True,
+        tp_r: float = 2.0,
+        min_body_ratio: float = 0.50,
+        max_sweep_pierce: float = 5.0,
+        sweep_lookback: int = 20,
+        max_sweep_to_mss_bars: int = 6,
+        max_mss_to_fvg_bars: int = 3,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct
         self.spread_buffer = spread_buffer
         self.max_sl_cap = max_sl_cap
         self.contract_size = contract_size
+        self.partial_tp_enabled = partial_tp_enabled
+        self.partial_tp_r = partial_tp_r
+        self.partial_tp_ratio = partial_tp_ratio
+        self.be_trigger_r = be_trigger_r
+        self.extended_killzones = extended_killzones
+        self.tp_r = tp_r
+        self.min_body_ratio = min_body_ratio
+        self.max_sweep_pierce = max_sweep_pierce
+        self.sweep_lookback = sweep_lookback
+        self.max_sweep_to_mss_bars = max_sweep_to_mss_bars
+        self.max_mss_to_fvg_bars = max_mss_to_fvg_bars
 
     def run(self, df_m5: pd.DataFrame, df_h1: pd.DataFrame) -> BacktestSummary:
         m5 = df_m5.copy()
@@ -84,7 +106,13 @@ class SMCBacktester:
             balance=self.initial_balance,
             equity=self.initial_balance,
         )
-        orchestrator = StrategyOrchestrator()
+        orchestrator = StrategyOrchestrator(
+            max_sl_cap=self.max_sl_cap,
+            partial_tp_enabled=self.partial_tp_enabled,
+            partial_tp_r=self.partial_tp_r,
+            partial_tp_ratio=self.partial_tp_ratio,
+            be_trigger_r=self.be_trigger_r,
+        )
 
         trades: List[Dict[str, Any]] = []
         active_trade_log: Optional[Dict[str, Any]] = None
@@ -126,6 +154,8 @@ class SMCBacktester:
                     open_time=p.open_time,
                     initial_sl_distance=p.initial_sl_distance,
                     be_moved=p.be_moved,
+                    partial_closed=p.partial_closed,
+                    remaining_ratio=p.remaining_ratio,
                 )
 
             # Evaluate detection only if no active position and no pending order
@@ -139,6 +169,13 @@ class SMCBacktester:
                     spread_buffer=self.spread_buffer,
                     max_sl_cap=self.max_sl_cap,
                     precomputed_swings=(all_sh[: i + 1], all_sl[: i + 1]),
+                    extended_killzones=self.extended_killzones,
+                    tp_r=self.tp_r,
+                    min_body_ratio=self.min_body_ratio,
+                    max_sweep_pierce=self.max_sweep_pierce,
+                    sweep_lookback=self.sweep_lookback,
+                    max_sweep_to_mss_bars=self.max_sweep_to_mss_bars,
+                    max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
                 )
 
             # Step orchestrator
@@ -157,6 +194,16 @@ class SMCBacktester:
                     "initial_sl_dist": new_p.initial_sl_distance,
                 }
 
+            # Process partial close intent
+            for intent in intents:
+                if intent.intent_type == OrderIntentType.PARTIAL_CLOSE:
+                    partial_dollar = (account.balance * self.risk_pct) * self.partial_tp_ratio * self.partial_tp_r
+                    account.balance += partial_dollar
+                    account.equity = account.balance
+                    if active_trade_log is not None:
+                        active_trade_log["partial_pnl"] = round(partial_dollar, 2)
+                        active_trade_log["partial_r"] = self.partial_tp_r
+
             # Check if position was closed during this bar
             if had_position and account.open_position is None and prev_pos is not None:
                 exit_price = prev_pos.entry_price
@@ -167,7 +214,7 @@ class SMCBacktester:
                     if float(current_bar["high"]) >= prev_pos.tp_price:
                         exit_price = prev_pos.tp_price
                         exit_reason = "TP"
-                        pnl_r = 2.0
+                        pnl_r = self.tp_r
                     elif float(current_bar["low"]) <= prev_pos.sl_price:
                         exit_price = prev_pos.sl_price
                         if prev_pos.be_moved:
@@ -180,7 +227,7 @@ class SMCBacktester:
                     if float(current_bar["low"]) <= prev_pos.tp_price:
                         exit_price = prev_pos.tp_price
                         exit_reason = "TP"
-                        pnl_r = 2.0
+                        pnl_r = self.tp_r
                     elif float(current_bar["high"]) >= prev_pos.sl_price:
                         exit_price = prev_pos.sl_price
                         if prev_pos.be_moved:
@@ -200,10 +247,16 @@ class SMCBacktester:
                         else:
                             pnl_r = (prev_pos.entry_price - exit_price) / prev_pos.initial_sl_distance
 
-                # Calculate PnL Dollar
-                pnl_dollar = pnl_r * (account.balance * self.risk_pct)
-                account.balance += pnl_dollar
+                # Calculate PnL Dollar on remaining portion
+                rem_ratio = prev_pos.remaining_ratio if hasattr(prev_pos, "remaining_ratio") else 1.0
+                rem_pnl_dollar = pnl_r * (account.balance * self.risk_pct) * rem_ratio
+                account.balance += rem_pnl_dollar
                 account.equity = account.balance
+
+                partial_dollar = active_trade_log.get("partial_pnl", 0.0) if active_trade_log else 0.0
+                total_trade_dollar = round(rem_pnl_dollar + partial_dollar, 2)
+                partial_r_val = active_trade_log.get("partial_r", 0.0) if active_trade_log else 0.0
+                total_trade_r = round((pnl_r * rem_ratio) + (partial_r_val * (1.0 - rem_ratio) if prev_pos.partial_closed else 0.0), 2)
 
                 if account.balance > peak_equity:
                     peak_equity = account.balance
@@ -216,8 +269,8 @@ class SMCBacktester:
                         "exit_time": bar_time,
                         "exit_price": exit_price,
                         "exit_reason": exit_reason,
-                        "pnl_dollar": round(pnl_dollar, 2),
-                        "pnl_r": round(pnl_r, 2),
+                        "pnl_dollar": total_trade_dollar,
+                        "pnl_r": total_trade_r,
                         "balance": round(account.balance, 2),
                     })
                     trades.append(active_trade_log)

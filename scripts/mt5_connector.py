@@ -60,7 +60,7 @@ class MT5Connector:
             return None
             
         df = pd.DataFrame(rates)
-        df['time'] = pd.to_datetime(df['time'], unit='s')
+        df['time'] = pd.to_datetime(df['time'], unit='s', utc=True)
         logger.debug("Fetched %s candles for %s %s", len(df), symbol, timeframe_str)
         return df
 

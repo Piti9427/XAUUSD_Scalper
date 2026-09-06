@@ -55,9 +55,15 @@ Unit tests live in `tests/` and use `unittest`. Run them after changing config l
 
 This folder has no Git history, so use short imperative commit messages such as `Add ATR-based stop logic`. Pull requests should describe trading behavior changed, configuration impact, test evidence, and any risk to live alerts.
 
-## Security & Configuration Tips
+## Real-Money Financial Safety & Rigorous Engineering
 
-Do not commit real MT5 credentials, Telegram tokens, chat IDs, spreadsheet IDs, or document IDs. Prefer env overrides for secrets. Validate spread, news pause windows, and symbol settings in demo mode before live use.
+XAUUSD trading involves real capital. Every agent and developer working in this repository MUST strictly follow these rules without compromise:
+
+1. **Zero Sloppiness / No Shortcuts**: Always trace end-to-end paths across all seams (Market Data -> Pure Detection -> Orchestrator -> Execution Adapter -> Notifier). Never assume behavior without verification.
+2. **Reproduce First (Diagnosing-Bugs Discipline)**: Build a tight, failing feedback loop/test before modifying production code.
+3. **Risk Protection Invariant**: Never silently round up or clamp lot sizes if doing so exceeds the account's defined risk percentage.
+4. **Timezone Uniformity**: All market timestamps MUST be timezone-aware UTC. Never compare naive datetimes with aware datetimes.
+5. **Execution & Alert Alignment**: Telegram alerts must strictly reflect executed or broker-approved orders, never phantom signals rejected by circuit breakers.
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
 

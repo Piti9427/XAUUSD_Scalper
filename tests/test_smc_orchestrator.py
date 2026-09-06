@@ -186,6 +186,62 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertEqual(intents, [])
         self.assertIsNone(account.pending_order)
 
+    def test_partial_take_profit_triggers_and_moves_sl_to_be(self):
+        orch = StrategyOrchestrator(partial_tp_enabled=True, partial_tp_r=1.0, partial_tp_ratio=0.5)
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.10,
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=5.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+
+        # Bar reaches 2005.0 (+1.0R): triggers Partial TP and BE move
+        bar = {"time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc), "open": 2002, "high": 2005.5, "low": 2001, "close": 2005}
+        intents = orch.on_bar(bar, account)
+
+        intent_types = [i.intent_type for i in intents]
+        self.assertIn(OrderIntentType.PARTIAL_CLOSE, intent_types)
+        self.assertIn(OrderIntentType.MOVE_SL_TO_BE, intent_types)
+        self.assertTrue(pos.partial_closed)
+        self.assertTrue(pos.be_moved)
+        self.assertEqual(pos.sl_price, 2000.0)
+        self.assertAlmostEqual(pos.lot_size, 0.05)
+
+    def test_fill_bar_immediate_stop_out(self):
+        # Pending BUY limit at 2010.0, SL at 2005.0, TP at 2020.0
+        limit_order = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=3,
+        )
+        account = AccountState(
+            balance=10000.0,
+            equity=10000.0,
+            pending_order=limit_order,
+            pending_bars_held=0,
+        )
+        # Bar opens at 2012.0, plunges to 2003.0 (fills at 2010.0 and breaches SL at 2005.0!)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012.0,
+            "high": 2012.0,
+            "low": 2003.0,
+            "close": 2004.0,
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertIsNone(account.pending_order)
+        self.assertIsNone(account.open_position)
+        self.assertEqual(account.daily_loss_count, 1)
+        self.assertIsNotNone(account.last_loss_time)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,7 @@ from scripts.smc.notifier import (
     SMCTelegramNotifier,
     format_order_filled_card,
     format_be_moved_card,
+    format_partial_tp_card,
     format_trade_closed_card,
     format_circuit_breaker_card,
 )
@@ -46,8 +47,18 @@ async def run_smc_live_copilot():
     is_connected = connector.connect()
     dry_run = not is_connected
 
+    strat_cfg = config.get("strategy", {})
     adapter = SMCExecutionAdapter(symbol=symbol, dry_run=dry_run)
-    orchestrator = StrategyOrchestrator()
+    orchestrator = StrategyOrchestrator(
+        max_daily_losses=strat_cfg.get("max_daily_losses", 2),
+        cooldown_minutes=strat_cfg.get("cooldown_mins", 30),
+        ttl_expire_bars=strat_cfg.get("order_ttl_bars", 4),
+        max_sl_cap=strat_cfg.get("max_sl_cap", 25.0),
+        partial_tp_enabled=strat_cfg.get("partial_tp_enabled", True),
+        partial_tp_r=strat_cfg.get("partial_tp_r", 1.0),
+        partial_tp_ratio=strat_cfg.get("partial_tp_ratio", 0.5),
+        be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
+    )
     news_mgr = NewsManager()
     notifier = SMCTelegramNotifier(config)
     account = AccountState(balance=10000.0, equity=10000.0)
@@ -156,19 +167,16 @@ async def run_smc_live_copilot():
                             current_time=bar_time,
                             current_spread=current_spread,
                             max_spread=max_spread,
+                            max_sl_cap=strat_cfg.get("max_sl_cap", 25.0),
+                            extended_killzones=strat_cfg.get("extended_killzones", True),
+                            tp_r=strat_cfg.get("tp_r", 2.5),
+                            min_body_ratio=strat_cfg.get("min_body_ratio", 0.45),
+                            max_sweep_pierce=strat_cfg.get("max_sweep_pierce", 8.0),
+                            sweep_lookback=strat_cfg.get("sweep_lookback", 25),
                         )
 
-                    if setup is not None:
-                        logger.info("Found SMC Setup: %s at %s", setup.direction.value, setup.entry_price)
-                        chart_path = generate_setup_chart(df_m5, setup)
-                        lot_calc = calculate_lot_size(account.balance, setup.entry_price, setup.sweep_wick)
-                        lot_val = lot_calc.lot_size if lot_calc.is_valid else 0.01
-                        await notifier.send_alert(
-                            signal=setup,
-                            lot_size=lot_val,
-                            risk_amount=account.balance * 0.005,
-                            chart_image_path=chart_path,
-                        )
+                    # Snapshot position before orchestrator step to detect trade close
+                    pos_before = account.open_position
 
                     # Step Orchestrator
                     intents = orchestrator.on_bar(
@@ -184,12 +192,86 @@ async def run_smc_live_copilot():
                         res = adapter.execute_intent(intent)
                         logger.info("Execution Result: %s", res.message)
 
+                        # Coupling (ADR-021): Send alert ONLY after orchestrator approval (no phantom signals)
+                        if intent.intent_type == OrderIntentType.PLACE_LIMIT and setup is not None:
+                            logger.info("Orchestrator approved SMC Setup: %s at %s (Lot: %s)", setup.direction.value, setup.entry_price, intent.lot_size)
+                            chart_path = generate_setup_chart(df_m5, setup)
+                            risk_usd = round(intent.lot_size * abs(intent.limit_price - intent.sl_price) * 100.0, 2)
+                            await notifier.send_alert(
+                                signal=setup,
+                                lot_size=intent.lot_size,
+                                risk_amount=risk_usd,
+                                chart_image_path=chart_path,
+                            )
+
+                    # Check Milestone Notifications: Trade Closed
+                    if pos_before is not None and account.open_position is None:
+                        if pos_before.direction == Direction.BUY:
+                            if float(last_closed_bar["low"]) <= pos_before.sl_price:
+                                exit_price = pos_before.sl_price
+                                if pos_before.be_moved:
+                                    exit_reason = "Hit Breakeven Stop Loss"
+                                    pnl_r = 0.0
+                                else:
+                                    exit_reason = "Hit Stop Loss"
+                                    pnl_r = -1.0
+                            elif float(last_closed_bar["high"]) >= pos_before.tp_price:
+                                exit_price = pos_before.tp_price
+                                exit_reason = "Hit Take Profit Target"
+                                pnl_r = strat_cfg.get("tp_r", 2.5)
+                            else:
+                                exit_price = float(last_closed_bar["close"])
+                                exit_reason = "Market / Rollover Closure"
+                                pnl_r = round((exit_price - pos_before.entry_price) / pos_before.initial_sl_distance, 2)
+                            pnl_dollars = round((exit_price - pos_before.entry_price) * pos_before.lot_size * 100.0, 2)
+                        else:  # SELL
+                            if float(last_closed_bar["high"]) >= pos_before.sl_price:
+                                exit_price = pos_before.sl_price
+                                if pos_before.be_moved:
+                                    exit_reason = "Hit Breakeven Stop Loss"
+                                    pnl_r = 0.0
+                                else:
+                                    exit_reason = "Hit Stop Loss"
+                                    pnl_r = -1.0
+                            elif float(last_closed_bar["low"]) <= pos_before.tp_price:
+                                exit_price = pos_before.tp_price
+                                exit_reason = "Hit Take Profit Target"
+                                pnl_r = strat_cfg.get("tp_r", 2.5)
+                            else:
+                                exit_price = float(last_closed_bar["close"])
+                                exit_reason = "Market / Rollover Closure"
+                                pnl_r = round((pos_before.entry_price - exit_price) / pos_before.initial_sl_distance, 2)
+                            pnl_dollars = round((pos_before.entry_price - exit_price) * pos_before.lot_size * 100.0, 2)
+
+                        await notifier.send_message(
+                            format_trade_closed_card(
+                                direction=pos_before.direction,
+                                exit_price=exit_price,
+                                pnl_dollars=pnl_dollars,
+                                pnl_r=pnl_r,
+                                reason=exit_reason,
+                                symbol=symbol,
+                            )
+                        )
+
                     # Check Milestone Notifications
                     if account.open_position is not None:
                         # Order Filled Alert
                         if not account.open_position.fill_alerted:
                             await notifier.send_message(format_order_filled_card(account.open_position, symbol))
                             account.open_position.fill_alerted = True
+
+                        # Partial Take Profit Alert
+                        if account.open_position.partial_closed and not account.open_position.partial_alerted:
+                            await notifier.send_message(format_partial_tp_card(
+                                direction=account.open_position.direction,
+                                closed_lot=round(account.open_position.lot_size, 2),
+                                remaining_lot=round(account.open_position.lot_size, 2),
+                                r_multiple=strat_cfg.get("partial_tp_r", 1.0),
+                                entry_price=account.open_position.entry_price,
+                                symbol=symbol,
+                            ))
+                            account.open_position.partial_alerted = True
 
                         # Breakeven Alert
                         if account.open_position.be_moved and not account.open_position.be_alerted:

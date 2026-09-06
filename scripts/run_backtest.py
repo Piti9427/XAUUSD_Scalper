@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""
+Backtest runner script.
+Adapts available M15/H1 CSV data for the SMC backtester.
+Generates M5-equivalent from M15 when no M5 data exists.
+
+Usage:
+    python3 -m scripts.run_backtest
+    python3 scripts/run_backtest.py
+"""
+import sys
+import os
+
+# Ensure project root is on path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import pandas as pd
+from scripts.smc.backtester import SMCBacktester, format_backtest_summary
+
+
+def load_csv(filepath: str) -> pd.DataFrame:
+    """
+    Loads XAUUSD CSV data with Yahoo Finance multi-header format:
+    Row 0: Price,Close,High,Low,Open,Volume  (column names)
+    Row 1: Ticker,GC=F,...                    (ticker symbols)
+    Data rows have Datetime as index.
+    """
+    df = pd.read_csv(filepath, header=[0, 1], index_col=0)
+    # Flatten multi-index columns: take level 0 only (Close, High, Low, Open, Volume)
+    df.columns = [col[0] for col in df.columns]
+    df = df.reset_index()
+    # Rename to lowercase
+    rename_map = {}
+    for col in df.columns:
+        if col in ("Price", "Datetime") or col == df.columns[0]:
+            rename_map[col] = "time"
+        else:
+            rename_map[col] = col.lower()
+    df = df.rename(columns=rename_map)
+
+    df["time"] = pd.to_datetime(df["time"], utc=True)
+    for col in ["open", "high", "low", "close", "volume"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = df.dropna(subset=["open", "high", "low", "close"])
+    df = df.sort_values("time").reset_index(drop=True)
+    return df
+
+
+def main():
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+
+    # Check for M5 data first, fall back to M15
+    m5_path = os.path.join(data_dir, "XAUUSD_M5.csv")
+    m15_path = os.path.join(data_dir, "XAUUSD_M15.csv")
+    h1_path = os.path.join(data_dir, "XAUUSD_H1.csv")
+
+    if not os.path.exists(h1_path):
+        print("ERROR: XAUUSD_H1.csv not found in data/")
+        sys.exit(1)
+
+    df_h1 = load_csv(h1_path)
+    print(f"H1 data: {len(df_h1)} bars, {df_h1['time'].iloc[0]} to {df_h1['time'].iloc[-1]}")
+
+    if os.path.exists(m5_path):
+        df_m5 = load_csv(m5_path)
+        print(f"M5 data: {len(df_m5)} bars")
+    elif os.path.exists(m15_path):
+        # Use M15 as proxy — backtester uses bar-by-bar simulation
+        # M15 is equivalent to M5 with 3x wider bars
+        # Parameters need adjustment: sweep lookback, FVG size, etc.
+        df_m5 = load_csv(m15_path)
+        print(f"M15 data (used as M5 proxy): {len(df_m5)} bars, {df_m5['time'].iloc[0]} to {df_m5['time'].iloc[-1]}")
+        print("NOTE: Using M15 data. Signal frequency will be lower, parameters adapted.")
+    else:
+        print("ERROR: No M5 or M15 data found in data/")
+        sys.exit(1)
+
+    # Filter H1 to overlap with M5/M15 date range
+    m5_start = df_m5["time"].iloc[0]
+    m5_end = df_m5["time"].iloc[-1]
+    # H1 needs 200+ bars before M5 start for EMA200
+    h1_before = df_h1[df_h1["time"] < m5_start]
+    if len(h1_before) < 200:
+        print(f"WARNING: Only {len(h1_before)} H1 bars before M5 start. EMA200 may be inaccurate early on.")
+
+    print(f"\nDate range: {m5_start.date()} to {m5_end.date()}")
+    print(f"Trading days: ~{(m5_end - m5_start).days}")
+    print()
+
+    # 1. Baseline Run
+    print("=" * 60)
+    print("RUN 1: Baseline SMC v1 (max_sl_cap=$6.00, No Partial TP)")
+    print("=" * 60)
+    bt_baseline = SMCBacktester(
+        initial_balance=10000.0,
+        risk_pct=0.005,
+        spread_buffer=0.30,
+        max_sl_cap=6.00,
+        partial_tp_enabled=False,
+        extended_killzones=False,
+    )
+    s_base = bt_baseline.run(df_m5, df_h1)
+    print(format_backtest_summary(s_base))
+
+    # 2. Optimized Gold Strategy v2
+    print("\n" + "=" * 60)
+    print("RUN 2: Optimized Gold SMC v2 (max_sl_cap=$25, Partial TP 50% @ 1.0R, Runner 2.5R, Gold Nuances)")
+    print("=" * 60)
+    bt_optimized = SMCBacktester(
+        initial_balance=10000.0,
+        risk_pct=0.005,
+        spread_buffer=0.30,
+        max_sl_cap=25.00,
+        contract_size=100.0,
+        partial_tp_enabled=True,
+        partial_tp_r=1.0,
+        partial_tp_ratio=0.5,
+        be_trigger_r=1.0,
+        extended_killzones=True,
+        tp_r=2.5,
+        min_body_ratio=0.45,
+        max_sweep_pierce=8.0,
+        sweep_lookback=25,
+        max_sweep_to_mss_bars=8,
+        max_mss_to_fvg_bars=4,
+    )
+    s_opt = bt_optimized.run(df_m5, df_h1)
+    print(format_backtest_summary(s_opt))
+
+    if not s_opt.trades_df.empty:
+        print("\n## Optimized Trade Log")
+        display_cols = [c for c in ["entry_time", "direction", "entry_price", "sl_price", "tp_price", "lot_size", "exit_time", "exit_price", "exit_reason", "pnl_dollar", "pnl_r", "balance"] if c in s_opt.trades_df.columns]
+        print(s_opt.trades_df[display_cols].to_string(index=False))
+
+    return s_opt
+
+
+if __name__ == "__main__":
+    main()

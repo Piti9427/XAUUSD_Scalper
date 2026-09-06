@@ -52,10 +52,22 @@ def compute_liquidity_levels(
         pdh = float(prev_df["high"].max())
         pdl = float(prev_df["low"].min())
 
+    # Compute London session high/low (07:00 - 12:00 UTC) if available
+    london_mask = (
+        target_mask
+        & (df["time"].dt.hour >= 7)
+        & (df["time"].dt.hour < 12)
+    )
+    london_df = df[london_mask]
+    london_high = float(london_df["high"].max()) if not london_df.empty else None
+    london_low = float(london_df["low"].min()) if not london_df.empty else None
+
     return LiquidityLevels(
         asian_high=asian_high,
         asian_low=asian_low,
         pdh=pdh,
         pdl=pdl,
-        date_str=target_date.isoformat()
+        date_str=target_date.isoformat(),
+        london_high=london_high,
+        london_low=london_low,
     )

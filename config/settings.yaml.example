@@ -23,17 +23,24 @@ telegram:
   chat_id: "YOUR_CHAT_ID"   # Telegram Channel or User Chat ID
   send_charts: true         # Set true if matplotlib/requirements-viz.txt is installed
 
-# SMC Strategy Parameters (v1 Baseline)
+# SMC Strategy Parameters (v2 Gold Optimized)
 strategy:
   risk_pct: 0.005           # 0.5% account equity risk per trade
-  max_sl_cap: 6.00          # Skip setups with SL distance > $6.00 (600 points)
+  max_sl_cap: 25.00         # Hard cap on SL distance ($25.00 / 2500 points for Gold)
   spread_buffer: 0.30       # Broker spread buffer added to SL ($0.30 / 30 points)
   max_spread: 0.35          # Real-time Spread Guard: Abort entry if spread > $0.35
-  tp_r: 2.0                 # Fixed Take Profit multiplier (2.0R)
+  tp_r: 2.5                 # Final Take Profit multiplier (2.5R Runner)
   be_trigger_r: 1.0         # Breakeven relocation threshold (+1.0R)
-  order_ttl_bars: 3         # Limit order expiration (3 bars = 15 min on M5)
+  partial_tp_enabled: true  # Scale-out profit taker: lock in cash before full TP
+  partial_tp_r: 1.0         # First Partial TP trigger (+1.0R)
+  partial_tp_ratio: 0.50    # Close 50% position at Partial TP, let 50% run risk-free
+  order_ttl_bars: 4         # Limit order expiration (4 bars = 20 min on M5, 60m on M15)
   max_daily_losses: 2       # Circuit Breaker: Halt trading after 2 losses in 1 UTC day
   cooldown_mins: 30         # Post-loss cooldown timer (30 minutes)
+  extended_killzones: true  # London 07:00-10:30 UTC, NY 12:30-16:30 UTC
+  min_body_ratio: 0.45      # Displacement candle body ratio (45% for Gold wicks)
+  max_sweep_pierce: 8.0     # Max wick pierce beyond liquidity level ($8.00)
+  sweep_lookback: 25        # Bars to look back for sweep detection
 
 # DXY Macro Trend Gate (Optional)
 dxy:
