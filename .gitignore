@@ -1,0 +1,51 @@
+# ==============================================================================
+# XAUUSD Trading System .gitignore
+# ==============================================================================
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Configuration Secrets & Overrides
+config/settings.yaml
+.env
+.env.local
+.env.*.local
+
+# Databases & Runtime SQLite
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/smc_trades.db
+data/news_cache.json
+
+# Logs
+*.log
+logs/
+
+# Historical CSV Datasets (Large Data)
+data/*.csv
+!data/.gitkeep
+
+# Chart Snapshots
+data/*.png
+*.png
+
+# macOS & IDE Files
+.DS_Store
+.vscode/
+.idea/
+.scratch/
+.codegraph/
+
+# Deployment Artefacts
+deploy/swapfile

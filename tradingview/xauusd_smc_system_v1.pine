@@ -1,0 +1,227 @@
+//@version=6
+strategy("XAUUSD SMC System v1 (Sweep + MSS + FVG)", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=100, process_orders_on_close=false, calc_bars_on_close=true)
+
+// ==========================================
+// 1. INPUT CONFIGURATION (SMC v1 Spec)
+// ==========================================
+var string G_SMC   = "SMC Parameters"
+var string G_RISK  = "Risk & Position Sizing"
+var string G_SESS  = "Trading Sessions (UTC)"
+
+// Sessions (UTC)
+londonStart = input.int(7, "London Start Hour (UTC)", group=G_SESS)
+londonEnd   = input.int(10, "London End Hour (UTC)", group=G_SESS)
+nyStartH    = input.int(12, "NY Start Hour (UTC)", group=G_SESS)
+nyStartM    = input.int(30, "NY Start Minute (UTC)", group=G_SESS)
+nyEndH      = input.int(15, "NY End Hour (UTC)", group=G_SESS)
+nyEndM      = input.int(30, "NY End Minute (UTC)", group=G_SESS)
+asianStart  = input.int(0, "Asian Start Hour (UTC)", group=G_SESS)
+asianEnd    = input.int(7, "Asian End Hour (UTC)", group=G_SESS)
+
+// SMC Thresholds
+maxSweepPiercePts = input.float(5.0, "Max Sweep Pierce ($)", step=0.5, group=G_SMC)
+minDispRatio      = input.float(0.60, "Min Displacement Body Ratio", step=0.05, group=G_SMC)
+minFvgSizePts     = input.float(0.50, "Min FVG Size ($)", step=0.1, group=G_SMC)
+slSpreadBufferPts = input.float(0.30, "SL Spread Buffer ($)", step=0.05, group=G_RISK)
+maxSlCapPts       = input.float(6.00, "Max SL Distance Cap ($)", step=0.5, group=G_RISK)
+riskPct           = input.float(0.5, "Risk Per Trade (%)", step=0.1, group=G_RISK)
+tpMultiplierR     = input.float(2.0, "Take Profit (R)", step=0.5, group=G_RISK)
+orderTtlBars      = input.int(3, "Limit Order TTL (Bars)", group=G_SMC)
+
+// ==========================================
+// 2. HIGHER TIMEFRAME BIAS (H1 EMA 200)
+// ==========================================
+h1_close  = request.security(syminfo.tickerid, "60", close)
+h1_ema200 = request.security(syminfo.tickerid, "60", ta.ema(close, 200))
+isH1Bullish = h1_close > h1_ema200
+isH1Bearish = h1_close < h1_ema200
+
+// ==========================================
+// 3. SESSION DETECTION (UTC)
+// ==========================================
+t_hour   = hour(time, "UTC")
+t_min    = minute(time, "UTC")
+t_mins   = t_hour * 60 + t_min
+
+isAsianSession  = (t_hour >= asianStart and t_hour < asianEnd)
+isLondonKillzone = (t_hour >= londonStart and t_hour < londonEnd)
+isNyKillzone     = (t_mins >= (nyStartH * 60 + nyStartM) and t_mins < (nyEndH * 60 + nyEndM))
+isTradingSession = isLondonKillzone or isNyKillzone
+
+// Background highlights for Killzones
+bgcolor(isLondonKillzone ? color.new(color.blue, 93) : na, title="London Killzone")
+bgcolor(isNyKillzone ? color.new(color.orange, 93) : na, title="NY Killzone")
+
+// ==========================================
+// 4. LIQUIDITY LEVELS (Asian H/L + PDH/PDL)
+// ==========================================
+var float asianHigh = na
+var float asianLow  = na
+var float currentAsianHigh = na
+var float currentAsianLow  = na
+
+var float pdh = na
+var float pdl = na
+var float currentDayHigh = na
+var float currentDayLow  = na
+
+isNewUtcDay = ta.change(dayofmonth(time, "UTC")) != 0
+
+if isNewUtcDay
+    pdh := currentDayHigh
+    pdl := currentDayLow
+    currentDayHigh := high
+    currentDayLow  := low
+    asianHigh := currentAsianHigh
+    asianLow  := currentAsianLow
+    currentAsianHigh := na
+    currentAsianLow  := na
+else
+    currentDayHigh := math.max(nz(currentDayHigh, high), high)
+    currentDayLow  := math.min(nz(currentDayLow, low), low)
+
+if isAsianSession
+    currentAsianHigh := math.max(nz(currentAsianHigh, high), high)
+    currentAsianLow  := math.min(nz(currentAsianLow, low), low)
+    asianHigh := currentAsianHigh
+    asianLow  := currentAsianLow
+
+// Draw levels
+plot(asianHigh, "Asian High", color=color.new(color.purple, 30), style=plot.style_circles)
+plot(asianLow, "Asian Low", color=color.new(color.purple, 30), style=plot.style_circles)
+plot(pdh, "PDH", color=color.new(color.red, 40), style=plot.style_line)
+plot(pdl, "PDL", color=color.new(color.green, 40), style=plot.style_line)
+
+// ==========================================
+// 5. 5-BAR FRACTAL SWINGS
+// ==========================================
+isSwingHigh = (high[2] > high[0]) and (high[2] > high[1]) and (high[2] > high[3]) and (high[2] > high[4])
+isSwingLow  = (low[2] < low[0]) and (low[2] < low[1]) and (low[2] < low[3]) and (low[2] < low[4])
+
+var float lastSwingHigh = na
+var float lastSwingLow  = na
+
+if isSwingHigh
+    lastSwingHigh := high[2]
+if isSwingLow
+    lastSwingLow := low[2]
+
+// ==========================================
+// 6. SWEEP DETECTION (Wick-only, <= $5.00)
+// ==========================================
+sweepLowAsian = (low < asianLow) and (close >= asianLow) and ((asianLow - low) <= maxSweepPiercePts)
+sweepLowPdl   = (low < pdl) and (close >= pdl) and ((pdl - low) <= maxSweepPiercePts)
+isSweepLow    = sweepLowAsian or sweepLowPdl
+
+sweepHighAsian = (high > asianHigh) and (close <= asianHigh) and ((high - asianHigh) <= maxSweepPiercePts)
+sweepHighPdl   = (high > pdh) and (close <= pdh) and ((high - pdh) <= maxSweepPiercePts)
+isSweepHigh    = sweepHighAsian or sweepHighPdl
+
+var int lastSweepBar = na
+var float lastSweepWick = na
+var int lastSweepDir = 0 // 1 = Bullish sweep (low swept), -1 = Bearish sweep (high swept)
+
+if isSweepLow
+    lastSweepBar := bar_index
+    lastSweepWick := low
+    lastSweepDir := 1
+
+if isSweepHigh
+    lastSweepBar := bar_index
+    lastSweepWick := high
+    lastSweepDir := -1
+
+// ==========================================
+// 7. MSS & DISPLACEMENT (ADR-003, ADR-014)
+// ==========================================
+c_range = high - low
+c_body  = math.abs(close - open)
+isDisplacement = (c_range > 0) and ((c_body / c_range) >= minDispRatio)
+
+// Temporal window: MSS must occur <= 6 bars after sweep
+barsSinceSweep = bar_index - nz(lastSweepBar, 0)
+canMssBullish = (lastSweepDir == 1) and (barsSinceSweep <= 6) and (barsSinceSweep > 0)
+canMssBearish = (lastSweepDir == -1) and (barsSinceSweep <= 6) and (barsSinceSweep > 0)
+
+isMssBullish = canMssBullish and (close > lastSwingHigh) and isDisplacement and isH1Bullish and isTradingSession
+isMssBearish = canMssBearish and (close < lastSwingLow) and isDisplacement and isH1Bearish and isTradingSession
+
+// ==========================================
+// 8. FVG DETECTION (ADR-004)
+// ==========================================
+isFvgBullish = (low[0] > high[2]) and ((low[0] - high[2]) >= minFvgSizePts)
+isFvgBearish = (low[2] > high[0]) and ((low[2] - high[0]) >= minFvgSizePts)
+
+// Entry trigger: Bullish FVG formed on or right after MSS
+validBuySetup  = isMssBullish[1] and isFvgBullish and isTradingSession
+validSellSetup = isMssBearish[1] and isFvgBearish and isTradingSession
+
+// ==========================================
+// 9. ORDER EXECUTION & LIFECYCLE
+// ==========================================
+var float pendingLimitPrice = na
+var float pendingSlPrice    = na
+var float pendingTpPrice    = na
+var int   pendingOrderBar   = na
+var int   pendingOrderDir   = 0
+
+// Place Limit Order at 50% FVG
+if validBuySetup and strategy.position_size == 0 and pendingOrderDir == 0
+    fvgLowLevel  = high[2]
+    fvgHighLevel = low[0]
+    ce50 = (fvgHighLevel + fvgLowLevel) / 2.0
+    slDist = (ce50 - lastSweepWick) + slSpreadBufferPts
+    
+    if slDist <= maxSlCapPts and slDist > 0
+        pendingLimitPrice := ce50
+        pendingSlPrice    := lastSweepWick - slSpreadBufferPts
+        pendingTpPrice    := ce50 + (slDist * tpMultiplierR)
+        pendingOrderBar   := bar_index
+        pendingOrderDir   := 1
+        strategy.entry("BUY_LIMIT", strategy.long, limit=pendingLimitPrice)
+
+if validSellSetup and strategy.position_size == 0 and pendingOrderDir == 0
+    fvgHighLevel = low[2]
+    fvgLowLevel  = high[0]
+    ce50 = (fvgHighLevel + fvgLowLevel) / 2.0
+    slDist = (lastSweepWick - ce50) + slSpreadBufferPts
+    
+    if slDist <= maxSlCapPts and slDist > 0
+        pendingLimitPrice := ce50
+        pendingSlPrice    := lastSweepWick + slSpreadBufferPts
+        pendingTpPrice    := ce50 - (slDist * tpMultiplierR)
+        pendingOrderBar   := bar_index
+        pendingOrderDir   := -1
+        strategy.entry("SELL_LIMIT", strategy.short, limit=pendingLimitPrice)
+
+// Order TTL Expiration (3 bars without fill)
+if pendingOrderDir != 0 and strategy.position_size == 0
+    if (bar_index - pendingOrderBar) >= orderTtlBars
+        strategy.cancel("BUY_LIMIT")
+        strategy.cancel("SELL_LIMIT")
+        pendingOrderDir := 0
+
+// Position Management: Breakeven Relocation (+1.0R) and Exits
+var bool isBeMoved = false
+if ta.change(strategy.position_size) != 0
+    if strategy.position_size != 0
+        isBeMoved := false
+        pendingOrderDir := 0
+
+if strategy.position_size > 0
+    initialDist = math.abs(strategy.position_avg_price - pendingSlPrice)
+    if not isBeMoved and high >= (strategy.position_avg_price + initialDist)
+        isBeMoved := true
+    currentSl = isBeMoved ? strategy.position_avg_price : pendingSlPrice
+    strategy.exit("EXIT_BUY", "BUY_LIMIT", stop=currentSl, limit=pendingTpPrice)
+
+if strategy.position_size < 0
+    initialDist = math.abs(pendingSlPrice - strategy.position_avg_price)
+    if not isBeMoved and low <= (strategy.position_avg_price - initialDist)
+        isBeMoved := true
+    currentSl = isBeMoved ? strategy.position_avg_price : pendingSlPrice
+    strategy.exit("EXIT_SELL", "SELL_LIMIT", stop=currentSl, limit=pendingTpPrice)
+
+// Rollover Flat: Close before 21:00 UTC
+if t_hour >= 20 and t_min >= 55 and strategy.position_size != 0
+    strategy.close_all(comment="Rollover Flat")

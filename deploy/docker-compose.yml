@@ -1,0 +1,22 @@
+services:
+  xauusd-copilot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: xauusd_smc_copilot
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - ../config/settings.yaml:/app/config/settings.yaml:ro
+      - ../data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits: 800M for AMD 1GB Micro, can be increased to 4G+ on Ampere A1 ARM
+    deploy:
+      resources:
+        limits:
+          memory: 2048M

@@ -1,0 +1,294 @@
+//@version=6
+indicator(
+     "XAUUSD Pro Copilot [Indicator & Alerts]",
+     shorttitle="XAUUSD Copilot Ind",
+     overlay=true
+)
+
+//=============================================================================
+// 1. GENERAL SETTINGS & TRADE DIRECTION
+//=============================================================================
+const string genGroup = "General & Mode Settings"
+
+tradeDirection = input.string("Both", title="Trade Direction", options=["Both", "Long Only", "Short Only"], group=genGroup)
+awaitBarConfirmation = input.bool(true, title="Await Bar Confirmation", group=genGroup, tooltip="Prevents repainting by triggering strictly on confirmed bar close")
+
+//=============================================================================
+// 2. EMA TREND & CONFLUENCE
+//=============================================================================
+const string emaGroup = "EMA Dual-Confluence"
+
+fastLength = input.int(20, title="Fast EMA Length", minval=1, group=emaGroup)
+slowLength = input.int(50, title="Slow EMA Length", minval=1, group=emaGroup)
+trendLength = input.int(200, title="Trend EMA Length", minval=1, group=emaGroup)
+useTrendFilter = input.bool(true, title="Use EMA 200 Direction Filter", group=emaGroup, tooltip="Longs only above EMA 200, Shorts only below EMA 200")
+
+emaFast  = ta.ema(close, fastLength)
+emaSlow  = ta.ema(close, slowLength)
+emaTrend = ta.ema(close, trendLength)
+
+emaBullCross = ta.crossover(emaFast, emaSlow)
+emaBearCross = ta.crossunder(emaFast, emaSlow)
+
+trendLongOk  = not useTrendFilter or close > emaTrend
+trendShortOk = not useTrendFilter or close < emaTrend
+
+//=============================================================================
+// 3. CHANDELIER EXIT ENGINE (CALIBRATED FOR GOLD)
+//=============================================================================
+const string ceGroup = "Chandelier Exit (Calibrated for Gold)"
+
+useCeFilter = input.bool(true, title="Use CE Direction Filter", group=ceGroup)
+ceLength    = input.int(22, title="CE ATR Period", minval=1, group=ceGroup)
+ceMult      = input.float(2.0, title="CE ATR Multiplier", step=0.1, group=ceGroup, tooltip="Gold calibrated to 2.0 (down from standard 3.0 to protect intraday gains)")
+useClose    = input.bool(true, title="Use Close Price for Extremums", group=ceGroup)
+useCeExit   = input.bool(true, title="Exit On Chandelier Flip", group=ceGroup)
+
+atrCe = ceMult * ta.atr(ceLength)
+
+highestSource = useClose ? ta.highest(close, ceLength) : ta.highest(high, ceLength)
+lowestSource  = useClose ? ta.lowest(close, ceLength) : ta.lowest(low, ceLength)
+
+longStop = highestSource - atrCe
+longStopPrev = nz(longStop[1], longStop)
+longStop := close[1] > longStopPrev ? math.max(longStop, longStopPrev) : longStop
+
+shortStop = lowestSource + atrCe
+shortStopPrev = nz(shortStop[1], shortStop)
+shortStop := close[1] < shortStopPrev ? math.min(shortStop, shortStopPrev) : shortStop
+
+var int ceDir = 1
+ceDir := close > shortStopPrev ? 1 : close < longStopPrev ? -1 : ceDir
+
+ceLongOk  = not useCeFilter or ceDir == 1
+ceShortOk = not useCeFilter or ceDir == -1
+ceLine    = ceDir == 1 ? longStop : shortStop
+
+//=============================================================================
+// 4. SESSION KILLZONES & ASIAN RANGE ENGINE
+//=============================================================================
+const string sessGroup = "Session Engine (Killzones & Asian Liquidity)"
+
+useSessionFilter = input.bool(true, title="Filter Entries by Killzones", group=sessGroup)
+showSessionBg    = input.bool(true, title="Highlight Killzones on Chart", group=sessGroup)
+showAsianBox     = input.bool(true, title="Draw Asian High/Low Liquidity Range", group=sessGroup)
+sessionTz        = input.string("UTC", title="Session Timezone", options=["UTC", "America/New_York", "Asia/Bangkok"], group=sessGroup)
+
+// Killzone time windows (UTC standard)
+// London: 07:00-10:00 UTC (14:00-17:00 TH)
+// New York: 12:30-15:30 UTC (19:30-22:30 TH)
+// Asian Range: 00:00-07:00 UTC (07:00-14:00 TH)
+inLondon = not na(time(timeframe.period, "0700-1000:23456", sessionTz))
+inNY     = not na(time(timeframe.period, "1230-1530:23456", sessionTz))
+inAsian  = not na(time(timeframe.period, "0000-0700:23456", sessionTz))
+
+inTradeKillzone = not useSessionFilter or (inLondon or inNY)
+
+// Asian Range Liquidity High/Low tracking
+var float asianHigh = na
+var float asianLow  = na
+var line  asianHighLine = na
+var line  asianLowLine  = na
+
+isNewDay = ta.change(time("D")) != 0
+
+if isNewDay
+    asianHigh := na
+    asianLow  := na
+    // Delete previous day's lines so each day gets fresh range lines
+    if not na(asianHighLine)
+        line.delete(asianHighLine)
+        line.delete(asianLowLine)
+    asianHighLine := na
+    asianLowLine  := na
+
+if inAsian
+    asianHigh := na(asianHigh) ? high : math.max(asianHigh, high)
+    asianLow  := na(asianLow)  ? low  : math.min(asianLow, low)
+    if showAsianBox
+        if na(asianHighLine)
+            asianHighLine := line.new(bar_index, asianHigh, bar_index, asianHigh, color=color.new(color.yellow, 30), width=1, style=line.style_dashed)
+            asianLowLine  := line.new(bar_index, asianLow, bar_index, asianLow, color=color.new(color.yellow, 30), width=1, style=line.style_dashed)
+        else
+            line.set_xy1(asianHighLine, line.get_x1(asianHighLine), asianHigh)
+            line.set_xy2(asianHighLine, bar_index, asianHigh)
+            line.set_xy1(asianLowLine, line.get_x1(asianLowLine), asianLow)
+            line.set_xy2(asianLowLine, bar_index, asianLow)
+else if showAsianBox and not na(asianHighLine) and not isNewDay
+    line.set_x2(asianHighLine, bar_index)
+    line.set_x2(asianLowLine, bar_index)
+
+bgcolor(showSessionBg and inLondon ? color.new(color.blue, 92) : na, title="London Killzone BG")
+bgcolor(showSessionBg and inNY ? color.new(color.orange, 92) : na, title="New York Killzone BG")
+
+//=============================================================================
+// 5. ADX & HIGHER TIMEFRAME FILTERS
+//=============================================================================
+const string filterGroup = "Momentum & HTF Filters"
+
+useAdxFilter = input.bool(false, title="Use ADX Volatility Filter", group=filterGroup)
+diLength     = input.int(14, title="DI Length", minval=1, group=filterGroup)
+adxSmoothing = input.int(14, title="ADX Smoothing", minval=1, group=filterGroup)
+minAdx       = input.float(18.0, title="Minimum ADX Threshold", step=0.5, group=filterGroup)
+
+[plusDI, minusDI, adxValue] = ta.dmi(diLength, adxSmoothing)
+adxOk = not useAdxFilter or adxValue >= minAdx
+
+useHtfFilter = input.bool(false, title="Use HTF Trend Filter", group=filterGroup)
+htfTimeframe = input.timeframe("60", title="HTF Timeframe (e.g. 60=H1)", group=filterGroup)
+htfEmaLength = input.int(200, title="HTF EMA Length", minval=1, group=filterGroup)
+
+htfClose = request.security(syminfo.tickerid, htfTimeframe, close, barmerge.gaps_off, barmerge.lookahead_off)
+htfEma   = request.security(syminfo.tickerid, htfTimeframe, ta.ema(close, htfEmaLength), barmerge.gaps_off, barmerge.lookahead_off)
+
+htfLongOk  = not useHtfFilter or htfClose > htfEma
+htfShortOk = not useHtfFilter or htfClose < htfEma
+
+//=============================================================================
+// 6. DYNAMIC RISK MANAGEMENT (GOLD ATR-BASED)
+//=============================================================================
+const string riskGroup = "Gold Risk Management (ATR / Pips)"
+
+riskModel      = input.string("Dynamic ATR", title="Risk Model", options=["Dynamic ATR", "Fixed Points ($)"], group=riskGroup)
+slAtrMult      = input.float(1.5, title="Stop Loss ATR Multiplier", minval=0.5, step=0.1, group=riskGroup)
+tp1RrRatio     = input.float(1.5, title="TP1 Risk:Reward Ratio", minval=0.5, step=0.1, group=riskGroup)
+tp2RrRatio     = input.float(3.0, title="TP2 Risk:Reward Ratio", minval=1.0, step=0.2, group=riskGroup)
+
+fixedSlPts     = input.float(4.0, title="Fixed SL in USD ($/Pts)", minval=1.0, step=0.5, group=riskGroup, tooltip="Used if Risk Model = Fixed Points. E.g. $4.00 = 400 pips")
+fixedTp1Pts    = input.float(6.0, title="Fixed TP1 in USD ($/Pts)", minval=1.0, step=0.5, group=riskGroup)
+fixedTp2Pts    = input.float(12.0, title="Fixed TP2 in USD ($/Pts)", minval=1.0, step=0.5, group=riskGroup)
+
+useEmaExit     = input.bool(true, title="Exit On Counter EMA Crossover", group=riskGroup)
+riskAtrLen     = input.int(14, title="Risk ATR Period", minval=1, group=riskGroup, tooltip="ATR period for SL/TP distance calculation. Use 14 for standard, or match CE ATR Period (22) for consistency")
+
+atrVal = ta.atr(riskAtrLen)
+
+//=============================================================================
+// 7. TRADING CONDITIONS
+//=============================================================================
+await = awaitBarConfirmation ? barstate.isconfirmed : true
+
+longPermitted  = tradeDirection == "Both" or tradeDirection == "Long Only"
+shortPermitted = tradeDirection == "Both" or tradeDirection == "Short Only"
+
+longCondition = emaBullCross and trendLongOk and ceLongOk and inTradeKillzone and adxOk and htfLongOk and longPermitted and await
+shortCondition = emaBearCross and trendShortOk and ceShortOk and inTradeKillzone and adxOk and htfShortOk and shortPermitted and await
+
+exitLongEma  = useEmaExit and emaBearCross and await
+exitShortEma = useEmaExit and emaBullCross and await
+
+exitLongCe   = useCeExit and close < longStop and await
+exitShortCe  = useCeExit and close > shortStop and await
+
+// Calculated target levels
+calcSlDist = (riskModel == "Dynamic ATR") ? (atrVal * slAtrMult) : fixedSlPts
+calcTp1Dist = (riskModel == "Dynamic ATR") ? (calcSlDist * tp1RrRatio) : fixedTp1Pts
+calcTp2Dist = (riskModel == "Dynamic ATR") ? (calcSlDist * tp2RrRatio) : fixedTp2Pts
+
+var float currentSl  = na
+var float currentTp1 = na
+var float currentTp2 = na
+
+if longCondition
+    currentSl  := close - calcSlDist
+    currentTp1 := close + calcTp1Dist
+    currentTp2 := close + calcTp2Dist
+
+if shortCondition
+    currentSl  := close + calcSlDist
+    currentTp1 := close - calcTp1Dist
+    currentTp2 := close - calcTp2Dist
+
+// Clear stale target levels when exit conditions fire
+if exitLongEma or exitLongCe or exitShortEma or exitShortCe
+    currentSl  := na
+    currentTp1 := na
+    currentTp2 := na
+
+//=============================================================================
+// 8. VISUAL STYLE & PLOTS
+//=============================================================================
+const string visualGroup = "Visual Style & Dashboards"
+
+visualMode        = input.string("Balanced", title="Visual Mode", options=["Clean", "Balanced", "Full Debug"], group=visualGroup)
+showBuySellLabels = input.bool(true, title="Show Buy / Sell Labels", group=visualGroup)
+showTargetLevels  = input.bool(true, title="Show Dynamic Target Lines", group=visualGroup)
+
+fastEmaWidth  = input.int(2, title="Fast EMA Width", minval=1, maxval=5, group=visualGroup)
+slowEmaWidth  = input.int(2, title="Slow EMA Width", minval=1, maxval=5, group=visualGroup)
+trendEmaWidth = input.int(2, title="Trend EMA Width", minval=1, maxval=5, group=visualGroup)
+ceLineWidth   = input.int(1, title="CE Line Width", minval=1, maxval=5, group=visualGroup)
+
+isClean    = visualMode == "Clean"
+isBalanced = visualMode == "Balanced"
+isDebug    = visualMode == "Full Debug"
+
+// EMA Plots
+plot(emaFast, title="Fast EMA (20)", color=color.new(color.aqua, isClean ? 10 : 0), linewidth=fastEmaWidth)
+plot(emaSlow, title="Slow EMA (50)", color=color.new(color.orange, isClean ? 10 : 0), linewidth=slowEmaWidth)
+plot(emaTrend, title="Trend EMA (200)", color=color.new(color.purple, 30), linewidth=trendEmaWidth)
+
+// Chandelier Stop Line
+ceColor = ceDir == 1 ? color.new(color.green, isClean ? 80 : 20) : color.new(color.red, isClean ? 80 : 20)
+plot(isClean ? na : ceLine, title="Chandelier Exit Stop", color=ceColor, linewidth=ceLineWidth, style=plot.style_linebr)
+
+// Dynamic Target Levels
+plot(showTargetLevels ? currentTp2 : na, title="Dynamic TP2 Level", color=color.new(color.green, 20), style=plot.style_circles, linewidth=1)
+plot(showTargetLevels ? currentTp1 : na, title="Dynamic TP1 Level", color=color.new(color.teal, 20),  style=plot.style_circles, linewidth=1)
+plot(showTargetLevels ? currentSl : na,  title="Dynamic SL Level",  color=color.new(color.red, 20),   style=plot.style_circles, linewidth=1)
+
+// Buy / Sell Entry Labels
+plotshape(
+     longCondition and showBuySellLabels,
+     title="Buy Signal Label",
+     text="BUY GOLD",
+     location=location.belowbar,
+     style=shape.labelup,
+     size=size.small,
+     color=color.new(#00E676, 0),
+     textcolor=color.black
+)
+
+plotshape(
+     shortCondition and showBuySellLabels,
+     title="Sell Signal Label",
+     text="SELL GOLD",
+     location=location.abovebar,
+     style=shape.labeldown,
+     size=size.small,
+     color=color.new(#FF5252, 0),
+     textcolor=color.white
+)
+
+// Debug Confluence Shapes
+plotshape(isDebug and emaBullCross, title="Debug EMA Bull Cross", location=location.belowbar, style=shape.circle, size=size.tiny, color=color.aqua)
+plotshape(isDebug and emaBearCross, title="Debug EMA Bear Cross", location=location.abovebar, style=shape.circle, size=size.tiny, color=color.orange)
+plotshape(isDebug and ta.change(ceDir) != 0 and ceDir == 1, title="Debug CE Bull Flip", location=location.belowbar, style=shape.triangleup, size=size.tiny, color=color.green)
+plotshape(isDebug and ta.change(ceDir) != 0 and ceDir == -1, title="Debug CE Bear Flip", location=location.abovebar, style=shape.triangledown, size=size.tiny, color=color.red)
+
+//=============================================================================
+// 9. TRADINGVIEW ALERTCONDITIONS (WEBHOOK & POPUP COMPATIBLE)
+//=============================================================================
+alertcondition(
+     longCondition,
+     title="XAUUSD Buy Signal",
+     message='{"action": "BUY", "symbol": "{{ticker}}", "price": {{close}}, "time": "{{timenow}}", "note": "Bullish EMA 20/50 + CE Bullish + Killzone"}'
+)
+
+alertcondition(
+     shortCondition,
+     title="XAUUSD Sell Signal",
+     message='{"action": "SELL", "symbol": "{{ticker}}", "price": {{close}}, "time": "{{timenow}}", "note": "Bearish EMA 20/50 + CE Bearish + Killzone"}'
+)
+
+alertcondition(
+     exitLongEma or exitLongCe,
+     title="XAUUSD Exit Long",
+     message='{"action": "CLOSE_LONG", "symbol": "{{ticker}}", "price": {{close}}, "note": "EMA Reversal or Chandelier Stop"}'
+)
+
+alertcondition(
+     exitShortEma or exitShortCe,
+     title="XAUUSD Exit Short",
+     message='{"action": "CLOSE_SHORT", "symbol": "{{ticker}}", "price": {{close}}, "note": "EMA Reversal or Chandelier Stop"}'
+)

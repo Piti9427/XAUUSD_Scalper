@@ -1,0 +1,56 @@
+# ==============================================================================
+# XAUUSD SMC Trading System Configuration Template
+# Copy to config/settings.yaml and populate with your credentials
+# ==============================================================================
+
+# MetaTrader 5 Configuration
+mt5:
+  login: 0                  # Your MT5 account number (e.g. 12345678)
+  password: ""              # Your MT5 investor or master password
+  server: "Exness-MT5Real"  # e.g. "Exness-MT5Trial", "ICMarketsSC-Demo"
+  symbol: "XAUUSD"          # Symbol on broker (e.g. "XAUUSD", "XAUUSDm")
+  timeframe: "M5"           # Primary monitoring timeframe: M5
+
+# Runtime Settings
+runtime:
+  log_level: "INFO"         # DEBUG, INFO, WARNING, ERROR
+  dry_run: false            # true = simulate execution; false = live orders
+
+# Telegram Copilot Notifications
+telegram:
+  enabled: false            # Enable to receive real-time signal cards & lifecycle updates
+  token: "YOUR_BOT_TOKEN"   # Telegram Bot API token from @BotFather
+  chat_id: "YOUR_CHAT_ID"   # Telegram Channel or User Chat ID
+  send_charts: true         # Set true if matplotlib/requirements-viz.txt is installed
+
+# SMC Strategy Parameters (v1 Baseline)
+strategy:
+  risk_pct: 0.005           # 0.5% account equity risk per trade
+  max_sl_cap: 6.00          # Skip setups with SL distance > $6.00 (600 points)
+  spread_buffer: 0.30       # Broker spread buffer added to SL ($0.30 / 30 points)
+  max_spread: 0.35          # Real-time Spread Guard: Abort entry if spread > $0.35
+  tp_r: 2.0                 # Fixed Take Profit multiplier (2.0R)
+  be_trigger_r: 1.0         # Breakeven relocation threshold (+1.0R)
+  order_ttl_bars: 3         # Limit order expiration (3 bars = 15 min on M5)
+  max_daily_losses: 2       # Circuit Breaker: Halt trading after 2 losses in 1 UTC day
+  cooldown_mins: 30         # Post-loss cooldown timer (30 minutes)
+
+# DXY Macro Trend Gate (Optional)
+dxy:
+  enabled: false            # Set true to enforce inverse Dollar Index correlation
+  symbol: "DXY"             # DXY ticker on broker (e.g. "USDX", "DXY_m")
+  h1_ema_filter: true       # Block Gold BUY when DXY > EMA 200
+
+# Economic News Intelligence
+news:
+  enabled: true             # Enable automated USD news blackout filter
+  auto_fetch: true          # Auto-download weekly calendar from ForexFactory
+  blackout_window_mins: 30  # Blackout window before & after high-impact USD events
+  pre_news_action_mins: 15  # Pre-news evaluation window (BE at >= 1R, Close at < 1R)
+
+# Google Workspace Sync (Optional NotebookLM / Sheets Integration)
+gws:
+  enabled: false
+  cli_path: "/Users/nopparuj/.gemini/extensions/google-workspace-cli/npm/run.js"
+  spreadsheet_id: ""        # Google Sheet ID for trade journal sync
+  doc_id: ""                # Google Doc ID for trade notes

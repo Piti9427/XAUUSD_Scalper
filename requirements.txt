@@ -1,0 +1,16 @@
+# ==============================================================================
+# XAUUSD SMC Trading System — Core Dependencies
+# Single Source of Truth for venv + pip installation
+# ==============================================================================
+
+# Core Mathematical & Time Series Engine
+pandas>=2.0.0
+numpy>=1.24.0
+pyyaml>=6.0
+
+# Alerting & Async Communication
+python-telegram-bot>=20.0
+requests>=2.28.0
+
+# Optional Broker (Windows only; auto-bypassed on macOS and Linux)
+MetaTrader5>=5.0.45; sys_platform == 'win32'

@@ -1,0 +1,10 @@
+# ==============================================================================
+# Optional Visualization Dependencies (Headless Candlestick Chart Snapshots)
+# Install only if dark-theme chart generation is required (Mac/Local Copilot)
+# Usage: pip install -r requirements-viz.txt
+# ==============================================================================
+-r requirements.txt
+
+matplotlib>=3.7.0
+mplfinance>=0.12.9b0
+pillow>=10.0.0
