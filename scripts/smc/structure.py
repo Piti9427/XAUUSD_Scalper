@@ -129,3 +129,32 @@ def check_sweep(
                 return True, c_low
 
     return False, 0.0
+
+
+def is_expansion_breakout(
+    candle: Dict[str, Any],
+    level: float,
+    is_high_level: bool = True,
+    max_breakout_pierce: float = 8.0
+) -> bool:
+    """
+    ADR-002 Expansion Breakout: a candle's body closes through the level,
+    or its wick pierces beyond the fixed $8.00 breakout cap, invalidates
+    sweep search immediately -- a sweep before this bar must not be reused.
+    """
+    c_high = float(candle["high"])
+    c_low = float(candle["low"])
+    c_close = float(candle["close"])
+
+    if is_high_level:
+        if c_high > level:
+            pierce = c_high - level
+            if c_close > level or pierce > max_breakout_pierce:
+                return True
+    else:
+        if c_low < level:
+            pierce = level - c_low
+            if c_close < level or pierce > max_breakout_pierce:
+                return True
+
+    return False

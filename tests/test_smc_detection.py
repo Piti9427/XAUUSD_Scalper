@@ -181,6 +181,78 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, start_time + timedelta(minutes=90))
         self.assertIsNone(signal)
 
+    def test_expansion_breakout_invalidates_stale_sweep(self):
+        # CONTEXT.md Expansion Breakout rule: a candle whose body closes through
+        # the liquidity level, or whose wick pierces beyond $8.00, invalidates
+        # sweep search immediately -- an older sweep before that breakout must
+        # never be reused for a new setup.
+        #
+        # Sequence: bar15 sweeps Asian Low (2010.0) cleanly (stale, pre-breakout).
+        # bar16 is a body-close breakout ($9.00 through the level).
+        # bar17 is a wick-only dip that pierces $9.50 (> $8.00 fixed breakout cap).
+        # bar18 is neutral. bar19 is the MSS displacement candle.
+        # bar20 confirms the FVG.
+        #
+        # Without the breakout check, the backward sweep search skips past
+        # bars 16-18 (none of them satisfy check_sweep) and finds bar15's
+        # stale sweep, producing a signal whose SL is tainted by bar16's low.
+        # With the fix, the search must stop at the first breakout bar and
+        # return no setup, since no valid sweep exists after the breakout.
+        start_time = datetime(2026, 3, 2, 7, 0, tzinfo=timezone.utc)
+        m5_records = []
+        for i in range(15):
+            h = 2014.0 if i == 5 else (2012.0 if i in [4, 6] else 2010.5)
+            m5_records.append({
+                "time": start_time + timedelta(minutes=i * 5),
+                "open": 2010.0, "high": h, "low": 2009.5, "close": 2010.5,
+                "tick_volume": 100,
+            })
+        # bar15 (08:15): stale sweep of Asian Low, pierce $1.50, closes back inside
+        m5_records.append({
+            "time": start_time + timedelta(minutes=15 * 5),
+            "open": 2010.5, "high": 2011.5, "low": 2008.5, "close": 2011.0,
+            "tick_volume": 150,
+        })
+        # bar16 (08:20): body-close breakout, close $9.00 through Asian Low
+        m5_records.append({
+            "time": start_time + timedelta(minutes=16 * 5),
+            "open": 2011.0, "high": 2011.2, "low": 2000.0, "close": 2001.0,
+            "tick_volume": 400,
+        })
+        # bar17 (08:25): wick-only dip piercing $9.50 (> $8.00 fixed breakout cap)
+        m5_records.append({
+            "time": start_time + timedelta(minutes=17 * 5),
+            "open": 2001.0, "high": 2012.0, "low": 2000.5, "close": 2011.5,
+            "tick_volume": 150,
+        })
+        # bar18 (08:30): neutral bar, no sweep
+        m5_records.append({
+            "time": start_time + timedelta(minutes=18 * 5),
+            "open": 2011.5, "high": 2013.0, "low": 2011.0, "close": 2012.5,
+            "tick_volume": 120,
+        })
+        # bar19 (08:35): MSS displacement candle, closes above swing high 2014.0
+        m5_records.append({
+            "time": start_time + timedelta(minutes=19 * 5),
+            "open": 2012.5, "high": 2016.2, "low": 2012.4, "close": 2016.0,
+            "tick_volume": 300,
+        })
+        # bar20 (08:40): confirms FVG (low 2015.0 > bar18 high 2013.0)
+        m5_records.append({
+            "time": start_time + timedelta(minutes=20 * 5),
+            "open": 2016.0, "high": 2018.0, "low": 2015.0, "close": 2017.5,
+            "tick_volume": 200,
+        })
+        df_m5 = pd.DataFrame(m5_records)
+        eval_time = start_time + timedelta(minutes=20 * 5)
+
+        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, eval_time, max_sl_cap=25.0)
+        self.assertIsNone(
+            signal,
+            "Expansion breakout must invalidate the stale pre-breakout sweep; "
+            f"got a setup with SL tainted by the breakout instead: {signal}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

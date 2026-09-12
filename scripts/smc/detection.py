@@ -8,6 +8,7 @@ from scripts.smc.structure import (
     check_displacement,
     detect_fvg,
     check_sweep,
+    is_expansion_breakout,
 )
 
 
@@ -58,6 +59,7 @@ def detect_smc_setup(
     max_sweep_pierce: float = 5.0,
     sweep_lookback: int = 20,
     extended_killzones: bool = True,
+    max_breakout_pierce: float = 8.0,
 ) -> Optional[SetupSignal]:
     """
     Pure Functional Seam: Evaluates market conditions for a deterministic SMC setup.
@@ -167,6 +169,16 @@ def detect_smc_setup(
 
     for i in range(n_m5 - 1, max(0, n_m5 - sweep_lookback), -1):
         bar = df_m5.iloc[i].to_dict()
+
+        # ADR-002 Expansion Breakout: a decisive body-close-through or a wick
+        # pierce beyond $8.00 invalidates the search immediately -- a sweep
+        # that occurred before this bar can no longer be used for a new setup.
+        if any(
+            is_expansion_breakout(bar, lvl, is_high_level=is_high_level, max_breakout_pierce=max_breakout_pierce)
+            for lvl in levels_to_check
+        ):
+            break
+
         for lvl in levels_to_check:
             is_sw, wick = check_sweep(bar, level=lvl, is_high_level=is_high_level, max_pierce=max_sweep_pierce)
             if is_sw:
