@@ -1,0 +1,465 @@
+//@version=6
+strategy("XAUUSD Master Pro Strategy [SMC + TSS + GSS]", shorttitle="XAUPro", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, commission_type=strategy.commission.percent, commission_value=0.01, slippage=1, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+
+// =============================================================================
+// 1. GENERAL & EXECUTION SETTINGS (ADR-023)
+// =============================================================================
+G_GEN          = "1. General & Execution Settings"
+tradeDirection = input.string("Both", "Trade Direction", options=["Both", "Long Only", "Short Only"], group=G_GEN)
+signalMode     = input.string("All Institutional", "Signal Engine Mode", options=["All Institutional", "SMC Prime Only", "TSS (Turtle Soup) Only", "GSS (Golden Zone OTE) Only"], group=G_GEN)
+awaitBarClose  = input.bool(true, "Await Bar Confirmation (Zero Repaint)", group=G_GEN)
+
+// =============================================================================
+// 2. SESSION KILLZONES, JUDAS SWING & SILVER BULLET (UTC) [ADR-007]
+// =============================================================================
+G_SESS           = "2. Session Engine (UTC)"
+useSessionFilter = input.bool(true, "Filter Entries by Killzones", group=G_SESS)
+showSessionBg    = input.bool(true, "Highlight Killzone Backgrounds", group=G_SESS)
+filterRollover   = input.bool(true, "Block Signals During Rollover (20:55-23:00 UTC)", group=G_SESS)
+
+t_hour = hour(time, "UTC")
+t_min  = minute(time, "UTC")
+t_mins = t_hour * 60 + t_min
+
+inAsian    = (t_hour >= 0 and t_hour < 7)
+inLondonKZ = (t_mins >= (7 * 60) and t_mins < (10 * 60 + 30))
+inLondonLiq= (t_mins >= (7 * 60) and t_mins < (12 * 60))
+inNYKZ     = (t_mins >= (12 * 60 + 30) and t_mins < (16 * 60 + 30))
+inRollover = (t_mins >= (20 * 60 + 55) and t_mins < (23 * 60))
+
+isJudasWindow  = (t_hour == 7) or (t_hour == 8 and t_min <= 30)
+isSilverBullet = (t_hour == 7) or (t_hour == 14)
+
+isKillzoneActive = not useSessionFilter or (inLondonKZ or inNYKZ)
+isTimeAllowed    = isKillzoneActive and (not filterRollover or not inRollover)
+
+bgcolor(showSessionBg and inLondonKZ ? color.new(color.blue, 93) : na, title="London Killzone")
+bgcolor(showSessionBg and inNYKZ ? color.new(color.orange, 93) : na, title="NY Killzone")
+
+// =============================================================================
+// =============================================================================
+// 3. ZERO-REPAINT HTF TREND BIAS (H1) [ADR-006, ADR-022]
+// =============================================================================
+G_HTF        = "3. Macro HTF Trend Filter"
+useHtfFilter = input.bool(true, "Use H1 EMA 200 Trend Filter (Zero Repaint)", group=G_HTF)
+
+h1_close_conf  = request.security(syminfo.tickerid, "60", close[1], barmerge.gaps_off, barmerge.lookahead_off)
+h1_ema200_conf = request.security(syminfo.tickerid, "60", ta.ema(close, 200)[1], barmerge.gaps_off, barmerge.lookahead_off)
+
+htfBullish = not useHtfFilter or (h1_close_conf > h1_ema200_conf)
+htfBearish = not useHtfFilter or (h1_close_conf < h1_ema200_conf)
+
+// =============================================================================
+// 4. MULTI-SESSION LIQUIDITY CASCADE (ADR-017)
+// =============================================================================
+G_LIQ             = "4. Liquidity Pools & Swing Extremums"
+maxSweepPiercePts = input.float(8.0, "Max Sweep Pierce ($) [ADR-002]", step=0.5, group=G_LIQ)
+minSweepPiercePts = input.float(0.30, "Min Sweep Pierce ($)", step=0.05, group=G_LIQ)
+
+pdh = request.security(syminfo.tickerid, "D", high[1], barmerge.gaps_off, barmerge.lookahead_off)
+pdl = request.security(syminfo.tickerid, "D", low[1], barmerge.gaps_off, barmerge.lookahead_off)
+
+var float asianHigh  = na
+var float asianLow   = na
+var float currAsianH = na
+var float currAsianL = na
+
+isNewAsianDay = ta.change(dayofmonth(time, "UTC")) != 0
+
+if isNewAsianDay
+    currAsianH := na
+    currAsianL := na
+
+if inAsian
+    currAsianH := math.max(nz(currAsianH, high), high)
+    currAsianL := math.min(nz(currAsianL, low), low)
+    asianHigh  := currAsianH
+    asianLow   := currAsianL
+
+var float londonHigh  = na
+var float londonLow   = na
+var float currLondonH = na
+var float currLondonL = na
+
+if inLondonLiq and not inLondonLiq[1]
+    currLondonH := high
+    currLondonL := low
+else if inLondonLiq
+    currLondonH := math.max(nz(currLondonH, high), high)
+    currLondonL := math.min(nz(currLondonL, low), low)
+    londonHigh  := currLondonH
+    londonLow   := currLondonL
+
+isSwingHigh = (high[2] > high[0]) and (high[2] > high[1]) and (high[2] > high[3]) and (high[2] > high[4])
+isSwingLow  = (low[2] < low[0]) and (low[2] < low[1]) and (low[2] < low[3]) and (low[2] < low[4])
+var float lastSwingHigh    = na
+var float lastSwingLow     = na
+var int   lastSwingHighBar = na
+var int   lastSwingLowBar  = na
+
+if isSwingHigh
+    lastSwingHigh    := high[2]
+    lastSwingHighBar := bar_index - 2
+if isSwingLow
+    lastSwingLow     := low[2]
+    lastSwingLowBar  := bar_index - 2
+
+sweepLowAsian  = not inAsian and (low < asianHigh) and (low < asianLow) and (close >= asianLow) and ((asianLow - low) <= maxSweepPiercePts) and ((asianLow - low) >= minSweepPiercePts)
+sweepLowPdl    = (low < pdl) and (close >= pdl) and ((pdl - low) <= maxSweepPiercePts) and ((pdl - low) >= minSweepPiercePts)
+sweepLowLondon = inNYKZ and not na(londonLow) and (low < londonLow) and (close >= londonLow) and ((londonLow - low) <= maxSweepPiercePts) and ((londonLow - low) >= minSweepPiercePts)
+isSweepLow     = sweepLowAsian or sweepLowPdl or sweepLowLondon
+
+sweepHighAsian = not inAsian and (high > asianLow) and (high > asianHigh) and (close <= asianHigh) and ((high - asianHigh) <= maxSweepPiercePts) and ((high - asianHigh) >= minSweepPiercePts)
+sweepHighPdh   = (high > pdh) and (close <= pdh) and ((high - pdh) <= maxSweepPiercePts) and ((high - pdh) >= minSweepPiercePts)
+sweepHighLondon= inNYKZ and not na(londonHigh) and (high > londonHigh) and (close <= londonHigh) and ((high - londonHigh) <= maxSweepPiercePts) and ((high - londonHigh) >= minSweepPiercePts)
+isSweepHigh    = sweepHighAsian or sweepHighPdh or sweepHighLondon
+
+var int   lastSweepBar       = na
+var float trueSweepExtremum  = na
+var int   lastSweepDir       = 0
+
+if isSweepLow
+    lastSweepBar      := bar_index
+    trueSweepExtremum := low
+    lastSweepDir      := 1
+else if lastSweepDir == 1 and (bar_index - nz(lastSweepBar, 0) <= 8)
+    trueSweepExtremum := math.min(nz(trueSweepExtremum, low), low)
+
+if isSweepHigh
+    lastSweepBar      := bar_index
+    trueSweepExtremum := high
+    lastSweepDir      := -1
+else if lastSweepDir == -1 and (bar_index - nz(lastSweepBar, 0) <= 8)
+    trueSweepExtremum := math.max(nz(trueSweepExtremum, high), high)
+
+// =============================================================================
+// 5. SMC PRIME ENGINE (SWEEP + MSS + FVG LIMIT PENDING) [ADR-003, 004, 005, 014]
+// =============================================================================
+G_SMC         = "5. SMC Prime Parameters"
+minDispRatio  = input.float(0.45, "Min Displacement Body Ratio [ADR-004]", step=0.05, group=G_SMC)
+minFvgSizePts = input.float(0.30, "Min FVG Gap Size ($) [ADR-004]", step=0.05, group=G_SMC)
+orderTtlBars  = input.int(4, "Limit Order TTL (Bars) [ADR-005]", minval=1, maxval=10, group=G_SMC)
+
+candleRange    = high - low
+candleBody     = math.abs(close - open)
+isDisplacement = (candleRange > 0) and ((candleBody / candleRange) >= minDispRatio)
+barsSinceSweep = bar_index - nz(lastSweepBar, 0)
+
+canMssBullish = (lastSweepDir == 1) and (barsSinceSweep <= 8) and (barsSinceSweep > 0)
+canMssBearish = (lastSweepDir == -1) and (barsSinceSweep <= 8) and (barsSinceSweep > 0)
+
+isMssBullish = canMssBullish and (close > lastSwingHigh) and (close > open) and isDisplacement and htfBullish and isTimeAllowed
+isMssBearish = canMssBearish and (close < lastSwingLow) and (close < open) and isDisplacement and htfBearish and isTimeAllowed
+
+var int lastMssBar = na
+var int lastMssDir = 0
+
+if isMssBullish
+    lastMssBar := bar_index
+    lastMssDir := 1
+if isMssBearish
+    lastMssBar := bar_index
+    lastMssDir := -1
+
+barsSinceMss = bar_index - nz(lastMssBar, 0)
+
+isFvgBullish = (low[0] > high[2]) and ((low[0] - high[2]) >= minFvgSizePts)
+isFvgBearish = (low[2] > high[0]) and ((low[2] - high[0]) >= minFvgSizePts)
+
+canFvgBullish = (lastMssDir == 1) and (barsSinceMss <= 4) and (barsSinceMss >= 0) and isFvgBullish
+canFvgBearish = (lastMssDir == -1) and (barsSinceMss <= 4) and (barsSinceMss >= 0) and isFvgBearish
+
+smcBuySetupReady  = canFvgBullish and isTimeAllowed and (tradeDirection != "Short Only")
+smcSellSetupReady = canFvgBearish and isTimeAllowed and (tradeDirection != "Long Only")
+
+// =============================================================================
+// 6. TSS ENGINE (TURTLE SOUP STRATEGY - 20-BAR FALSE BREAKOUT)
+// =============================================================================
+G_TSS        = "6. TSS Engine (Turtle Soup False Breakout)"
+tssLookback  = input.int(20, "TSS Lookback (Bars)", minval=5, group=G_TSS)
+tssMinPierce = input.float(0.40, "TSS Min Pierce ($)", step=0.1, group=G_TSS)
+tssMaxPierce = input.float(5.00, "TSS Max Pierce ($)", step=0.5, group=G_TSS)
+
+priorHigh20 = ta.highest(high[1], tssLookback)
+priorLow20  = ta.lowest(low[1], tssLookback)
+
+tssBuySignal  = (low < priorLow20) and ((priorLow20 - low) >= tssMinPierce) and ((priorLow20 - low) <= tssMaxPierce) and (close > priorLow20) and isTimeAllowed and htfBullish and (tradeDirection != "Short Only")
+tssSellSignal = (high > priorHigh20) and ((high - priorHigh20) >= tssMinPierce) and ((high - priorHigh20) <= tssMaxPierce) and (close < priorHigh20) and isTimeAllowed and htfBearish and (tradeDirection != "Long Only")
+
+// =============================================================================
+// 7. GSS ENGINE (GOLDEN ZONE OTE 61.8% - 78.6% DIRECTION-VERIFIED)
+// =============================================================================
+G_GSS         = "7. GSS Engine (Golden Zone OTE Pullback)"
+minLegSizePts = input.float(3.0, "Min Impulse Leg Size ($)", step=0.5, group=G_GSS)
+
+isBullishImpulse = not na(lastSwingLowBar) and not na(lastSwingHighBar) and (lastSwingLowBar < lastSwingHighBar)
+bullRange        = nz(lastSwingHigh - lastSwingLow, 0.0)
+fib618Bull       = lastSwingHigh - (bullRange * 0.618)
+fib786Bull       = lastSwingHigh - (bullRange * 0.786)
+
+gssBuyCondition  = isBullishImpulse and (bullRange >= minLegSizePts) and (low <= fib618Bull) and (low >= fib786Bull) and (close > open) and htfBullish and isTimeAllowed and (tradeDirection != "Short Only")
+
+isBearishImpulse = not na(lastSwingLowBar) and not na(lastSwingHighBar) and (lastSwingHighBar < lastSwingLowBar)
+bearRange        = nz(lastSwingHigh - lastSwingLow, 0.0)
+fib618Bear       = lastSwingLow + (bearRange * 0.618)
+fib786Bear       = lastSwingLow + (bearRange * 0.786)
+
+gssSellCondition = isBearishImpulse and (bearRange >= minLegSizePts) and (high >= fib618Bear) and (high <= fib786Bear) and (close < open) and htfBearish and isTimeAllowed and (tradeDirection != "Long Only")
+
+gssBuySignal  = gssBuyCondition and not gssBuyCondition[1]
+gssSellSignal = gssSellCondition and not gssSellCondition[1]
+
+// =============================================================================
+// 8. RISK & TWO-TIER SCALE-OUT (ADR-018/019/024)
+// =============================================================================
+G_RISK    = "8. Risk & Two-Tier Scale-Out (ADR-018/019/024)"
+maxSlCap  = input.float(25.0, "Max SL Cap Distance ($) [ADR-019]", step=1.0, group=G_RISK, tooltip="If structural risk exceeds this cap, setup is strictly rejected")
+slBuffer  = input.float(0.30, "SL Spread Buffer ($)", step=0.05, group=G_RISK)
+beBuffer  = input.float(0.10, "Breakeven Buffer ($)", step=0.05, group=G_RISK)
+spreadPts = input.float(0.30, "Broker Spread ($) [ADR-024]", step=0.05, group=G_RISK, tooltip="Ask-Bid spread for Long limit fills and Short TP exits")
+tp1R      = input.float(1.0, "TP1 Target (R) [Close 50% & Move BE]", step=0.1, group=G_RISK)
+tp2R      = input.float(2.5, "TP2 Runner Target (R)", step=0.5, group=G_RISK)
+
+// =============================================================================
+// 9. EXECUTION & TRADINGVIEW STRATEGY COUPLING (ADR-023)
+// =============================================================================
+var bool   pendingActive     = false
+var int    pendingDir        = 0
+var float  pendingLimit      = na
+var float  pendingSl         = na
+var float  pendingTp1        = na
+var float  pendingTp2        = na
+var int    pendingBar        = na
+var string pendingType       = ""
+var bool   pendingPlacedInKz = false
+
+var bool   tradeActive       = false
+var int    tradeDir          = 0
+var float  tradeEntry        = na
+var float  tradeSl           = na
+var float  tradeTp1          = na
+var float  tradeTp2          = na
+var bool   isBeRelocated     = false
+var int    tp1Bar            = na
+
+bool triggerNewPending = false
+bool triggerNewMarket  = false
+int  newDir            = 0
+float newEntry         = na
+float newSl            = na
+float newTp1           = na
+float newTp2           = na
+string newType         = ""
+
+bool allowSmc = (signalMode == "All Institutional" or signalMode == "SMC Prime Only")
+bool allowTss = (signalMode == "All Institutional" or signalMode == "TSS (Turtle Soup) Only")
+bool allowGss = (signalMode == "All Institutional" or signalMode == "GSS (Golden Zone OTE) Only")
+
+// 1. SMC Prime (Limit Order Model at 50% FVG)
+if allowSmc and not tradeActive and not pendingActive
+    if smcBuySetupReady
+        fvgCe = (low[0] + high[2]) / 2.0
+        rawSl = trueSweepExtremum - slBuffer
+        dist  = fvgCe - rawSl
+        if dist > 0 and dist <= maxSlCap
+            triggerNewPending := true
+            newDir   := 1
+            newEntry := fvgCe
+            newSl    := rawSl
+            newTp1   := fvgCe + (dist * tp1R)
+            newTp2   := fvgCe + (dist * tp2R)
+            newType  := "SMC_PRIME"
+    else if smcSellSetupReady
+        fvgCe = (high[0] + low[2]) / 2.0
+        rawSl = trueSweepExtremum + slBuffer
+        dist  = rawSl - fvgCe
+        if dist > 0 and dist <= maxSlCap
+            triggerNewPending := true
+            newDir   := -1
+            newEntry := fvgCe
+            newSl    := rawSl
+            newTp1   := fvgCe - (dist * tp1R)
+            newTp2   := fvgCe - (dist * tp2R)
+            newType  := "SMC_PRIME"
+
+// 2. TSS (Immediate Market Confirmation on Rejection Bar Close)
+if allowTss and not tradeActive and not pendingActive and not triggerNewPending
+    if tssBuySignal
+        rawSl = low - slBuffer
+        dist  = close - rawSl
+        if dist > 0 and dist <= maxSlCap
+            triggerNewMarket := true
+            newDir   := 1
+            newEntry := close
+            newSl    := rawSl
+            newTp1   := close + (dist * tp1R)
+            newTp2   := close + (dist * tp2R)
+            newType  := "TSS"
+    else if tssSellSignal
+        rawSl = high + slBuffer
+        dist  = rawSl - close
+        if dist > 0 and dist <= maxSlCap
+            triggerNewMarket := true
+            newDir   := -1
+            newEntry := close
+            newSl    := rawSl
+            newTp1   := close - (dist * tp1R)
+            newTp2   := close - (dist * tp2R)
+            newType  := "TSS"
+
+// 3. GSS (Immediate Market Confirmation on OTE Bar Close)
+if allowGss and not tradeActive and not pendingActive and not triggerNewPending and not triggerNewMarket
+    if gssBuySignal
+        rawSl = nz(lastSwingLow, low) - slBuffer
+        dist  = close - rawSl
+        if dist > 0 and dist <= maxSlCap
+            triggerNewMarket := true
+            newDir   := 1
+            newEntry := close
+            newSl    := rawSl
+            newTp1   := close + (dist * tp1R)
+            newTp2   := close + (dist * tp2R)
+            newType  := "GSS_OTE"
+    else if gssSellSignal
+        rawSl = nz(lastSwingHigh, high) + slBuffer
+        dist  = rawSl - close
+        if dist > 0 and dist <= maxSlCap
+            triggerNewMarket := true
+            newDir   := -1
+            newEntry := close
+            newSl    := rawSl
+            newTp1   := close - (dist * tp1R)
+            newTp2   := close - (dist * tp2R)
+            newType  := "GSS_OTE"
+
+barConfirmed = awaitBarClose ? barstate.isconfirmed : true
+
+// Activate Pending Limit
+if triggerNewPending and barConfirmed
+    pendingActive     := true
+    pendingDir        := newDir
+    pendingLimit      := newEntry
+    pendingSl         := newSl
+    pendingTp1        := newTp1
+    pendingTp2        := newTp2
+    pendingBar        := bar_index
+    pendingType       := newType
+    pendingPlacedInKz := isKillzoneActive
+
+// Activate Market Entry (TSS/GSS — bar-close confirmation, enter at confirmed close price)
+if triggerNewMarket and barConfirmed
+    tradeActive   := true
+    tradeDir      := newDir
+    tradeEntry    := newEntry
+    tradeSl       := newSl
+    tradeTp1      := newTp1
+    tradeTp2      := newTp2
+    isBeRelocated := false
+    tp1Bar        := na
+    if newDir == 1
+        strategy.entry("Long", strategy.long, limit=newEntry)
+    else if newDir == -1
+        strategy.entry("Short", strategy.short, limit=newEntry)
+
+// Check Pending Order Fill on subsequent bars (SMC — limit at 50% FVG price with spread buffer)
+if pendingActive and not tradeActive and (bar_index > pendingBar)
+    bool filled = false
+    // Long limit: Ask must reach down to limit price
+    if pendingDir == 1 and (low + spreadPts) <= pendingLimit
+        filled := true
+    // Short limit: Bid must reach up to limit price (chart shows Bid)
+    else if pendingDir == -1 and high >= pendingLimit
+        filled := true
+        
+    bool ttlExpired = (bar_index - pendingBar) >= orderTtlBars
+    bool kzExpired  = pendingPlacedInKz and not isKillzoneActive
+
+    if filled
+        tradeActive   := true
+        tradeDir      := pendingDir
+        tradeEntry    := pendingLimit
+        tradeSl       := pendingSl
+        tradeTp1      := pendingTp1
+        tradeTp2      := pendingTp2
+        isBeRelocated := false
+        tp1Bar        := na
+        pendingActive := false
+        if tradeDir == 1
+            strategy.entry("Long", strategy.long, limit=pendingLimit)
+        else if tradeDir == -1
+            strategy.entry("Short", strategy.short, limit=pendingLimit)
+    else if ttlExpired or kzExpired
+        pendingActive := false
+
+// Manage Active Trade Exits (TP1 50% partial + BE, Full TP2, SL)
+// Hardened ADR-024:
+// 1. Original SL checked FIRST before TP1 (conservative invariant, zero optimistic survivor bias)
+// 2. tp1Bar guard: DO NOT evaluate Breakeven on the exact bar TP1 is hit, as lower shadow precedes expansion
+// 3. Short exits calibrated for Ask execution (low + spreadPts)
+if tradeActive
+    if tradeDir == 1
+        // === LONG EXITS (Sell at Bid = chart price) ===
+        // 1. Before BE: Original SL checked FIRST
+        if not isBeRelocated and low <= tradeSl
+            strategy.close("Long", comment="SL 🛑")
+            tradeActive := false
+            tp1Bar      := na
+        // 2. Before BE: Only if SL NOT hit, check TP1 (Close 50% & Move BE)
+        else if not isBeRelocated and high >= tradeTp1
+            strategy.close("Long", qty_percent=50, comment="TP1 (+1.0R) 🏦")
+            isBeRelocated := true
+            tradeSl       := tradeEntry + beBuffer
+            tp1Bar        := bar_index
+            // Same bar: only TP2 can trigger (DO NOT check low vs new BE)
+            if high >= tradeTp2
+                strategy.close("Long", comment="TP2 (+2.5R) 🎯")
+                tradeActive := false
+                tp1Bar      := na
+        // 3. After BE (subsequent bars only: bar_index > tp1Bar)
+        else if isBeRelocated and bar_index > tp1Bar
+            if high >= tradeTp2
+                strategy.close("Long", comment="TP2 (+2.5R) 🎯")
+                tradeActive := false
+                tp1Bar      := na
+            else if low <= tradeSl
+                strategy.close("Long", comment="BE (+0.10) 🛡️")
+                tradeActive := false
+                tp1Bar      := na
+                
+    else if tradeDir == -1
+        // === SHORT EXITS ===
+        // 1. Before BE: Original SL checked FIRST (raw high, tradeSl already includes slBuffer)
+        if not isBeRelocated and high >= tradeSl
+            strategy.close("Short", comment="SL 🛑")
+            tradeActive := false
+            tp1Bar      := na
+        // 2. Before BE: Only if SL NOT hit, check TP1 (Ask-calibrated: low + spreadPts)
+        else if not isBeRelocated and (low + spreadPts) <= tradeTp1
+            strategy.close("Short", qty_percent=50, comment="TP1 (+1.0R) 🏦")
+            isBeRelocated := true
+            tradeSl       := tradeEntry - beBuffer
+            tp1Bar        := bar_index
+            // Same bar: only TP2 can trigger
+            if (low + spreadPts) <= tradeTp2
+                strategy.close("Short", comment="TP2 (+2.5R) 🎯")
+                tradeActive := false
+                tp1Bar      := na
+        // 3. After BE (subsequent bars only: bar_index > tp1Bar)
+        else if isBeRelocated and bar_index > tp1Bar
+            if (low + spreadPts) <= tradeTp2
+                strategy.close("Short", comment="TP2 (+2.5R) 🎯")
+                tradeActive := false
+                tp1Bar      := na
+            else if high >= tradeSl
+                strategy.close("Short", comment="BE (+0.10) 🛡️")
+                tradeActive := false
+                tp1Bar      := na
+
+// Rollover Flat Rule (20:55 UTC)
+if tradeActive and inRollover
+    if tradeDir == 1
+        strategy.close("Long", comment="Rollover Flat ⏰")
+    else if tradeDir == -1
+        strategy.close("Short", comment="Rollover Flat ⏰")
+    tradeActive := false
+    tp1Bar      := na
