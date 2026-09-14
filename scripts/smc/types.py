@@ -56,6 +56,8 @@ class OrderIntent:
     lot_size: Optional[float] = None
     reason: str = ""
     expire_bars: int = 3
+    order_id: Optional[str] = None
+    ticket: Optional[int] = None
 
 
 @dataclass
