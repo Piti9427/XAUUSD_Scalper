@@ -1,8 +1,10 @@
+import asyncio
 from datetime import datetime, timezone
+import math
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set, Tuple
 import logging
-from fastapi import FastAPI, Depends, HTTPException, Header, Request, status
+from fastapi import FastAPI, Depends, HTTPException, Header, Request, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
@@ -21,18 +23,46 @@ def create_app(
     max_daily_losses: int = 2,
     rollover_hour_utc: int = 20,
     rollover_minute_utc: int = 55,
+    notifier: Optional[Any] = None,
+    news_manager: Optional[Any] = None,
+    commission_per_lot: Optional[float] = None,
+    slippage_allowance: Optional[float] = None,
 ) -> FastAPI:
     """
-    Factory creating the FastAPI Webhook Bridge application.
+    Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
     """
     app = FastAPI(
         title="XAUUSD Master Pro Webhook Bridge",
-        version="1.0.0",
-        description="Translates TradingView alerts into broker MT5 executions with strict risk shields.",
+        version="1.1.0",
+        description="Translates TradingView alerts into broker MT5 executions with strict async risk shields.",
     )
 
     start_time = time.time()
     adapter = SMCExecutionAdapter(symbol="XAUUSD", dry_run=dry_run, db_path=db_path)
+    app.state.adapter = adapter
+
+    # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
+    memory_idempotency_cache: Set[Tuple[str, str]] = set()
+
+    def is_processed(oid: str, ev: str) -> bool:
+        if (oid, ev) in memory_idempotency_cache:
+            return True
+        if adapter.is_webhook_processed(oid, ev):
+            memory_idempotency_cache.add((oid, ev))
+            return True
+        return False
+
+    def mark_processed(oid: str, ev: str, status_str: str = "success"):
+        memory_idempotency_cache.add((oid, ev))
+        adapter.mark_webhook_processed(oid, ev, status=status_str)
+
+    # Pattern B: Safe Non-Blocking Dispatcher for Side-Effects (Telegram Notifier)
+    def _dispatch_tg_safe(card: str):
+        if notifier and getattr(notifier, "enabled", False):
+            try:
+                notifier.send_message(card)
+            except Exception as exc:
+                logger.warning(f"Background Telegram dispatch error: {exc}")
 
     async def verify_auth(
         authorization: Optional[str] = Header(None),
@@ -53,16 +83,141 @@ def create_app(
 
     @app.get("/health")
     async def health_check():
+        daily_losses = await asyncio.to_thread(adapter.get_daily_realized_losses)
+        equity = (await asyncio.to_thread(adapter.get_account_equity)) or account_balance
+        circuit_tripped = daily_losses >= max_daily_losses
         return {
             "status": "ok",
             "mode": "dry-run" if adapter.dry_run else "live",
+            "mt5_connected": not adapter.dry_run and adapter.connected,
+            "account_equity": equity,
+            "daily_realized_losses": daily_losses,
+            "circuit_breaker_tripped": circuit_tripped,
             "uptime_seconds": round(time.time() - start_time, 2),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
+    @app.post("/api/v1/setup")
+    async def handle_versioned_setup(
+        request: Request,
+        authorized: bool = Depends(verify_auth),
+    ):
+        try:
+            payload = await request.json()
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Malformed JSON payload",
+            )
+
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payload must be a JSON object",
+            )
+
+        # 1. Validate required fields
+        required_fields = ["order_id", "symbol", "dir", "limit", "sl"]
+        for rf in required_fields:
+            if rf not in payload or payload[rf] is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Missing required field: {rf}",
+                )
+
+        order_id = str(payload["order_id"]).strip()
+        symbol = str(payload["symbol"]).strip()
+        direction_str = str(payload["dir"]).strip().upper()
+
+        if direction_str not in ("BUY", "SELL"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid direction. Must be BUY or SELL",
+            )
+
+        try:
+            limit = float(payload["limit"])
+            sl = float(payload["sl"])
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="limit and sl must be valid floating point numbers",
+            )
+
+        if not (math.isfinite(limit) and math.isfinite(sl)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="limit and sl must be finite numbers",
+            )
+
+        if limit <= 0 or sl <= 0 or limit == sl:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="limit and sl must be positive and not equal",
+            )
+
+        # Geometry validation
+        if direction_str == "BUY" and limit <= sl:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid price geometry: BUY limit price must be higher than stop loss",
+            )
+        if direction_str == "SELL" and limit >= sl:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid price geometry: SELL limit price must be lower than stop loss",
+            )
+
+        # 2. Atomic claim via setup_inbox
+        claim = await asyncio.to_thread(adapter.claim_setup, payload)
+        if claim["status"] == "duplicate":
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "status": "ignored_duplicate",
+                    "receipt_id": claim["receipt_id"],
+                    "order_id": order_id,
+                },
+            )
+        elif claim["status"] == "conflict":
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "status": "conflict",
+                    "receipt_id": claim["receipt_id"],
+                    "order_id": order_id,
+                    "reason": "Conflicting payload for existing order_id",
+                },
+            )
+        elif claim["status"] == "busy":
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "status": "busy",
+                    "order_id": order_id,
+                    "reason": "Another active setup is currently claimed or uncertain",
+                },
+            )
+        elif claim["status"] == "claimed":
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "status": "accepted",
+                    "receipt_id": claim["receipt_id"],
+                    "order_id": order_id,
+                    "symbol": symbol,
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unexpected claim status: {claim['status']}",
+            )
+
     @app.post("/webhook/tradingview")
     async def handle_tradingview_webhook(
         request: Request,
+        background_tasks: BackgroundTasks,
         authorized: bool = Depends(verify_auth),
     ):
         try:
@@ -77,25 +232,45 @@ def create_app(
         order_id = payload.get("order_id")
         logger.info(f"Received verified webhook event: {event} for order_id: {order_id}")
 
-        # Idempotency Check: Reject duplicates
-        if order_id and adapter.is_webhook_processed(order_id, event):
+        if event == "SETUP_PENDING" and order_id and not adapter.dry_run:
+            existing_setup = await asyncio.to_thread(adapter.inspect_setup, payload)
+            if existing_setup is not None:
+                return {
+                    "status": "ignored_duplicate" if existing_setup["status"] == "duplicate" else "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "receipt_id": existing_setup["receipt_id"],
+                    **({"reason": "Conflicting payload for existing order_id"}
+                       if existing_setup["status"] == "conflict" else {}),
+                }
+
+        # Idempotency Check: Fast-path in-memory check followed by SQLite
+        if order_id and is_processed(order_id, event):
             logger.warning(f"Ignoring duplicate webhook delivery for {order_id} ({event})")
+            receipt_id = (
+                await asyncio.to_thread(adapter.get_setup_receipt, order_id)
+                if event == "SETUP_PENDING" else None
+            )
             return {
                 "status": "ignored_duplicate",
                 "order_id": order_id,
                 "event": event,
                 "message": f"Event {event} already processed for {order_id}",
+                **({"receipt_id": receipt_id} if receipt_id else {}),
             }
 
         # 1. SETUP_PENDING: Place Pending Limit with Dynamic Risk Sizing
         if event == "SETUP_PENDING":
             # 1a. Daily Circuit Breaker Guard (ADR-011)
-            losses_today = adapter.get_daily_realized_losses()
+            losses_today = await asyncio.to_thread(adapter.get_daily_realized_losses)
             if losses_today >= max_daily_losses:
                 reason = f"Daily Circuit Breaker Triggered (ADR-011): {losses_today}/{max_daily_losses} daily losses reached. Trading halted."
                 logger.warning(reason)
+                if notifier and getattr(notifier, "enabled", False):
+                    from scripts.smc.notifier import format_circuit_breaker_card
+                    background_tasks.add_task(_dispatch_tg_safe, format_circuit_breaker_card(losses_today=losses_today))
                 if order_id:
-                    adapter.mark_webhook_processed(order_id, event, status="rejected_circuit_breaker")
+                    await asyncio.to_thread(mark_processed, order_id, event, "rejected_circuit_breaker")
                 return {
                     "status": "rejected",
                     "order_id": order_id,
@@ -104,10 +279,20 @@ def create_app(
                 }
 
             # 1b. Rollover Flat Guard (ADR-007)
-            event_time_str = payload.get("time")
-            if event_time_str:
+            event_time_raw = payload.get("time")
+            if event_time_raw is not None:
                 try:
-                    event_dt = datetime.fromisoformat(event_time_str.replace(" ", "T"))
+                    if isinstance(event_time_raw, (int, float)):
+                        if event_time_raw > 1e11:
+                            event_dt = datetime.fromtimestamp(event_time_raw / 1000.0, tz=timezone.utc)
+                        else:
+                            event_dt = datetime.fromtimestamp(float(event_time_raw), tz=timezone.utc)
+                    else:
+                        event_dt = datetime.fromisoformat(str(event_time_raw).replace(" ", "T"))
+                        if event_dt.tzinfo is None:
+                            event_dt = event_dt.replace(tzinfo=timezone.utc)
+                        else:
+                            event_dt = event_dt.astimezone(timezone.utc)
                 except Exception:
                     event_dt = datetime.now(timezone.utc)
             else:
@@ -119,13 +304,72 @@ def create_app(
                 reason = f"Rollover Flat Guard (ADR-007): Orders blocked after {rollover_hour_utc}:{rollover_minute_utc:02d} UTC"
                 logger.warning(reason)
                 if order_id:
-                    adapter.mark_webhook_processed(order_id, event, status="rejected_rollover")
+                    await asyncio.to_thread(mark_processed, order_id, event, "rejected_rollover")
                 return {
                     "status": "rejected",
                     "order_id": order_id,
                     "event": event,
                     "reason": reason,
                 }
+
+            # 1c. 30-Minute Post-SL Cooldown Check (ADR-011)
+            last_loss_dt = await asyncio.to_thread(adapter.get_last_loss_timestamp)
+            if last_loss_dt:
+                elapsed_seconds = (event_dt - last_loss_dt).total_seconds()
+                if 0 <= elapsed_seconds < 1800:
+                    remaining_mins = int((1800 - elapsed_seconds) // 60) + 1
+                    reason = f"Post-SL Cooldown Active (ADR-011): {remaining_mins}m remaining before new setups allowed."
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(mark_processed, order_id, event, "rejected_cooldown")
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
+
+            # 1d. High-Impact USD News Blackout Window (ADR-010)
+            if news_manager is not None:
+                is_blackout, news_name = await asyncio.to_thread(
+                    news_manager.is_in_blackout, event_dt, getattr(news_manager, "events", [])
+                )
+                if is_blackout:
+                    reason = f"News Blackout (ADR-010): High-impact news '{news_name}' within 30m window."
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(mark_processed, order_id, event, "rejected_news")
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
+
+            # 1e. Dynamic Account Equity Sizing (ADR-020)
+            broker_risk = None
+            if not adapter.dry_run:
+                broker_risk = await asyncio.to_thread(adapter.get_risk_snapshot)
+            if not adapter.dry_run and broker_risk is None:
+                reason = "Execution Gated: MT5 account or symbol risk data unavailable."
+                logger.error(reason)
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": reason,
+                }
+            effective_balance = broker_risk["balance"] if broker_risk else account_balance
+            effective_equity = broker_risk["equity"] if broker_risk else account_balance
+            if not adapter.dry_run:
+                exposure = await asyncio.to_thread(adapter.get_open_exposure)
+                if exposure is None or exposure:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": "Broker exposure is present or unknown; new setup blocked",
+                    }
 
             entry = float(payload["limit"])
             sl = float(payload["sl"])
@@ -137,22 +381,45 @@ def create_app(
 
             # Sizing with zero spread double-buffer invariant
             lot_result = calculate_lot_size(
-                balance=account_balance,
+                balance=effective_balance,
                 entry_price=entry,
                 sl_price=sl,
                 risk_pct=risk_pct,
                 spread_buffer=0.0,
+                equity=effective_equity,
+                min_lot=broker_risk["min_lot"] if broker_risk else 0.01,
+                max_lot=broker_risk["max_lot"] if broker_risk else 10.0,
+                lot_step=broker_risk["lot_step"] if broker_risk else 0.01,
+                contract_size=broker_risk["contract_size"] if broker_risk else 100.0,
+                commission_per_lot=commission_per_lot,
+                slippage_allowance=slippage_allowance,
+                require_cost_model=not adapter.dry_run,
             )
 
             if not lot_result.is_valid:
                 if order_id:
-                    adapter.mark_webhook_processed(order_id, event, status="rejected")
+                    await asyncio.to_thread(mark_processed, order_id, event, "rejected")
                 return {
                     "status": "rejected",
                     "order_id": order_id,
                     "event": event,
                     "reason": f"ADR-020 Small-Account Risk Gate: {lot_result.reason}",
                 }
+
+            if not adapter.dry_run:
+                claim = await asyncio.to_thread(adapter.claim_setup, payload)
+                if claim["status"] == "duplicate":
+                    return {
+                        "status": "ignored_duplicate",
+                        "order_id": order_id,
+                        "receipt_id": claim["receipt_id"],
+                    }
+                if claim["status"] != "claimed":
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "reason": f"Setup claim {claim['status']}; broker reconciliation required",
+                    }
 
             intent = OrderIntent(
                 intent_type=OrderIntentType.PLACE_LIMIT,
@@ -164,14 +431,67 @@ def create_app(
                 order_id=order_id,
                 reason=payload.get("type", "SMC_PRIME"),
             )
-            exec_res = adapter.execute_intent(intent)
+            # Pattern A: Offload blocking MT5 broker call to thread pool
+            try:
+                exec_res = await asyncio.to_thread(adapter.execute_intent, intent)
+            except Exception as exc:
+                logger.error(f"Execution error or timeout for {order_id}: {exc}")
+                if not adapter.dry_run and order_id:
+                    await asyncio.to_thread(adapter.update_setup_status, order_id, "uncertain")
+                return {
+                    "status": "uncertain",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": f"Execution uncertain: {exc}. Broker reconciliation required.",
+                }
+            if not exec_res.success:
+                if not adapter.dry_run and order_id:
+                    await asyncio.to_thread(adapter.update_setup_status, order_id, "rejected")
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": exec_res.message,
+                }
+            if not adapter.dry_run and order_id:
+                await asyncio.to_thread(adapter.update_setup_status, order_id, "accepted", exec_res.order_id)
             if order_id:
-                adapter.mark_webhook_processed(order_id, event, status="success")
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
+
+            # Pattern B: Fire-and-forget Telegram notification
+            if notifier and getattr(notifier, "enabled", False):
+                try:
+                    from scripts.smc.types import SetupSignal
+                    from scripts.smc.notifier import format_smc_trade_card
+                    sig = SetupSignal(
+                        direction=direction,
+                        sweep_price=sl,
+                        sweep_wick=sl,
+                        mss_price=entry,
+                        entry_price=entry,
+                        sl_price=sl,
+                        tp_price=tp2 if tp2 > 0 else tp1,
+                        sl_distance=lot_result.sl_distance,
+                        risk_r=2.5,
+                        fvg_high=max(entry, sl),
+                        fvg_low=min(entry, sl),
+                        reason=payload.get("type", "SMC_PRIME"),
+                        timestamp=event_dt,
+                    )
+                    card = format_smc_trade_card(
+                        signal=sig,
+                        lot_size=lot_result.lot_size,
+                        risk_amount=lot_result.risk_amount,
+                    )
+                    background_tasks.add_task(_dispatch_tg_safe, card)
+                except Exception as exc:
+                    logger.warning(f"Failed to schedule Telegram notification: {exc}")
 
             return {
                 "status": "success",
                 "action": "LIMIT_PLACED",
                 "order_id": order_id,
+                **({"receipt_id": claim["receipt_id"]} if not adapter.dry_run else {}),
                 "lot_size": lot_result.lot_size,
                 "ticket": exec_res.order_id,
                 "message": exec_res.message,
@@ -186,23 +506,59 @@ def create_app(
             direction = (
                 Direction.BUY if payload.get("dir") == "BUY" else Direction.SELL
             )
-            adapter.log_lifecycle_event(
+            ticket = None
+            reason = "TradingView Alert Fill Confirmation"
+            if not adapter.dry_run:
+                pos = await asyncio.to_thread(adapter.get_matching_position, order_id)
+                if pos is None:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": "Broker has no open position matching order_id",
+                    }
+                entry = float(pos.price_open)
+                ticket = int(pos.ticket)
+                reason = "TradingView Alert Fill Confirmation (Broker Verified)"
+
+            await asyncio.to_thread(
+                adapter.log_lifecycle_event,
                 event_type="ORDER_FILLED",
                 direction=direction.value,
                 entry_price=entry,
                 sl_price=sl,
                 tp_price=tp2 if tp2 > 0 else tp1,
                 order_id=order_id,
-                reason="TradingView Alert Fill Confirmation",
+                ticket=ticket,
+                reason=reason,
             )
             if order_id:
-                adapter.mark_webhook_processed(order_id, event, status="success")
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
+
+            if notifier and getattr(notifier, "enabled", False):
+                try:
+                    from scripts.smc.types import Position
+                    from scripts.smc.notifier import format_order_filled_card
+                    fill_lot = float(pos.volume) if not adapter.dry_run and 'pos' in locals() and pos else float(payload.get("lot_size") or 0.01)
+                    pos_card = Position(
+                        direction=direction,
+                        entry_price=entry,
+                        sl_price=sl,
+                        tp_price=tp2 if tp2 > 0 else tp1,
+                        lot_size=fill_lot,
+                        open_time=datetime.now(timezone.utc),
+                        initial_sl_distance=abs(entry - sl),
+                    )
+                    background_tasks.add_task(_dispatch_tg_safe, format_order_filled_card(pos_card))
+                except Exception as exc:
+                    logger.warning(f"Failed to schedule Telegram notification: {exc}")
 
             return {
                 "status": "success",
                 "action": "ORDER_RECORDED",
                 "order_id": order_id,
                 "entry": entry,
+                **({"ticket": ticket} if ticket else {}),
             }
 
         # 3. TP1_HIT_MOVE_BE: 50% Volume Scale-Out & Breakeven Relocation (ADR-018)
@@ -217,7 +573,23 @@ def create_app(
                 order_id=order_id,
                 reason=f"TP1_{close_pct}_PCT_SCALE_OUT",
             )
-            exec_close = adapter.execute_intent(intent_close)
+            exec_close = await asyncio.to_thread(adapter.execute_intent, intent_close)
+            if not exec_close.success:
+                safety_close = await asyncio.to_thread(
+                    adapter.execute_intent,
+                    OrderIntent(
+                        intent_type=OrderIntentType.CLOSE_MARKET,
+                        order_id=order_id,
+                        reason="TP1 partial rejected: close whole position",
+                    ),
+                )
+                return {
+                    "status": "closed_for_safety" if safety_close.success else "reconcile_required",
+                    "order_id": order_id,
+                    "event": event,
+                    "partial_message": exec_close.message,
+                    "close_message": safety_close.message,
+                }
 
             # 3b. Move SL to BE
             intent_be = OrderIntent(
@@ -226,10 +598,45 @@ def create_app(
                 order_id=order_id,
                 reason="TP1_RELOCATE_SL_TO_BE",
             )
-            exec_be = adapter.execute_intent(intent_be)
+            exec_be = await asyncio.to_thread(adapter.execute_intent, intent_be)
+
+            if not exec_be.success:
+                safety_close = await asyncio.to_thread(
+                    adapter.execute_intent,
+                    OrderIntent(
+                        intent_type=OrderIntentType.CLOSE_MARKET,
+                        order_id=order_id,
+                        reason="TP1 complete but BE rejected: close runner",
+                    ),
+                )
+                return {
+                    "status": "closed_for_safety" if safety_close.success else "reconcile_required",
+                    "order_id": order_id,
+                    "event": event,
+                    "be_message": exec_be.message,
+                    "close_message": safety_close.message,
+                }
 
             if order_id:
-                adapter.mark_webhook_processed(order_id, event, status="success")
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
+
+            if notifier and getattr(notifier, "enabled", False):
+                try:
+                    from scripts.smc.notifier import format_partial_tp_card
+                    tp_dir = Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
+                    tp_lot = float(payload.get("lot_size") or 0.02)
+                    closed_lot = round(tp_lot * (close_pct / 100.0), 2)
+                    remaining_lot = round(tp_lot - closed_lot, 2)
+                    card = format_partial_tp_card(
+                        direction=tp_dir,
+                        closed_lot=closed_lot,
+                        remaining_lot=remaining_lot,
+                        r_multiple=1.0,
+                        entry_price=entry,
+                    )
+                    background_tasks.add_task(_dispatch_tg_safe, card)
+                except Exception as exc:
+                    logger.warning(f"Failed to schedule Telegram notification: {exc}")
 
             return {
                 "status": "success",
@@ -248,14 +655,26 @@ def create_app(
                 order_id=order_id,
                 reason=reason,
             )
-            exec_cancel = adapter.execute_intent(intent)
-            adapter.log_lifecycle_event(
+            exec_cancel = await asyncio.to_thread(adapter.execute_intent, intent)
+            if not exec_cancel.success:
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": exec_cancel.message,
+                }
+            if not adapter.dry_run:
+                exposure_after_cancel = await asyncio.to_thread(adapter.get_open_exposure)
+                if exposure_after_cancel == []:
+                    await asyncio.to_thread(adapter.finish_setup, order_id)
+            await asyncio.to_thread(
+                adapter.log_lifecycle_event,
                 event_type="ORDER_CANCELED",
                 order_id=order_id,
                 reason=reason,
             )
             if order_id:
-                adapter.mark_webhook_processed(order_id, event, status="success")
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
 
             return {
                 "status": "success",
@@ -265,22 +684,93 @@ def create_app(
                 "message": exec_cancel.message,
             }
 
-        # 5. TRADE_CLOSED: Finalize Position Lifecycle
+        # 5. TRADE_CLOSED: Finalize Position Lifecycle & Execute Broker Close
         elif event == "TRADE_CLOSED":
             reason = payload.get("reason", "POSITION_CLOSED")
-            adapter.log_lifecycle_event(
-                event_type="TRADE_CLOSED",
+            pnl_r = payload.get("pnl_r")
+            pnl_dollar = payload.get("pnl_dollar")
+
+            # Determine PnL from reason if not explicitly provided
+            if pnl_r is None:
+                upper_reason = reason.upper()
+                if "SL" in upper_reason or "STOP LOSS" in upper_reason:
+                    pnl_r = -1.0
+                    if pnl_dollar is None:
+                        pnl_dollar = - round(account_balance * risk_pct, 2)
+                elif "TP2" in upper_reason or "RUNNER" in upper_reason:
+                    pnl_r = 2.5
+                    if pnl_dollar is None:
+                        pnl_dollar = round(account_balance * risk_pct * 2.5, 2)
+                elif "TP1" in upper_reason:
+                    pnl_r = 1.0
+                    if pnl_dollar is None:
+                        pnl_dollar = round(account_balance * risk_pct * 1.0, 2)
+                elif "BE" in upper_reason or "BREAKEVEN" in upper_reason:
+                    pnl_r = 0.0
+                    if pnl_dollar is None:
+                        pnl_dollar = 0.0
+
+            # Execute close market on broker if position is active or rollover flat
+            intent_close = OrderIntent(
+                intent_type=OrderIntentType.CLOSE_MARKET,
                 order_id=order_id,
                 reason=reason,
             )
+            exec_close = await asyncio.to_thread(adapter.execute_intent, intent_close)
+
+            if not exec_close.success:
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": exec_close.message,
+                }
+
+            if not adapter.dry_run:
+                exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)
+                if exposure_after_close == []:
+                    await asyncio.to_thread(adapter.finish_setup, order_id)
+                broker_pnl = await asyncio.to_thread(adapter.get_realized_pnl_for_order, order_id)
+                if broker_pnl is not None:
+                    pnl_dollar = broker_pnl
+
+            await asyncio.to_thread(
+                adapter.log_lifecycle_event,
+                event_type="TRADE_CLOSED",
+                order_id=order_id,
+                pnl_dollar=pnl_dollar,
+                pnl_r=pnl_r,
+                reason=reason,
+            )
             if order_id:
-                adapter.mark_webhook_processed(order_id, event, status="success")
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
+
+            if notifier and getattr(notifier, "enabled", False):
+                try:
+                    from scripts.smc.notifier import format_trade_closed_card
+                    tc_dir = Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
+                    card = format_trade_closed_card(
+                        direction=tc_dir,
+                        exit_price=float(payload.get("exit_price") or 0.0),
+                        pnl_dollars=pnl_dollar or 0.0,
+                        pnl_r=pnl_r or 0.0,
+                        reason=reason,
+                    )
+                    background_tasks.add_task(_dispatch_tg_safe, card)
+                except Exception as exc:
+                    logger.warning(f"Failed to schedule Telegram notification: {exc}")
 
             return {
                 "status": "success",
                 "action": "TRADE_CLOSED",
                 "order_id": order_id,
                 "reason": reason,
+                "pnl_r": pnl_r,
+                "pnl_dollar": pnl_dollar,
+                "execution": {
+                    "success": exec_close.success,
+                    "message": exec_close.message,
+                },
             }
 
         return {

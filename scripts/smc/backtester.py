@@ -114,7 +114,16 @@ class SMCBacktester:
 
         # Performance Optimization: Precompute M5 5-bar fractals once (O(N))
         from scripts.smc.structure import find_fractals_5bar
+        from scripts.smc.detection import is_in_session
+        import numpy as np
+
         all_sh, all_sl = find_fractals_5bar(m5)
+
+        m5_times = m5["time"].tolist()
+        m5_opens = m5["open"].to_numpy(dtype=float)
+        m5_highs = m5["high"].to_numpy(dtype=float)
+        m5_lows = m5["low"].to_numpy(dtype=float)
+        m5_closes = m5["close"].to_numpy(dtype=float)
 
         account = AccountState(
             balance=self.initial_balance,
@@ -126,6 +135,8 @@ class SMCBacktester:
             partial_tp_r=self.partial_tp_r,
             partial_tp_ratio=self.partial_tp_ratio,
             be_trigger_r=self.be_trigger_r,
+            spread_buffer=self.spread_buffer,
+            be_buffer=0.10,
         )
 
         trades: List[Dict[str, Any]] = []
@@ -136,8 +147,14 @@ class SMCBacktester:
         max_drawdown = 0.0
 
         for i in range(15, len(m5)):
-            current_bar = m5.iloc[i].to_dict()
-            bar_time: datetime = current_bar["time"]
+            bar_time: datetime = m5_times[i]
+            current_bar = {
+                "time": bar_time,
+                "open": m5_opens[i],
+                "high": m5_highs[i],
+                "low": m5_lows[i],
+                "close": m5_closes[i],
+            }
             bar_date = bar_time.date()
             bar_date_str = bar_date.isoformat()
 
@@ -147,32 +164,32 @@ class SMCBacktester:
             current_liquidity = liquidity_cache[bar_date_str]
 
             # Fast binary search slice for H1 (O(log H) instead of O(H) linear scan)
-            import numpy as np
             target_ts = (pd.Timestamp(bar_time) - pd.Timedelta(hours=1)).to_datetime64()
             h1_idx = int(np.searchsorted(h1_times, target_ts, side="right"))
-            sub_h1 = h1.iloc[:h1_idx]
-            sub_m5 = m5.iloc[: i + 1]
 
-            # Evaluate detection only if no active position and no pending order
+            # Evaluate detection only if no active position and no pending order and in session
             setup_signal = None
             if account.open_position is None and account.pending_order is None:
-                setup_signal = detect_smc_setup(
-                    sub_h1,
-                    sub_m5,
-                    current_liquidity,
-                    bar_time,
-                    spread_buffer=self.spread_buffer,
-                    max_sl_cap=self.max_sl_cap,
-                    precomputed_swings=(all_sh[: i - 1] + [False, False],
-                                        all_sl[: i - 1] + [False, False]),
-                    extended_killzones=self.extended_killzones,
-                    tp_r=self.tp_r,
-                    min_body_ratio=self.min_body_ratio,
-                    max_sweep_pierce=self.max_sweep_pierce,
-                    sweep_lookback=self.sweep_lookback,
-                    max_sweep_to_mss_bars=self.max_sweep_to_mss_bars,
-                    max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
-                )
+                if is_in_session(bar_time, extended=self.extended_killzones):
+                    sub_h1 = h1.iloc[:h1_idx]
+                    sub_m5 = m5.iloc[: i + 1]
+                    setup_signal = detect_smc_setup(
+                        sub_h1,
+                        sub_m5,
+                        current_liquidity,
+                        bar_time,
+                        spread_buffer=self.spread_buffer,
+                        max_sl_cap=self.max_sl_cap,
+                        precomputed_swings=(all_sh[: i - 1] + [False, False],
+                                            all_sl[: i - 1] + [False, False]),
+                        extended_killzones=self.extended_killzones,
+                        tp_r=self.tp_r,
+                        min_body_ratio=self.min_body_ratio,
+                        max_sweep_pierce=self.max_sweep_pierce,
+                        sweep_lookback=self.sweep_lookback,
+                        max_sweep_to_mss_bars=self.max_sweep_to_mss_bars,
+                        max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
+                    )
 
             # Observe the same lifecycle used by the orchestrator; do not infer fills
             # solely from the position remaining open at the end of a candle.

@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import uvicorn
 from scripts.webhook_bridge import create_app
+from scripts.smc.notifier import SMCTelegramNotifier
 
 
 logging.basicConfig(
@@ -26,6 +27,7 @@ logger = logging.getLogger("staging_bridge")
 
 
 def load_config(config_path: str = "config/settings.yaml") -> dict:
+    """Loads configuration for the staging/webhook bridge."""
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
@@ -50,9 +52,13 @@ def main():
     dry_run = args.dry_run if args.dry_run is not None else wh_cfg.get("dry_run", True)
     account_balance = args.balance or wh_cfg.get("account_balance", 10000.0)
     risk_pct = args.risk or wh_cfg.get("risk_pct", 0.01)
+    commission_per_lot = wh_cfg.get("commission_per_lot")
+    slippage_allowance = wh_cfg.get("slippage_allowance")
     max_daily_losses = wh_cfg.get("max_daily_losses", 2)
     rollover_hour_utc = wh_cfg.get("rollover_hour_utc", 20)
     rollover_minute_utc = wh_cfg.get("rollover_minute_utc", 55)
+
+    notifier = SMCTelegramNotifier(cfg) if cfg.get("telegram", {}).get("enabled") else None
 
     logger.info("=" * 60)
     logger.info("🚀 Starting XAUUSD Webhook Bridge Service")
@@ -62,6 +68,7 @@ def main():
     logger.info(f"💰 Account Equity: ${account_balance:,.2f} | Risk per Trade: {risk_pct * 100:.1f}%")
     logger.info(f"🛑 Circuit Breaker: Max {max_daily_losses} daily losses (ADR-011)")
     logger.info(f"⏰ Rollover Cutoff: {rollover_hour_utc}:{rollover_minute_utc:02d} UTC (ADR-007)")
+    logger.info(f"📱 Telegram Alerts: {'ENABLED' if notifier and notifier.enabled else 'DISABLED'}")
     logger.info("=" * 60)
 
     app = create_app(
@@ -72,6 +79,9 @@ def main():
         max_daily_losses=max_daily_losses,
         rollover_hour_utc=rollover_hour_utc,
         rollover_minute_utc=rollover_minute_utc,
+        notifier=notifier,
+        commission_per_lot=commission_per_lot,
+        slippage_allowance=slippage_allowance,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

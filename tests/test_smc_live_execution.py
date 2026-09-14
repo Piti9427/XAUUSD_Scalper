@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
 import unittest
 import threading
+import tempfile
+import os
 from unittest.mock import AsyncMock, Mock, patch
 
 import pandas as pd
@@ -48,8 +50,11 @@ class TestLiveExecution(unittest.IsolatedAsyncioTestCase):
         account = AccountState(balance=10000.0, equity=10000.0)
         config = {"mt5": {"login": 1, "password": "test", "server": "test"}}
         with ExitStack() as stack:
+            temp_dir = stack.enter_context(tempfile.TemporaryDirectory())
             stack.enter_context(patch("scripts.smc.mt5_adapter.mt5", broker))
-            adapter = SMCExecutionAdapter(dry_run=False, db_path=":memory:")
+            adapter = SMCExecutionAdapter(
+                dry_run=False, db_path=os.path.join(temp_dir, "trades.db")
+            )
             stack.callback(adapter.conn.close)
             for name, value in {
                 "load_config": Mock(return_value=config), "setup_logging": Mock(),

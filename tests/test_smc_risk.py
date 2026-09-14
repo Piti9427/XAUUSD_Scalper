@@ -10,7 +10,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
         # Spread buffer = $0.30 -> total SL distance = $4.30
         # Denominator = 4.30 * 100 = 430
         # Raw lot = 50 / 430 = 0.116279...
-        # Floored to 0.01 step = 0.11
+        # Floored to two 0.01-step legs = 0.10
         result = calculate_lot_size(
             balance=10000.0,
             entry_price=2000.00,
@@ -21,9 +21,9 @@ class TestSMCRiskCalculator(unittest.TestCase):
         )
         self.assertIsInstance(result, LotResult)
         self.assertTrue(result.is_valid)
-        self.assertEqual(result.lot_size, 0.11)
+        self.assertEqual(result.lot_size, 0.10)
         self.assertAlmostEqual(result.sl_distance, 4.30, places=2)
-        self.assertAlmostEqual(result.risk_amount, 50.0, places=2)
+        self.assertAlmostEqual(result.risk_amount, 43.0, places=2)
 
     def test_max_sl_cap_rejection(self):
         # SL distance before buffer = $6.00 + $0.30 = $6.30 > $6.00 max cap
@@ -40,12 +40,11 @@ class TestSMCRiskCalculator(unittest.TestCase):
         self.assertEqual(result.lot_size, 0.0)
         self.assertIn("SL distance exceeds max cap", result.reason)
 
-    def test_min_lot_clamping(self):
+    def test_min_lot_that_exceeds_configured_risk_is_rejected(self):
         # Balance = $500, Risk = 0.5% ($2.50)
         # SL distance = $5.00 * 100 = 500
         # Raw lot = 2.50 / 500 = 0.005 -> below min_lot (0.01)
-        # Min lot 0.01 * 5.00 * 100 = $5.00 risk (1.0% <= 1.5% max cap)
-        # Should clamp to 0.01 safely
+        # Min lot 0.01 * 5.00 * 100 = $5.00 risk, above $2.50 budget.
         result = calculate_lot_size(
             balance=500.0,
             entry_price=2000.00,
@@ -54,8 +53,8 @@ class TestSMCRiskCalculator(unittest.TestCase):
             spread_buffer=0.30,
             min_lot=0.01
         )
-        self.assertTrue(result.is_valid)
-        self.assertEqual(result.lot_size, 0.01)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.lot_size, 0.0)
 
     def test_strict_small_account_risk_gate_rejects_over_risk(self):
         # Balance = $500. SL distance = $10.30.
@@ -88,6 +87,82 @@ class TestSMCRiskCalculator(unittest.TestCase):
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 10.0)
+
+    def test_lot_is_rounded_down_to_two_broker_steps_for_equal_scale_out(self):
+        # $35 budget / ($10 SL * 100) permits 0.03 lot, but 0.03
+        # cannot be divided into two 0.01-step broker orders.
+        result = calculate_lot_size(
+            balance=3500.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            lot_step=0.01,
+            min_lot=0.01,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.02)
+
+    def test_broker_max_lot_is_also_split_compatible(self):
+        result = calculate_lot_size(
+            balance=100000.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            max_lot=0.03,
+            lot_step=0.01,
+            min_lot=0.01,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.02)
+
+    def test_equity_below_balance_limits_risk_budget(self):
+        result = calculate_lot_size(
+            balance=10000.0, equity=5000.0,
+            entry_price=2000.0, sl_price=1990.0,
+            risk_pct=0.01, spread_buffer=0.0,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.04)
+        self.assertEqual(result.risk_amount, 40.0)
+
+    def test_commission_and_slippage_are_included_in_budget(self):
+        result = calculate_lot_size(
+            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
+            risk_pct=0.01, spread_buffer=0.0,
+            commission_per_lot=10.0, slippage_allowance=0.5,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.04)
+        self.assertAlmostEqual(result.risk_amount, 42.4)
+
+    def test_strict_cost_model_rejects_missing_allowance(self):
+        result = calculate_lot_size(
+            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
+            risk_pct=0.01, spread_buffer=0.0,
+            commission_per_lot=10.0, require_cost_model=True,
+        )
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.lot_size, 0.0)
+
+    def test_negative_cost_allowance_is_rejected(self):
+        result = calculate_lot_size(
+            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
+            risk_pct=0.01, spread_buffer=0.0,
+            commission_per_lot=-10.0, slippage_allowance=0.0,
+            require_cost_model=True,
+        )
+        self.assertFalse(result.is_valid)
+
+    def test_broker_millilot_step_is_preserved(self):
+        result = calculate_lot_size(
+            balance=500.0, entry_price=2000.0, sl_price=1990.0,
+            risk_pct=0.01, spread_buffer=0.0,
+            min_lot=0.001, lot_step=0.001,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.004)
 
     def test_zero_or_negative_balance(self):
         result = calculate_lot_size(

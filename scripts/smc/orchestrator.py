@@ -29,6 +29,8 @@ class StrategyOrchestrator:
         partial_tp_r: float = 1.2,
         partial_tp_ratio: float = 0.5,
         be_trigger_r: float = 1.0,
+        spread_buffer: float = 0.30,
+        be_buffer: float = 0.10,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
@@ -40,6 +42,8 @@ class StrategyOrchestrator:
         self.partial_tp_r = partial_tp_r
         self.partial_tp_ratio = partial_tp_ratio
         self.be_trigger_r = be_trigger_r
+        self.spread_buffer = spread_buffer
+        self.be_buffer = be_buffer
 
     def _evaluate_open_position(
         self,
@@ -90,7 +94,7 @@ class StrategyOrchestrator:
                 if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.partial_tp_r):
                     partial_hit = True
             else:  # SELL
-                if float(bar["low"]) <= (pos.entry_price - pos.initial_sl_distance * self.partial_tp_r):
+                if (float(bar["low"]) + self.spread_buffer) <= (pos.entry_price - pos.initial_sl_distance * self.partial_tp_r):
                     partial_hit = True
 
             if partial_hit:
@@ -106,17 +110,18 @@ class StrategyOrchestrator:
                         reason=f"Partial TP hit (+{self.partial_tp_r}R): Closed {partial_lot} lots",
                     )
                 )
-                # Automatically lock in breakeven
+                # Automatically lock in breakeven with be_buffer (ADR-018/ADR-024)
                 if not pos.be_moved:
                     pos.be_moved = True
-                    pos.sl_price = pos.entry_price
+                    be_price = round(pos.entry_price + (self.be_buffer if pos.direction == Direction.BUY else -self.be_buffer), 2)
+                    pos.sl_price = be_price
                     intents.append(
                         OrderIntent(
                             intent_type=OrderIntentType.MOVE_SL_TO_BE,
                             direction=pos.direction,
-                            limit_price=pos.entry_price,
-                            sl_price=pos.entry_price,
-                            reason="Partial TP reached: SL moved to Breakeven",
+                            limit_price=be_price,
+                            sl_price=be_price,
+                            reason=f"Partial TP reached: SL moved to Breakeven ({be_price})",
                         )
                     )
 
@@ -125,36 +130,38 @@ class StrategyOrchestrator:
             if pos.direction == Direction.BUY:
                 if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.be_trigger_r):
                     pos.be_moved = True
-                    pos.sl_price = pos.entry_price
+                    be_price = round(pos.entry_price + self.be_buffer, 2)
+                    pos.sl_price = be_price
                     intents.append(
                         OrderIntent(
                             intent_type=OrderIntentType.MOVE_SL_TO_BE,
                             direction=Direction.BUY,
-                            limit_price=pos.entry_price,
-                            sl_price=pos.entry_price,
-                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven",
+                            limit_price=be_price,
+                            sl_price=be_price,
+                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven ({be_price})",
                         )
                     )
             else:  # SELL
-                if float(bar["low"]) <= (pos.entry_price - pos.initial_sl_distance * self.be_trigger_r):
+                if (float(bar["low"]) + self.spread_buffer) <= (pos.entry_price - pos.initial_sl_distance * self.be_trigger_r):
                     pos.be_moved = True
-                    pos.sl_price = pos.entry_price
+                    be_price = round(pos.entry_price - self.be_buffer, 2)
+                    pos.sl_price = be_price
                     intents.append(
                         OrderIntent(
                             intent_type=OrderIntentType.MOVE_SL_TO_BE,
                             direction=Direction.SELL,
-                            limit_price=pos.entry_price,
-                            sl_price=pos.entry_price,
-                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven",
+                            limit_price=be_price,
+                            sl_price=be_price,
+                            reason=f"{self.be_trigger_r}R profit reached: SL moved to Breakeven ({be_price})",
                         )
                     )
 
-        # Check Full TP hits
+        # Check Full TP hits (Ask-calibrated on SELL)
         if pos.direction == Direction.BUY:
             if float(bar["high"]) >= pos.tp_price:
                 account.open_position = None
         else:  # SELL
-            if float(bar["low"]) <= pos.tp_price:
+            if (float(bar["low"]) + self.spread_buffer) <= pos.tp_price:
                 account.open_position = None
 
         return intents

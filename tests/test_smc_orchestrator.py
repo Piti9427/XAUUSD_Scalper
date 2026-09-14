@@ -208,7 +208,7 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertIn(OrderIntentType.MOVE_SL_TO_BE, intent_types)
         self.assertTrue(pos.partial_closed)
         self.assertTrue(pos.be_moved)
-        self.assertEqual(pos.sl_price, 2000.0)
+        self.assertEqual(pos.sl_price, 2000.0 + orch.be_buffer)
         self.assertAlmostEqual(pos.lot_size, 0.05)
 
     def test_fill_bar_immediate_stop_out(self):
