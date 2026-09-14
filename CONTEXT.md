@@ -30,6 +30,8 @@
 | **Strict Small-Account Risk Gate** | หากคำนวณ Lot ได้ต่ำกว่า 0.01 lot แล้วการบังคับเปิด 0.01 lot จะทำให้พอร์ตเสี่ยงเกิน **1.5% ของเงินทุน** ระบบต้อง **ปฏิเสธคำสั่งทันที (is_valid=False)** ห้าม Over-risk เด็ดขาด |
 | **News Blackout Window** | ห้ามเปิดออเดอร์ใหม่ก่อน/หลังข่าวแดง USD 30 นาที; หากมีออเดอร์ค้างก่อนข่าว 15 นาที: ถ้ากำไร $\ge 1R$ ให้เลื่อน BE, ถ้ากำไร $< 1R$ ให้ปิดทิ้งทันที |
 | **Execution-Notification Coupling** | การ์ดสัญญาณ Telegram และการสั่งออเดอร์ต้องผูกติดกับ OrderIntent ที่ผ่าน Orchestrator แล้วเท่านั้น ห้ามส่งสัญญาณ Phantom Signal เด็ดขาด |
+| **Turtle Soup Strategy (TSS)** | การแทงทะลุหลอกระดับ 20-bar Swing High/Low ด้วยไส้เทียน ($0.40–$5.00) แล้วเนื้อเทียนปิดกลับเข้ามาในกรอบเดิม (False Breakout / Liquidity Raid) เข้าสวนทันที |
+| **Golden Session Setup (GSS)** | การย่อตัวกลับเข้าสู่โซน Fibonacci 61.8%–78.6% (Optimal Trade Entry - OTE) ของคลื่นส่ง Displacement ในช่วง London/NY Killzone |
 
 ---
 
@@ -56,4 +58,7 @@
 * **[ADR-019] Gold Dynamic SL Cap & True Swing Extremum:** ขยาย Max SL Cap เป็น $25.00 สำหรับทองคำ และยึด Stop Loss ที่จุดต่ำสุด/สูงสุดจริงของสวิงทั้งหมดระหว่าง Sweep ถึง MSS
 * **[ADR-020] Strict Small-Account Risk Gate:** ปฏิเสธคำสั่งทันทีหาก 0.01 lot ทำให้ความเสี่ยงเกิน 1.5% ของเงินทุนในพอร์ต
 * **[ADR-021] Execution & Notification Alignment:** ส่งการ์ด Telegram แจ้งเตือนเฉพาะเมื่อ OrderIntent ผ่านการตรวจสอบจาก Orchestrator แล้วเท่านั้น ป้องกัน Phantom Signals
-* **[ADR-022] Timezone Uniformity Standard:** ข้อมูลเวลาทั้งหมดในระบบต้องเป็น Timezone-aware UTC ห้ามเปรียบเทียบ offset-naive กับ aware 데이타
+* **[ADR-022] Timezone Uniformity Standard:** ข้อมูลเวลาทั้งหมดในระบบต้องเป็น Timezone-aware UTC ห้ามเปรียบเทียบ offset-naive กับ aware datetime
+* **[ADR-023] TradingView Master Copilot Indicator Architecture (Hardened):** พัฒนา indicator บน TradingView Pine Script v6 สำหรับ XAUUSD เพื่อเป็น Visual & Notification Copilot คู่ขนาน รองรับ 3 กลยุทธ์สถาบันแท้จริง (SMC Prime พร้อม 50% FVG Limit + 4-bar TTL, TSS Turtle Soup, GSS Golden Zone OTE ตรวจสอบทิศทางสวิง) ปลด Trend Flow ออกเพื่อป้องกันการขัดแย้งของสัญญาณ ทำงานบน M15/M5 ป้องกัน Repaint ด้วย Zero-Repaint H1 Confirmed Security (`close[1]`), จัดการความเสี่ยงแบบข้ามแพลตฟอร์ม 100% สอดคล้องกับ Python Core (Max SL Cap $25.00 หากเกิน Invalidate Setup ทันที, Two-Tier Scale-Out 1.0R TP1 ปิด 50% บังทุน + 2.5R Runner, London Liquidity Tracking 07:00-12:00 UTC), และ Real-Time Dashboard HUD พร้อมแจ้งเตือนสถานะการเทรดครบวงจร (Setup Pending, Filled, BE Moved, TP/SL Hit)
+* **[ADR-024] Live Execution Guardrails & Deterministic Lifecycle Binding:** (1) Conservative SL Invariant: ตรวจ Original SL ก่อนเสมอเมื่อแท่งแตะทั้ง SL และ TP1/TP2 เพื่อกำจัด Survivor Bias (2) Spread-Calibrated Match & Exit: Long limit entry ใช้ low+$0.30 เป็น Ask, Short TP exit ใช้ low+$0.30 เป็น Ask; Short SL ใช้ raw high เพราะ slBuffer บวกไว้แล้ว (3) tp1Bar Runner Guard: ห้ามเช็ค Breakeven SL ในแท่งเดียวกับที่เกิด TP1 เพราะ lower shadow เกิดก่อน expansion (4) Killzone Guard Expiration: ยกเลิก Pending Limit เมื่อพ้น Killzone (หากตั้งไว้ใน KZ) หรือครบ 4 แท่ง (5) Deterministic Order ID: แนบ order_id ทุก Webhook JSON (SETUP_PENDING, ORDER_FILLED, TP1_HIT_MOVE_BE, ORDER_CANCELED, TRADE_CLOSED) สำหรับ MT5 ticket mapping
+

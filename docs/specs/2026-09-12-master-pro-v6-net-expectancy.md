@@ -1,7 +1,7 @@
 # SPEC: Master Pro v6 — Simulation ที่เชื่อถือได้ และวัด Net Expectancy ได้จริง
 
 > วันที่: 2026-09-12
-> Source plan: [improvement plan](../2026-09-12-master-pro-v6-improvement-plan.md)
+> Source plan: [improvement plan](../plans/2026-09-12-master-pro-v6-improvement-plan.md)
 > Source review: [Master Pro v6 logic review](../reviews/2026-09-12-master-pro-v6-logic-review.md)
 > Primary artifact: [xauusd_master_pro_v6.pine](../../tradingview/xauusd_master_pro_v6.pine)
 > Tickets: `.scratch/master-pro-v6/issues/`

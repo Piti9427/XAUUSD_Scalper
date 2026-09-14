@@ -1,0 +1,249 @@
+{
+  "python": "3.14.6",
+  "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "baseline_sha256": "8504b10e7b35898761055def61ae777a52e69ed694d5363b0e762b1ff1e75c8e",
+  "current_sha256": "a9d1b0f364f8724e26406a2300651fb4504454d4145ae1be4111276583d7f4de",
+  "data": {
+    "XAUUSD_M15.csv": {
+      "sha256": "8907f7b7d00e7e97539ca4e785e0059e7ad1387ef72938c92d1b794415d0375b",
+      "source_header": "Ticker,GC=F,GC=F,GC=F,GC=F,GC=F"
+    },
+    "XAUUSD_H1.csv": {
+      "sha256": "6046daf86f7d8d7043c811f790cb0d37a37b79310eee81abbb3326a88596df66",
+      "source_header": "Ticker,GC=F,GC=F,GC=F,GC=F,GC=F"
+    }
+  },
+  "coverage": {
+    "bars": 4432,
+    "start": "2026-03-10 04:00:00+00:00",
+    "end": "2026-05-18 14:15:00+00:00"
+  },
+  "warning": "Legacy M15 GC=F proxy simulation; no broker M5, costs, or live-readiness certification.",
+  "profiles": {
+    "v1": {
+      "parameters": {
+        "max_sl_cap": 6.0,
+        "partial_tp_enabled": false,
+        "extended_killzones": false
+      },
+      "before": {
+        "seconds": [
+          2.8080816250294447,
+          2.8204719580244273,
+          2.8140663749654777
+        ],
+        "median_seconds": 2.8140663749654777,
+        "detector_calls": 4417,
+        "signals_sha256": "675ab344587b8dd8bbb1fc607b60c705cf69b5e6e203b7b9117de5797362bbfe",
+        "metrics": {
+          "initial_balance": 10000.0,
+          "final_balance": 10000.0,
+          "net_profit": 0.0,
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "be_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 1.0,
+          "max_drawdown_pct": 0.0,
+          "avg_r": 0.0
+        },
+        "trades": []
+      },
+      "after": {
+        "seconds": [
+          0.9832924579968676,
+          0.9829122080118395,
+          0.9872269170009531
+        ],
+        "median_seconds": 0.9832924579968676,
+        "detector_calls": 4417,
+        "signals_sha256": "675ab344587b8dd8bbb1fc607b60c705cf69b5e6e203b7b9117de5797362bbfe",
+        "metrics": {
+          "initial_balance": 10000.0,
+          "final_balance": 10000.0,
+          "net_profit": 0.0,
+          "total_trades": 0,
+          "winning_trades": 0,
+          "losing_trades": 0,
+          "be_trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 1.0,
+          "max_drawdown_pct": 0.0,
+          "avg_r": 0.0
+        },
+        "trades": []
+      },
+      "speedup": 2.8618813783014314
+    },
+    "v2": {
+      "parameters": {
+        "max_sl_cap": 25.0,
+        "partial_tp_enabled": true,
+        "partial_tp_r": 1.0,
+        "partial_tp_ratio": 0.5,
+        "be_trigger_r": 1.0,
+        "extended_killzones": true,
+        "tp_r": 2.5,
+        "min_body_ratio": 0.45,
+        "max_sweep_pierce": 8.0,
+        "sweep_lookback": 25,
+        "max_sweep_to_mss_bars": 8,
+        "max_mss_to_fvg_bars": 4
+      },
+      "before": {
+        "seconds": [
+          5.020669874968007,
+          5.030323207960464,
+          5.024288542044815
+        ],
+        "median_seconds": 5.024288542044815,
+        "detector_calls": 4340,
+        "signals_sha256": "c5ba840645442ae8e70c425907bfed3862040bfb60bd65039d79a7fedd8adbb0",
+        "metrics": {
+          "initial_balance": 10000.0,
+          "final_balance": 9999.81,
+          "net_profit": -0.19,
+          "total_trades": 3,
+          "winning_trades": 2,
+          "losing_trades": 1,
+          "be_trades": 0,
+          "win_rate": 66.67,
+          "profit_factor": 1.0,
+          "max_drawdown_pct": 0.5,
+          "avg_r": 0.0
+        },
+        "trades": [
+          {
+            "entry_time": "2026-03-17T07:15:00.000Z",
+            "direction": "SELL",
+            "entry_price": 5021.45,
+            "sl_price": 5044.9,
+            "tp_price": 4962.82,
+            "lot_size": 0.02,
+            "initial_sl_dist": 23.45,
+            "partial_pnl": 25.0,
+            "partial_r": 1.0,
+            "exit_time": "2026-03-17T12:15:00.000Z",
+            "exit_price": 5021.45,
+            "exit_reason": "BE",
+            "pnl_dollar": 25.0,
+            "pnl_r": 0.5,
+            "balance": 10025.0
+          },
+          {
+            "entry_time": "2026-04-22T08:45:00.000Z",
+            "direction": "SELL",
+            "entry_price": 4776.3501,
+            "sl_price": 4791.1,
+            "tp_price": 4739.48,
+            "lot_size": 0.03,
+            "initial_sl_dist": 14.7499,
+            "partial_pnl": 25.06,
+            "partial_r": 1.0,
+            "exit_time": "2026-04-22T13:45:00.000Z",
+            "exit_price": 4776.3501,
+            "exit_reason": "BE",
+            "pnl_dollar": 25.06,
+            "pnl_r": 0.5,
+            "balance": 10050.06
+          },
+          {
+            "entry_time": "2026-05-14T07:45:00.000Z",
+            "direction": "BUY",
+            "entry_price": 4697.8999,
+            "sl_price": 4672.9,
+            "tp_price": 4760.4,
+            "lot_size": 0.02,
+            "initial_sl_dist": 24.9999,
+            "partial_pnl": null,
+            "partial_r": null,
+            "exit_time": "2026-05-14T13:30:00.000Z",
+            "exit_price": 4672.9,
+            "exit_reason": "SL",
+            "pnl_dollar": -50.25,
+            "pnl_r": -1.0,
+            "balance": 9999.81
+          }
+        ]
+      },
+      "after": {
+        "seconds": [
+          1.2082614160026424,
+          1.2087485420051962,
+          1.202593291993253
+        ],
+        "median_seconds": 1.2082614160026424,
+        "detector_calls": 4340,
+        "signals_sha256": "c5ba840645442ae8e70c425907bfed3862040bfb60bd65039d79a7fedd8adbb0",
+        "metrics": {
+          "initial_balance": 10000.0,
+          "final_balance": 9999.81,
+          "net_profit": -0.19,
+          "total_trades": 3,
+          "winning_trades": 2,
+          "losing_trades": 1,
+          "be_trades": 0,
+          "win_rate": 66.67,
+          "profit_factor": 1.0,
+          "max_drawdown_pct": 0.5,
+          "avg_r": 0.0
+        },
+        "trades": [
+          {
+            "entry_time": "2026-03-17T07:15:00.000Z",
+            "direction": "SELL",
+            "entry_price": 5021.45,
+            "sl_price": 5044.9,
+            "tp_price": 4962.82,
+            "lot_size": 0.02,
+            "initial_sl_dist": 23.45,
+            "partial_pnl": 25.0,
+            "partial_r": 1.0,
+            "exit_time": "2026-03-17T12:15:00.000Z",
+            "exit_price": 5021.45,
+            "exit_reason": "BE",
+            "pnl_dollar": 25.0,
+            "pnl_r": 0.5,
+            "balance": 10025.0
+          },
+          {
+            "entry_time": "2026-04-22T08:45:00.000Z",
+            "direction": "SELL",
+            "entry_price": 4776.3501,
+            "sl_price": 4791.1,
+            "tp_price": 4739.48,
+            "lot_size": 0.03,
+            "initial_sl_dist": 14.7499,
+            "partial_pnl": 25.06,
+            "partial_r": 1.0,
+            "exit_time": "2026-04-22T13:45:00.000Z",
+            "exit_price": 4776.3501,
+            "exit_reason": "BE",
+            "pnl_dollar": 25.06,
+            "pnl_r": 0.5,
+            "balance": 10050.06
+          },
+          {
+            "entry_time": "2026-05-14T07:45:00.000Z",
+            "direction": "BUY",
+            "entry_price": 4697.8999,
+            "sl_price": 4672.9,
+            "tp_price": 4760.4,
+            "lot_size": 0.02,
+            "initial_sl_dist": 24.9999,
+            "partial_pnl": null,
+            "partial_r": null,
+            "exit_time": "2026-05-14T13:30:00.000Z",
+            "exit_price": 4672.9,
+            "exit_reason": "SL",
+            "pnl_dollar": -50.25,
+            "pnl_r": -1.0,
+            "balance": 9999.81
+          }
+        ]
+      },
+      "speedup": 4.15827938846789
+    }
+  }
+}

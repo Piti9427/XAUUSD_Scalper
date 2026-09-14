@@ -4,6 +4,7 @@
 - **Architecture:** Python + MetaTrader 5 API + Telegram Bot.
 
 ## Project Structure
+- `docs/`: System specifications, improvement plans, logic audits, and engineering handoffs.
 - `config/`: Secret tokens and connection parameters.
 - `scripts/`: Implementation of the Pine Script logic in Python.
 - `data/`: Historical data for backtesting and performance logs.
