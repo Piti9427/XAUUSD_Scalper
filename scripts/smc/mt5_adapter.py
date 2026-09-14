@@ -508,7 +508,7 @@ class SMCExecutionAdapter:
                 lot_size=intent.lot_size,
                 reason=intent.reason,
                 order_id=intent.order_id,
-                ticket=intent.ticket or 123456,
+                ticket=intent.ticket,
             )
             return ExecutionResult(success=True, order_id=intent.ticket or 123456, message=msg)
 

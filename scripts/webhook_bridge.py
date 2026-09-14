@@ -27,6 +27,8 @@ def create_app(
     news_manager: Optional[Any] = None,
     commission_per_lot: Optional[float] = None,
     slippage_allowance: Optional[float] = None,
+    tp_r: float = 2.5,
+    partial_tp_r: float = 1.0,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -97,122 +99,6 @@ def create_app(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-    @app.post("/api/v1/setup")
-    async def handle_versioned_setup(
-        request: Request,
-        authorized: bool = Depends(verify_auth),
-    ):
-        try:
-            payload = await request.json()
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Malformed JSON payload",
-            )
-
-        if not isinstance(payload, dict):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Payload must be a JSON object",
-            )
-
-        # 1. Validate required fields
-        required_fields = ["order_id", "symbol", "dir", "limit", "sl"]
-        for rf in required_fields:
-            if rf not in payload or payload[rf] is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Missing required field: {rf}",
-                )
-
-        order_id = str(payload["order_id"]).strip()
-        symbol = str(payload["symbol"]).strip()
-        direction_str = str(payload["dir"]).strip().upper()
-
-        if direction_str not in ("BUY", "SELL"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid direction. Must be BUY or SELL",
-            )
-
-        try:
-            limit = float(payload["limit"])
-            sl = float(payload["sl"])
-        except (ValueError, TypeError):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="limit and sl must be valid floating point numbers",
-            )
-
-        if not (math.isfinite(limit) and math.isfinite(sl)):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="limit and sl must be finite numbers",
-            )
-
-        if limit <= 0 or sl <= 0 or limit == sl:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="limit and sl must be positive and not equal",
-            )
-
-        # Geometry validation
-        if direction_str == "BUY" and limit <= sl:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid price geometry: BUY limit price must be higher than stop loss",
-            )
-        if direction_str == "SELL" and limit >= sl:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid price geometry: SELL limit price must be lower than stop loss",
-            )
-
-        # 2. Atomic claim via setup_inbox
-        claim = await asyncio.to_thread(adapter.claim_setup, payload)
-        if claim["status"] == "duplicate":
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={
-                    "status": "ignored_duplicate",
-                    "receipt_id": claim["receipt_id"],
-                    "order_id": order_id,
-                },
-            )
-        elif claim["status"] == "conflict":
-            return JSONResponse(
-                status_code=status.HTTP_409_CONFLICT,
-                content={
-                    "status": "conflict",
-                    "receipt_id": claim["receipt_id"],
-                    "order_id": order_id,
-                    "reason": "Conflicting payload for existing order_id",
-                },
-            )
-        elif claim["status"] == "busy":
-            return JSONResponse(
-                status_code=status.HTTP_409_CONFLICT,
-                content={
-                    "status": "busy",
-                    "order_id": order_id,
-                    "reason": "Another active setup is currently claimed or uncertain",
-                },
-            )
-        elif claim["status"] == "claimed":
-            return JSONResponse(
-                status_code=status.HTTP_202_ACCEPTED,
-                content={
-                    "status": "accepted",
-                    "receipt_id": claim["receipt_id"],
-                    "order_id": order_id,
-                    "symbol": symbol,
-                },
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unexpected claim status: {claim['status']}",
-            )
 
     @app.post("/webhook/tradingview")
     async def handle_tradingview_webhook(
@@ -288,11 +174,13 @@ def create_app(
                         else:
                             event_dt = datetime.fromtimestamp(float(event_time_raw), tz=timezone.utc)
                     else:
-                        event_dt = datetime.fromisoformat(str(event_time_raw).replace(" ", "T"))
-                        if event_dt.tzinfo is None:
-                            event_dt = event_dt.replace(tzinfo=timezone.utc)
-                        else:
-                            event_dt = event_dt.astimezone(timezone.utc)
+                        _raw = str(event_time_raw).replace(" ", "T")
+                        _parsed = datetime.fromisoformat(_raw)
+                        event_dt = (
+                            _parsed.replace(tzinfo=timezone.utc)
+                            if _parsed.tzinfo is None
+                            else _parsed.astimezone(timezone.utc)
+                        )
                 except Exception:
                     event_dt = datetime.now(timezone.utc)
             else:
@@ -472,7 +360,7 @@ def create_app(
                         sl_price=sl,
                         tp_price=tp2 if tp2 > 0 else tp1,
                         sl_distance=lot_result.sl_distance,
-                        risk_r=2.5,
+                        risk_r=tp_r,
                         fvg_high=max(entry, sl),
                         fvg_low=min(entry, sl),
                         reason=payload.get("type", "SMC_PRIME"),
@@ -532,6 +420,8 @@ def create_app(
                 ticket=ticket,
                 reason=reason,
             )
+            if order_id and ticket and not adapter.dry_run:
+                await asyncio.to_thread(adapter.update_setup_status, order_id, "accepted", ticket)
             if order_id:
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
 
@@ -698,13 +588,13 @@ def create_app(
                     if pnl_dollar is None:
                         pnl_dollar = - round(account_balance * risk_pct, 2)
                 elif "TP2" in upper_reason or "RUNNER" in upper_reason:
-                    pnl_r = 2.5
+                    pnl_r = tp_r
                     if pnl_dollar is None:
-                        pnl_dollar = round(account_balance * risk_pct * 2.5, 2)
+                        pnl_dollar = round(account_balance * risk_pct * tp_r, 2)
                 elif "TP1" in upper_reason:
-                    pnl_r = 1.0
+                    pnl_r = partial_tp_r
                     if pnl_dollar is None:
-                        pnl_dollar = round(account_balance * risk_pct * 1.0, 2)
+                        pnl_dollar = round(account_balance * risk_pct * partial_tp_r, 2)
                 elif "BE" in upper_reason or "BREAKEVEN" in upper_reason:
                     pnl_r = 0.0
                     if pnl_dollar is None:
@@ -719,12 +609,14 @@ def create_app(
             exec_close = await asyncio.to_thread(adapter.execute_intent, intent_close)
 
             if not exec_close.success:
-                return {
-                    "status": "rejected",
-                    "order_id": order_id,
-                    "event": event,
-                    "reason": exec_close.message,
-                }
+                already_closed_by_broker = "not found" in (exec_close.message or "").lower()
+                if not already_closed_by_broker:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": exec_close.message,
+                    }
 
             if not adapter.dry_run:
                 exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)

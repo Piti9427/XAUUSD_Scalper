@@ -71,6 +71,10 @@ def main():
     logger.info(f"📱 Telegram Alerts: {'ENABLED' if notifier and notifier.enabled else 'DISABLED'}")
     logger.info("=" * 60)
 
+    strategy_cfg = cfg.get("strategy", {})
+    tp_r = float(strategy_cfg.get("tp_r", 2.5))
+    partial_tp_r = float(strategy_cfg.get("partial_tp_r", 1.0))
+
     app = create_app(
         auth_token=secret_token,
         dry_run=dry_run,
@@ -82,6 +86,8 @@ def main():
         notifier=notifier,
         commission_per_lot=commission_per_lot,
         slippage_allowance=slippage_allowance,
+        tp_r=tp_r,
+        partial_tp_r=partial_tp_r,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

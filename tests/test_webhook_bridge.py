@@ -932,5 +932,135 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
         self.assertFalse(data["circuit_breaker_tripped"])
 
 
+class TestCodeReviewHardeningFixes(unittest.TestCase):
+    """Verifies F2 (ORDER_FILLED inbox update), F3 (TRADE_CLOSED normal TP2 close), and F4 (configurable R-multiples)."""
+
+    def setUp(self):
+        import tempfile
+        import os
+        from scripts.webhook_bridge import create_app
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.temp_dir.name, "test_fixes.db")
+        self.secret_token = "TEST_FIXES_SECRET"
+        self.headers = {"Authorization": f"Bearer {self.secret_token}"}
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_f2_order_filled_updates_setup_inbox_to_accepted_with_ticket(self):
+        from types import SimpleNamespace
+        from scripts.webhook_bridge import create_app
+        app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+        )
+        try:
+            # Seed inbox with claimed setup
+            app.state.adapter.claim_setup({"order_id": "SETUP_F2", "limit": 4050.0, "sl": 4045.0})
+            inbox_before = app.state.adapter.get_setup_status("SETUP_F2")
+            self.assertEqual(inbox_before["status"], "claimed")
+            self.assertIsNone(inbox_before["ticket"])
+
+            app.state.adapter.dry_run = False
+            broker_pos = SimpleNamespace(ticket=777888, price_open=4050.0, volume=0.10)
+            app.state.adapter.get_matching_position = Mock(return_value=broker_pos)
+
+            client = TestClient(app)
+            fill_payload = {
+                "event": "ORDER_FILLED",
+                "order_id": "SETUP_F2",
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "entry": 4050.00,
+                "sl": 4045.00,
+                "tp1": 4055.00,
+                "tp2": 4062.50,
+            }
+            res = client.post("/webhook/tradingview", json=fill_payload, headers=self.headers)
+            self.assertEqual(res.status_code, 200)
+
+            inbox_after = app.state.adapter.get_setup_status("SETUP_F2")
+            self.assertEqual(inbox_after["status"], "accepted")
+            self.assertEqual(inbox_after["ticket"], 777888)
+        finally:
+            app.state.adapter.close()
+
+    def test_f3_trade_closed_finalizes_when_broker_position_already_closed_by_tp(self):
+        from scripts.smc.mt5_adapter import ExecutionResult
+        from scripts.webhook_bridge import create_app
+        app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+        )
+        try:
+            # Simulate broker returning 'Target position not found' on CLOSE_MARKET (e.g. TP2 already hit)
+            app.state.adapter.execute_intent = Mock(
+                return_value=ExecutionResult(False, None, "Target position not found")
+            )
+            client = TestClient(app)
+            payload = {
+                "event": "TRADE_CLOSED",
+                "order_id": "TP2_ALREADY_CLOSED",
+                "symbol": "XAUUSD",
+                "reason": "TP2_RUNNER_HIT",
+                "dir": "BUY",
+                "exit_price": 4062.50,
+            }
+            res = client.post("/webhook/tradingview", json=payload, headers=self.headers)
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data["status"], "success")
+            self.assertEqual(data["action"], "TRADE_CLOSED")
+            self.assertEqual(data["pnl_r"], 2.5)
+
+            # Confirm lifecycle log was written
+            logs = app.state.adapter.get_lifecycle_logs()
+            tc_logs = [log for log in logs if log["event_type"] == "TRADE_CLOSED" and log["order_id"] == "TP2_ALREADY_CLOSED"]
+            self.assertEqual(len(tc_logs), 1)
+        finally:
+            app.state.adapter.close()
+
+    def test_f4_custom_r_multiples_configured_via_create_app(self):
+        from scripts.webhook_bridge import create_app
+        app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=10000.0,
+            risk_pct=0.01,
+            tp_r=3.5,
+            partial_tp_r=1.5,
+        )
+        try:
+            client = TestClient(app)
+            # 1. Test TP2 with tp_r=3.5
+            res_tp2 = client.post("/webhook/tradingview", json={
+                "event": "TRADE_CLOSED",
+                "order_id": "ORDER_TP2_CUSTOM",
+                "symbol": "XAUUSD",
+                "reason": "TP2_RUNNER_HIT",
+            }, headers=self.headers)
+            self.assertEqual(res_tp2.status_code, 200)
+            data_tp2 = res_tp2.json()
+            self.assertEqual(data_tp2["pnl_r"], 3.5)
+            self.assertEqual(data_tp2["pnl_dollar"], 350.0)
+
+            # 2. Test TP1 with partial_tp_r=1.5
+            res_tp1 = client.post("/webhook/tradingview", json={
+                "event": "TRADE_CLOSED",
+                "order_id": "ORDER_TP1_CUSTOM",
+                "symbol": "XAUUSD",
+                "reason": "TP1_SCALE_OUT",
+            }, headers=self.headers)
+            self.assertEqual(res_tp1.status_code, 200)
+            data_tp1 = res_tp1.json()
+            self.assertEqual(data_tp1["pnl_r"], 1.5)
+            self.assertEqual(data_tp1["pnl_dollar"], 150.0)
+        finally:
+            app.state.adapter.close()
+
+
 if __name__ == "__main__":
     unittest.main()

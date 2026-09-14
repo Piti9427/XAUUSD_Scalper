@@ -41,6 +41,11 @@ def calculate_lot_size(
         If floored lot is less than min_lot, min_lot (0.01) is evaluated.
         If min_lot * SL Distance * Contract Size > Balance * risk_pct,
         the order is strictly REJECTED (is_valid=False) to prevent small-account blowup.
+
+    Note:
+        When entry/sl prices already include spread buffer (e.g. from TradingView alert),
+        callers MUST pass spread_buffer=0.0 to avoid double-counting. The default 0.30 is for
+        direct broker price feeds only.
     """
     capital = min(balance, equity) if equity is not None else balance
     if require_cost_model and (commission_per_lot is None or slippage_allowance is None):
