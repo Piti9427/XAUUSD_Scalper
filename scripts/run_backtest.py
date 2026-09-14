@@ -2,12 +2,13 @@
 """
 Backtest runner script.
 Adapts available M15/H1 CSV data for the SMC backtester.
-Generates M5-equivalent from M15 when no M5 data exists.
+Uses M15 as a diagnostic proxy when M5 is unavailable; it is not M5-equivalent.
 
 Usage:
     python3 -m scripts.run_backtest
     python3 scripts/run_backtest.py
 """
+import csv
 import sys
 import os
 
@@ -20,15 +21,19 @@ from scripts.smc.backtester import SMCBacktester, format_backtest_summary
 
 def load_csv(filepath: str) -> pd.DataFrame:
     """
-    Loads XAUUSD CSV data with Yahoo Finance multi-header format:
+    Loads plain MT5 exports (time,open,high,low,close,...) or Yahoo multi-header CSV:
     Row 0: Price,Close,High,Low,Open,Volume  (column names)
     Row 1: Ticker,GC=F,...                    (ticker symbols)
     Data rows have Datetime as index.
     """
-    df = pd.read_csv(filepath, header=[0, 1], index_col=0)
-    # Flatten multi-index columns: take level 0 only (Close, High, Low, Open, Volume)
-    df.columns = [col[0] for col in df.columns]
-    df = df.reset_index()
+    with open(filepath, newline="", encoding="utf-8-sig") as handle:
+        columns = next(csv.reader(handle))
+    if "time" in columns:
+        df = pd.read_csv(filepath)
+    else:
+        df = pd.read_csv(filepath, header=[0, 1], index_col=0)
+        df.columns = [col[0] for col in df.columns]
+        df = df.reset_index()
     # Rename to lowercase
     rename_map = {}
     for col in df.columns:
@@ -68,11 +73,10 @@ def main():
         print(f"M5 data: {len(df_m5)} bars")
     elif os.path.exists(m15_path):
         # Use M15 as proxy — backtester uses bar-by-bar simulation
-        # M15 is equivalent to M5 with 3x wider bars
-        # Parameters need adjustment: sweep lookback, FVG size, etc.
+        # Bar-count windows retain their configured values; this is not M5 parity.
         df_m5 = load_csv(m15_path)
         print(f"M15 data (used as M5 proxy): {len(df_m5)} bars, {df_m5['time'].iloc[0]} to {df_m5['time'].iloc[-1]}")
-        print("NOTE: Using M15 data. Signal frequency will be lower, parameters adapted.")
+        print("DIAGNOSTIC ONLY: M15 proxy, unchanged bar-count windows; not a broker M5 readiness test.")
     else:
         print("ERROR: No M5 or M15 data found in data/")
         sys.exit(1)
@@ -86,7 +90,7 @@ def main():
         print(f"WARNING: Only {len(h1_before)} H1 bars before M5 start. EMA200 may be inaccurate early on.")
 
     print(f"\nDate range: {m5_start.date()} to {m5_end.date()}")
-    print(f"Trading days: ~{(m5_end - m5_start).days}")
+    print(f"Calendar span: {(m5_end - m5_start).days} days")
     print()
 
     # 1. Baseline Run

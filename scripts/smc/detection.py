@@ -170,13 +170,15 @@ def detect_smc_setup(
     for i in range(n_m5 - 1, max(0, n_m5 - sweep_lookback), -1):
         bar = df_m5.iloc[i].to_dict()
 
-        # ADR-002 Expansion Breakout: a decisive body-close-through or a wick
-        # pierce beyond $8.00 invalidates the search immediately -- a sweep
-        # that occurred before this bar can no longer be used for a new setup.
-        if any(
-            is_expansion_breakout(bar, lvl, is_high_level=is_high_level, max_breakout_pierce=max_breakout_pierce)
-            for lvl in levels_to_check
-        ):
+        # A breakout invalidates older sweeps of that level only.
+        levels_to_check = [
+            lvl for lvl in levels_to_check
+            if not is_expansion_breakout(
+                bar, lvl, is_high_level=is_high_level,
+                max_breakout_pierce=max_breakout_pierce,
+            )
+        ]
+        if not levels_to_check:
             break
 
         for lvl in levels_to_check:
@@ -201,12 +203,10 @@ def detect_smc_setup(
     if bias == Direction.BUY:
         # Find the latest confirmed swing high prior to candidate MSS bar
         for i in range(sweep_idx + 1, min(n_m5, sweep_idx + max_sweep_to_mss_bars + 1)):
-            prev_swing_highs = [
-                df_m5.iloc[k]["high"] for k in range(0, i) if swing_highs[k]
-            ]
-            if not prev_swing_highs:
+            swing_idx = next((k for k in range(i - 1, -1, -1) if swing_highs[k]), None)
+            if swing_idx is None:
                 continue
-            recent_swing_high = prev_swing_highs[-1]
+            recent_swing_high = df_m5.iloc[swing_idx]["high"]
             
             bar_i = df_m5.iloc[i]
             # Body close must exceed swing high AND be a green candle
@@ -220,12 +220,10 @@ def detect_smc_setup(
                     break
     else:  # SELL
         for i in range(sweep_idx + 1, min(n_m5, sweep_idx + max_sweep_to_mss_bars + 1)):
-            prev_swing_lows = [
-                df_m5.iloc[k]["low"] for k in range(0, i) if swing_lows[k]
-            ]
-            if not prev_swing_lows:
+            swing_idx = next((k for k in range(i - 1, -1, -1) if swing_lows[k]), None)
+            if swing_idx is None:
                 continue
-            recent_swing_low = prev_swing_lows[-1]
+            recent_swing_low = df_m5.iloc[swing_idx]["low"]
 
             bar_i = df_m5.iloc[i]
             # Body close must drop below swing low AND be a red candle

@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone, date
 from typing import List, Dict, Any, Optional
 import pandas as pd
@@ -29,6 +29,20 @@ class BacktestSummary:
     max_drawdown_pct: float
     avg_r: float
     trades_df: pd.DataFrame = field(default_factory=lambda: pd.DataFrame())
+
+
+class _RecordingOrchestrator(StrategyOrchestrator):
+    """Capture the actual lifecycle evaluation, including fill-and-close bars."""
+
+    evaluated_before = None
+    evaluated_after = None
+
+    def _evaluate_open_position(self, account, bar, bar_time):
+        position = account.open_position
+        self.evaluated_before = replace(position)
+        intents = super()._evaluate_open_position(account, bar, bar_time)
+        self.evaluated_after = replace(position)
+        return intents
 
 
 class SMCBacktester:
@@ -106,7 +120,7 @@ class SMCBacktester:
             balance=self.initial_balance,
             equity=self.initial_balance,
         )
-        orchestrator = StrategyOrchestrator(
+        orchestrator = _RecordingOrchestrator(
             max_sl_cap=self.max_sl_cap,
             partial_tp_enabled=self.partial_tp_enabled,
             partial_tp_r=self.partial_tp_r,
@@ -134,29 +148,10 @@ class SMCBacktester:
 
             # Fast binary search slice for H1 (O(log H) instead of O(H) linear scan)
             import numpy as np
-            target_ts = pd.Timestamp(bar_time).to_datetime64()
+            target_ts = (pd.Timestamp(bar_time) - pd.Timedelta(hours=1)).to_datetime64()
             h1_idx = int(np.searchsorted(h1_times, target_ts, side="right"))
             sub_h1 = h1.iloc[:h1_idx]
             sub_m5 = m5.iloc[: i + 1]
-
-            # Track whether position was open before on_bar
-            had_position = account.open_position is not None
-            prev_pos: Optional[Position] = None
-            if had_position:
-                # Copy position details
-                p = account.open_position
-                prev_pos = Position(
-                    direction=p.direction,
-                    entry_price=p.entry_price,
-                    sl_price=p.sl_price,
-                    tp_price=p.tp_price,
-                    lot_size=p.lot_size,
-                    open_time=p.open_time,
-                    initial_sl_distance=p.initial_sl_distance,
-                    be_moved=p.be_moved,
-                    partial_closed=p.partial_closed,
-                    remaining_ratio=p.remaining_ratio,
-                )
 
             # Evaluate detection only if no active position and no pending order
             setup_signal = None
@@ -168,7 +163,8 @@ class SMCBacktester:
                     bar_time,
                     spread_buffer=self.spread_buffer,
                     max_sl_cap=self.max_sl_cap,
-                    precomputed_swings=(all_sh[: i + 1], all_sl[: i + 1]),
+                    precomputed_swings=(all_sh[: i - 1] + [False, False],
+                                        all_sl[: i - 1] + [False, False]),
                     extended_killzones=self.extended_killzones,
                     tp_r=self.tp_r,
                     min_body_ratio=self.min_body_ratio,
@@ -178,103 +174,66 @@ class SMCBacktester:
                     max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
                 )
 
-            # Step orchestrator
+            # Observe the same lifecycle used by the orchestrator; do not infer fills
+            # solely from the position remaining open at the end of a candle.
+            orchestrator.evaluated_before = None
+            orchestrator.evaluated_after = None
             intents = orchestrator.on_bar(current_bar, account, setup_signal)
+            before = orchestrator.evaluated_before
+            after = orchestrator.evaluated_after
+            if before is None:
+                continue
 
-            # Check if a position was just opened
-            if not had_position and account.open_position is not None:
-                new_p = account.open_position
+            if active_trade_log is None:
                 active_trade_log = {
-                    "entry_time": new_p.open_time,
-                    "direction": new_p.direction.value,
-                    "entry_price": new_p.entry_price,
-                    "sl_price": new_p.sl_price,
-                    "tp_price": new_p.tp_price,
-                    "lot_size": new_p.lot_size,
-                    "initial_sl_dist": new_p.initial_sl_distance,
+                    "entry_time": before.open_time,
+                    "direction": before.direction.value,
+                    "entry_price": before.entry_price,
+                    "sl_price": before.sl_price,
+                    "tp_price": before.tp_price,
+                    "lot_size": before.lot_size,
+                    "initial_sl_dist": before.initial_sl_distance,
+                    "partial_pnl": 0.0,
                 }
 
-            # Process partial close intent
+            sign = 1 if before.direction == Direction.BUY else -1
             for intent in intents:
                 if intent.intent_type == OrderIntentType.PARTIAL_CLOSE:
-                    partial_dollar = (account.balance * self.risk_pct) * self.partial_tp_ratio * self.partial_tp_r
-                    account.balance += partial_dollar
-                    account.equity = account.balance
-                    if active_trade_log is not None:
-                        active_trade_log["partial_pnl"] = round(partial_dollar, 2)
-                        active_trade_log["partial_r"] = self.partial_tp_r
+                    partial_cash = (before.initial_sl_distance * self.partial_tp_r
+                                    * intent.lot_size * self.contract_size)
+                    account.balance += partial_cash
+                    active_trade_log["partial_pnl"] += partial_cash
 
-            # Check if position was closed during this bar
-            if had_position and account.open_position is None and prev_pos is not None:
-                exit_price = prev_pos.entry_price
-                exit_reason = "CLOSED"
-                pnl_r = 0.0
+            if account.open_position is None:
+                rollover = any(x.intent_type == OrderIntentType.CLOSE_MARKET for x in intents)
+                stop_hit = (float(current_bar["low"]) <= before.sl_price
+                            if sign == 1 else float(current_bar["high"]) >= before.sl_price)
+                if rollover:
+                    exit_price, exit_reason = float(current_bar["close"]), "ROLLOVER_FLAT"
+                elif stop_hit:
+                    exit_price = before.sl_price
+                    exit_reason = "BE" if before.be_moved else "SL"
+                else:
+                    exit_price, exit_reason = before.tp_price, "TP"
+                remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                account.balance += remaining_cash
+                total_cash = remaining_cash + active_trade_log["partial_pnl"]
+                initial_risk = (active_trade_log["initial_sl_dist"]
+                                * active_trade_log["lot_size"] * self.contract_size)
+                active_trade_log.update({
+                    "exit_time": bar_time,
+                    "exit_price": exit_price,
+                    "exit_reason": exit_reason,
+                    "pnl_dollar": round(total_cash, 2),
+                    "pnl_r": round(total_cash / initial_risk, 4),
+                    "balance": round(account.balance, 2),
+                })
+                trades.append(active_trade_log)
+                active_trade_log = None
 
-                if prev_pos.direction == Direction.BUY:
-                    if float(current_bar["high"]) >= prev_pos.tp_price:
-                        exit_price = prev_pos.tp_price
-                        exit_reason = "TP"
-                        pnl_r = self.tp_r
-                    elif float(current_bar["low"]) <= prev_pos.sl_price:
-                        exit_price = prev_pos.sl_price
-                        if prev_pos.be_moved:
-                            exit_reason = "BE"
-                            pnl_r = 0.0
-                        else:
-                            exit_reason = "SL"
-                            pnl_r = -1.0
-                else:  # SELL
-                    if float(current_bar["low"]) <= prev_pos.tp_price:
-                        exit_price = prev_pos.tp_price
-                        exit_reason = "TP"
-                        pnl_r = self.tp_r
-                    elif float(current_bar["high"]) >= prev_pos.sl_price:
-                        exit_price = prev_pos.sl_price
-                        if prev_pos.be_moved:
-                            exit_reason = "BE"
-                            pnl_r = 0.0
-                        else:
-                            exit_reason = "SL"
-                            pnl_r = -1.0
-
-                # Check rollover close
-                for intent in intents:
-                    if intent.intent_type == OrderIntentType.CLOSE_MARKET:
-                        exit_price = float(current_bar["close"])
-                        exit_reason = "ROLLOVER_FLAT"
-                        if prev_pos.direction == Direction.BUY:
-                            pnl_r = (exit_price - prev_pos.entry_price) / prev_pos.initial_sl_distance
-                        else:
-                            pnl_r = (prev_pos.entry_price - exit_price) / prev_pos.initial_sl_distance
-
-                # Calculate PnL Dollar on remaining portion
-                rem_ratio = prev_pos.remaining_ratio if hasattr(prev_pos, "remaining_ratio") else 1.0
-                rem_pnl_dollar = pnl_r * (account.balance * self.risk_pct) * rem_ratio
-                account.balance += rem_pnl_dollar
-                account.equity = account.balance
-
-                partial_dollar = active_trade_log.get("partial_pnl", 0.0) if active_trade_log else 0.0
-                total_trade_dollar = round(rem_pnl_dollar + partial_dollar, 2)
-                partial_r_val = active_trade_log.get("partial_r", 0.0) if active_trade_log else 0.0
-                total_trade_r = round((pnl_r * rem_ratio) + (partial_r_val * (1.0 - rem_ratio) if prev_pos.partial_closed else 0.0), 2)
-
-                if account.balance > peak_equity:
-                    peak_equity = account.balance
-                dd = (peak_equity - account.balance) / peak_equity * 100.0
-                if dd > max_drawdown:
-                    max_drawdown = dd
-
-                if active_trade_log is not None:
-                    active_trade_log.update({
-                        "exit_time": bar_time,
-                        "exit_price": exit_price,
-                        "exit_reason": exit_reason,
-                        "pnl_dollar": total_trade_dollar,
-                        "pnl_r": total_trade_r,
-                        "balance": round(account.balance, 2),
-                    })
-                    trades.append(active_trade_log)
-                    active_trade_log = None
+            account.equity = account.balance
+            peak_equity = max(peak_equity, account.balance)
+            max_drawdown = max(max_drawdown, (peak_equity - account.balance) / peak_equity * 100.0)
 
         # Build Summary
         trades_df = pd.DataFrame(trades)

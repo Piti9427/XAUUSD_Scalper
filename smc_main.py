@@ -77,7 +77,7 @@ async def run_smc_live_copilot():
             # 3. Auto-fetch ForexFactory Calendar (every 4 hours)
             if time.time() - last_news_fetch_time > 14400:
                 try:
-                    cached_news_events = news_mgr.fetch_forexfactory_calendar()
+                    cached_news_events = await asyncio.to_thread(news_mgr.fetch_forexfactory_calendar)
                     last_news_fetch_time = time.time()
                     logger.info("Refreshed economic news calendar: %d high-impact USD events", len(cached_news_events))
                 except Exception as exc:
@@ -192,10 +192,16 @@ async def run_smc_live_copilot():
                         res = adapter.execute_intent(intent)
                         logger.info("Execution Result: %s", res.message)
 
-                        # Coupling (ADR-021): Send alert ONLY after orchestrator approval (no phantom signals)
+                        if not res.success:
+                            if intent.intent_type == OrderIntentType.PLACE_LIMIT:
+                                account.pending_order = None
+                                account.pending_bars_held = 0
+                            continue
+
+                        # Notify only after the execution adapter accepts placement.
                         if intent.intent_type == OrderIntentType.PLACE_LIMIT and setup is not None:
                             logger.info("Orchestrator approved SMC Setup: %s at %s (Lot: %s)", setup.direction.value, setup.entry_price, intent.lot_size)
-                            chart_path = generate_setup_chart(df_m5, setup)
+                            chart_path = await asyncio.to_thread(generate_setup_chart, df_m5, setup)
                             risk_usd = round(intent.lot_size * abs(intent.limit_price - intent.sl_price) * 100.0, 2)
                             await notifier.send_alert(
                                 signal=setup,
@@ -287,10 +293,14 @@ async def run_smc_live_copilot():
 
             await asyncio.sleep(10)
 
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    except asyncio.CancelledError:
+        logger.info("SMC v1 Live Loop cancelled.")
+        raise
+    except KeyboardInterrupt:
         logger.info("SMC v1 Live Loop stopped.")
     finally:
         connector.disconnect()
+        adapter.conn.close()
 
 
 if __name__ == "__main__":

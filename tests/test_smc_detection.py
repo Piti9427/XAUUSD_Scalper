@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
@@ -74,7 +75,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
             })
         self.df_h1 = pd.DataFrame(h1_records)
 
-    def test_valid_bullish_setup_during_london(self):
+    def valid_setup_inputs(self, direction=Direction.BUY):
         # 1. London session: 08:00 UTC
         # 2. Sweep of Asian Low (2010.0): wick touches 2008.0 (pierce $2.00 <= $5.00), close 2011.0
         # 3. Previous M5 swing high at 2014.0 (5-bar fractal)
@@ -123,13 +124,69 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         df_m5 = pd.DataFrame(m5_records)
         eval_time = start_time + timedelta(minutes=18*5)
         
-        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, eval_time)
+        if direction == Direction.SELL:
+            def mirror(df):
+                result = df.copy()
+                for column in ("open", "close"):
+                    result[column] = 4000.0 - df[column]
+                result["high"] = 4000.0 - df["low"]
+                result["low"] = 4000.0 - df["high"]
+                return result
+
+            liquidity = LiquidityLevels(
+                asian_high=4000.0 - self.liquidity.asian_low,
+                asian_low=4000.0 - self.liquidity.asian_high,
+                pdh=4000.0 - self.liquidity.pdl,
+                pdl=4000.0 - self.liquidity.pdh,
+                date_str=self.liquidity.date_str,
+            )
+            return mirror(self.df_h1), mirror(df_m5), liquidity, eval_time
+        return self.df_h1, df_m5, self.liquidity, eval_time
+
+    def test_valid_bullish_setup_during_london(self):
+        signal = detect_smc_setup(*self.valid_setup_inputs())
         self.assertIsNotNone(signal)
         self.assertEqual(signal.direction, Direction.BUY)
         self.assertEqual(signal.entry_price, 2014.0) # 50% of [2013.0, 2015.0]
         self.assertEqual(signal.sl_price, 2008.20) # 2008.5 - 0.30 buffer
         self.assertAlmostEqual(signal.sl_distance, 5.80, places=2)
         self.assertAlmostEqual(signal.tp_price, 2014.0 + (5.80 * 2.0), places=2) # 2R TP
+
+    def test_broken_other_level_preserves_fresh_sweep(self):
+        for direction in Direction:
+            with self.subTest(direction=direction):
+                h1, m5, liquidity, now = self.valid_setup_inputs(direction)
+                baseline = detect_smc_setup(h1, m5, liquidity, now)
+                self.assertIsNotNone(baseline)
+                liquidity = (replace(liquidity, pdl=2020.0) if direction == Direction.BUY
+                             else replace(liquidity, pdh=1980.0))
+                signal = detect_smc_setup(h1, m5, liquidity, now)
+                self.assertEqual(signal, baseline)
+
+    def test_breakout_branches_and_boundary(self):
+        for direction in Direction:
+            for kind in ("body", "wick", "at_cap", "older"):
+                with self.subTest(direction=direction, kind=kind):
+                    h1, m5, liquidity, now = self.valid_setup_inputs(direction)
+                    is_buy = direction == Direction.BUY
+                    level = liquidity.asian_low if is_buy else liquidity.asian_high
+                    extreme = "low" if is_buy else "high"
+                    sign = -1 if is_buy else 1
+                    index = 14 if kind == "older" else 16
+                    pierce = 1.0 if kind in ("body", "older") else (8.0 if kind == "at_cap" else 8.1)
+                    m5.loc[index, extreme] = level + sign * pierce
+                    if kind in ("body", "older"):
+                        m5.loc[index, "close"] = level + sign * 0.2
+                    signal = detect_smc_setup(h1, m5, liquidity, now, max_sl_cap=25.0,
+                                              max_sweep_pierce=8.0)
+                    if kind in ("body", "wick"):
+                        self.assertIsNone(signal)
+                    else:
+                        self.assertIsNotNone(signal)
+                        self.assertEqual(signal.direction, direction)
+                        self.assertEqual(signal.entry_price, 2014.0 if is_buy else 1986.0)
+                        wick = level + sign * (8.0 if kind == "at_cap" else 1.5)
+                        self.assertAlmostEqual(signal.sl_price, wick + sign * 0.3)
 
     def test_out_of_session_returns_none(self):
         # Evaluation at 11:00 UTC (between London and NY)

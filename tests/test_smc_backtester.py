@@ -106,6 +106,54 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertGreater(summary.net_profit, 0.0)
         self.assertEqual(summary.win_rate, 100.0)
 
+    def test_cash_uses_filled_volume(self):
+        trade = SMCBacktester().run(self.df_m5, self.df_h1).trades_df.iloc[0]
+        expected = (trade.exit_price - trade.entry_price) * trade.lot_size * 100
+        self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
+
+    def test_stop_wins_when_both_levels_hit(self):
+        bars = self.df_m5.copy()
+        mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 15)
+        bars.loc[mask, "low"] = 2000.0
+        trade = SMCBacktester().run(bars, self.df_h1).trades_df.iloc[0]
+        self.assertEqual(trade.exit_reason, "SL")
+        self.assertLess(trade.pnl_dollar, 0)
+
+    def test_fill_and_stop_in_same_bar_is_recorded(self):
+        bars = self.df_m5.copy()
+        mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 10)
+        bars.loc[mask, "low"] = 2000.0
+        result = SMCBacktester().run(bars, self.df_h1)
+        self.assertEqual(result.total_trades, 1)
+        self.assertLess(result.final_balance, result.initial_balance)
+        trade = result.trades_df.iloc[0]
+        self.assertEqual(trade.entry_time, trade.exit_time)
+        self.assertEqual(trade.exit_reason, "SL")
+
+    def test_detector_only_sees_closed_h1_and_confirmed_fractals(self):
+        from unittest.mock import patch
+        from scripts.smc.structure import find_fractals_5bar
+        calls = []
+
+        def inspect(h1, m5, liquidity, now, **kwargs):
+            self.assertTrue((h1.time + pd.Timedelta(hours=1) <= now).all())
+            self.assertEqual(kwargs["precomputed_swings"], find_fractals_5bar(m5))
+            calls.append(now)
+            return None
+
+        with patch("scripts.smc.backtester.detect_smc_setup", side_effect=inspect):
+            SMCBacktester().run(self.df_m5, self.df_h1)
+        self.assertTrue(calls)
+
+    def test_partial_and_tp_cash_conserve_filled_volume(self):
+        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0).run(self.df_m5, self.df_h1)
+        trade = result.trades_df.iloc[0]
+        partial_lots = round(trade.lot_size * 0.5, 2)
+        expected = (partial_lots * trade.initial_sl_dist +
+                    (trade.lot_size - partial_lots) * (trade.exit_price - trade.entry_price)) * 100
+        self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
+        self.assertAlmostEqual(result.net_profit, expected, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()
