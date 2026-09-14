@@ -8,7 +8,9 @@
 - `config/`: Secret tokens and connection parameters.
 - `scripts/`: Implementation of the Pine Script logic in Python.
 - `data/`: Historical data for backtesting and performance logs.
-- `main.py`: Main entry point for the live alert loop.
+- `main.py`: Main entry point for the legacy alert loop.
+
+`smc_main.py` is offline-only. It refuses to start when MT5 connects because its local position state and fixed-balance sizing are not broker-reconciled. Its disconnected simulation disables Telegram alerts. Use the webhook bridge in dry-run or demo testing; neither path is certified for real-money trading.
 
 ## Runtime Notes
 - Keep real MT5, Telegram, and Google Workspace secrets out of `config/settings.yaml`.

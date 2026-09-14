@@ -45,6 +45,12 @@ async def run_smc_live_copilot():
         server=config["mt5"]["server"],
     )
     is_connected = connector.connect()
+    if is_connected:
+        # This loop mutates local position state before broker confirmation and
+        # sizes orders from a fixed account balance. Keep it offline-only until
+        # broker reconciliation owns the full order lifecycle.
+        connector.disconnect()
+        raise RuntimeError("SMC legacy loop live execution is disabled; use the broker-reconciled webhook bridge for demo validation")
     dry_run = not is_connected
 
     strat_cfg = config.get("strategy", {})
@@ -60,7 +66,7 @@ async def run_smc_live_copilot():
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
     )
     news_mgr = NewsManager()
-    notifier = SMCTelegramNotifier(config)
+    notifier = SMCTelegramNotifier({"telegram": {"enabled": False}})
     account = AccountState(balance=10000.0, equity=10000.0)
 
     last_processed_m5_time = None
