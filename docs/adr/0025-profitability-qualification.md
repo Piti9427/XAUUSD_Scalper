@@ -2,7 +2,7 @@
 
 Status: Accepted
 
-Pine Master Pro uses `tradingview/xauusd_master_pro_strategy.pine` as canonical strategy and alert source. Manual order entry remains primary. `/api/v2/alerts` is notifier-only and accepts `SIMULATED_*` events; it has no broker execution adapter.
+Pine Master Pro uses `tradingview/xauusd_master_pro_strategy.pine` as canonical profitability evaluator. Manual order entry remains primary. Alert ownership is superseded by ADR-0026: the Indicator owns Manual Signals while the Strategy is reserved for future automated trading. `/api/v2/alerts` is notifier-only and accepts `SIMULATED_*` events; it has no broker execution adapter.
 
 Historical candidates are SMC, TSS, GSS, and confluence of at least two engines in the same direction on the same confirmed M15 bar. Confluence geometry priority is SMC, TSS, then GSS. A candidate qualifies only with at least 100 trades, profit factor at least 1.50, positive expectancy, maximum drawdown at most 5%, positive lower 95% weekly-block bootstrap expectancy, and non-negative long, short, London, and New York slice expectancy. Twice-cost stress must retain positive expectancy and profit factor above 1.0.
 

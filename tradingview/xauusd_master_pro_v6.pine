@@ -6,9 +6,10 @@ indicator("XAUUSD Master Pro System [SMC + TSS + GSS + Institutional Alerts]", s
 // =============================================================================
 G_GEN          = "1. General & Execution Settings"
 tradeDirection = input.string("Both", "Trade Direction", options=["Both", "Long Only", "Short Only"], group=G_GEN)
-signalMode     = input.string("All Institutional", "Signal Engine Mode", options=["All Institutional", "SMC Prime Only", "TSS (Turtle Soup) Only", "GSS (Golden Zone OTE) Only"], group=G_GEN, tooltip="Choose single strategy mode or All Institutional for confluence priority")
+signalMode     = input.string("Confluence (2+)", "Signal Engine Mode", options=["Confluence (2+)", "SMC Prime Only", "TSS (Turtle Soup) Only", "GSS (Golden Zone OTE) Only"], group=G_GEN, tooltip="Keep identical to paired Strategy instance")
 visualPreset   = input.string("Balanced (Clean)", "Visual Preset Mode", options=["Balanced (Clean)", "Minimal (Signals Only)", "Full Analytics"], group=G_GEN, tooltip="Balanced = HUD + Signals + Levels; Minimal = Signals Only; Full = All Boxes & Historical Zones")
 awaitBarClose  = input.bool(true, "Await Bar Confirmation (Zero Repaint)", group=G_GEN, tooltip="Triggers strictly on confirmed bar close")
+alertOutput    = input.string("Manual Card", "Alert Output", options=["Manual Card", "Bot JSON", "Off"], group=G_GEN, tooltip="Manual Card for discretionary trading. Bot JSON emits machine-only payloads.")
 
 isFullAnalytics = (visualPreset == "Full Analytics")
 isMinimal       = (visualPreset == "Minimal (Signals Only)")
@@ -23,7 +24,7 @@ showExtraLines  = isFullAnalytics
 G_SESS           = "2. Session Engine (UTC)"
 useSessionFilter = input.bool(true, "Filter Entries by Killzones", group=G_SESS)
 showSessionBg    = input.bool(true, "Highlight Killzone Backgrounds", group=G_SESS)
-filterRollover   = input.bool(true, "Block Signals During Rollover (20:55-23:00 UTC)", group=G_SESS)
+filterRollover   = input.bool(true, "Block Signals During Rollover (20:45-23:00 UTC)", group=G_SESS)
 
 t_hour = hour(time, "UTC")
 t_min  = minute(time, "UTC")
@@ -34,7 +35,7 @@ inAsian    = (t_hour >= 0 and t_hour < 7)
 inLondonKZ = (t_mins >= (7 * 60) and t_mins < (10 * 60 + 30))
 inLondonLiq= (t_mins >= (7 * 60) and t_mins < (12 * 60))
 inNYKZ     = (t_mins >= (12 * 60 + 30) and t_mins < (16 * 60 + 30))
-inRollover = (t_mins >= (20 * 60 + 55) and t_mins < (23 * 60))
+inRollover = (t_mins >= (20 * 60 + 45) and t_mins < (23 * 60))
 
 isJudasWindow  = (t_hour == 7) or (t_hour == 8 and t_min <= 30)
 isSilverBullet = (t_hour == 7) or (t_hour == 14)
@@ -53,14 +54,14 @@ useHtfFilter = input.bool(true, "Use H1 EMA 200 Trend Filter (Zero Repaint)", gr
 useSmtFilter = input.bool(true, "Detect SMT Divergence (vs DXY)", group=G_HTF)
 dxyTicker    = input.string("TVC:DXY", "DXY Ticker Symbol", group=G_HTF)
 
-h1_close_conf  = request.security(syminfo.tickerid, "60", close[1], barmerge.gaps_off, barmerge.lookahead_off)
-h1_ema200_conf = request.security(syminfo.tickerid, "60", ta.ema(close, 200)[1], barmerge.gaps_off, barmerge.lookahead_off)
+h1_close_conf  = request.security(syminfo.tickerid, "60", close[1], barmerge.gaps_off, barmerge.lookahead_on)
+h1_ema200_conf = request.security(syminfo.tickerid, "60", ta.ema(close, 200)[1], barmerge.gaps_off, barmerge.lookahead_on)
 
 htfBullish = not useHtfFilter or (h1_close_conf > h1_ema200_conf)
 htfBearish = not useHtfFilter or (h1_close_conf < h1_ema200_conf)
 
-dxyHighConf  = request.security(dxyTicker, timeframe.period, high[1], barmerge.gaps_off, barmerge.lookahead_off)
-dxyLowConf   = request.security(dxyTicker, timeframe.period, low[1], barmerge.gaps_off, barmerge.lookahead_off)
+dxyHighConf  = request.security(dxyTicker, timeframe.period, high[1], barmerge.gaps_off, barmerge.lookahead_on)
+dxyLowConf   = request.security(dxyTicker, timeframe.period, low[1], barmerge.gaps_off, barmerge.lookahead_on)
 dxySwingHigh = ta.highest(dxyHighConf, 10)
 dxySwingLow  = ta.lowest(dxyLowConf, 10)
 
@@ -71,8 +72,8 @@ G_LIQ             = "4. Liquidity Pools & Swing Extremums"
 maxSweepPiercePts = input.float(8.0, "Max Sweep Pierce ($) [ADR-002]", step=0.5, group=G_LIQ)
 minSweepPiercePts = input.float(0.30, "Min Sweep Pierce ($)", step=0.05, group=G_LIQ)
 
-pdh = request.security(syminfo.tickerid, "D", high[1], barmerge.gaps_off, barmerge.lookahead_off)
-pdl = request.security(syminfo.tickerid, "D", low[1], barmerge.gaps_off, barmerge.lookahead_off)
+pdh = request.security(syminfo.tickerid, "D", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], barmerge.gaps_off, barmerge.lookahead_on)
 
 var float asianHigh  = na
 var float asianLow   = na
@@ -282,12 +283,16 @@ float newTp1           = na
 float newTp2           = na
 string newType         = ""
 
-bool allowSmc = (signalMode == "All Institutional" or signalMode == "SMC Prime Only")
-bool allowTss = (signalMode == "All Institutional" or signalMode == "TSS (Turtle Soup) Only")
-bool allowGss = (signalMode == "All Institutional" or signalMode == "GSS (Golden Zone OTE) Only")
+longContributors = (smcBuySetupReady ? 1 : 0) + (tssBuySignal ? 1 : 0) + (gssBuySignal ? 1 : 0)
+shortContributors = (smcSellSetupReady ? 1 : 0) + (tssSellSignal ? 1 : 0) + (gssSellSignal ? 1 : 0)
+bool confluenceLong = signalMode == "Confluence (2+)" and longContributors >= 2
+bool confluenceShort = signalMode == "Confluence (2+)" and shortContributors >= 2
+bool allowSmc = signalMode == "SMC Prime Only" or (smcBuySetupReady and confluenceLong) or (smcSellSetupReady and confluenceShort)
+bool allowTss = signalMode == "TSS (Turtle Soup) Only" or (tssBuySignal and confluenceLong) or (tssSellSignal and confluenceShort)
+bool allowGss = signalMode == "GSS (Golden Zone OTE) Only" or (gssBuySignal and confluenceLong) or (gssSellSignal and confluenceShort)
 
 if allowSmc and not tradeActive and not pendingActive
-    if smcBuySetupReady
+    if smcBuySetupReady and (signalMode == "SMC Prime Only" or confluenceLong)
         fvgCe = (low[0] + high[2]) / 2.0
         rawSl = trueSweepExtremum - slBuffer
         dist  = fvgCe - rawSl
@@ -299,7 +304,7 @@ if allowSmc and not tradeActive and not pendingActive
             newTp1   := fvgCe + (dist * tp1R)
             newTp2   := fvgCe + (dist * tp2R)
             newType  := "SMC_PRIME"
-    else if smcSellSetupReady
+    else if smcSellSetupReady and (signalMode == "SMC Prime Only" or confluenceShort)
         fvgCe = (high[0] + low[2]) / 2.0
         rawSl = trueSweepExtremum + slBuffer
         dist  = rawSl - fvgCe
@@ -313,7 +318,7 @@ if allowSmc and not tradeActive and not pendingActive
             newType  := "SMC_PRIME"
 
 if allowTss and not tradeActive and not pendingActive and not triggerNewPending
-    if tssBuySignal
+    if tssBuySignal and (signalMode == "TSS (Turtle Soup) Only" or confluenceLong)
         rawSl = low - slBuffer
         dist  = close - rawSl
         if dist > 0 and dist <= maxSlCap
@@ -324,7 +329,7 @@ if allowTss and not tradeActive and not pendingActive and not triggerNewPending
             newTp1   := close + (dist * tp1R)
             newTp2   := close + (dist * tp2R)
             newType  := "TSS"
-    else if tssSellSignal
+    else if tssSellSignal and (signalMode == "TSS (Turtle Soup) Only" or confluenceShort)
         rawSl = high + slBuffer
         dist  = rawSl - close
         if dist > 0 and dist <= maxSlCap
@@ -337,7 +342,7 @@ if allowTss and not tradeActive and not pendingActive and not triggerNewPending
             newType  := "TSS"
 
 if allowGss and not tradeActive and not pendingActive and not triggerNewPending and not triggerNewMarket
-    if gssBuySignal
+    if gssBuySignal and (signalMode == "GSS (Golden Zone OTE) Only" or confluenceLong)
         rawSl = nz(lastSwingLow, low) - slBuffer
         dist  = close - rawSl
         if dist > 0 and dist <= maxSlCap
@@ -348,7 +353,7 @@ if allowGss and not tradeActive and not pendingActive and not triggerNewPending 
             newTp1   := close + (dist * tp1R)
             newTp2   := close + (dist * tp2R)
             newType  := "GSS_OTE"
-    else if gssSellSignal
+    else if gssSellSignal and (signalMode == "GSS (Golden Zone OTE) Only" or confluenceShort)
         rawSl = nz(lastSwingHigh, high) + slBuffer
         dist  = rawSl - close
         if dist > 0 and dist <= maxSlCap
@@ -550,30 +555,30 @@ judasBadge = isJudasSweep ? " [JUDAS SWING 🪤]" : ""
 sbBadge    = isSilverBullet ? " [SILVER BULLET ⚡]" : ""
 utcTimeStr = str.format_time(time, "yyyy-MM-dd HH:mm:ss", "UTC")
 
-if eventSetupPending
+if eventSetupPending and alertOutput != "Off"
     pendingJson = '{"event":"SETUP_PENDING","order_id":"' + pendingOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (pendingDir == 1 ? "BUY" : "SELL") + '","type":"' + pendingType + '","limit":' + str.tostring(pendingLimit, "#.##") + ',"sl":' + str.tostring(pendingSl, "#.##") + ',"tp1":' + str.tostring(pendingTp1, "#.##") + ',"tp2":' + str.tostring(pendingTp2, "#.##") + ',"ttl":' + str.tostring(orderTtlBars) + ',"time":"' + utcTimeStr + '"}'
-    pendingCard = str.format("⏳ [XAUUSD Master Pro] LIMIT SETUP PENDING!{0}{1}{2}\n📌 Engine: {3}\n🎯 Order: {4} LIMIT @ {5,number,#.##}\n🛑 SL: {6,number,#.##} (Risk: ${7,number,#.##})\n🎯 TP1 (+1.0R): {8,number,#.##} (Close 50% & Move BE)\n🎯 TP2 (+2.5R): {9,number,#.##} (Runner)\n⏳ TTL: {10} Bars\n⏰ Time: {11} UTC\n\n--- JSON WEBHOOK ---\n", smtBadge, judasBadge, sbBadge, pendingType, pendingDir == 1 ? "BUY" : "SELL", pendingLimit, pendingSl, math.abs(pendingLimit - pendingSl), pendingTp1, pendingTp2, orderTtlBars, utcTimeStr) + pendingJson
-    alert(pendingCard, alert.freq_once_per_bar_close)
+    pendingCard = str.format("⏳ [XAUUSD Master Pro] LIMIT SETUP PENDING!{0}{1}{2}\n📌 Engine: {3}\n🎯 Order: {4} LIMIT @ {5,number,#.##}\n🛑 SL: {6,number,#.##} (Distance: ${7,number,#.##})\n🎯 TP1 (+{8,number,#.#}R): {9,number,#.##}\n🎯 TP2 (+{10,number,#.#}R): {11,number,#.##}\n⏳ TTL: {12} Bars\n⏰ Time: {13} UTC", smtBadge, judasBadge, sbBadge, pendingType, pendingDir == 1 ? "BUY" : "SELL", pendingLimit, pendingSl, math.abs(pendingLimit - pendingSl), tp1R, pendingTp1, tp2R, pendingTp2, orderTtlBars, utcTimeStr)
+    alert(alertOutput == "Bot JSON" ? pendingJson : pendingCard, alert.freq_once_per_bar_close)
 
-if eventOrderFilled
+if eventOrderFilled and alertOutput != "Off"
     fillJson = '{"event":"ORDER_FILLED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (tradeDir == 1 ? "BUY" : "SELL") + '","type":"' + activeSignalType + '","entry":' + str.tostring(tradeEntry, "#.##") + ',"sl":' + str.tostring(tradeSl, "#.##") + ',"tp1":' + str.tostring(tradeTp1, "#.##") + ',"tp2":' + str.tostring(tradeTp2, "#.##") + ',"time":"' + utcTimeStr + '"}'
-    fillCard = str.format("🚀 [XAUUSD Master Pro] ORDER FILLED!{0}{1}{2}\n📌 Engine: {3}\n💰 Executed: {4} @ {5,number,#.##}\n🛑 SL: {6,number,#.##} (Risk: ${7,number,#.##})\n🎯 TP1 (+1.0R): {8,number,#.##}\n🎯 TP2 (+2.5R): {9,number,#.##}\n⏰ Time: {10} UTC\n\n--- JSON WEBHOOK ---\n", smtBadge, judasBadge, sbBadge, activeSignalType, tradeDir == 1 ? "BUY" : "SELL", tradeEntry, tradeSl, math.abs(tradeEntry - tradeSl), tradeTp1, tradeTp2, utcTimeStr) + fillJson
-    alert(fillCard, alert.freq_once_per_bar)
+    fillCard = str.format("🚀 [XAUUSD Master Pro] MODEL FILL{0}{1}{2}\n📌 Engine: {3}\n💰 Direction: {4} @ {5,number,#.##}\n🛑 SL: {6,number,#.##} (Distance: ${7,number,#.##})\n🎯 TP1: {8,number,#.##}\n🎯 TP2: {9,number,#.##}\n⏰ Time: {10} UTC", smtBadge, judasBadge, sbBadge, activeSignalType, tradeDir == 1 ? "BUY" : "SELL", tradeEntry, tradeSl, math.abs(tradeEntry - tradeSl), tradeTp1, tradeTp2, utcTimeStr)
+    alert(alertOutput == "Bot JSON" ? fillJson : fillCard, alert.freq_once_per_bar)
 
-if eventTp1Hit
+if eventTp1Hit and alertOutput != "Off"
     tp1Json = '{"event":"TP1_HIT_MOVE_BE","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (tradeDir == 1 ? "BUY" : "SELL") + '","action":"PARTIAL_CLOSE","close_percent":50,"entry":' + str.tostring(tradeEntry, "#.##") + ',"new_sl":' + str.tostring(tradeSl, "#.##") + ',"time":"' + utcTimeStr + '"}'
-    tp1Card = str.format("🎉 [XAUUSD Master Pro] TP1 (+1.0R) REACHED!\n📌 Action: Close 50% Position & Relocate SL to Breakeven (+0.10)\n🛡️ New SL (BE): {0,number,#.##}\n💰 Entry: {1,number,#.##}\n⏰ Time: {2} UTC\n\n--- JSON WEBHOOK ---\n", tradeSl, tradeEntry, utcTimeStr) + tp1Json
-    alert(tp1Card, alert.freq_once_per_bar)
+    tp1Card = str.format("🎉 [XAUUSD Master Pro] TP1 (+{0,number,#.#}R) REACHED\n📌 Manual action: Close 50% and move SL to BE\n🛡️ New SL: {1,number,#.##}\n💰 Entry: {2,number,#.##}\n⏰ Time: {3} UTC", tp1R, tradeSl, tradeEntry, utcTimeStr)
+    alert(alertOutput == "Bot JSON" ? tp1Json : tp1Card, alert.freq_once_per_bar)
 
-if eventOrderExpired
+if eventOrderExpired and alertOutput != "Off"
     cancelJson = '{"event":"ORDER_CANCELED","order_id":"' + pendingOrderId + '","symbol":"' + syminfo.ticker + '","reason":"' + expireReason + '","bars":' + str.tostring(orderTtlBars) + ',"time":"' + utcTimeStr + '"}'
-    cancelCard = str.format("⌛ [XAUUSD Master Pro] LIMIT ORDER CANCELED!\n📌 Reason: {0}\n⏰ Time: {1} UTC\n\n--- JSON WEBHOOK ---\n", expireReason, utcTimeStr) + cancelJson
-    alert(cancelCard, alert.freq_once_per_bar)
+    cancelCard = str.format("⌛ [XAUUSD Master Pro] CANCEL LIMIT\n📌 Reason: {0}\n⏰ Time: {1} UTC", expireReason, utcTimeStr)
+    alert(alertOutput == "Bot JSON" ? cancelJson : cancelCard, alert.freq_once_per_bar)
 
-if eventTradeClosed
+if eventTradeClosed and alertOutput != "Off"
     closedJson = '{"event":"TRADE_CLOSED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","reason":"' + closeReason + '","time":"' + utcTimeStr + '"}'
-    closedCard = str.format("🏁 [XAUUSD Master Pro] TRADE CLOSED!\n📌 Reason: {0}\n⏰ Time: {1} UTC\n\n--- JSON WEBHOOK ---\n", closeReason, utcTimeStr) + closedJson
-    alert(closedCard, alert.freq_once_per_bar)
+    closedCard = str.format("🏁 [XAUUSD Master Pro] MODEL CLOSED\n📌 Reason: {0}\n⏰ Time: {1} UTC", closeReason, utcTimeStr)
+    alert(alertOutput == "Bot JSON" ? closedJson : closedCard, alert.freq_once_per_bar)
 
 alertcondition(eventSetupPending, title="Setup Pending Alert", message="⏳ XAUUSD Setup Pending Limit Order")
 alertcondition(eventOrderFilled,  title="Order Filled Alert",  message="🚀 XAUUSD Order Filled Entry Executed")

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XAUUSD paired trading workflow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--paper:#f5f5f5;--ink:#2d3142;--muted:#4f5d75;--soft:#7a8399;--accent:#eb6c36;--tint:rgba(235,108,54,.08);--link:#2e5aa8;--rule:rgba(45,49,66,.12)}
+    body{background:var(--paper);color:var(--ink);font-family:'Noto Sans Thai','Geist',sans-serif;padding:48px 32px;min-height:100vh}
+    main{max-width:1200px;margin:auto}.eyebrow{font:500 8px 'Geist Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    h1{font:400 32px 'Instrument Serif','Noto Sans Thai',serif;margin-bottom:8px}.subtitle{font-size:12px;color:var(--muted);margin-bottom:24px}
+    .canvas{overflow-x:auto}svg{display:block;width:100%;min-width:1000px}.note{border-top:1px solid var(--rule);margin-top:16px;padding-top:12px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body><main>
+  <p class="eyebrow">PROCESS · MANUAL + DEMO AUTO</p>
+  <h1>XAUUSD Master Pro — ใช้ Indicator คู่ Strategy</h1>
+  <p class="subtitle">หนึ่ง setup contract สองมุมมอง; broker confirmation เป็นหลักฐาน execution</p>
+  <div class="canvas">
+  <svg viewBox="0 0 1120 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="xau-paired-title xau-paired-desc">
+    <title id="xau-paired-title">XAUUSD paired trading workflow</title>
+    <desc id="xau-paired-desc">ขั้นตอนตรวจ setup จาก Indicator และ Strategy ก่อนแยกเป็นการเทรดด้วยตนเองหรือส่งผ่าน risk gate ไปยัง MT5 Demo</desc>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#eb6c36"/></marker>
+      <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e5aa8"/></marker>
+    </defs>
+    <rect width="1120" height="520" fill="#f5f5f5"/>
+    <rect x="0" y="56" width="1120" height="144" fill="rgba(45,49,66,.025)"/>
+    <rect x="0" y="216" width="1120" height="144" fill="rgba(45,49,66,.045)"/>
+    <text x="16" y="80" fill="#4f5d75" font-size="8" font-family="Geist Mono" letter-spacing="1.2">SHARED CHECK</text>
+    <text x="16" y="240" fill="#4f5d75" font-size="8" font-family="Geist Mono" letter-spacing="1.2">ACTION</text>
+
+    <!-- connectors before nodes -->
+    <path d="M252 128 H304" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M464 128 H516" fill="none" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+    <path d="M676 116 H720 Q728 116 728 124 V272 Q728 280 736 280 H768" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <path d="M596 168 V252 Q596 260 604 260 H616" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+    <path d="M776 300 H736 Q728 300 728 308 V320 Q728 328 720 328 H684" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+    <path d="M936 280 H988" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+    <rect x="268" y="100" width="36" height="12" rx="2" fill="#f5f5f5"/><text x="286" y="108" fill="#7a8399" font-size="8" font-family="Geist Mono" text-anchor="middle">PAIR</text>
+    <rect x="480" y="100" width="36" height="12" rx="2" fill="#f5f5f5"/><text x="498" y="108" fill="#7a8399" font-size="8" font-family="Geist Mono" text-anchor="middle">MATCH</text>
+    <rect x="696" y="228" width="64" height="12" rx="2" fill="#f5f5f5"/><text x="728" y="236" fill="#7a8399" font-size="8" font-family="Geist Mono" text-anchor="middle">MANUAL</text>
+    <rect x="576" y="220" width="48" height="12" rx="2" fill="#f5f5f5"/><text x="600" y="228" fill="#2e5aa8" font-size="8" font-family="Geist Mono" text-anchor="middle">JSON</text>
+    <rect x="696" y="336" width="64" height="12" rx="2" fill="#f5f5f5"/><text x="728" y="344" fill="#2e5aa8" font-size="8" font-family="Geist Mono" text-anchor="middle">APPROVED</text>
+    <rect x="944" y="252" width="36" height="12" rx="2" fill="#f5f5f5"/><text x="962" y="260" fill="#7a8399" font-size="8" font-family="Geist Mono" text-anchor="middle">VERIFY</text>
+
+    <g><rect x="92" y="88" width="160" height="80" rx="6" fill="#f5f5f5" stroke="#2d3142"/><text x="172" y="120" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Indicator</text><text x="172" y="140" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">setup · entry · SL · TP</text></g>
+    <g><rect x="304" y="88" width="160" height="80" rx="6" fill="#f5f5f5" stroke="#2d3142"/><text x="384" y="120" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Strategy</text><text x="384" y="140" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">tester · HUD · levels</text></g>
+    <g><rect x="516" y="88" width="160" height="80" rx="6" fill="rgba(235,108,54,.08)" stroke="#eb6c36"/><text x="596" y="116" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Parity Check</text><text x="596" y="136" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">bar · direction · prices</text><text x="596" y="152" text-anchor="middle" fill="#eb6c36" font-size="8" font-family="Geist Mono">MISMATCH = SKIP</text></g>
+    <g><rect x="768" y="240" width="168" height="80" rx="6" fill="#f5f5f5" stroke="#2d3142"/><text x="852" y="272" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Manual Order</text><text x="852" y="292" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">lot · SL · TP1 · TP2</text></g>
+    <g><rect x="616" y="280" width="68" height="96" rx="6" fill="rgba(46,90,168,.05)" stroke="#2e5aa8"/><text x="650" y="320" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Risk</text><text x="650" y="340" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">GATES</text><text x="650" y="356" text-anchor="middle" fill="#eb6c36" font-size="8" font-family="Geist Mono">FAIL CLOSED</text></g>
+    <g><rect x="988" y="240" width="112" height="80" rx="6" fill="rgba(45,49,66,.05)" stroke="#4f5d75"/><text x="1044" y="272" text-anchor="middle" fill="#2d3142" font-size="12" font-weight="600">Broker</text><text x="1044" y="292" text-anchor="middle" fill="#4f5d75" font-size="8" font-family="Geist Mono">ticket = truth</text></g>
+
+    <line x1="24" y1="416" x2="1096" y2="416" stroke="rgba(45,49,66,.12)"/>
+    <text x="24" y="440" fill="#4f5d75" font-size="8" font-family="Geist Mono" letter-spacing="1.2">LEGEND</text>
+    <rect x="112" y="428" width="12" height="12" rx="2" fill="rgba(235,108,54,.08)" stroke="#eb6c36"/><text x="136" y="440" fill="#4f5d75" font-size="8" font-family="Geist Mono">decision gate</text>
+    <line x1="284" y1="436" x2="328" y2="436" stroke="#2e5aa8" marker-end="url(#arrow-link)"/><text x="340" y="440" fill="#4f5d75" font-size="8" font-family="Geist Mono">machine path</text>
+    <text x="24" y="484" fill="#7a8399" font-size="12" font-family="Noto Sans Thai">Auto path เปิดใช้หลัง Demo gates ผ่านเท่านั้น · Indicator/Strategy signal ไม่ใช่หลักฐาน broker execution</text>
+  </svg></div>
+  <p class="note">Default diagram-design profile · static doc-wide view · updated 2026-09-15</p>
+</main></body></html>

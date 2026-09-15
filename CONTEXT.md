@@ -24,6 +24,12 @@
 | **Sweep→MSS→FVG Window** | MSS ต้องเกิดภายใน **8 แท่ง** หลังแท่ง Sweep; FVG ต้องเกิดบนแท่ง MSS เอง หรือภายใน 4 แท่งถัดไป |
 | **H1 Trend Filter** | H1 Close $> \text{EMA}(200) \rightarrow$ อนุญาตเฉพาะฝั่ง BUY; H1 Close $< \text{EMA}(200) \rightarrow$ อนุญาตเฉพาะฝั่ง SELL |
 | **Session Killzones** | London (07:00–10:30 UTC) และ New York (12:30–16:30 UTC) ครอบคลุมช่วง London Fix |
+| **Setup Signal** | ข้อเสนอเข้าเทรดจาก strategy logic ที่ระบุทิศทาง, Entry, SL, TP1 และ TP2 แต่ยังไม่ใช่ Order หรือ Position จนกว่าจะถูกส่งและ broker ยืนยัน |
+| **Manual Signal Mode** | รูปแบบใช้งานที่ระบบแสดงและแจ้ง Setup Signal ให้ Trader ตรวจสอบ แล้ว Trader เป็นผู้ตัดสินใจและส่งออเดอร์เอง |
+| **WATCH Signal** | สถานะเตรียมตัวเมื่อโครงสร้างของ Setup เริ่มก่อตัวแต่ยังไม่ผ่านเงื่อนไขยืนยันครบ จึงห้ามใช้เป็นคำสั่งเข้าเทรด |
+| **READY Signal** | Setup Signal ที่ผ่านเงื่อนไขยืนยันบนแท่งปิดแล้ว พร้อมระดับ Entry, SL, TP1 และ TP2 สำหรับให้ Trader พิจารณาก่อนส่งออเดอร์เอง |
+| **Manual Signal Owner** | แหล่งเดียวที่ประกาศ WATCH และ READY Signal สำหรับ Trader คือ Indicator; Automated Trading Strategy ไม่ประกาศ Manual Signal ซ้ำ |
+| **Automated Trading Strategy** | ระบบเทคนิคสำหรับให้ bot ประเมิน Setup และจัดการ Order ผ่าน risk controls กับ broker lifecycle โดยพัฒนาเป็นเฟสถัดจาก Manual Signal Mode |
 | **Rollover Flat Rule** | บังคับปิดทุก Position ก่อนเวลา 20:55 UTC เพื่อหลีกเลี่ยง Spread ถ่างและ Swap |
 | **Two-Tier Scale-Out** | กลไกทำกำไร: เมื่อราคาแตะ **+1.0R** ให้ปิดแบ่งทำกำไร **50% ทันที (PARTIAL_CLOSE)** พร้อมเลื่อน SL ของอีก 50% มาที่ **Breakeven (Entry $\pm$ Spread Buffer)** ปล่อยให้ Runner วิ่งชน **+2.5R (Full TP)** |
 | **Max SL Cap** | จำกัดระยะ Stop Loss สูงสุดไม่เกิน **$25.00 (2500 points)** สอดคล้องกับความผันผวนของทองคำที่ราคา $4000-$5200 (หากเกิน Skip Setup) |
@@ -61,4 +67,3 @@
 * **[ADR-022] Timezone Uniformity Standard:** ข้อมูลเวลาทั้งหมดในระบบต้องเป็น Timezone-aware UTC ห้ามเปรียบเทียบ offset-naive กับ aware datetime
 * **[ADR-023] TradingView Master Copilot Indicator Architecture (Hardened):** พัฒนา indicator บน TradingView Pine Script v6 สำหรับ XAUUSD เพื่อเป็น Visual & Notification Copilot คู่ขนาน รองรับ 3 กลยุทธ์สถาบันแท้จริง (SMC Prime พร้อม 50% FVG Limit + 4-bar TTL, TSS Turtle Soup, GSS Golden Zone OTE ตรวจสอบทิศทางสวิง) ปลด Trend Flow ออกเพื่อป้องกันการขัดแย้งของสัญญาณ ทำงานบน M15/M5 ป้องกัน Repaint ด้วย Zero-Repaint H1 Confirmed Security (`close[1]`), จัดการความเสี่ยงแบบข้ามแพลตฟอร์ม 100% สอดคล้องกับ Python Core (Max SL Cap $25.00 หากเกิน Invalidate Setup ทันที, Two-Tier Scale-Out 1.0R TP1 ปิด 50% บังทุน + 2.5R Runner, London Liquidity Tracking 07:00-12:00 UTC), และ Real-Time Dashboard HUD พร้อมแจ้งเตือนสถานะการเทรดครบวงจร (Setup Pending, Filled, BE Moved, TP/SL Hit)
 * **[ADR-024] Live Execution Guardrails & Deterministic Lifecycle Binding:** (1) Conservative SL Invariant: ตรวจ Original SL ก่อนเสมอเมื่อแท่งแตะทั้ง SL และ TP1/TP2 เพื่อกำจัด Survivor Bias (2) Spread-Calibrated Match & Exit: Long limit entry ใช้ low+$0.30 เป็น Ask, Short TP exit ใช้ low+$0.30 เป็น Ask; Short SL ใช้ raw high เพราะ slBuffer บวกไว้แล้ว (3) tp1Bar Runner Guard: ห้ามเช็ค Breakeven SL ในแท่งเดียวกับที่เกิด TP1 เพราะ lower shadow เกิดก่อน expansion (4) Killzone Guard Expiration: ยกเลิก Pending Limit เมื่อพ้น Killzone (หากตั้งไว้ใน KZ) หรือครบ 4 แท่ง (5) Deterministic Order ID: แนบ order_id ทุก Webhook JSON (SETUP_PENDING, ORDER_FILLED, TP1_HIT_MOVE_BE, ORDER_CANCELED, TRADE_CLOSED) สำหรับ MT5 ticket mapping
-
