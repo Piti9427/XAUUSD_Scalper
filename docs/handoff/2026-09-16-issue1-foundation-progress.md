@@ -17,20 +17,21 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Fib/OTE research log without filter | `scripts/smc/fibonacci.py`, `tests/test_smc_fibonacci.py` |
 | 5% DD + 2 losses / 1% daily halt persistence | `scripts/smc/risk_halt.py`, `tests/test_smc_risk_halt.py`; orchestrator honors `risk_halt.halted` |
 | 0.5% risk floor/reject (pre-existing) | `scripts/smc/risk.py`, `tests/test_smc_risk.py` |
-| Fill-and-stop same bar recorded (pre-existing) | `tests/test_smc_backtester.py` |
+| Bot-only cancel/close (comment ownership) | `is_bot_owned_comment` + adapter cancel/close/rollover guards; `tests/test_smc_ownership.py` |
 
 ## Still open for issue #1
 
 | Gap | Notes |
 | --- | --- |
 | Gate A remaining material decisions | Fib anchors freeze, cash-flow pause, quote-side/stats protocol, data provenance |
-| Broker ownership isolation + reconcile | Bot-only cancel/close; durable intent; partial fill residual |
+| Broker reconcile (accept/reject/UNKNOWN, partial residual, cancel races) | Partial adapter logging exists; full authoritative lifecycle incomplete |
 | Shared-account vs bot PnL separation | Manual losses affect gates, not bot expectancy |
 | News blackout + unknown/stale block | Partial news module exists; point-in-time archive + block-on-unknown incomplete |
 | Bid/ask tick replay economics | Mid/OHLC still used in places |
 | Affordability report on live Exness spec | USD 500 / 0.01 lot distance audit |
 | Oracle ARM64 runtime soak | Infra gate, not strategy |
 | Forward Demo 12-week protocol | Prospective evidence only after Gates A–C |
+| Wire risk_halt file into live/Demo loop end-to-end | Module+orchestrator ready; persistence path not yet loaded in `smc_main` |
 | Close/comment issues on GitHub | Local work committed; tracker write currently 403 (PAT lacks issues write); `gh` keyring invalid |
 
 ## Sibling issues #2–#4

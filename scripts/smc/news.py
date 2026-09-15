@@ -51,6 +51,35 @@ class NewsManager:
 
         return False, None
 
+    def new_risk_allowed(
+        self,
+        current_time: datetime,
+        events: Optional[List[NewsEvent]],
+        *,
+        schedule_known: bool,
+        window_mins: int = 30,
+        filter_currency: str = "USD",
+        filter_impact: str = "HIGH",
+    ) -> Tuple[bool, str]:
+        """
+        Foundation BaselinePlay admission gate for new/pending exposure.
+
+        Unknown or stale news schedules block new risk. Existing positions are
+        not force-closed or moved to BE by this method (unlike Legacy ADR-010).
+        """
+        if not schedule_known or events is None:
+            return False, "unknown_or_stale_news_schedule"
+        in_blackout, name = self.is_in_blackout(
+            current_time,
+            events,
+            window_mins=window_mins,
+            filter_currency=filter_currency,
+            filter_impact=filter_impact,
+        )
+        if in_blackout:
+            return False, f"news_blackout:{name}"
+        return True, "ok"
+
     def evaluate_pre_news_position(
         self,
         current_time: datetime,

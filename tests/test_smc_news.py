@@ -34,6 +34,25 @@ class TestSMCNewsManager(unittest.TestCase):
         is_blocked, _ = self.manager.is_in_blackout(t_safe, self.events, window_mins=30)
         self.assertFalse(is_blocked)
 
+    def test_foundation_blocks_unknown_news_and_blackout_without_forcing_exit(self):
+        allowed, reason = self.manager.new_risk_allowed(
+            self.nfp_time, None, schedule_known=False,
+        )
+        self.assertFalse(allowed)
+        self.assertEqual(reason, "unknown_or_stale_news_schedule")
+
+        blocked, reason = self.manager.new_risk_allowed(
+            self.nfp_time - timedelta(minutes=10), self.events, schedule_known=True,
+        )
+        self.assertFalse(blocked)
+        self.assertIn("news_blackout", reason)
+
+        ok, reason = self.manager.new_risk_allowed(
+            self.nfp_time - timedelta(minutes=45), self.events, schedule_known=True,
+        )
+        self.assertTrue(ok)
+        self.assertEqual(reason, "ok")
+
     def test_pre_news_position_handling_lock_be(self):
         # Position open, currently at +1.2R profit, 14 min before NFP
         # Must return MOVE_SL_TO_BE
