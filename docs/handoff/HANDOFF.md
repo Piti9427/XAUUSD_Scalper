@@ -17,4 +17,14 @@
    - **เนื้อหา:** ตรรกะตรวจจับสัญญาณ SMC v2 ใน Python, คิวแก้ไข 6 Blockers สำหรับการเชื่อมต่อ Live MT5 และ Backtest 75% Winrate
    - **สถานะ:** 🟡 รอเคลียร์ 6 รายการใน Python ก่อนเชื่อมต่อพอร์ตจริง
 
+4. **[`2026-09-14-live-execution-bridge-and-risk-shield.md`](2026-09-14-live-execution-bridge-and-risk-shield.md)**:
+   - **หัวข้อ:** Live Execution Bridge & Async Risk Shield (`scripts/webhook_bridge.py`)
+   - **เนื้อหา:** FastAPI bridge, Two-tier idempotency, Dynamic equity risk sizing, Async MT5 offloading, Zero phantom alerts
+   - **สถานะ:** 🟢 **Engineered & Fully Tested**
+
+5. **[`2026-09-15-demo-auto-order-remediation.md`](2026-09-15-demo-auto-order-remediation.md)**:
+   - **หัวข้อ:** Exness Demo Auto-Order Remediation & Scrutinize Review
+   - **เนื้อหา:** ผล Scrutinize แผน Demo Auto-Order (Verdict: REWORK), ระบุ 1 Blocker (ขาด Reconciler daemon), 2 Major (Schema break, Capital sizing), 1 Failing test ใน suite เดิม พร้อม Action Plan 5 ขั้นตอน
+   - **สถานะ:** 🟡 **Plan Rework in Progress**
+
 > กรุณาดูรายละเอียดสารบัญฉบับเต็มได้ที่ **[`README.md`](README.md)**
