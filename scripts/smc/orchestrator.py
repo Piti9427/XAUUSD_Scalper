@@ -9,6 +9,7 @@ from scripts.smc.types import (
     SetupSignal,
 )
 from scripts.smc.risk import calculate_lot_size
+from scripts.smc.risk_halt import RiskHaltState
 
 
 class StrategyOrchestrator:
@@ -173,6 +174,7 @@ class StrategyOrchestrator:
         setup_signal: Optional[SetupSignal] = None,
         current_spread: Optional[float] = None,
         max_spread: float = 0.35,
+        risk_halt: Optional[RiskHaltState] = None,
     ) -> List[OrderIntent]:
         intents: List[OrderIntent] = []
 
@@ -241,7 +243,10 @@ class StrategyOrchestrator:
 
             return []
 
-        # 4. Circuit Breaker & Cooldown Checks (ADR-011)
+        # 4. Circuit Breaker & Cooldown Checks (ADR-011 / foundation risk halt)
+        if risk_halt is not None and risk_halt.halted:
+            return []
+
         if account.daily_loss_count >= self.max_daily_losses:
             return []
 
