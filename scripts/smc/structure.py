@@ -1,7 +1,147 @@
+from dataclasses import dataclass
+from enum import Enum
 from typing import Tuple, List, Dict, Any, Optional
 import pandas as pd
 import numpy as np
 from scripts.smc.types import Direction
+
+RULE_VERSION_STRUCTURE = "s1-s4-mechanical-v1"
+
+
+class StructureBias(Enum):
+    UNKNOWN = "UNKNOWN"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
+
+
+class StructureEventKind(Enum):
+    NONE = "NONE"
+    BOS = "BOS"
+    CHOCH = "CHOCH"
+    INTERNAL = "INTERNAL"
+
+
+@dataclass(frozen=True)
+class StructureEvent:
+    kind: StructureEventKind
+    broken_price: Optional[float] = None
+    protected_price: Optional[float] = None
+
+
+@dataclass(frozen=True)
+class StructureState:
+    bias: StructureBias
+    protected_price: Optional[float] = None
+    protected_index: Optional[int] = None
+    last_broken_price: Optional[float] = None
+
+    @classmethod
+    def initial(cls) -> "StructureState":
+        return cls(bias=StructureBias.UNKNOWN)
+
+
+def _latest_opposite_pivot(
+    opposite_pivots_between: List[Tuple[int, float]],
+) -> Optional[Tuple[int, float]]:
+    if not opposite_pivots_between:
+        return None
+    return max(opposite_pivots_between, key=lambda item: item[0])
+
+
+def apply_close_break(
+    state: StructureState,
+    *,
+    break_side: str,
+    broken_swing_price: float,
+    break_index: int,
+    opposite_pivots_between: List[Tuple[int, float]],
+) -> Tuple[StructureState, StructureEvent]:
+    """
+    Apply one closed-bar swing break under ADR-0027 / mechanical §3.5.
+
+    opposite_pivots_between: confirmed opposite pivots with index in
+    (broken_swing_index, break_index). Caller supplies the filtered list.
+    """
+    if state.last_broken_price is not None and broken_swing_price == state.last_broken_price:
+        return state, StructureEvent(kind=StructureEventKind.NONE)
+
+    opposite = _latest_opposite_pivot(opposite_pivots_between)
+
+    if state.bias == StructureBias.UNKNOWN:
+        if opposite is None:
+            return state, StructureEvent(kind=StructureEventKind.NONE, broken_price=broken_swing_price)
+        opp_index, opp_price = opposite
+        new_bias = StructureBias.BULLISH if break_side == "above" else StructureBias.BEARISH
+        nxt = StructureState(
+            bias=new_bias,
+            protected_price=opp_price,
+            protected_index=opp_index,
+            last_broken_price=broken_swing_price,
+        )
+        return nxt, StructureEvent(
+            kind=StructureEventKind.BOS,
+            broken_price=broken_swing_price,
+            protected_price=opp_price,
+        )
+
+    is_continuation = (
+        (state.bias == StructureBias.BULLISH and break_side == "above")
+        or (state.bias == StructureBias.BEARISH and break_side == "below")
+    )
+    is_protected_break = (
+        state.protected_price is not None
+        and broken_swing_price == state.protected_price
+        and (
+            (state.bias == StructureBias.BULLISH and break_side == "below")
+            or (state.bias == StructureBias.BEARISH and break_side == "above")
+        )
+    )
+
+    if is_protected_break:
+        if opposite is None:
+            nxt = StructureState(
+                bias=StructureBias.UNKNOWN,
+                last_broken_price=broken_swing_price,
+            )
+            return nxt, StructureEvent(
+                kind=StructureEventKind.CHOCH,
+                broken_price=broken_swing_price,
+            )
+        opp_index, opp_price = opposite
+        new_bias = StructureBias.BEARISH if state.bias == StructureBias.BULLISH else StructureBias.BULLISH
+        nxt = StructureState(
+            bias=new_bias,
+            protected_price=opp_price,
+            protected_index=opp_index,
+            last_broken_price=broken_swing_price,
+        )
+        return nxt, StructureEvent(
+            kind=StructureEventKind.CHOCH,
+            broken_price=broken_swing_price,
+            protected_price=opp_price,
+        )
+
+    if is_continuation:
+        if opposite is None:
+            return state, StructureEvent(kind=StructureEventKind.NONE, broken_price=broken_swing_price)
+        opp_index, opp_price = opposite
+        nxt = StructureState(
+            bias=state.bias,
+            protected_price=opp_price,
+            protected_index=opp_index,
+            last_broken_price=broken_swing_price,
+        )
+        return nxt, StructureEvent(
+            kind=StructureEventKind.BOS,
+            broken_price=broken_swing_price,
+            protected_price=opp_price,
+        )
+
+    return state, StructureEvent(
+        kind=StructureEventKind.INTERNAL,
+        broken_price=broken_swing_price,
+        protected_price=state.protected_price,
+    )
 
 
 def find_fractals_5bar(df: pd.DataFrame) -> Tuple[List[bool], List[bool]]:
