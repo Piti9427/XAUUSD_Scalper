@@ -89,10 +89,18 @@ async def run_smc_live_copilot():
                 except Exception as exc:
                     logger.warning("Could not refresh economic calendar: %s", exc)
 
-            # 4. Check News Blackout Window (+/- 30 min)
-            is_blackout, news_title = news_mgr.is_in_blackout(now_utc, cached_news_events, window_mins=30)
+            # 4. Foundation news admission: unknown schedule or USD HIGH blackout blocks new risk
+            schedule_known = last_news_fetch_time > 0
+            allowed_news, news_reason = news_mgr.new_risk_allowed(
+                now_utc,
+                cached_news_events,
+                schedule_known=schedule_known,
+                window_mins=30,
+            )
+            is_blackout = not allowed_news
+            news_title = news_reason
             if is_blackout:
-                logger.warning("News Blackout active: %s. Skipping new setups.", news_title)
+                logger.warning("News admission blocked: %s. Skipping new setups.", news_title)
 
             # 5. Query Live Spread
             spread_raw = connector.get_spread(symbol)
