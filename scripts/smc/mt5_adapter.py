@@ -17,6 +17,18 @@ except ImportError:
     mt5 = None
 
 
+BOT_COMMENT_PREFIX = "SMC_"
+
+
+def is_bot_owned_comment(comment: Optional[str], order_id: Optional[str] = None) -> bool:
+    """True only for comments owned by this strategy — never symbol-only matches."""
+    if not comment or not comment.startswith(BOT_COMMENT_PREFIX):
+        return False
+    if order_id is None:
+        return True
+    return comment in {f"SMC_{order_id}", f"SMC_Partial_{order_id}"}
+
+
 @dataclass(frozen=True)
 class ExecutionResult:
     success: bool
@@ -564,8 +576,13 @@ class SMCExecutionAdapter:
             canceled_count = 0
             if orders:
                 for o in orders:
-                    match_ticket = (intent.ticket is not None and o.ticket == intent.ticket)
-                    match_order_id = (intent.order_id is not None and getattr(o, "comment", "") == f"SMC_{intent.order_id}")
+                    owned = is_bot_owned_comment(getattr(o, "comment", ""), intent.order_id)
+                    match_ticket = (
+                        intent.ticket is not None
+                        and o.ticket == intent.ticket
+                        and is_bot_owned_comment(getattr(o, "comment", ""))
+                    )
+                    match_order_id = intent.order_id is not None and owned
                     if match_ticket or match_order_id:
                         req = {"action": mt5.TRADE_ACTION_REMOVE, "order": o.ticket}
                         result = mt5.order_send(req)
@@ -591,8 +608,13 @@ class SMCExecutionAdapter:
             moved_count = 0
             if positions:
                 for pos in positions:
-                    match_ticket = (intent.ticket is not None and pos.ticket == intent.ticket)
-                    match_order_id = (intent.order_id is not None and getattr(pos, "comment", "") == f"SMC_{intent.order_id}")
+                    owned = is_bot_owned_comment(getattr(pos, "comment", ""), intent.order_id)
+                    match_ticket = (
+                        intent.ticket is not None
+                        and pos.ticket == intent.ticket
+                        and is_bot_owned_comment(getattr(pos, "comment", ""))
+                    )
+                    match_order_id = intent.order_id is not None and owned
                     if match_ticket or match_order_id:
                         req = {
                             "action": mt5.TRADE_ACTION_SLTP,
@@ -624,8 +646,13 @@ class SMCExecutionAdapter:
             closed_count = 0
             if positions:
                 for pos in positions:
-                    match_ticket = (intent.ticket is not None and pos.ticket == intent.ticket)
-                    match_order_id = (intent.order_id is not None and getattr(pos, "comment", "") == f"SMC_{intent.order_id}")
+                    owned = is_bot_owned_comment(getattr(pos, "comment", ""), intent.order_id)
+                    match_ticket = (
+                        intent.ticket is not None
+                        and pos.ticket == intent.ticket
+                        and is_bot_owned_comment(getattr(pos, "comment", ""))
+                    )
+                    match_order_id = intent.order_id is not None and owned
                     if match_ticket or match_order_id:
                         close_type = (
                             mt5.ORDER_TYPE_SELL
@@ -672,9 +699,16 @@ class SMCExecutionAdapter:
             closed_count = 0
             if positions:
                 for pos in positions:
-                    match_ticket = (intent.ticket is not None and pos.ticket == intent.ticket)
-                    match_order_id = (intent.order_id is not None and getattr(pos, "comment", "") == f"SMC_{intent.order_id}")
-                    if match_ticket or match_order_id or is_rollover_all:
+                    owned_any = is_bot_owned_comment(getattr(pos, "comment", ""))
+                    owned = is_bot_owned_comment(getattr(pos, "comment", ""), intent.order_id)
+                    match_ticket = (
+                        intent.ticket is not None
+                        and pos.ticket == intent.ticket
+                        and owned_any
+                    )
+                    match_order_id = intent.order_id is not None and owned
+                    # Rollover closes only bot-owned exposure — never foreign manual trades.
+                    if match_ticket or match_order_id or (is_rollover_all and owned_any):
                         close_type = (
                             mt5.ORDER_TYPE_SELL
                             if pos.type == mt5.ORDER_TYPE_BUY
