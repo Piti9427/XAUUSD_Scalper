@@ -13,6 +13,7 @@ Foundation BaselinePlay structure classification adopts `docs/specs/xauusd-s1-s4
 - Confirmed user intent from issue #1: CHoCH required; internal breaks ≠ CHoCH; UNKNOWN explicit.
 - Numerical defaults (5-bar strict fractal, body/range ≥ 0.45 for qualification, bars 1–8 sweep→break window when used by detectors) are adopted from mechanical proposed defaults, not claimed as individually optimized by the user.
 - Legacy MSS-only detection remains available for Legacy Reference / S1 control paths and must stay separately labeled.
+- Demo/`smc_main.py` defaults to `require_choch=True` and `partial_tp_enabled=False` for BaselinePlay; offline backtester keeps `require_choch=False` unless callers opt into foundation mode.
 - Other issue #1 unsettled gates (Fibonacci anchors, account cash-flow pause, statistical protocol, data provenance) stay open and are not decided here.
 
 ## Consequences

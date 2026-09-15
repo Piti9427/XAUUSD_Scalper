@@ -144,6 +144,120 @@ def apply_close_break(
     )
 
 
+def available_confirmed_pivots(
+    flags: List[bool],
+    prices: List[float],
+    asof_index: int,
+) -> List[Tuple[int, float]]:
+    """Pivots confirmed by two right bars before asof_index (exclusive)."""
+    out: List[Tuple[int, float]] = []
+    for idx, is_pivot in enumerate(flags):
+        if not is_pivot:
+            continue
+        if idx + 2 >= asof_index:
+            continue
+        out.append((idx, float(prices[idx])))
+    return out
+
+
+def _available_pivots(
+    flags: List[bool],
+    prices: List[float],
+    asof_index: int,
+) -> List[Tuple[int, float]]:
+    return available_confirmed_pivots(flags, prices, asof_index)
+
+
+def replay_structure_until(
+    highs: List[float],
+    lows: List[float],
+    closes: List[float],
+    swing_highs: List[bool],
+    swing_lows: List[bool],
+    end_index_exclusive: int,
+) -> StructureState:
+    """
+    Replay closed-bar swing breaks from bar 0 .. end_index_exclusive-1.
+
+    On each bar, at most one directional break is applied: prefer break of the
+    latest available swing in the close direction (high if close rising through
+    a high, low if falling through a low).
+    """
+    state = StructureState.initial()
+    n = min(end_index_exclusive, len(closes), len(highs), len(lows))
+    for i in range(n):
+        close = float(closes[i])
+        avail_highs = _available_pivots(swing_highs, highs, i)
+        avail_lows = _available_pivots(swing_lows, lows, i)
+
+        break_above = None
+        for idx, price in reversed(avail_highs):
+            if close > price:
+                break_above = (idx, price)
+                break
+        break_below = None
+        for idx, price in reversed(avail_lows):
+            if close < price:
+                break_below = (idx, price)
+                break
+
+        if break_above is None and break_below is None:
+            continue
+
+        # One event per bar: choose the break matching the candle body direction
+        # when both exist; otherwise take the only candidate.
+        open_proxy = float(closes[i - 1]) if i > 0 else close
+        prefer_above = close >= open_proxy
+        if break_above is not None and (break_below is None or prefer_above):
+            broken_idx, broken_price = break_above
+            opposite = [
+                (idx, price)
+                for idx, price in avail_lows
+                if broken_idx < idx < i
+            ]
+            state, _ = apply_close_break(
+                state,
+                break_side="above",
+                broken_swing_price=broken_price,
+                break_index=i,
+                opposite_pivots_between=opposite,
+            )
+        elif break_below is not None:
+            broken_idx, broken_price = break_below
+            opposite = [
+                (idx, price)
+                for idx, price in avail_highs
+                if broken_idx < idx < i
+            ]
+            state, _ = apply_close_break(
+                state,
+                break_side="below",
+                broken_swing_price=broken_price,
+                break_index=i,
+                opposite_pivots_between=opposite,
+            )
+    return state
+
+
+def classify_candidate_break(
+    state_before: StructureState,
+    *,
+    break_side: str,
+    broken_swing_price: float,
+    break_index: int,
+    opposite_pivots_between: List[Tuple[int, float]],
+) -> StructureEvent:
+    """Classify one candidate structural break without mutating caller state."""
+    _, event = apply_close_break(
+        state_before,
+        break_side=break_side,
+        broken_swing_price=broken_swing_price,
+        break_index=break_index,
+        opposite_pivots_between=opposite_pivots_between,
+    )
+    return event
+
+
 def find_fractals_5bar(df: pd.DataFrame) -> Tuple[List[bool], List[bool]]:
     """
     Identifies 5-bar Fractal swing points (2 bars left, 1 center, 2 bars right).

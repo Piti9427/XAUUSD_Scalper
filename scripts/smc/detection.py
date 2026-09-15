@@ -9,6 +9,10 @@ from scripts.smc.structure import (
     detect_fvg,
     check_sweep,
     is_expansion_breakout,
+    StructureEventKind,
+    replay_structure_until,
+    classify_candidate_break,
+    available_confirmed_pivots,
 )
 
 
@@ -60,6 +64,7 @@ def detect_smc_setup(
     sweep_lookback: int = 20,
     extended_killzones: bool = True,
     max_breakout_pierce: float = 8.0,
+    require_choch: bool = False,
 ) -> Optional[SetupSignal]:
     """
     Pure Functional Seam: Evaluates market conditions for a deterministic SMC setup.
@@ -238,6 +243,54 @@ def detect_smc_setup(
     if mss_idx is None:
         return None
 
+    if require_choch:
+        highs = [float(x) for x in df_m5["high"].tolist()]
+        lows = [float(x) for x in df_m5["low"].tolist()]
+        closes = [float(x) for x in df_m5["close"].tolist()]
+        state_before = replay_structure_until(
+            highs, lows, closes, swing_highs, swing_lows, mss_idx,
+        )
+        break_side = "above" if bias == Direction.BUY else "below"
+        if bias == Direction.BUY:
+            opposite = [
+                (idx, price)
+                for idx, price in available_confirmed_pivots(swing_lows, lows, mss_idx)
+                if price is not None
+            ]
+            # Opposite pivots must sit between the broken swing and the break bar.
+            broken_idx = next(
+                (k for k in range(mss_idx - 1, -1, -1)
+                 if swing_highs[k] and float(df_m5.iloc[k]["high"]) == float(mss_swing_price)),
+                None,
+            )
+            if broken_idx is None:
+                return None
+            opposite = [
+                (idx, price) for idx, price in opposite if broken_idx < idx < mss_idx
+            ]
+        else:
+            broken_idx = next(
+                (k for k in range(mss_idx - 1, -1, -1)
+                 if swing_lows[k] and float(df_m5.iloc[k]["low"]) == float(mss_swing_price)),
+                None,
+            )
+            if broken_idx is None:
+                return None
+            opposite = [
+                (idx, price)
+                for idx, price in available_confirmed_pivots(swing_highs, highs, mss_idx)
+                if broken_idx < idx < mss_idx
+            ]
+        event = classify_candidate_break(
+            state_before,
+            break_side=break_side,
+            broken_swing_price=float(mss_swing_price),
+            break_index=mss_idx,
+            opposite_pivots_between=opposite,
+        )
+        if event.kind != StructureEventKind.CHOCH:
+            return None
+
     # 4. FVG Detection (ADR-004)
     # FVG formed on MSS bar or up to max_mss_to_fvg_bars after
     fvg_found = False
@@ -291,6 +344,6 @@ def detect_smc_setup(
         risk_r=tp_r,
         fvg_high=float(fvg_high_val),
         fvg_low=float(fvg_low_val),
-        reason=f"{bias.value} SMC Setup: Swept {swept_level} -> MSS {mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]",
+        reason=f"{bias.value} SMC Setup: Swept {swept_level} -> {'CHOCH' if require_choch else 'MSS'} {mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]",
         timestamp=current_time
     )

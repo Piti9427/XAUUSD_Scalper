@@ -60,7 +60,7 @@ async def run_smc_live_copilot():
         cooldown_minutes=strat_cfg.get("cooldown_mins", 30),
         ttl_expire_bars=strat_cfg.get("order_ttl_bars", 4),
         max_sl_cap=strat_cfg.get("max_sl_cap", 25.0),
-        partial_tp_enabled=strat_cfg.get("partial_tp_enabled", True),
+        partial_tp_enabled=strat_cfg.get("partial_tp_enabled", False),
         partial_tp_r=strat_cfg.get("partial_tp_r", 1.0),
         partial_tp_ratio=strat_cfg.get("partial_tp_ratio", 0.5),
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
@@ -179,6 +179,9 @@ async def run_smc_live_copilot():
                             min_body_ratio=strat_cfg.get("min_body_ratio", 0.45),
                             max_sweep_pierce=strat_cfg.get("max_sweep_pierce", 8.0),
                             sweep_lookback=strat_cfg.get("sweep_lookback", 25),
+                            max_sweep_to_mss_bars=strat_cfg.get("max_sweep_to_mss_bars", 8),
+                            max_mss_to_fvg_bars=strat_cfg.get("max_mss_to_fvg_bars", 4),
+                            require_choch=strat_cfg.get("require_choch", True),
                         )
 
                     # Snapshot position before orchestrator step to detect trade close

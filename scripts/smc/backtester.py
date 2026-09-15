@@ -69,6 +69,7 @@ class SMCBacktester:
         sweep_lookback: int = 20,
         max_sweep_to_mss_bars: int = 6,
         max_mss_to_fvg_bars: int = 3,
+        require_choch: bool = False,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct
@@ -86,6 +87,7 @@ class SMCBacktester:
         self.sweep_lookback = sweep_lookback
         self.max_sweep_to_mss_bars = max_sweep_to_mss_bars
         self.max_mss_to_fvg_bars = max_mss_to_fvg_bars
+        self.require_choch = require_choch
 
     def run(self, df_m5: pd.DataFrame, df_h1: pd.DataFrame) -> BacktestSummary:
         m5 = df_m5.copy()
@@ -189,6 +191,7 @@ class SMCBacktester:
                         sweep_lookback=self.sweep_lookback,
                         max_sweep_to_mss_bars=self.max_sweep_to_mss_bars,
                         max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
+                        require_choch=self.require_choch,
                     )
 
             # Observe the same lifecycle used by the orchestrator; do not infer fills

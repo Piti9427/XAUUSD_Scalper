@@ -310,6 +310,68 @@ class TestSMCDetectionIntegration(unittest.TestCase):
             f"got a setup with SL tainted by the breakout instead: {signal}",
         )
 
+    def test_require_choch_rejects_mss_only_legacy_setup(self):
+        h1, m5, liquidity, now = self.valid_setup_inputs()
+        legacy = detect_smc_setup(h1, m5, liquidity, now)
+        self.assertIsNotNone(legacy, "legacy MSS path must still find the fixture")
+        foundation = detect_smc_setup(h1, m5, liquidity, now, require_choch=True)
+        self.assertIsNone(
+            foundation,
+            "foundation BaselinePlay must reject fractal-MSS that is not protected-swing CHOCH",
+        )
+
+    def test_require_choch_accepts_protected_swing_reversal(self):
+        # Mechanical §3.5: opposite pivot must sit BETWEEN broken swing and break.
+        # Form low → bounce high → break that low (bearish, protected=high) → sweep → CHOCH.
+        start = datetime(2026, 3, 2, 7, 0, tzinfo=timezone.utc)
+        rows = []
+
+        def bar(i, o, h, l, c):
+            return {
+                "time": start + timedelta(minutes=5 * i),
+                "open": o, "high": h, "low": l, "close": c, "tick_volume": 100,
+            }
+
+        # 0-7: swing low at 3 = 2016 (confirm by bar 5); stay above asian 2010
+        for i in range(8):
+            l = 2016.0 if i == 3 else (2017.0 if i in (2, 4) else 2019.0)
+            rows.append(bar(i, 2019.0, 2020.0, l, 2019.5))
+
+        # 8-12: swing high at 9 = 2030 (between low and later break; confirm by bar 11)
+        for i in range(8, 13):
+            h = 2030.0 if i == 9 else (2028.0 if i in (8, 10) else 2024.0)
+            rows.append(bar(i, 2023.0, h, 2021.0, 2023.5))
+
+        # 13: bearish BOS — close below swing low 2016; opposite high 2030 is between
+        rows.append(bar(13, 2022.0, 2022.5, 2013.5, 2014.5))
+
+        # 14: recover above asian without expansion close-through
+        rows.append(bar(14, 2014.5, 2018.0, 2014.0, 2017.5))
+
+        # 15: Sweep asian 2010
+        rows.append(bar(15, 2017.5, 2018.0, 2008.5, 2011.0))
+
+        # 16: FVG left / pre-CHOCH
+        rows.append(bar(16, 2011.0, 2020.0, 2010.8, 2019.0))
+
+        # 17: CHOCH through protected 2030
+        rows.append(bar(17, 2019.0, 2035.0, 2018.5, 2034.0))
+
+        # 18: FVG right (low > bar16 high)
+        rows.append(bar(18, 2034.0, 2036.0, 2021.0, 2035.0))
+
+        df_m5 = pd.DataFrame(rows)
+        eval_time = start + timedelta(minutes=5 * 18)
+        signal = detect_smc_setup(
+            self.df_h1, df_m5, self.liquidity, eval_time,
+            max_sl_cap=25.0, require_choch=True, min_body_ratio=0.45,
+            max_sweep_to_mss_bars=8, max_mss_to_fvg_bars=4,
+            max_sweep_pierce=8.0,
+        )
+        self.assertIsNotNone(signal, "protected-swing CHOCH fixture must qualify")
+        self.assertEqual(signal.direction, Direction.BUY)
+        self.assertIn("CHOCH", signal.reason)
+
 
 if __name__ == "__main__":
     unittest.main()
