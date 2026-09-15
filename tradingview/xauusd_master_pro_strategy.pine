@@ -1,5 +1,5 @@
 //@version=6
-strategy("XAUUSD Master Pro Strategy [SMC + TSS + GSS]", shorttitle="XAUPro", overlay=true, initial_capital=100, default_qty_type=strategy.fixed, default_qty_value=0, commission_type=strategy.commission.percent, commission_value=0.01, slippage=1, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+strategy("XAUUSD Master Pro Strategy [SMC + TSS + GSS]", shorttitle="XAUPro", overlay=true, initial_capital=100, default_qty_type=strategy.fixed, default_qty_value=0, commission_type=strategy.commission.percent, commission_value=0.01, slippage=1, calc_on_order_fills=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
 
 // =============================================================================
 // 1. GENERAL & EXECUTION SETTINGS (ADR-023)
@@ -246,14 +246,11 @@ var string pendingType       = ""
 var bool   pendingPlacedInKz = false
 var float  pendingQty        = na
 
-var bool   tradeActive       = false
-var int    tradeDir          = 0
 var float  tradeEntry        = na
 var float  tradeSl           = na
 var float  tradeTp1          = na
 var float  tradeTp2          = na
 var bool   isBeRelocated     = false
-var int    tp1Bar            = na
 
 bool triggerNewPending = false
 bool triggerNewMarket  = false
@@ -273,7 +270,7 @@ bool allowTss = signalMode == "TSS (Turtle Soup) Only" or (tssBuySignal and conf
 bool allowGss = signalMode == "GSS (Golden Zone OTE) Only" or (gssBuySignal and confluenceLong) or (gssSellSignal and confluenceShort)
 
 // 1. SMC Prime (Limit Order Model at 50% FVG)
-if allowSmc and not tradeActive and not pendingActive
+if allowSmc and strategy.position_size == 0 and not pendingActive
     if smcBuySetupReady and (signalMode == "SMC Prime Only" or confluenceLong)
         fvgCe = (low[0] + high[2]) / 2.0
         rawSl = lastMssSweepExtremum - slBuffer
@@ -300,7 +297,7 @@ if allowSmc and not tradeActive and not pendingActive
             newType  := "SMC_PRIME"
 
 // 2. TSS (Immediate Market Confirmation on Rejection Bar Close)
-if allowTss and not tradeActive and not pendingActive and not triggerNewPending
+if allowTss and strategy.position_size == 0 and not pendingActive and not triggerNewPending
     if tssBuySignal and (signalMode == "TSS (Turtle Soup) Only" or confluenceLong)
         rawSl = low - slBuffer
         dist  = close - rawSl
@@ -325,7 +322,7 @@ if allowTss and not tradeActive and not pendingActive and not triggerNewPending
             newType  := "TSS"
 
 // 3. GSS (Immediate Market Confirmation on OTE Bar Close)
-if allowGss and not tradeActive and not pendingActive and not triggerNewPending and not triggerNewMarket
+if allowGss and strategy.position_size == 0 and not pendingActive and not triggerNewPending and not triggerNewMarket
     if gssBuySignal and (signalMode == "GSS (Golden Zone OTE) Only" or confluenceLong)
         rawSl = nz(lastSwingLow, low) - slBuffer
         dist  = close - rawSl
@@ -351,7 +348,7 @@ if allowGss and not tradeActive and not pendingActive and not triggerNewPending 
 
 barConfirmed = awaitBarClose ? barstate.isconfirmed : true
 
-// Activate Pending Limit
+// Activate native orders. Broker emulator owns fills and position state.
 candidateQty = (triggerNewPending or triggerNewMarket) ? f_riskLot(newEntry, newSl) : 0.0
 capitalViable = candidateQty >= requiredSplitLot
 
@@ -366,121 +363,57 @@ if triggerNewPending and barConfirmed and capitalViable
     pendingType       := newType
     pendingPlacedInKz := isKillzoneActive
     pendingQty        := candidateQty
+    if newDir == 1
+        strategy.entry("Long", strategy.long, qty=candidateQty, limit=newEntry)
+    else
+        strategy.entry("Short", strategy.short, qty=candidateQty, limit=newEntry)
 
-// Activate Market Entry (TSS/GSS — bar-close confirmation, enter at confirmed close price)
 if triggerNewMarket and barConfirmed and capitalViable
-    tradeActive   := true
-    tradeDir      := newDir
-    tradeEntry    := newEntry
-    tradeSl       := newSl
-    tradeTp1      := newTp1
-    tradeTp2      := newTp2
-    isBeRelocated := false
-    tp1Bar        := na
+    tradeSl  := newSl
+    tradeTp1 := newTp1
+    tradeTp2 := newTp2
     if newDir == 1
         strategy.entry("Long", strategy.long, qty=candidateQty)
-    else if newDir == -1
+    else
         strategy.entry("Short", strategy.short, qty=candidateQty)
 
-// Check Pending Order Fill on subsequent bars (SMC — limit at 50% FVG price with spread buffer)
-if pendingActive and not tradeActive and (bar_index > pendingBar)
-    bool filled = false
-    // Long limit: Ask must reach down to limit price
-    if pendingDir == 1 and (low + spreadPts) <= pendingLimit
-        filled := true
-    // Short limit: Bid must reach up to limit price (chart shows Bid)
-    else if pendingDir == -1 and high >= pendingLimit
-        filled := true
-        
-    bool ttlExpired = (bar_index - pendingBar) >= orderTtlBars
-    bool kzExpired  = pendingPlacedInKz and not isKillzoneActive
+pendingExpired = pendingActive and strategy.position_size == 0 and ((bar_index - pendingBar) >= orderTtlBars or (pendingPlacedInKz and not isKillzoneActive))
+if pendingExpired
+    strategy.cancel(pendingDir == 1 ? "Long" : "Short")
+    pendingActive := false
 
-    if filled
-        tradeActive   := true
-        tradeDir      := pendingDir
-        tradeEntry    := pendingLimit
-        tradeSl       := pendingSl
-        tradeTp1      := pendingTp1
-        tradeTp2      := pendingTp2
-        isBeRelocated := false
-        tp1Bar        := na
+newLongFill = strategy.position_size > 0 and strategy.position_size[1] == 0
+newShortFill = strategy.position_size < 0 and strategy.position_size[1] == 0
+if newLongFill or newShortFill
+    tradeEntry := strategy.position_avg_price
+    if pendingActive
+        tradeSl := pendingSl
         pendingActive := false
-        if tradeDir == 1
-            strategy.entry("Long", strategy.long, qty=pendingQty, limit=pendingLimit)
-        else if tradeDir == -1
-            strategy.entry("Short", strategy.short, qty=pendingQty, limit=pendingLimit)
-    else if ttlExpired or kzExpired
-        pendingActive := false
+    riskDistance = math.abs(tradeEntry - tradeSl)
+    tradeTp1 := tradeEntry + (newLongFill ? riskDistance * tp1R : -riskDistance * tp1R)
+    tradeTp2 := tradeEntry + (newLongFill ? riskDistance * tp2R : -riskDistance * tp2R)
+    isBeRelocated := false
 
-// Manage Active Trade Exits (TP1 50% partial + BE, Full TP2, SL)
-// Hardened ADR-024:
-// 1. Original SL checked FIRST before TP1 (conservative invariant, zero optimistic survivor bias)
-// 2. tp1Bar guard: DO NOT evaluate Breakeven on the exact bar TP1 is hit, as lower shadow precedes expansion
-// 3. Short exits calibrated for Ask execution (low + spreadPts)
-if tradeActive
-    if tradeDir == 1
-        // === LONG EXITS (Sell at Bid = chart price) ===
-        // 1. Before BE: Original SL checked FIRST
-        if not isBeRelocated and low <= tradeSl
-            strategy.close("Long", comment="SL 🛑")
-            tradeActive := false
-            tp1Bar      := na
-        // 2. Before BE: Only if SL NOT hit, check TP1 (Close 50% & Move BE)
-        else if not isBeRelocated and high >= tradeTp1
-            strategy.close("Long", qty_percent=50, comment="TP1 (+1.0R) 🏦")
-            isBeRelocated := true
-            tradeSl       := tradeEntry + beBuffer
-            tp1Bar        := bar_index
-            // Same bar: only TP2 can trigger (DO NOT check low vs new BE)
-            if high >= tradeTp2
-                strategy.close("Long", comment="TP2 (+2.5R) 🎯")
-                tradeActive := false
-                tp1Bar      := na
-        // 3. After BE (subsequent bars only: bar_index > tp1Bar)
-        else if isBeRelocated and bar_index > tp1Bar
-            if high >= tradeTp2
-                strategy.close("Long", comment="TP2 (+2.5R) 🎯")
-                tradeActive := false
-                tp1Bar      := na
-            else if low <= tradeSl
-                strategy.close("Long", comment="BE (+0.10) 🛡️")
-                tradeActive := false
-                tp1Bar      := na
-                
-    else if tradeDir == -1
-        // === SHORT EXITS ===
-        // 1. Before BE: Original SL checked FIRST (raw high, tradeSl already includes slBuffer)
-        if not isBeRelocated and high >= tradeSl
-            strategy.close("Short", comment="SL 🛑")
-            tradeActive := false
-            tp1Bar      := na
-        // 2. Before BE: Only if SL NOT hit, check TP1 (Ask-calibrated: low + spreadPts)
-        else if not isBeRelocated and (low + spreadPts) <= tradeTp1
-            strategy.close("Short", qty_percent=50, comment="TP1 (+1.0R) 🏦")
-            isBeRelocated := true
-            tradeSl       := tradeEntry - beBuffer
-            tp1Bar        := bar_index
-            // Same bar: only TP2 can trigger
-            if (low + spreadPts) <= tradeTp2
-                strategy.close("Short", comment="TP2 (+2.5R) 🎯")
-                tradeActive := false
-                tp1Bar      := na
-        // 3. After BE (subsequent bars only: bar_index > tp1Bar)
-        else if isBeRelocated and bar_index > tp1Bar
-            if (low + spreadPts) <= tradeTp2
-                strategy.close("Short", comment="TP2 (+2.5R) 🎯")
-                tradeActive := false
-                tp1Bar      := na
-            else if high >= tradeSl
-                strategy.close("Short", comment="BE (+0.10) 🛡️")
-                tradeActive := false
-                tp1Bar      := na
+positionReduced = strategy.position_size != 0 and strategy.position_size[1] != 0 and math.abs(strategy.position_size) < math.abs(strategy.position_size[1])
+if positionReduced
+    isBeRelocated := true
 
-// Rollover Flat Rule (20:45 UTC, first reachable M15 bar before 20:55 deadline)
-if tradeActive and inRollover
-    if tradeDir == 1
-        strategy.close("Long", comment="Rollover Flat ⏰")
-    else if tradeDir == -1
-        strategy.close("Short", comment="Rollover Flat ⏰")
-    tradeActive := false
-    tp1Bar      := na
+if strategy.position_size > 0
+    runnerStop = isBeRelocated ? tradeEntry + beBuffer : tradeSl
+    if not isBeRelocated
+        strategy.exit("Long-TP1", from_entry="Long", stop=tradeSl, limit=tradeTp1, qty_percent=50)
+        strategy.exit("Long-TP2", from_entry="Long", stop=runnerStop, limit=tradeTp2, qty_percent=50)
+    else
+        strategy.cancel("Long-TP1")
+        strategy.exit("Long-TP2", from_entry="Long", stop=runnerStop, limit=tradeTp2, qty_percent=100)
+else if strategy.position_size < 0
+    runnerStop = isBeRelocated ? tradeEntry - beBuffer : tradeSl
+    if not isBeRelocated
+        strategy.exit("Short-TP1", from_entry="Short", stop=tradeSl, limit=tradeTp1, qty_percent=50)
+        strategy.exit("Short-TP2", from_entry="Short", stop=runnerStop, limit=tradeTp2, qty_percent=50)
+    else
+        strategy.cancel("Short-TP1")
+        strategy.exit("Short-TP2", from_entry="Short", stop=runnerStop, limit=tradeTp2, qty_percent=100)
+
+if strategy.position_size != 0 and inRollover
+    strategy.close_all(comment="Rollover Flat")
