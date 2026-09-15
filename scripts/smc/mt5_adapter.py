@@ -17,6 +17,14 @@ except ImportError:
     mt5 = None
 
 
+@dataclass(frozen=True)
+class ExecutionResult:
+    success: bool
+    order_id: Optional[int]
+    message: str
+    status: str = "OK"  # OK | REJECTED | UNKNOWN
+
+
 BOT_COMMENT_PREFIX = "SMC_"
 
 
@@ -27,13 +35,6 @@ def is_bot_owned_comment(comment: Optional[str], order_id: Optional[str] = None)
     if order_id is None:
         return True
     return comment in {f"SMC_{order_id}", f"SMC_Partial_{order_id}"}
-
-
-@dataclass(frozen=True)
-class ExecutionResult:
-    success: bool
-    order_id: Optional[int]
-    message: str
 
 
 class SMCExecutionAdapter:
@@ -535,6 +536,17 @@ class SMCExecutionAdapter:
                 if intent.order_id
                 else f"SMC_v1_{intent.reason[:20]}"
             )
+            self.log_lifecycle_event(
+                event_type="INTENT_SUBMITTED",
+                direction=intent.direction.value if intent.direction else None,
+                entry_price=intent.limit_price,
+                sl_price=intent.sl_price,
+                tp_price=intent.tp_price,
+                lot_size=intent.lot_size,
+                reason=intent.reason,
+                order_id=intent.order_id,
+                ticket=intent.ticket,
+            )
             request = {
                 "action": mt5.TRADE_ACTION_PENDING,
                 "symbol": self.symbol,
@@ -547,12 +559,20 @@ class SMCExecutionAdapter:
                 "comment": comment_str,
             }
             result = mt5.order_send(request)
-            if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-                err_msg = f"retcode {result.retcode}: {result.comment}" if result is not None else "MT5 order_send returned None"
+            if result is None:
+                return ExecutionResult(
+                    success=False,
+                    order_id=None,
+                    message="Order submit returned None — status UNKNOWN; reconcile before retry",
+                    status="UNKNOWN",
+                )
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                err_msg = f"retcode {result.retcode}: {result.comment}"
                 return ExecutionResult(
                     success=False,
                     order_id=None,
                     message=f"Order failed with {err_msg}",
+                    status="REJECTED",
                 )
             self.log_lifecycle_event(
                 event_type="PLACE_LIMIT",
