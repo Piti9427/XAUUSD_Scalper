@@ -1,5 +1,8 @@
 # XAUUSD Setup Experiment v1 — Mechanical Specification for S1–S4
 
+**Mechanical completion (issue #3):** [`xauusd-s1-s4-mechanical-v1.md`](xauusd-s1-s4-mechanical-v1.md) — decision tables, worked BUY/SELL examples, boundary fixtures, parent coverage matrix.  
+**Research handoff (issue #4):** [`xauusd-s1-s4-research-handoff-v1.md`](xauusd-s1-s4-research-handoff-v1.md).
+
 ## Problem Statement
 
 ผู้ใช้ต้องการพัฒนา Manual Signal Indicator สำหรับบอกจุดเข้าเทรดเองก่อน และแยกระบบ Automated Trading Strategy สำหรับ bot ไว้ภายหลัง ต้องการเปรียบเทียบ Sweep → MSS → FVG กับ CHOCH, Order Block และ OB∩FVG โดยมีหลักฐาน ไม่เลือกจากความสวยของกราฟหรือ win rate อย่างเดียว
