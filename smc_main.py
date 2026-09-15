@@ -11,7 +11,14 @@ from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
 from scripts.smc.risk import calculate_lot_size
+from scripts.smc.risk_halt import (
+    load_risk_halt_state,
+    new_risk_halt_state,
+    observe_equity,
+    save_risk_halt_state,
+)
 from scripts.smc.chart import generate_setup_chart
+from pathlib import Path
 from scripts.smc.notifier import (
     SMCTelegramNotifier,
     format_order_filled_card,
@@ -68,6 +75,11 @@ async def run_smc_live_copilot():
     news_mgr = NewsManager()
     notifier = SMCTelegramNotifier({"telegram": {"enabled": False}})
     account = AccountState(balance=10000.0, equity=10000.0)
+    risk_halt_path = Path(strat_cfg.get("risk_halt_path", "data/risk_halt_state.json"))
+    risk_halt = load_risk_halt_state(risk_halt_path) or new_risk_halt_state(account.equity)
+    if risk_halt.halted:
+        logger.error("Persistent risk halt active on startup: drawdown=%s daily=%s losses=%s",
+                     risk_halt.drawdown_halt, risk_halt.daily_equity_halt, risk_halt.net_losing_trades_today)
 
     last_processed_m5_time = None
     last_news_fetch_time = 0.0
@@ -195,6 +207,10 @@ async def run_smc_live_copilot():
                     # Snapshot position before orchestrator step to detect trade close
                     pos_before = account.open_position
 
+                    # Persistent equity gates (5% DD / 1% daily) before new risk
+                    observe_equity(risk_halt, account.equity, now=now_utc)
+                    save_risk_halt_state(risk_halt_path, risk_halt)
+
                     # Step Orchestrator
                     intents = orchestrator.on_bar(
                         bar=last_closed_bar,
@@ -202,6 +218,7 @@ async def run_smc_live_copilot():
                         setup_signal=setup,
                         current_spread=current_spread,
                         max_spread=max_spread,
+                        risk_halt=risk_halt,
                     )
 
                     for intent in intents:

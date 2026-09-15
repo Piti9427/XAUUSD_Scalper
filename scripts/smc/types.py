@@ -88,3 +88,38 @@ class AccountState:
     last_loss_time: Optional[datetime] = None
     current_utc_date: Optional[str] = None
     news_events: List[Dict[str, Any]] = field(default_factory=list)
+    # Whole-account risk sees all activity; bot expectancy uses bot_* only.
+    bot_realized_pnl: float = 0.0
+    manual_realized_pnl: float = 0.0
+    cash_flow_total: float = 0.0
+
+
+def apply_account_pnl_event(
+    account: AccountState,
+    *,
+    amount: float,
+    source: str,
+) -> None:
+    """
+    Record PnL/cash without mixing bot expectancy and foreign activity.
+
+    source:
+      - bot: strategy-owned closed trade
+      - manual: human/other system trade (affects equity gates, not bot expectancy)
+      - cash_flow: deposit/withdrawal/credit (disclosure only; does not count as bot edge)
+    """
+    amount = float(amount)
+    if source == "bot":
+        account.bot_realized_pnl += amount
+        account.balance += amount
+        account.equity += amount
+    elif source == "manual":
+        account.manual_realized_pnl += amount
+        account.balance += amount
+        account.equity += amount
+    elif source == "cash_flow":
+        account.cash_flow_total += amount
+        account.balance += amount
+        account.equity += amount
+    else:
+        raise ValueError(f"unknown pnl source: {source}")

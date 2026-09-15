@@ -21,20 +21,22 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Affordability distance at USD 500 / 0.01 lot | `scripts/smc/affordability.py`, `tests/test_smc_affordability.py` |
 | News unknown/stale + blackout blocks new risk | `NewsManager.new_risk_allowed`, wired in `smc_main.py`; `tests/test_smc_news.py` |
 | INTENT_SUBMITTED + UNKNOWN vs REJECTED | `ExecutionResult.status` in `mt5_adapter.py` |
+| Manual vs bot vs cash-flow PnL separation | `apply_account_pnl_event` in `types.py`; `tests/test_smc_account_pnl.py` |
+| Broker/Demo identity gate | `scripts/smc/broker_identity.py`; `tests/test_smc_broker_identity.py` |
+| Fill-during-cancel / partial residual reconcile | `scripts/smc/reconcile.py`; `tests/test_smc_reconcile.py` |
+| risk_halt file load/save in SMC loop | `smc_main.py` + `observe_equity` before admission |
+| Gate A research defaults | ADR-0028 |
+| Bid/ask executable side + OHLC AMBIGUOUS | `scripts/smc/quotes.py`; `tests/test_smc_quotes.py` |
 
 ## Still open for issue #1
 
 | Gap | Notes |
 | --- | --- |
-| Gate A remaining material decisions | Fib anchors freeze, cash-flow pause, quote-side/stats protocol, data provenance |
-| Full broker reconcile (partial residual, cancel races, restart after submit) | INTENT/UNKNOWN started; not complete lifecycle |
-| Shared-account vs bot PnL separation | Manual losses affect gates, not bot expectancy |
-| Bid/ask tick replay economics | Mid/OHLC still used in places |
-| Live Exness symbol/account identity verification | Spec requires broker-confirmed metadata |
-| Oracle ARM64 runtime soak | Infra gate, not strategy |
-| Forward Demo 12-week protocol | Prospective evidence only after Gates A–C |
-| Wire risk_halt file path end-to-end in Demo loop | Module+orchestrator ready; file load/save not fully wired while live loop remains disabled |
-| Close/comment issues on GitHub | Local work committed; tracker write currently 403 (PAT lacks issues write); `gh` keyring invalid |
+| Live Exness connect smoke with real credentials | Identity helper ready; needs broker session evidence |
+| Full tick-history replay feed integration | Quote helpers ready; backtester still mostly OHLC |
+| Oracle ARM64 runtime soak | Infra gate, not strategy code |
+| Forward Demo 12-week protocol execution | Prospective ops after Gates B/C |
+| Close/comment issues on GitHub | Local work committed; tracker write 403 (PAT lacks issues write); `gh` keyring invalid |
 
 ## Sibling issues #2–#4
 
