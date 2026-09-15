@@ -71,3 +71,57 @@ def compute_liquidity_levels(
         london_high=london_high,
         london_low=london_low,
     )
+
+
+def select_nearest_opposing_pool_tp(
+    direction,
+    entry_price: float,
+    sl_distance: float,
+    liquidity: LiquidityLevels,
+    min_r: float = 1.5,
+    consumed_levels: Optional[set] = None,
+):
+    """
+    Foundation BaselinePlay TP: nearest untouched opposing liquidity pool.
+
+    BUY targets pools strictly above entry; SELL targets pools strictly below.
+    Skip when nearest eligible planned R < min_r (do not stretch to a farther pool).
+    """
+    from scripts.smc.types import Direction
+
+    consumed = consumed_levels or set()
+    if direction == Direction.BUY:
+        candidates = [
+            ("asian_high", liquidity.asian_high),
+            ("pdh", liquidity.pdh),
+            ("london_high", liquidity.london_high),
+        ]
+        candidates = [
+            (name, float(level))
+            for name, level in candidates
+            if level is not None and float(level) > entry_price and float(level) not in consumed
+        ]
+        candidates.sort(key=lambda item: item[1])
+    else:
+        candidates = [
+            ("asian_low", liquidity.asian_low),
+            ("pdl", liquidity.pdl),
+            ("london_low", liquidity.london_low),
+        ]
+        candidates = [
+            (name, float(level))
+            for name, level in candidates
+            if level is not None and float(level) < entry_price and float(level) not in consumed
+        ]
+        candidates.sort(key=lambda item: item[1], reverse=True)
+
+    if not candidates:
+        return None, "no opposing pool beyond entry"
+
+    name, tp = candidates[0]
+    if sl_distance <= 0:
+        return None, "nonpositive SL distance"
+    planned_r = abs(tp - entry_price) / sl_distance
+    if planned_r < min_r:
+        return None, f"nearest {name} R {planned_r:.2f} < {min_r}"
+    return round(tp, 2), name

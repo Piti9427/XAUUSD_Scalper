@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List, Tuple
 import pandas as pd
 import numpy as np
 from scripts.smc.types import Direction, SetupSignal, LiquidityLevels
+from scripts.smc.liquidity import select_nearest_opposing_pool_tp
 from scripts.smc.structure import (
     find_fractals_5bar,
     check_displacement,
@@ -65,6 +66,7 @@ def detect_smc_setup(
     extended_killzones: bool = True,
     max_breakout_pierce: float = 8.0,
     require_choch: bool = False,
+    min_target_r: float = 1.5,
 ) -> Optional[SetupSignal]:
     """
     Pure Functional Seam: Evaluates market conditions for a deterministic SMC setup.
@@ -316,22 +318,41 @@ def detect_smc_setup(
     if not fvg_found:
         return None
 
-    # 5. Risk, SL, TP (ADR-018, ADR-019)
+    # 5. Risk, SL, TP (ADR-018, ADR-019 / foundation pool TP when require_choch)
     if bias == Direction.BUY:
         sl_price = round(true_sweep_wick - spread_buffer, 2)
         raw_sl_dist = abs(entry_limit_price - true_sweep_wick)
         total_sl_dist = round(raw_sl_dist + spread_buffer, 2)
-        tp_price = round(entry_limit_price + (total_sl_dist * tp_r), 2)
     else:  # SELL
         sl_price = round(true_sweep_wick + spread_buffer, 2)
         raw_sl_dist = abs(entry_limit_price - true_sweep_wick)
         total_sl_dist = round(raw_sl_dist + spread_buffer, 2)
-        tp_price = round(entry_limit_price - (total_sl_dist * tp_r), 2)
 
     # SL Cap Check (max_sl_cap or ATR dynamic)
     if total_sl_dist > effective_sl_cap:
         return None
 
+    pool_tp_name = None
+    if require_choch:
+        tp_price, pool_tp_name = select_nearest_opposing_pool_tp(
+            bias,
+            entry_price=float(entry_limit_price),
+            sl_distance=float(total_sl_dist),
+            liquidity=liquidity,
+            min_r=min_target_r,
+        )
+        if tp_price is None:
+            return None
+        risk_r = abs(float(tp_price) - float(entry_limit_price)) / float(total_sl_dist)
+    else:
+        if bias == Direction.BUY:
+            tp_price = round(entry_limit_price + (total_sl_dist * tp_r), 2)
+        else:
+            tp_price = round(entry_limit_price - (total_sl_dist * tp_r), 2)
+        risk_r = tp_r
+
+    structure_label = "CHOCH" if require_choch else "MSS"
+    target_note = f" pool={pool_tp_name}" if pool_tp_name else ""
     return SetupSignal(
         direction=bias,
         sweep_price=float(swept_level),
@@ -341,9 +362,12 @@ def detect_smc_setup(
         sl_price=float(sl_price),
         tp_price=float(tp_price),
         sl_distance=float(total_sl_dist),
-        risk_r=tp_r,
+        risk_r=float(risk_r),
         fvg_high=float(fvg_high_val),
         fvg_low=float(fvg_low_val),
-        reason=f"{bias.value} SMC Setup: Swept {swept_level} -> {'CHOCH' if require_choch else 'MSS'} {mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]",
+        reason=(
+            f"{bias.value} SMC Setup: Swept {swept_level} -> {structure_label} "
+            f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}"
+        ),
         timestamp=current_time
     )

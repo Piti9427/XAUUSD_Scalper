@@ -371,6 +371,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         self.assertIsNotNone(signal, "protected-swing CHOCH fixture must qualify")
         self.assertEqual(signal.direction, Direction.BUY)
         self.assertIn("CHOCH", signal.reason)
+        self.assertIn("pool=", signal.reason)
 
 
 if __name__ == "__main__":
