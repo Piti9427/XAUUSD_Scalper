@@ -1377,6 +1377,28 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)
 
+    def test_trade_closed_uses_frozen_initial_r_from_fill_geometry(self):
+        """Dollar PnL + entry/SL/lot → R uses frozen initial denominator."""
+        res = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "TRADE_CLOSED",
+                "order_id": "FROZEN_R_1",
+                "dir": "BUY",
+                "entry": 2000.0,
+                "sl": 1990.0,
+                "lot_size": 0.01,
+                "pnl_dollar": 10.0,
+                "reason": "MANUAL_FLAT",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["action"], "TRADE_CLOSED")
+        # risk = 10 * 0.01 * 100 = 10; pnl 10 → 1.0R
+        self.assertEqual(data["pnl_r"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

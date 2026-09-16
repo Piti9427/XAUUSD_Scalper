@@ -900,6 +900,21 @@ def create_app(
                 if broker_pnl is not None:
                     pnl_dollar = broker_pnl
 
+            # Scenario 21: freeze R denominator from entry→SL at fill; never invent from BE.
+            if pnl_r is None and pnl_dollar is not None:
+                entry = float(payload.get("entry") or 0.0)
+                sl = float(payload.get("sl") or 0.0)
+                lot = float(payload.get("lot_size") or 0.0)
+                initial_dist = abs(entry - sl) if entry and sl else 0.0
+                if initial_dist > 0 and lot > 0:
+                    from scripts.smc.risk import frozen_initial_r
+
+                    pnl_r = frozen_initial_r(
+                        pnl_dollars=float(pnl_dollar),
+                        initial_sl_distance=initial_dist,
+                        filled_lot=lot,
+                    )
+
             await asyncio.to_thread(
                 adapter.log_lifecycle_event,
                 event_type="TRADE_CLOSED",
