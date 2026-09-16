@@ -84,6 +84,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Filled setup identity consumed (no revive) | **Done:** orchestrator `mark_terminal(..., "filled")` on pending fill; `test_fill_marks_setup_terminal_blocks_revive` |
 | Required-scenario coverage matrix (1–24) | **Done:** `scripts/ops/issue1_scenario_coverage.py` → `docs/ops/2026-09-16-issue1-scenario-coverage.json`; scenarios 1–23 software_evidence_complete; 24 live_ops_required; readiness embeds Gate B summary |
 | Setup registry survives process restart (scenario 8) | **Done:** `load_setup_registry` / `save_setup_registry`; `smc_main` loads `data/setup_registry.json`; `test_registry_survives_restart_after_ttl` |
+| Invalidation before submission (scenario 8) | **Done:** orchestrator blocks PLACE when known H1 bias conflicts; marks terminal; `test_h1_bias_blocks_submission_before_place` |
 
 ## Still open for issue #1
 

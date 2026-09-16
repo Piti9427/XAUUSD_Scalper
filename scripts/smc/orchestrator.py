@@ -425,6 +425,15 @@ class StrategyOrchestrator:
                     sweep_wick=setup_signal.sweep_wick,
                     available_at=ts.isoformat(),
                 )
+            # Scenario 8: invalidation before submission — do not place then cancel.
+            bias_ok, bias_reason = pending_h1_bias_allows(
+                pending_direction=setup_signal.direction,
+                h1_bias=h1_bias,
+                bias_known=h1_bias_known,
+            )
+            if not bias_ok:
+                self.setup_registry.mark_terminal(setup_id, bias_reason)
+                return []
             allowed, _admit_reason = self.setup_registry.admit(setup_id)
             if not allowed:
                 return []

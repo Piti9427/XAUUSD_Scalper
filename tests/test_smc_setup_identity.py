@@ -97,6 +97,49 @@ class SetupIdentityTests(unittest.TestCase):
         self.assertEqual(revive, [])
         self.assertIsNone(account.pending_order)
 
+    def test_h1_bias_blocks_submission_before_place(self):
+        registry = SetupRegistry()
+        orch = StrategyOrchestrator(setup_registry=registry)
+        setup_id = make_setup_id(
+            direction="BUY",
+            entry_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            sweep_wick=2005.0,
+            available_at="2026-03-02T08:00:00+00:00",
+        )
+        signal = SetupSignal(
+            direction=Direction.BUY,
+            sweep_price=2010.0,
+            sweep_wick=2005.0,
+            mss_price=2012.0,
+            entry_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            sl_distance=5.0,
+            risk_r=2.0,
+            fvg_high=2011.0,
+            fvg_low=2009.0,
+            reason="test",
+            timestamp=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            setup_id=setup_id,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0)
+        bar0 = {
+            "time": datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            "open": 2015,
+            "high": 2016,
+            "low": 2014,
+            "close": 2015,
+        }
+        intents = orch.on_bar(
+            bar0, account, signal, h1_bias=Direction.SELL, h1_bias_known=True
+        )
+        self.assertEqual(intents, [])
+        self.assertIsNone(account.pending_order)
+        self.assertTrue(registry.is_blocked(setup_id))
+        self.assertEqual(registry.terminal_reason(setup_id), "h1_bias_invalidated")
+
     def test_h1_bias_flip_cancels_pending_and_blocks_revive(self):
         registry = SetupRegistry()
         orch = StrategyOrchestrator(setup_registry=registry)
