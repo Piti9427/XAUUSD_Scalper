@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
 # Issue #1 live gate helper — run on a host with MT5 + Exness Demo (hedging) session.
 # Mac native / Wine IPC is INCONCLUSIVE_INFRA — use Windows or proven Oracle stack.
+# Optional: export MT5_TERMINAL_PATH=C:\\Program Files\\MetaTrader 5\\terminal64.exe
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 DATE_TAG="$(date -u +%Y-%m-%d)"
 OUT="docs/ops/${DATE_TAG}-exness-smoke.json"
 
+SMOKE_ARGS=(--out "$OUT")
+if [[ -n "${MT5_TERMINAL_PATH:-}" ]]; then
+  SMOKE_ARGS+=(--path "$MT5_TERMINAL_PATH")
+fi
+if [[ -n "${1:-}" ]]; then
+  SMOKE_ARGS+=(--path "$1")
+fi
+
 echo "==> Broker identity + hedging mode smoke (no orders)"
-python3 scripts/smoke_broker_identity.py --out "$OUT"
+python3 scripts/smoke_broker_identity.py "${SMOKE_ARGS[@]}"
 cat "$OUT"
 
 echo ""
