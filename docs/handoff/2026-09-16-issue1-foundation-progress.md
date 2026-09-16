@@ -57,6 +57,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Orchestrator `risk_pct` from config | `StrategyOrchestrator.risk_pct` → `calculate_lot_size`; `test_new_setup_uses_configured_risk_pct` |
 | Smoke evidence artifact (`--out`) | `scripts/smoke_broker_identity.py`; `tests/test_smoke_broker_identity_cli.py` |
 | Broker lifecycle reconciler (TTL / fill / close) | `scripts/smc/broker_lifecycle.py`; webhook `POST /internal/clock`; `tests/test_smc_broker_lifecycle.py` |
+| Clock tick updates risk_halt on broker-only closes | `apply_broker_lifecycle_losses`; `tests/test_smc_risk_halt.py` |
 
 ## Still open for issue #1
 

@@ -16,6 +16,7 @@ from scripts.smc.risk_halt import (
     new_risk_halt_state,
     observe_equity,
     record_net_losing_trade,
+    apply_broker_lifecycle_losses,
     save_risk_halt_state,
 )
 from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
@@ -152,6 +153,25 @@ def create_app(
             order_ttl_bars=order_ttl_bars,
             bar_minutes=bar_minutes,
         )
+
+        if risk_halt is not None and halt_path is not None:
+            equity_raw = await asyncio.to_thread(adapter.get_account_equity)
+            history_ready = adapter.dry_run or equity_raw is not None
+            equity_now = (
+                float(equity_raw)
+                if equity_raw is not None
+                else float(account_balance)
+            )
+            observe_equity(
+                risk_halt,
+                equity_now,
+                now=now_utc,
+                history_ready=history_ready,
+            )
+            apply_broker_lifecycle_losses(
+                risk_halt, lifecycle.get("broker_closes", [])
+            )
+            await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
 
         # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
         if news_manager is not None and hasattr(news_manager, "should_cancel_pending"):

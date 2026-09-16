@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from scripts.smc.risk_halt import (
+    apply_broker_lifecycle_losses,
     load_risk_halt_state,
     new_risk_halt_state,
     observe_equity,
@@ -77,6 +78,20 @@ class RiskHaltPersistenceTests(unittest.TestCase):
             restored = load_risk_halt_state(path)
             self.assertIsNotNone(restored)
             self.assertTrue(restored.history_ready)
+
+    def test_apply_broker_lifecycle_losses_counts_negative_pnl_only(self):
+        state = new_risk_halt_state(500.0)
+        n = apply_broker_lifecycle_losses(
+            state,
+            [
+                {"order_id": "A", "pnl_dollar": -10.0, "pnl_r": -1.0},
+                {"order_id": "B", "pnl_dollar": 5.0, "pnl_r": 0.5},
+                {"order_id": "C", "pnl_dollar": None, "pnl_r": -0.2},
+            ],
+        )
+        self.assertEqual(n, 2)
+        self.assertEqual(state.net_losing_trades_today, 2)
+        self.assertTrue(state.halted)
 
 
 if __name__ == "__main__":

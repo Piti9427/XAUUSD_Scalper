@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Sequence
 
 
 @dataclass
@@ -99,6 +99,28 @@ def observe_equity(
 def record_net_losing_trade(state: RiskHaltState) -> RiskHaltState:
     state.net_losing_trades_today += 1
     return state
+
+
+def apply_broker_lifecycle_losses(
+    state: RiskHaltState,
+    broker_closes: Sequence[dict[str, Any]],
+) -> int:
+    """
+    Count net losing closes detected by broker lifecycle reconciler (clock tick).
+
+    Returns number of losses recorded (for tests/telemetry).
+    """
+    recorded = 0
+    for close in broker_closes:
+        pnl_dollar = close.get("pnl_dollar")
+        pnl_r = close.get("pnl_r")
+        is_net_loss = (pnl_r is not None and float(pnl_r) < 0) or (
+            pnl_dollar is not None and float(pnl_dollar) < 0
+        )
+        if is_net_loss:
+            record_net_losing_trade(state)
+            recorded += 1
+    return recorded
 
 
 def save_risk_halt_state(path: Path, state: RiskHaltState) -> None:
