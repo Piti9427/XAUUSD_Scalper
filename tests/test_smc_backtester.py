@@ -230,6 +230,17 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(result.sample_verdict, "INCONCLUSIVE")
         if result.winning_trades + result.losing_trades + result.be_trades > 0:
             self.assertIsNotNone(result.wilson)
+        self.assertIsNotNone(result.provenance)
+        self.assertEqual(result.provenance.code, "DATA_OHLC_ONLY")
+
+    def test_proxy_feed_cannot_claim_evaluable(self):
+        result = SMCBacktester(
+            require_choch=False,
+            is_proxy_feed=True,
+            source_label="yfinance",
+        ).run(self.df_m5, self.df_h1)
+        self.assertFalse(result.provenance.ok)
+        self.assertEqual(result.sample_verdict, "DATA_PROXY_FEED")
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ from scripts.smc.funnel import SetupFunnel
 from scripts.smc.replay_report import ReplayKind, ReplayReport, build_replay_report
 from scripts.smc.cost_accounting import CostAccountingReport, summarize_profit_layers
 from scripts.smc.stats_protocol import WilsonInterval, sample_verdict, wilson_interval
+from scripts.smc.provenance import ProvenanceReport, classify_dataset_provenance
 
 
 @dataclass
@@ -40,6 +41,7 @@ class BacktestSummary:
     cost_report: Optional[CostAccountingReport] = None
     sample_verdict: Optional[str] = None
     wilson: Optional[WilsonInterval] = None
+    provenance: Optional[ProvenanceReport] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -86,6 +88,8 @@ class SMCBacktester:
         external_account_events: Optional[List[Dict[str, Any]]] = None,
         operating_costs: float = 0.0,
         fees_and_swap: float = 0.0,
+        is_proxy_feed: bool = False,
+        source_label: Optional[str] = None,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct
@@ -109,6 +113,8 @@ class SMCBacktester:
         self.external_account_events = external_account_events
         self.operating_costs = float(operating_costs)
         self.fees_and_swap = float(fees_and_swap)
+        self.is_proxy_feed = bool(is_proxy_feed)
+        self.source_label = source_label
 
     def run(
         self,
@@ -446,7 +452,18 @@ class SMCBacktester:
             operating_costs=self.operating_costs,
         )
         # Story 42/43: freeze sample sufficiency before claiming PASS; few trades → INCONCLUSIVE.
+        # Scenario 22: provenance gap/proxy must not collapse into EVALUABLE/PASS.
+        provenance = classify_dataset_provenance(
+            has_m5=len(m5) > 0,
+            has_h1=len(h1) > 0,
+            has_ticks=tick_df is not None and len(tick_df) > 0,
+            timezone_aware_utc=True,  # normalized to UTC above
+            is_proxy=self.is_proxy_feed,
+            source_label=self.source_label,
+        )
         verdict = sample_verdict(n=scored_n)
+        if not provenance.ok:
+            verdict = provenance.code
         wilson = wilson_interval(wins=winning_trades, n=scored_n) if scored_n > 0 else None
 
         return BacktestSummary(
@@ -467,6 +484,7 @@ class SMCBacktester:
             cost_report=cost_report,
             sample_verdict=verdict,
             wilson=wilson,
+            provenance=provenance,
         )
 
 
