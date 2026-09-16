@@ -23,7 +23,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Affordability distance at USD 500 / 0.01 lot | `scripts/smc/affordability.py`, `tests/test_smc_affordability.py` |
 | News unknown/stale + blackout blocks new risk | `NewsManager.new_risk_allowed`, wired in `smc_main.py`; `tests/test_smc_news.py` |
 | INTENT_SUBMITTED + UNKNOWN vs REJECTED | `ExecutionResult.status` in `mt5_adapter.py` |
-| Manual vs bot vs cash-flow PnL separation | `apply_account_pnl_event` in `types.py`; `tests/test_smc_account_pnl.py` |
+| Manual vs bot vs cash-flow PnL separation | `apply_account_pnl_event` + `scripts/smc/account_pnl_sync.py`; clock `sync_classified_account_pnl` → `ACCOUNT_PNL` lifecycle; `tests/test_smc_account_pnl.py`, `test_clock_syncs_classified_account_pnl_deals` |
 | Broker/Demo identity gate | `scripts/smc/broker_identity.py` + hedging `scripts/smc/account_mode.py`; netting fails Demo gate; `tests/test_smc_broker_identity.py`, `tests/test_smc_account_mode.py` |
 | Fill-during-cancel / partial residual reconcile | `scripts/smc/reconcile.py`; `tests/test_smc_reconcile.py` |
 | risk_halt file load/save in SMC loop | `smc_main.py` + `observe_equity` before admission |

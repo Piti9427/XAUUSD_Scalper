@@ -1484,6 +1484,58 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         self.assertEqual(res2.json()["checked"], 0)
         self.assertEqual(res2.json()["exits"], [])
 
+    def test_clock_syncs_classified_account_pnl_deals(self):
+        """Stories 5–7: clock discloses bot/manual/cash_flow deals without inventing equity."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from scripts.smc.account_pnl_sync import DEAL_TYPE_BALANCE, DEAL_TYPE_BUY
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        client = TestClient(app)
+        try:
+            adapter = app.state.adapter
+            adapter.connected = True
+            deals = [
+                SimpleNamespace(
+                    ticket=101, type=DEAL_TYPE_BUY, comment="SMC_BOT1",
+                    profit=5.0, commission=0.0, swap=0.0, fee=0.0,
+                ),
+                SimpleNamespace(
+                    ticket=102, type=DEAL_TYPE_BUY, comment="hand trade",
+                    profit=-3.0, commission=0.0, swap=0.0, fee=0.0,
+                ),
+                SimpleNamespace(
+                    ticket=103, type=DEAL_TYPE_BALANCE, comment="",
+                    profit=50.0, commission=0.0, swap=0.0, fee=0.0,
+                ),
+            ]
+            with patch.object(adapter, "fetch_recent_broker_deals", return_value=deals):
+                res = client.post(
+                    "/internal/clock",
+                    headers={"Authorization": f"Bearer {self.secret}"},
+                )
+            self.assertEqual(res.status_code, 200)
+            rows = res.json()["account_pnl"]
+            self.assertEqual(len(rows), 3)
+            by_ticket = {r["ticket"]: r for r in rows}
+            self.assertEqual(by_ticket[101]["source"], "bot")
+            self.assertEqual(by_ticket[102]["source"], "manual")
+            self.assertEqual(by_ticket[103]["source"], "cash_flow")
+            # Idempotent second tick
+            with patch.object(adapter, "fetch_recent_broker_deals", return_value=deals):
+                res2 = client.post(
+                    "/internal/clock",
+                    headers={"Authorization": f"Bearer {self.secret}"},
+                )
+            self.assertEqual(res2.json()["account_pnl"], [])
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
     def test_clock_reconciles_uncertain_setup_against_broker(self):
         """Story 35: clock must reconcile uncertain intents — never leave them forever."""
         from types import SimpleNamespace

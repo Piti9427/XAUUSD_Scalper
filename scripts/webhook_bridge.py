@@ -170,6 +170,9 @@ def create_app(
             uncertain_results.append({"order_id": oid, "outcome": outcome})
             logger.info("Clock reconcile_uncertain %s -> %s", oid, outcome)
 
+        # Stories 5–7: disclose bot vs manual vs cash_flow deal cash separately.
+        account_pnl_rows = await asyncio.to_thread(adapter.sync_classified_account_pnl)
+
         if risk_halt is not None and halt_path is not None:
             equity_raw = await asyncio.to_thread(adapter.get_account_equity)
             history_ready = adapter.dry_run or equity_raw is not None
@@ -444,6 +447,7 @@ def create_app(
             cancel_results
             or exit_results
             or uncertain_results
+            or account_pnl_rows
             or lifecycle.get("ttl_cancels")
             or lifecycle.get("broker_fills")
             or lifecycle.get("broker_closes")
@@ -461,6 +465,7 @@ def create_app(
             "cancels": cancel_results,
             "exits": exit_results,
             "uncertain": uncertain_results,
+            "account_pnl": account_pnl_rows,
             "lifecycle": lifecycle,
             "reason": reason_out,
             "max_hold_bars": max_hold_bars,

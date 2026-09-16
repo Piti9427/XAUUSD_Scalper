@@ -148,6 +148,16 @@ class SMCExecutionAdapter:
             cursor.execute("ALTER TABLE setup_inbox ADD COLUMN ticket INTEGER")
         if "reconciled_at" not in inbox_cols:
             cursor.execute("ALTER TABLE setup_inbox ADD COLUMN reconciled_at TEXT")
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS processed_deals (
+                deal_ticket INTEGER PRIMARY KEY,
+                source TEXT NOT NULL,
+                amount REAL NOT NULL,
+                processed_at TEXT NOT NULL
+            )
+            """
+        )
         self.conn.commit()
 
     def claim_setup(self, payload: Dict[str, Any]) -> Dict[str, str]:
@@ -449,6 +459,72 @@ class SMCExecutionAdapter:
             """
         )
         return [str(row[0]) for row in cursor.fetchall() if row and row[0]]
+
+    def is_deal_processed(self, deal_ticket: int) -> bool:
+        cursor = self.conn.execute(
+            "SELECT 1 FROM processed_deals WHERE deal_ticket = ?",
+            (int(deal_ticket),),
+        )
+        return cursor.fetchone() is not None
+
+    def mark_deal_processed(self, deal_ticket: int, *, source: str, amount: float) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO processed_deals "
+                "(deal_ticket, source, amount, processed_at) VALUES (?, ?, ?, ?)",
+                (
+                    int(deal_ticket),
+                    str(source),
+                    float(amount),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+
+    def fetch_recent_broker_deals(self, *, lookback_hours: int = 48) -> List[Any]:
+        """
+        Read broker deal history for shared-account PnL classification.
+
+        Dry-run / missing MT5 → empty list (no invented deals).
+        """
+        if self.dry_run or mt5 is None or not self.connected:
+            return []
+        now = datetime.now(timezone.utc)
+        from_date = now - timedelta(hours=max(1, int(lookback_hours)))
+        deals = mt5.history_deals_get(from_date, now)
+        if not deals:
+            return []
+        return list(deals)
+
+    def sync_classified_account_pnl(self, *, lookback_hours: int = 48) -> List[Dict[str, Any]]:
+        """
+        Classify new broker deals as bot/manual/cash_flow and persist lifecycle rows.
+
+        Idempotent via processed_deals tickets. Does not mutate equity inventively —
+        broker equity snapshot remains the risk gate input.
+        """
+        from scripts.smc.account_pnl_sync import classify_deals
+
+        recorded: List[Dict[str, Any]] = []
+        for row in classify_deals(self.fetch_recent_broker_deals(lookback_hours=lookback_hours)):
+            if row.ticket is None:
+                continue
+            if self.is_deal_processed(int(row.ticket)):
+                continue
+            self.log_lifecycle_event(
+                event_type="ACCOUNT_PNL",
+                ticket=int(row.ticket),
+                pnl_dollar=float(row.amount),
+                reason=f"{row.source}:{row.comment[:40]}",
+            )
+            self.mark_deal_processed(int(row.ticket), source=row.source, amount=row.amount)
+            recorded.append(
+                {
+                    "ticket": int(row.ticket),
+                    "source": row.source,
+                    "amount": float(row.amount),
+                }
+            )
+        return recorded
 
     def list_unfilled_pending_setups(self) -> List[Dict[str, Any]]:
         """Pending setups with parsed UTC created_at for TTL reconciliation."""
