@@ -1,0 +1,20 @@
+{
+  "captured_at_utc": "2026-09-16T09:24:31.441539+00:00",
+  "git_head": "353771fbb8f6a904d3386533d04dc8beaf9eb48e",
+  "host": "macOS darwin",
+  "terminal_process_running": true,
+  "terminal_path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+  "wine_python_initialize": {
+    "ok": false,
+    "last_error": [-6, "Terminal: Authorization failed"]
+  },
+  "bases_present": ["Custom", "Default", "MetaQuotes-Demo"],
+  "exness_bases_present": false,
+  "settings_yaml_credentials": {
+    "login_set": false,
+    "password_set": false,
+    "server": ""
+  },
+  "gate_c_verdict": "INCONCLUSIVE_INFRA",
+  "note": "Wine terminal running is not sufficient: Python IPC still -6 auth fail; account base is MetaQuotes-Demo not Exness; no Exness credentials in settings.yaml."
+}

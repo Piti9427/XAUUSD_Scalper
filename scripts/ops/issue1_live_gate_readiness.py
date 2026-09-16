@@ -93,6 +93,7 @@ def main() -> int:
             "blocker_docs": [
                 "docs/ops/2026-09-16-mac-live-gate-blocker.md",
                 "docs/ops/2026-09-16-mac-wine-initialize-path.json",
+                "docs/ops/2026-09-16-mac-wine-reprobe-running.json",
                 host_hunt,
             ],
         },

@@ -15,9 +15,13 @@ Result: `INCONCLUSIVE_INFRA` / `mt5_import_missing` (artifact: `docs/ops/2026-09
 
 Interpretation: MetaTrader5 Python package unavailable on this Mac. Not strategy FAIL. Oracle ARM64 soak and Demo 12w still unexecuted.
 
-## Tracker (resolved same day)
+## 2026-09-16 — Wine terminal running re-probe @ `353771f`
 
-- Push OK: `feature/smc-v2-hardening` → `00b2e11` (Bugbot High: TP1/BE gate + live invent-PnL reject)
-- Closed via `gh`: #3, #4, #2
-- #1 remains OPEN until live Exness smoke + Oracle soak + Demo 12w
-- PR: https://github.com/Piti9427/XAUUSD_Scalper/pull/5
+`terminal64.exe` was running under MetaTrader 5.app Wine. Wine-Python
+`mt5.initialize(path=...)` still returned `[-6, "Terminal: Authorization failed"]`.
+
+Bases present: `MetaQuotes-Demo` only (no Exness). `config/settings.yaml` has
+empty login/password/server.
+
+Artifact: `docs/ops/2026-09-16-mac-wine-reprobe-running.json`  
+Verdict: still `INCONCLUSIVE_INFRA` — not Gate C PASS.

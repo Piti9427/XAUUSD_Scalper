@@ -1,91 +1,108 @@
-# GitHub close-ready notes (blocked by auth)
+# GitHub close-ready notes
 
-`gh` keyring invalid + MCP `issue_write`/`push_files` **403** (token is **read-only** — no issues/contents write).
-ConnectScm + `mcp_auth` re-run 2026-09-16: identity `Piti9427` readable; PATCH/POST write still 403.
-Git push also blocked (`osxkeychain` err -25293) — local branch **ahead of origin**.
-
-**Operator unblock (local Terminal, interactive):**
-
-```bash
-chmod +x scripts/ops_unblock_github.sh
-./scripts/ops_unblock_github.sh
-```
-
-Or manually:
-
-```bash
-security unlock-keychain ~/Library/Keychains/login.keychain-db
-gh auth refresh -h github.com -s repo
-git push origin feature/smc-v2-hardening
-```
-
-Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **Contents: Write** (read-only app cannot close trackers).
-
-Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
-MCP `issue_write` close attempt 2026-09-16: **403 Resource not accessible by personal access token** (read-only).
-
-Branch evidence: `feature/smc-v2-hardening` (**ahead 26** of origin — push blocked).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (266).
-Live gate helper: `scripts/ops/foundation_live_gate.sh` (MT5 host required).
-Pre-close audit: `./scripts/audit_local_issue_gates.sh` · JSON: `python3 scripts/generate_close_evidence.py`
-Goal matrix: `docs/handoff/2026-09-16-goal-completion-audit.md`
-
-**Operator:** run in Terminal.app (GUI keychain + browser):
-
-```bash
-./scripts/ops_unblock_github.sh
-```
-
-Script now: unlock keychain → `gh auth login` if invalid → `gh auth setup-git` → audit → push → close #3→#4→#2.
+**Branch:** `feature/smc-v2-hardening` @ `353771f` (pushed)  
+**Unit suite:** `python3 -m unittest discover -s tests` → **353 OK**  
+**`gh` CLI:** token **invalid** — run `gh auth refresh -h github.com -s repo`  
+**GitHub MCP:** rate-limited / previously read-only for issue write
 
 ---
 
-## Issue #3 — S1–S4 mechanical tables
+## Issues #2 / #3 / #4
 
-**Close as completed.** Paste comment:
+Closed earlier on this branch with local evidence. Re-verify after `gh auth refresh`:
+
+```bash
+gh issue view 2 --repo Piti9427/XAUUSD_Scalper
+gh issue view 3 --repo Piti9427/XAUUSD_Scalper
+gh issue view 4 --repo Piti9427/XAUUSD_Scalper
+```
+
+Paste packs (if still open): see historical sections below or `docs/ops/2026-09-16-github-close-evidence.json`.
+
+---
+
+## Issue #1 — Gold Playbook Foundation
+
+**Do NOT close yet.** Gate B software evidence is strong; Gate C/D live artifacts missing.
+
+### Progress comment (paste after `gh auth refresh`)
+
+```
+Issue #1 software/Gate B progress on feature/smc-v2-hardening (not closable yet).
+
+Software evidence:
+- 353 unit tests OK
+- Foundation scenarios 1–23 mapped with in-repo evidence:
+  docs/ops/2026-09-16-issue1-scenario-coverage.json
+- Progress map: docs/handoff/2026-09-16-issue1-foundation-progress.md
+- Recent: freeze_level SL gate, H1 bias cancel + pre-submit block,
+  persistent SetupRegistry across restarts, stops geometry, freshness/metadata
+
+Live gates still required (do not invent PASS):
+1. Exness Demo hedging identity smoke → docs/ops/<date>-exness-smoke.json ok:true
+2. Oracle ARM64 soak completed artifact
+3. Demo 12w start artifact after Gates B/C
+
+Mac blocker (current host):
+- Wine terminal64 running but MetaTrader5 initialize → -6 Authorization failed
+- Bases = MetaQuotes-Demo (not Exness); settings.yaml has no Exness credentials
+- Evidence: docs/ops/2026-09-16-mac-wine-reprobe-running.json
+- SSH hosts TCP/22 open but Mac ed25519 unauthorized:
+  docs/ops/2026-09-16-host-reachability-hunt.json
+
+Readiness: docs/ops/2026-09-16-issue1-live-gate-readiness.json
+issue1_closable: false
+
+Operator next:
+1. gh auth refresh -h github.com -s repo
+2. Authorize Mac pubkey on Windows/Oracle MT5 host OR run foundation_live_gate.sh there
+3. Login Exness Demo (hedging) and collect smoke/soak/Demo artifacts
+```
+
+### Close comment (ONLY after live artifacts exist)
+
+```
+Gold Playbook Foundation acceptance met.
+
+Evidence:
+- Software/scenarios: docs/ops/2026-09-16-issue1-scenario-coverage.json
+- Exness smoke ok:true: docs/ops/<date>-exness-smoke.json
+- Oracle soak: docs/ops/<date>-oracle-soak*.json
+- Demo 12w start: docs/ops/<date>-demo-12w-start*.json
+- Readiness issue1_closable:true: docs/ops/<date>-issue1-live-gate-readiness.json
+
+Closing #1.
+```
+
+---
+
+## Historical #3 / #4 / #2 paste packs
+
+### Issue #3
 
 ```
 Mechanical v1 deliverable landed in-repo.
 
 Evidence:
 - docs/specs/xauusd-s1-s4-mechanical-v1.md
-- tests/test_s1_s4_mechanical_spec_contract.py (6/6)
+- tests/test_s1_s4_mechanical_spec_contract.py
 - ADR-0027 rule version s1-s4-mechanical-v1
-
-Parent #2 stays open until #4 closes and Gate A freeze is acknowledged.
 ```
 
-## Issue #4 — Research handoff
-
-**Close as completed.** Paste comment:
+### Issue #4
 
 ```
 Research handoff v1 published.
 
 Evidence:
 - docs/specs/xauusd-s1-s4-research-handoff-v1.md
-- Explicit unresolved Gate B/C blockers listed (not silent incompleteness)
-- Specs README: gates open — not experiment-ready
-
-Remaining live/runtime evidence tracked under #1.
+- Explicit unresolved Gate B/C blockers listed
 ```
 
-## Issue #2 — Parent S1–S4 experiment
-
-**Close only after #3 and #4 are closed on the tracker.** Paste comment:
+### Issue #2
 
 ```
 Children #3/#4 documentation deliverables are complete in-repo.
 Closing parent tracker item; Gate A freeze / experiment start remains a
 separate operator decision under the research handoff + foundation gates.
 ```
-
-## Issue #1 — Gold Playbook Foundation
-
-**Do NOT close yet.** Software/runtime gates advanced on branch; still missing:
-
-1. Live Exness Demo identity smoke (`scripts/smoke_broker_identity.py`) — Mac host currently `mt5_import_missing` (see `docs/ops/2026-09-16-smoke-evidence-log.md`)
-2. Oracle ARM64 soak execution evidence
-3. Forward Demo 12-week protocol start (prospective)
-
-Progress map: `docs/handoff/2026-09-16-issue1-foundation-progress.md`
