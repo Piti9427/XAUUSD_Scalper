@@ -41,6 +41,19 @@ class ProvenanceTests(unittest.TestCase):
             "DATA_OHLC_ONLY",
         )
 
+    def test_hash_dataset_files_is_stable(self):
+        import tempfile
+        from pathlib import Path
+        from scripts.smc.provenance import hash_dataset_files, sha256_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "bars.csv"
+            p.write_text("a,b\n1,2\n", encoding="utf-8")
+            digest = sha256_file(p)
+            again = hash_dataset_files([p])
+            self.assertEqual(again["bars.csv"], digest)
+            self.assertEqual(len(digest), 64)
+
 
 if __name__ == "__main__":
     unittest.main()

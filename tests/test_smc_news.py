@@ -53,6 +53,22 @@ class TestSMCNewsManager(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(reason, "ok")
 
+    def test_should_cancel_pending_on_blackout_not_open_position(self):
+        cancel, reason = self.manager.should_cancel_pending(
+            self.nfp_time - timedelta(minutes=10),
+            self.events,
+            schedule_known=True,
+        )
+        self.assertTrue(cancel)
+        self.assertIn("news_blackout", reason)
+        keep, reason = self.manager.should_cancel_pending(
+            self.nfp_time - timedelta(minutes=45),
+            self.events,
+            schedule_known=True,
+        )
+        self.assertFalse(keep)
+        self.assertEqual(reason, "ok")
+
     def test_pre_news_position_handling_lock_be(self):
         # Position open, currently at +1.2R profit, 14 min before NFP
         # Must return MOVE_SL_TO_BE

@@ -80,6 +80,34 @@ class NewsManager:
             return False, f"news_blackout:{name}"
         return True, "ok"
 
+    def should_cancel_pending(
+        self,
+        current_time: datetime,
+        events: Optional[List[NewsEvent]],
+        *,
+        schedule_known: bool,
+        window_mins: int = 30,
+        filter_currency: str = "USD",
+        filter_impact: str = "HIGH",
+    ) -> Tuple[bool, str]:
+        """
+        Pending cancellation shares the new-risk news gate (scenario 18).
+
+        Does not force-close open positions — BaselinePlay holds through news
+        without pre-news BE/exit unless a separate Legacy path is enabled.
+        """
+        allowed, reason = self.new_risk_allowed(
+            current_time,
+            events,
+            schedule_known=schedule_known,
+            window_mins=window_mins,
+            filter_currency=filter_currency,
+            filter_impact=filter_impact,
+        )
+        if allowed:
+            return False, "ok"
+        return True, reason
+
     def evaluate_pre_news_position(
         self,
         current_time: datetime,

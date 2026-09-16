@@ -381,6 +381,56 @@ class TestSMCOrchestrator(unittest.TestCase):
         # Local state stays open until broker evidence arrives.
         self.assertIsNotNone(account.open_position)
 
+    def test_news_blackout_cancels_pending_but_fill_wins_same_bar(self):
+        pending = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=3,
+            order_id="NEWS1",
+        )
+        # No touch -> cancel
+        account = AccountState(
+            balance=10000.0, equity=10000.0, pending_order=pending, pending_bars_held=0
+        )
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2014, "high": 2015, "low": 2012, "close": 2013,
+        }
+        intents = self.orchestrator.on_bar(
+            bar, account, news_cancel_pending=True, news_cancel_reason="news_blackout:NFP"
+        )
+        self.assertEqual(len(intents), 1)
+        self.assertEqual(intents[0].intent_type, OrderIntentType.CANCEL_LIMIT)
+        self.assertIsNone(account.pending_order)
+
+        # Touch + news cancel flag -> fill wins (hold through news)
+        pending2 = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=3,
+            order_id="NEWS2",
+        )
+        account2 = AccountState(
+            balance=10000.0, equity=10000.0, pending_order=pending2, pending_bars_held=0
+        )
+        fill_bar = {
+            "time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc),
+            "open": 2012, "high": 2013, "low": 2009.5, "close": 2011,
+        }
+        self.orchestrator.on_bar(
+            fill_bar, account2, news_cancel_pending=True, news_cancel_reason="news_blackout:NFP"
+        )
+        self.assertIsNotNone(account2.open_position)
+        self.assertIsNone(account2.pending_order)
+
 
 if __name__ == "__main__":
     unittest.main()

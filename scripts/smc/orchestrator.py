@@ -264,6 +264,8 @@ class StrategyOrchestrator:
         current_spread: Optional[float] = None,
         max_spread: float = 0.35,
         risk_halt: Optional[RiskHaltState] = None,
+        news_cancel_pending: bool = False,
+        news_cancel_reason: str = "",
     ) -> List[OrderIntent]:
         intents: List[OrderIntent] = []
 
@@ -314,6 +316,21 @@ class StrategyOrchestrator:
                 account.pending_bars_held = 0
                 # Immediate SL/TP evaluation on fill bar
                 return self._evaluate_open_position(account, bar, bar_time)
+
+            if news_cancel_pending:
+                cancel_intent = OrderIntent(
+                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                    direction=order.direction,
+                    reason=f"News pending cancel: {news_cancel_reason or 'news_gate'}",
+                    order_id=order.order_id,
+                )
+                self.setup_registry.mark_terminal(
+                    order.order_id, news_cancel_reason or "news_cancel"
+                )
+                account.pending_order = None
+                account.pending_bars_held = 0
+                intents.append(cancel_intent)
+                return intents
 
             # Not filled: Increment TTL held bars
             account.pending_bars_held += 1

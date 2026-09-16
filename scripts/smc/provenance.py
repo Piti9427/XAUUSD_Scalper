@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
-from typing import Optional
+from pathlib import Path
+from typing import Dict, Iterable, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -46,3 +48,26 @@ def classify_dataset_provenance(
             "ticks absent; dual-touch exits must stay AMBIGUOUS",
         )
     return ProvenanceReport(True, "DATA_OK", source_label or "ok")
+
+
+def sha256_file(path: Union[str, Path]) -> str:
+    """Content hash for bars/ticks/news/rules artifacts."""
+    p = Path(path)
+    h = hashlib.sha256()
+    with p.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def hash_dataset_files(paths: Iterable[Union[str, Path]]) -> Dict[str, str]:
+    """
+    Map basename -> sha256 for a frozen evaluation bundle.
+
+    Missing files raise FileNotFoundError — do not invent hashes.
+    """
+    out: Dict[str, str] = {}
+    for raw in paths:
+        p = Path(raw)
+        out[p.name] = sha256_file(p)
+    return out

@@ -261,7 +261,16 @@ async def run_smc_live_copilot():
                             risk_halt.net_losing_trades_today,
                         )
 
-                    # Step Orchestrator
+                    # Step Orchestrator — cancel unfilled pending on news gate (not open positions)
+                    news_cancel = False
+                    news_cancel_reason = ""
+                    if account.pending_order is not None:
+                        news_cancel, news_cancel_reason = news_mgr.should_cancel_pending(
+                            now_utc,
+                            cached_news_events,
+                            schedule_known=schedule_known,
+                            window_mins=30,
+                        )
                     intents = orchestrator.on_bar(
                         bar=last_closed_bar,
                         account=account,
@@ -269,6 +278,8 @@ async def run_smc_live_copilot():
                         current_spread=current_spread,
                         max_spread=max_spread,
                         risk_halt=risk_halt,
+                        news_cancel_pending=news_cancel,
+                        news_cancel_reason=news_cancel_reason,
                     )
 
                     for intent in intents:
