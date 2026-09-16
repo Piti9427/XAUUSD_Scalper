@@ -17,6 +17,7 @@ import uvicorn
 from scripts.webhook_bridge import create_app
 from scripts.smc.notifier import SMCTelegramNotifier
 from scripts.smc.news import NewsManager
+from scripts.smc.real_money_approval import require_real_money_approval
 
 
 logging.basicConfig(
@@ -51,6 +52,14 @@ def main():
     port = args.port or wh_cfg.get("port", 8000)
     secret_token = os.environ.get("WEBHOOK_SECRET") or wh_cfg.get("secret_token", "XAUUSD_MASTER_SECRET_2026")
     dry_run = args.dry_run if args.dry_run is not None else wh_cfg.get("dry_run", True)
+    # Story 49: Demo readiness ≠ real-money. Live non-demo needs dual approval.
+    allow_demo_only = bool(wh_cfg.get("allow_demo_only", cfg.get("mt5", {}).get("allow_demo_only", True)))
+    real_money_cfg = cfg.get("real_money", {}) or {}
+    require_real_money_approval(
+        dry_run=bool(dry_run),
+        allow_demo_only=allow_demo_only,
+        config_approved=bool(real_money_cfg.get("approved", False)),
+    )
     account_balance = args.balance or wh_cfg.get("account_balance", 10000.0)
     risk_pct = args.risk or wh_cfg.get("risk_pct", 0.005)
     commission_per_lot = wh_cfg.get("commission_per_lot")

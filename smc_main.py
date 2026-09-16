@@ -6,7 +6,8 @@ from scripts.config_loader import load_config, setup_logging, ConfigError
 from scripts.mt5_connector import MT5Connector
 from scripts.smc.types import AccountState, OrderIntent, OrderIntentType, Direction
 from scripts.smc.liquidity import compute_liquidity_levels
-from scripts.smc.detection import detect_smc_setup
+from scripts.smc.detection import evaluate_smc_setup
+from scripts.smc.real_money_approval import require_real_money_approval
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
@@ -62,6 +63,14 @@ async def run_smc_live_copilot():
         connector.disconnect()
         raise RuntimeError("SMC legacy loop live execution is disabled; use the broker-reconciled webhook bridge for demo validation")
     dry_run = not is_connected
+    # Story 49: Demo readiness ≠ real-money. Live non-demo needs dual approval.
+    allow_demo_only = bool(config.get("mt5", {}).get("allow_demo_only", True))
+    real_money_cfg = config.get("real_money", {}) or {}
+    require_real_money_approval(
+        dry_run=dry_run,
+        allow_demo_only=allow_demo_only,
+        config_approved=bool(real_money_cfg.get("approved", False)),
+    )
 
     strat_cfg = config.get("strategy", {})
     adapter = SMCExecutionAdapter(symbol=symbol, dry_run=dry_run)
@@ -172,7 +181,7 @@ async def run_smc_live_copilot():
                         and not is_blackout
                         and h1_ready
                     ):
-                        setup = detect_smc_setup(
+                        decision = evaluate_smc_setup(
                             h1_candles=df_h1,
                             m5_candles=df_m5,
                             liquidity=liquidity,
@@ -189,6 +198,12 @@ async def run_smc_live_copilot():
                             max_mss_to_fvg_bars=strat_cfg.get("max_mss_to_fvg_bars", 4),
                             require_choch=strat_cfg.get("require_choch", True),
                         )
+                        setup = decision.setup if decision.admitted else None
+                        if not decision.admitted and decision.reject_reasons:
+                            logger.debug(
+                                "Setup rejected: %s",
+                                ",".join(decision.reject_reasons),
+                            )
 
                     # Snapshot position before orchestrator step to detect trade close
                     pos_before = account.open_position
