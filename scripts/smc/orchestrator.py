@@ -257,26 +257,24 @@ class StrategyOrchestrator:
                     is_filled = True
 
             if is_filled:
-                if current_spread is not None and current_spread > max_spread:
-                    # Spread blown out, skip fill on this bar
-                    is_filled = False
-                else:
-                    # Open position
-                    sl_dist = abs(order.limit_price - order.sl_price)
-                    account.open_position = Position(
-                        direction=order.direction,
-                        entry_price=order.limit_price,
-                        sl_price=order.sl_price,
-                        tp_price=order.tp_price,
-                        lot_size=order.lot_size or 0.01,
-                        open_time=bar_time,
-                        initial_sl_distance=sl_dist,
-                        be_moved=False,
-                    )
-                    account.pending_order = None
-                    account.pending_bars_held = 0
-                    # Immediate SL/TP evaluation on fill bar
-                    return self._evaluate_open_position(account, bar, bar_time)
+                # Scenario 15: once pending is accepted, a later spread blowout must not
+                # invent a no-fill when price already touched the limit. Spread gates
+                # only new risk admission (below), not authoritative broker fills.
+                sl_dist = abs(order.limit_price - order.sl_price)
+                account.open_position = Position(
+                    direction=order.direction,
+                    entry_price=order.limit_price,
+                    sl_price=order.sl_price,
+                    tp_price=order.tp_price,
+                    lot_size=order.lot_size or 0.01,
+                    open_time=bar_time,
+                    initial_sl_distance=sl_dist,
+                    be_moved=False,
+                )
+                account.pending_order = None
+                account.pending_bars_held = 0
+                # Immediate SL/TP evaluation on fill bar
+                return self._evaluate_open_position(account, bar, bar_time)
 
             # Not filled: Increment TTL held bars
             account.pending_bars_held += 1

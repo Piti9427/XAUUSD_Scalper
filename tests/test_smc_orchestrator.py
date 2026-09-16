@@ -139,8 +139,8 @@ class TestSMCOrchestrator(unittest.TestCase):
         intents = self.orchestrator.on_bar(bar, account)
         self.assertEqual(intents, [])
 
-    def test_spread_guard_blocks_fill_when_blown_out(self):
-        # Scenario: Limit order touched, but live spread is 0.50 (> 0.35 max)
+    def test_pending_fill_survives_spread_blowout(self):
+        # Foundation scenario 15: high spread after pending accepted must not erase fill.
         initial_order = OrderIntent(
             intent_type=OrderIntentType.PLACE_LIMIT,
             direction=Direction.BUY,
@@ -156,13 +156,12 @@ class TestSMCOrchestrator(unittest.TestCase):
             pending_order=initial_order,
             pending_bars_held=0,
         )
-        # Price touches 2009.5 <= 2010.0, but spread is 0.50
+        # Price touches 2009.5 <= 2010.0 even with spread 0.50 > max 0.35
         bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
-        intents = self.orchestrator.on_bar(bar, account, current_spread=0.50, max_spread=0.35)
-        self.assertEqual(intents, [])
-        self.assertIsNone(account.open_position)
-        self.assertIsNotNone(account.pending_order)
-        self.assertEqual(account.pending_bars_held, 1)
+        self.orchestrator.on_bar(bar, account, current_spread=0.50, max_spread=0.35)
+        self.assertIsNotNone(account.open_position)
+        self.assertIsNone(account.pending_order)
+        self.assertEqual(account.open_position.entry_price, 2010.0)
 
     def test_spread_guard_blocks_new_order_when_blown_out(self):
         account = AccountState(balance=10000.0, equity=10000.0)
