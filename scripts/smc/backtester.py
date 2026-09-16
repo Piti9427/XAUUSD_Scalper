@@ -15,6 +15,7 @@ from scripts.smc.detection import detect_smc_setup
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
+from scripts.smc.funnel import SetupFunnel
 
 
 @dataclass
@@ -31,6 +32,7 @@ class BacktestSummary:
     max_drawdown_pct: float
     avg_r: float
     trades_df: pd.DataFrame = field(default_factory=lambda: pd.DataFrame())
+    funnel: Optional[Dict[str, Any]] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -166,6 +168,7 @@ class SMCBacktester:
         trades: List[Dict[str, Any]] = []
         active_trade_log: Optional[Dict[str, Any]] = None
         liquidity_cache: Dict[str, Optional[LiquidityLevels]] = {}
+        funnel = SetupFunnel()
 
         peak_equity = self.initial_balance
         max_drawdown = 0.0
@@ -241,12 +244,22 @@ class SMCBacktester:
                         max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
                         require_choch=self.require_choch,
                     )
+                    if setup_signal is not None:
+                        funnel.bump("detected")
+                        funnel.bump("structure_qualified")
+                        funnel.bump("target_qualified")
 
             # Observe the same lifecycle used by the orchestrator; do not infer fills
             # solely from the position remaining open at the end of a candle.
             orchestrator.evaluated_before = None
             orchestrator.evaluated_after = None
             intents = orchestrator.on_bar(current_bar, account, setup_signal)
+            for intent in intents:
+                if intent.intent_type == OrderIntentType.PLACE_LIMIT:
+                    funnel.bump("affordable")
+                    funnel.bump("risk_admitted")
+                    funnel.bump("submitted")
+                    funnel.bump("broker_accepted")
             before = orchestrator.evaluated_before
             after = orchestrator.evaluated_after
             if before is None:
@@ -262,9 +275,27 @@ class SMCBacktester:
                     "lot_size": before.lot_size,
                     "initial_sl_dist": before.initial_sl_distance,
                     "partial_pnl": 0.0,
+                    "mae_r": 0.0,
+                    "mfe_r": 0.0,
                 }
+                funnel.bump("filled")
 
             sign = 1 if before.direction == Direction.BUY else -1
+            # Track MAE/MFE in R while the position is evaluated.
+            adverse = (
+                (before.entry_price - float(current_bar["low"])) / before.initial_sl_distance
+                if sign == 1
+                else (float(current_bar["high"]) - before.entry_price) / before.initial_sl_distance
+            )
+            favorable = (
+                (float(current_bar["high"]) - before.entry_price) / before.initial_sl_distance
+                if sign == 1
+                else (before.entry_price - float(current_bar["low"])) / before.initial_sl_distance
+            )
+            if before.initial_sl_distance > 0:
+                active_trade_log["mae_r"] = max(float(active_trade_log.get("mae_r", 0.0)), max(0.0, adverse))
+                active_trade_log["mfe_r"] = max(float(active_trade_log.get("mfe_r", 0.0)), max(0.0, favorable))
+
             for intent in intents:
                 if intent.intent_type == OrderIntentType.PARTIAL_CLOSE:
                     partial_cash = (before.initial_sl_distance * self.partial_tp_r
@@ -350,6 +381,7 @@ class SMCBacktester:
                     "balance": round(account.balance, 2),
                 })
                 trades.append(active_trade_log)
+                funnel.bump("closed")
                 active_trade_log = None
 
             account.equity = account.balance
@@ -384,6 +416,7 @@ class SMCBacktester:
             max_drawdown_pct=round(max_drawdown, 2),
             avg_r=round(avg_r, 2),
             trades_df=trades_df,
+            funnel=funnel.as_dict(),
         )
 
 

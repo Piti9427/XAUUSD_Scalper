@@ -129,6 +129,42 @@ class ProtectedSwingStructureTests(unittest.TestCase):
         )
         self.assertEqual(first.kind, StructureEventKind.NONE)
 
+    def test_replay_prefix_invariant_under_future_append(self):
+        # Minimal series: establish bullish BOS then append future bars.
+        highs = [10, 12, 11, 13, 12, 14, 13, 15, 14, 16, 15, 17, 16]
+        lows = [9, 10, 9.5, 11, 10.5, 12, 11.5, 13, 12.5, 14, 13.5, 15, 14.5]
+        closes = [9.5, 11, 10, 12.5, 11, 13.5, 12, 14.5, 13, 15.5, 14, 16.5, 15]
+        swing_highs = [False] * len(highs)
+        swing_lows = [False] * len(lows)
+        # Confirmed pivots with 2 right bars available before later indexes.
+        swing_highs[1] = True
+        swing_lows[2] = True
+        swing_highs[3] = True
+        swing_lows[4] = True
+        swing_highs[5] = True
+        swing_lows[6] = True
+
+        prefix_end = 8
+        state_prefix = replay_structure_until(
+            highs, lows, closes, swing_highs, swing_lows, prefix_end
+        )
+        # Future-append: longer series must not change decisions at prefix_end.
+        state_full_at_prefix = replay_structure_until(
+            highs, lows, closes, swing_highs, swing_lows, prefix_end
+        )
+        # Mutate future only (after prefix)
+        highs2 = list(highs)
+        lows2 = list(lows)
+        closes2 = list(closes)
+        highs2[-1] = 99.0
+        lows2[-1] = 1.0
+        closes2[-1] = 50.0
+        state_after_future_mutation = replay_structure_until(
+            highs2, lows2, closes2, swing_highs, swing_lows, prefix_end
+        )
+        self.assertEqual(state_prefix, state_full_at_prefix)
+        self.assertEqual(state_prefix, state_after_future_mutation)
+
 
 if __name__ == "__main__":
     unittest.main()

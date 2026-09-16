@@ -35,6 +35,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Setup identity + no revive after TTL (B16) | `scripts/smc/setup_identity.py`; orchestrator registry; detection stamps `setup_id`; `tests/test_smc_setup_identity.py` |
 | Dataset provenance reason codes (B20) | `scripts/smc/provenance.py`; `tests/test_smc_provenance.py` |
 | Drawdown halt flattens bot-owned exposure (story 10) | `scripts/smc/halt_actions.py`; webhook returns `flatten_actions`; `smc_main` clears local bot pending/position; `tests/test_smc_halt_actions.py` |
+| Structure prefix/future-append invariance | `test_replay_prefix_invariant_under_future_append` in `tests/test_smc_structure_choch.py` |
+| SetupFunnel stage counters + backtest wiring | `scripts/smc/funnel.py`; `SMCBacktester` bumps stages + `summary.funnel`; MAE/MFE R on trade log; `tests/test_smc_funnel.py` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
 
