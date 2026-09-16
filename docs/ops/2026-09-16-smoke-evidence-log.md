@@ -1,22 +1,18 @@
 # Smoke / infra evidence log (Issue #1)
 
-## 2026-09-16 — local Mac smoke attempt (updated)
+## 2026-09-16 — local Mac smoke (retry @ `1f20ced`)
 
 Command:
 ```bash
-.venv/bin/python scripts/smoke_broker_identity.py
+.venv/bin/python scripts/smoke_broker_identity.py --out docs/ops/2026-09-16-mac-smoke-retry.json
 ```
 
-Result:
-```json
-{
-  "ok": false,
-  "reasons": ["mt5_import_missing"],
-  "infra_verdict": "INCONCLUSIVE_INFRA",
-  "infra_detail": "mt5_unavailable_on_host"
-}
-```
+Result: `INCONCLUSIVE_INFRA` / `mt5_import_missing` (artifact: `docs/ops/2026-09-16-mac-smoke-retry.json`).
 
-Interpretation: `MetaTrader5` Python package unavailable on this host. Scored as **INCONCLUSIVE_INFRA** (not strategy FAIL). Oracle ARM64 soak and Demo 12w remain unexecuted.
+Interpretation: MetaTrader5 Python package unavailable on this Mac. Not strategy FAIL. Oracle ARM64 soak and Demo 12w still unexecuted.
 
-GitHub issue close: MCP `issue_write` and `gh` both return 403 / invalid keyring for issues write; MCP also hit rate limit (~31m). Git push to `feature/smc-v2-hardening` works.
+## Tracker (resolved same day)
+
+- Push OK: `feature/smc-v2-hardening` → `869b18a`
+- Closed via `gh`: #3, #4, #2
+- #1 remains OPEN until live Exness smoke + Oracle soak + Demo 12w
