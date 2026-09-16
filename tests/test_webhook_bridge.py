@@ -2237,3 +2237,95 @@ class TestWebhookClockTimeExit(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWebhookH1BiasGate(unittest.TestCase):
+    """Scenario 8: webhook path must honor known H1 bias like orchestrator."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from scripts.webhook_bridge import create_app
+
+        self.Path = Path
+        self.secret = "H1_BIAS_SECRET"
+        self.db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db.close()
+        self.app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=self.db.name,
+            commission_per_lot=0.0,
+            slippage_allowance=0.0,
+        )
+        self.client = TestClient(self.app)
+        self.headers = {"Authorization": f"Bearer {self.secret}"}
+
+    def tearDown(self):
+        self.app.state.adapter.conn.close()
+        self.Path(self.db.name).unlink(missing_ok=True)
+
+    def test_setup_pending_rejected_when_known_h1_bias_conflicts(self):
+        res = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "H1_BLOCK_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+                "h1_bias": "SELL",
+                "h1_bias_known": True,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["status"], "rejected")
+        self.assertIn("h1_bias", body["reason"])
+        self.assertTrue(self.app.state.setup_registry.is_blocked("H1_BLOCK_1"))
+
+    def test_clock_cancels_pending_when_known_h1_bias_flips(self):
+        adapter = self.app.state.adapter
+        # Dry-run SETUP does not claim inbox; seed accepted pending like news-cancel tests.
+        adapter.claim_setup(
+            {"order_id": "H1_FLIP_1", "dir": "BUY", "limit": 2400.0, "sl": 2390.0}
+        )
+        adapter.update_setup_status("H1_FLIP_1", "accepted", ticket=1)
+        adapter.log_lifecycle_event(
+            event_type="PLACE_LIMIT",
+            order_id="H1_FLIP_1",
+            direction="BUY",
+            entry_price=2400.0,
+            sl_price=2390.0,
+        )
+        self.assertIn("H1_FLIP_1", adapter.list_unfilled_pendings())
+
+        res = self.client.post(
+            "/internal/clock",
+            headers=self.headers,
+            json={"h1_bias": "SELL", "h1_bias_known": True},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        cancels = data.get("h1_bias_cancels") or []
+        self.assertTrue(cancels, msg=data)
+        self.assertEqual(cancels[0]["order_id"], "H1_FLIP_1")
+        self.assertEqual(cancels[0]["status"], "success")
+        self.assertIn("h1_bias", cancels[0]["reason"])
+        self.assertTrue(self.app.state.setup_registry.is_blocked("H1_FLIP_1"))
+        self.assertNotIn("H1_FLIP_1", adapter.list_unfilled_pendings())
+
+    def test_unknown_h1_bias_does_not_invent_clock_cancel(self):
+        adapter = self.app.state.adapter
+        adapter.claim_setup(
+            {"order_id": "H1_UNKNOWN_1", "dir": "BUY", "limit": 2400.0, "sl": 2390.0}
+        )
+        adapter.update_setup_status("H1_UNKNOWN_1", "accepted", ticket=1)
+        res = self.client.post("/internal/clock", headers=self.headers, json={})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("h1_bias_cancels") or [], [])
+        self.assertIn("H1_UNKNOWN_1", adapter.list_unfilled_pendings())
+
+

@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T09:54:57.751059+00:00",
-  "git_head": "3a09d3db63b23217827b94c241b4fdd5c8990421",
+  "captured_at_utc": "2026-09-16T10:02:55.404167+00:00",
+  "git_head": "35a527bf98f87b9ff6e8f412e9ac9b4f2a975223",
   "source": "docs/specs/gold-playbook-foundation.md \u00a7 Required scenarios",
   "scenarios": [
     {

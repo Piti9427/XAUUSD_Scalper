@@ -399,6 +399,36 @@ class JournalMixin:
         """
         return [row["order_id"] for row in self.list_unfilled_pending_setups()]
 
+    def get_pending_direction(self, order_id: str) -> Optional[str]:
+        """Direction for an unfilled pending from inbox payload or PLACE_LIMIT log."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT payload_json FROM setup_inbox WHERE order_id = ?",
+            (str(order_id),),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            try:
+                payload = json.loads(row[0])
+            except (TypeError, json.JSONDecodeError):
+                payload = None
+            if isinstance(payload, dict):
+                raw = payload.get("dir") or payload.get("direction")
+                if raw:
+                    return str(raw).strip().upper()
+        cursor.execute(
+            """
+            SELECT direction FROM trade_lifecycle
+            WHERE order_id = ? AND event_type = 'PLACE_LIMIT' AND direction IS NOT NULL
+            ORDER BY id DESC LIMIT 1
+            """,
+            (str(order_id),),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return str(row[0]).strip().upper()
+        return None
+
     def list_uncertain_order_ids(self) -> List[str]:
         """Active uncertain claims awaiting broker reconciliation (story 35)."""
         cursor = self.conn.cursor()

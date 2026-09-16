@@ -92,9 +92,11 @@ SCENARIOS: list[dict] = [
             "scripts/smc/setup_identity.py",
             "scripts/smc/orchestrator.py",
             "scripts/webhook_bridge.py",
+            "scripts/webhook/h1_bias.py",
             "smc_main.py",
             "tests/test_smc_setup_identity.py",
             "tests/test_webhook_bridge.py",
+            "tests/test_webhook_h1_bias.py",
         ],
     },
     {

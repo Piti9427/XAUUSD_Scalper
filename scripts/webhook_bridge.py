@@ -24,9 +24,10 @@ from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_inte
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
-from scripts.smc.setup_identity import SetupRegistry, load_setup_registry
 from scripts.webhook.auth import make_verify_auth
+from scripts.webhook.h1_bias import parse_h1_bias_fields
 from scripts.webhook.idempotency import make_idempotency_helpers
+from scripts.smc.setup_identity import SetupRegistry, load_setup_registry, pending_h1_bias_allows
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -134,6 +135,7 @@ def create_app(
 
     @app.post("/internal/clock")
     async def handle_clock_tick(
+        request: Request,
         background_tasks: BackgroundTasks,
         authorized: bool = Depends(verify_auth),
     ):
@@ -142,6 +144,7 @@ def create_app(
 
         Scenario 18/19 — never force-close filled positions on news; never notify
         TRADE CLOSED without broker evidence.
+        Optional JSON body may carry h1_bias / h1_bias_known (scenario 8).
         """
         from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
         from scripts.smc.clock_exit import (
@@ -152,8 +155,17 @@ def create_app(
         from scripts.smc.notification_policy import may_notify_close, may_notify_execution
         from scripts.smc.types import Position as PosCard
 
+        clock_payload: Dict[str, Any] = {}
+        try:
+            parsed = await request.json()
+            if isinstance(parsed, dict):
+                clock_payload = parsed
+        except Exception:
+            clock_payload = {}
+
         now_utc = datetime.now(timezone.utc)
         cancel_results = []
+        h1_bias_cancels = []
         exit_results = []
         uncertain_results = []
         lifecycle = await asyncio.to_thread(
@@ -317,6 +329,48 @@ def create_app(
                         }
                     )
 
+        # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
+        h1_bias, h1_bias_known = parse_h1_bias_fields(clock_payload)
+        if h1_bias_known:
+            pending_ids = await asyncio.to_thread(adapter.list_unfilled_pendings)
+            for oid in pending_ids:
+                pending_dir = await asyncio.to_thread(adapter.get_pending_direction, oid)
+                if not pending_dir:
+                    continue
+                bias_ok, bias_reason = pending_h1_bias_allows(
+                    pending_direction=pending_dir,
+                    h1_bias=h1_bias,
+                    bias_known=True,
+                )
+                if bias_ok:
+                    continue
+                intent = OrderIntent(
+                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                    order_id=oid,
+                    reason=f"H1 bias invalidation: {bias_reason}",
+                )
+                exec_cancel = await asyncio.to_thread(adapter.execute_intent, intent)
+                if exec_cancel.success:
+                    await asyncio.to_thread(
+                        adapter.log_lifecycle_event,
+                        event_type="ORDER_CANCELED",
+                        order_id=oid,
+                        reason=f"h1_bias_invalidated:{bias_reason}",
+                    )
+                    setup_registry.mark_terminal(oid, bias_reason)
+                    await asyncio.to_thread(adapter.finish_setup, oid)
+                elif "not found" in (exec_cancel.message or "").lower():
+                    setup_registry.mark_terminal(oid, "filled_during_cancel")
+                    await asyncio.to_thread(adapter.finish_setup, oid)
+                h1_bias_cancels.append(
+                    {
+                        "order_id": oid,
+                        "status": "success" if exec_cancel.success else "rejected",
+                        "reason": bias_reason,
+                        "message": exec_cancel.message,
+                    }
+                )
+
         open_rows = await asyncio.to_thread(adapter.list_open_fills)
         fills = [
             OpenFill(
@@ -451,6 +505,7 @@ def create_app(
 
         has_work = bool(
             cancel_results
+            or h1_bias_cancels
             or exit_results
             or uncertain_results
             or account_pnl_rows
@@ -469,6 +524,7 @@ def create_app(
             "action": "CLOCK_TICK",
             "checked": len(fills),
             "cancels": cancel_results,
+            "h1_bias_cancels": h1_bias_cancels,
             "exits": exit_results,
             "uncertain": uncertain_results,
             "account_pnl": account_pnl_rows,
@@ -811,6 +867,29 @@ def create_app(
             direction = (
                 Direction.BUY if payload.get("dir") == "BUY" else Direction.SELL
             )
+
+            # Scenario 8: invalidation before submission on known opposing H1 bias.
+            h1_bias, h1_bias_known = parse_h1_bias_fields(payload)
+            if h1_bias_known:
+                bias_ok, bias_reason = pending_h1_bias_allows(
+                    pending_direction=direction,
+                    h1_bias=h1_bias,
+                    bias_known=True,
+                )
+                if not bias_ok:
+                    reason = f"H1 bias gate blocked new risk: {bias_reason}"
+                    logger.warning(reason)
+                    if order_id:
+                        setup_registry.mark_terminal(order_id, bias_reason)
+                        await asyncio.to_thread(
+                            mark_processed, order_id, event, "rejected_h1_bias"
+                        )
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
 
             # Sizing with zero spread double-buffer invariant
             lot_result = calculate_lot_size(
