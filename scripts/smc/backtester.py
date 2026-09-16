@@ -16,6 +16,7 @@ from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
 from scripts.smc.funnel import SetupFunnel
+from scripts.smc.replay_report import ReplayKind, ReplayReport, build_replay_report
 
 
 @dataclass
@@ -33,6 +34,7 @@ class BacktestSummary:
     avg_r: float
     trades_df: pd.DataFrame = field(default_factory=lambda: pd.DataFrame())
     funnel: Optional[Dict[str, Any]] = None
+    replay_report: Optional[ReplayReport] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -75,6 +77,8 @@ class SMCBacktester:
         max_sweep_to_mss_bars: int = 8,
         max_mss_to_fvg_bars: int = 4,
         require_choch: bool = True,
+        replay_kind: ReplayKind = ReplayKind.THEORETICAL_TAPE,
+        external_account_events: Optional[List[Dict[str, Any]]] = None,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct
@@ -94,6 +98,8 @@ class SMCBacktester:
         self.max_sweep_to_mss_bars = max_sweep_to_mss_bars
         self.max_mss_to_fvg_bars = max_mss_to_fvg_bars
         self.require_choch = require_choch
+        self.replay_kind = replay_kind
+        self.external_account_events = external_account_events
 
     def run(
         self,
@@ -415,10 +421,21 @@ class SMCBacktester:
         profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (999.0 if gross_profit > 0 else 1.0)
         avg_r = (sum(t["pnl_r"] for t in scored) / scored_n) if scored_n > 0 else 0.0
 
+        net_profit = round(account.balance - self.initial_balance, 2)
+        replay_report = build_replay_report(
+            kind=self.replay_kind,
+            initial_balance=self.initial_balance,
+            trade_count=total_trades,
+            net_profit=net_profit,
+            win_rate=round(win_rate / 100.0, 4),
+            external_account_events=self.external_account_events,
+            risk_pct=self.risk_pct,
+        )
+
         return BacktestSummary(
             initial_balance=self.initial_balance,
             final_balance=round(account.balance, 2),
-            net_profit=round(account.balance - self.initial_balance, 2),
+            net_profit=net_profit,
             total_trades=total_trades,
             winning_trades=winning_trades,
             losing_trades=losing_trades,
@@ -429,6 +446,7 @@ class SMCBacktester:
             avg_r=round(avg_r, 2),
             trades_df=trades_df,
             funnel=funnel.as_dict(),
+            replay_report=replay_report,
         )
 
 

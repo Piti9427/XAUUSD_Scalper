@@ -67,6 +67,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Shared behavioral lifecycle boundary (story 47) | **Done:** `tests/test_foundation_behavioral_lifecycle.py` |
 | Open material decisions registry (story 48) | **Done:** `docs/handoff/2026-09-16-open-material-decisions.md` |
 | MT5 initialize path helper (Wine/Mac IPC) | **Done:** `scripts/smc/mt5_init.py`; smoke `--path` / `MT5_TERMINAL_PATH`; connector+adapter wired |
+| Research vs USD500 / shared-account replay labels (stories 39–40) | **Done:** `scripts/smc/replay_report.py`; backtester attaches `replay_report`; no shared-account parity without events |
 
 ## Still open for issue #1
 

@@ -182,6 +182,25 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
         self.assertAlmostEqual(result.net_profit, expected, places=2)
 
+    def test_default_replay_labeled_theoretical_not_usd500(self):
+        from scripts.smc.replay_report import ReplayKind
+
+        result = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
+        self.assertIsNotNone(result.replay_report)
+        self.assertEqual(result.replay_report.kind, ReplayKind.THEORETICAL_TAPE)
+        self.assertIn("theoretical_tape_not_account_performance", result.replay_report.notes)
+
+    def test_usd500_executable_replay_labeled(self):
+        from scripts.smc.replay_report import EXECUTABLE_DEMO_BALANCE, ReplayKind
+
+        result = SMCBacktester(
+            initial_balance=EXECUTABLE_DEMO_BALANCE,
+            replay_kind=ReplayKind.EXECUTABLE_USD500,
+            require_choch=False,
+        ).run(self.df_m5, self.df_h1)
+        self.assertEqual(result.replay_report.kind, ReplayKind.EXECUTABLE_USD500)
+        self.assertIsNotNone(result.replay_report.affordability)
+
 
 if __name__ == "__main__":
     unittest.main()
