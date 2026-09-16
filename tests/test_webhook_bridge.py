@@ -2321,6 +2321,53 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.app.state.adapter.conn.close()
         self.Path(self.db.name).unlink(missing_ok=True)
 
+    def test_setup_uses_live_h1_bias_when_payload_omits_bias(self):
+        """Live Gate C: TV omit h1_bias → broker H1 still blocks opposing SETUP."""
+        from unittest.mock import patch
+        with patch.object(
+            self.app.state.adapter,
+            "resolve_live_h1_bias",
+            return_value=("SELL", True),
+        ):
+            res = self.client.post(
+                "/webhook/tradingview",
+                headers=self.headers,
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "H1_LIVE_SETUP_1",
+                    "dir": "BUY",
+                    "limit": 2400.0,
+                    "sl": 2390.0,
+                    "tp1": 2420.0,
+                },
+            )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["status"], "rejected")
+        self.assertIn("h1_bias", body["reason"])
+        self.assertTrue(self.app.state.setup_registry.is_blocked("H1_LIVE_SETUP_1"))
+
+    def test_setup_does_not_invent_h1_reject_when_live_bias_unknown(self):
+        from unittest.mock import patch
+        with patch.object(
+            self.app.state.adapter,
+            "resolve_live_h1_bias",
+            return_value=(None, False),
+        ):
+            res = self.client.post(
+                "/webhook/tradingview",
+                headers=self.headers,
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "H1_LIVE_SETUP_OK",
+                    "dir": "BUY",
+                    "limit": 2400.0,
+                    "sl": 2390.0,
+                    "tp1": 2420.0,
+                },
+            )
+        self.assertEqual(res.json()["status"], "success")
+
     def test_setup_pending_rejected_when_known_h1_bias_conflicts(self):
         res = self.client.post(
             "/webhook/tradingview",

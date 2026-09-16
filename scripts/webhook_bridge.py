@@ -25,7 +25,7 @@ from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
 from scripts.webhook.auth import make_verify_auth
-from scripts.webhook.h1_bias import parse_h1_bias_fields
+from scripts.webhook.h1_bias import coalesce_h1_bias
 from scripts.webhook.idempotency import make_idempotency_helpers
 from scripts.smc.setup_identity import SetupRegistry, load_setup_registry, pending_h1_bias_allows
 
@@ -331,11 +331,10 @@ def create_app(
 
         # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
         # Prefer explicit clock JSON; else live MT5 resolve (Gate C cron empty body).
-        h1_bias, h1_bias_known = parse_h1_bias_fields(clock_payload)
-        if not h1_bias_known:
-            live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
-            if live_known:
-                h1_bias, h1_bias_known = live_bias, True
+        live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
+        h1_bias, h1_bias_known = coalesce_h1_bias(
+            clock_payload, live_bias, live_known
+        )
         if h1_bias_known:
             pending_ids = await asyncio.to_thread(adapter.list_unfilled_pendings)
             for oid in pending_ids:
@@ -874,7 +873,9 @@ def create_app(
             )
 
             # Scenario 8: invalidation before submission on known opposing H1 bias.
-            h1_bias, h1_bias_known = parse_h1_bias_fields(payload)
+            # Prefer TV payload fields; else live MT5 resolve (Gate C when TV omits bias).
+            live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
+            h1_bias, h1_bias_known = coalesce_h1_bias(payload, live_bias, live_known)
             if h1_bias_known:
                 bias_ok, bias_reason = pending_h1_bias_allows(
                     pending_direction=direction,

@@ -28,6 +28,24 @@ class TestParseH1BiasFields(unittest.TestCase):
         self.assertEqual(bias, "SELL")
         self.assertTrue(known)
 
+    def test_coalesce_prefers_payload_over_live(self):
+        from scripts.webhook.h1_bias import coalesce_h1_bias
+
+        bias, known = coalesce_h1_bias(
+            {"h1_bias": "BUY", "h1_bias_known": True},
+            live_bias="SELL",
+            live_known=True,
+        )
+        self.assertEqual(bias, "BUY")
+        self.assertTrue(known)
+
+    def test_coalesce_falls_back_to_live(self):
+        from scripts.webhook.h1_bias import coalesce_h1_bias
+
+        bias, known = coalesce_h1_bias({}, live_bias="SELL", live_known=True)
+        self.assertEqual(bias, "SELL")
+        self.assertTrue(known)
+
 
 if __name__ == "__main__":
     unittest.main()
