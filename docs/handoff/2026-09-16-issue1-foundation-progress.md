@@ -65,11 +65,10 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 
 | Gap | Notes |
 | --- | --- |
-| Live Exness connect smoke with real credentials | Run `python3 scripts/smoke_broker_identity.py` with MT5 session; needs broker evidence |
+| Live Exness connect smoke with real credentials | **Blocked on Mac:** native `MetaTrader5` missing; Wine IPC `(-10003)` / auth `(-6)`. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`. Needs Windows/Oracle host + Exness Demo session. |
 | Oracle ARM64 runtime soak | Checklist ready; needs executed soak evidence |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
-| Close/comment issues on GitHub | Local work committed; MCP read OK; **write still 403** (PAT lacks issues write); `gh` keyring invalid |
 
 ## Sibling issues #2–#4
 
-Documentation deliverables are in-repo (`xauusd-s1-s4-mechanical-v1.md`, research handoff, contract tests). Tracker closure blocked by the same write-auth issue.
+Documentation deliverables in-repo. Tracker: **#3/#4/#2 closed** 2026-09-16 via `gh` on `feature/smc-v2-hardening`.

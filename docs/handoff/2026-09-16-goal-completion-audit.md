@@ -1,15 +1,15 @@
 # Goal completion audit — fix all open GitHub issues
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
-**Branch:** `feature/smc-v2-hardening` @ `1f20ced` (pushed).  
-**Last verified:** 2026-09-16 ~14:17 ICT — push OK · closed #3/#4/#2 via `gh`
+**Branch:** `feature/smc-v2-hardening` (pushed; Mac live-gate blocker documented).  
+**Last verified:** 2026-09-16 ~14:24 ICT — #2/#3/#4 closed · #1 blocked on Mac MT5 IPC
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
 | **#3** Mechanical S1–S4 spec | Docs + contract tests | `docs/specs/xauusd-s1-s4-mechanical-v1.md`, contract 6/6 | ✅ closed | **Done** |
 | **#4** Research handoff | Docs + Gate B/C blockers | `docs/specs/xauusd-s1-s4-research-handoff-v1.md`, contract 6/6 | ✅ closed | **Done** |
 | **#2** Parent tracker | Close after #3/#4 | Parent closed on tracker | ✅ closed | **Done** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | Progress map + 268 tests; Mac smoke = `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | 268 tests OK; Mac native + Wine IPC both fail — see `docs/ops/2026-09-16-mac-live-gate-blocker.md` | ❌ open | **Needs non-Mac MT5 host + Exness Demo** |
 
 ## Auth / push (resolved 2026-09-16)
 
