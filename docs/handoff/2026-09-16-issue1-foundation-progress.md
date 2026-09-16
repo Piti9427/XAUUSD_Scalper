@@ -70,6 +70,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Research vs USD500 / shared-account replay labels (stories 39–40) | **Done:** `scripts/smc/replay_report.py`; backtester attaches `replay_report`; no shared-account parity without events |
 | Trading vs operating profit on backtest summary (story 41) | **Done:** backtester `cost_report` via `summarize_profit_layers` |
 | Frozen sample/Wilson on backtest summary (stories 42–43) | **Done:** `sample_verdict` + `wilson_interval` attached; few trades → INCONCLUSIVE |
+| Nearest pool TP min-R / consumed (scenario 7) | **Done:** `tests/test_smc_liquidity_tp.py` covers nearest-not-farther, R&lt;1.5 reject, consumed skip |
 
 ## Still open for issue #1
 
