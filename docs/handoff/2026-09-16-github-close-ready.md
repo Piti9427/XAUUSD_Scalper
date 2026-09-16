@@ -1,16 +1,20 @@
 # GitHub close-ready notes (blocked by auth)
 
-`gh` keyring invalid + MCP `issue_write` 403 (PAT lacks **issues write**).
+`gh` keyring invalid + MCP `issue_write`/`add_issue_comment` **403** (PAT lacks **issues write**).
+ConnectScm + `mcp_auth` re-run 2026-09-16: read works; write still 403.
+Git push also blocked (`osxkeychain` err -25293) — local branch **ahead of origin**.
 Paste when write auth restored via:
 
 ```bash
 gh auth refresh -h github.com -s repo
+# unlock keychain / re-auth git HTTPS, then:
+git push origin feature/smc-v2-hardening
 ```
 
-Retried 2026-09-16 repeatedly: still 403 / invalid keyring.
+Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
 
-Branch evidence: `feature/smc-v2-hardening` (synced to origin).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (238).
+Branch evidence: `feature/smc-v2-hardening` (local commits incl. webhook `/internal/clock`, frozen-R).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (239).
 
 ---
 
