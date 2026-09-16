@@ -163,6 +163,33 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertIsNone(account.pending_order)
         self.assertEqual(account.open_position.entry_price, 2010.0)
 
+    def test_new_setup_uses_configured_risk_pct(self):
+        signal = SetupSignal(
+            direction=Direction.BUY,
+            sweep_price=2010.0,
+            sweep_wick=2000.0,
+            mss_price=2014.0,
+            entry_price=2010.0,
+            sl_price=2000.0,
+            tp_price=2030.0,
+            sl_distance=10.0,
+            risk_r=2.0,
+            fvg_high=2011.0,
+            fvg_low=2009.0,
+            reason="BUY SMC Setup",
+            timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
+        )
+        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011.0, "close": 2012}
+        half = StrategyOrchestrator(risk_pct=0.005)
+        full = StrategyOrchestrator(risk_pct=0.01)
+        acct_half = AccountState(balance=10000.0, equity=10000.0)
+        acct_full = AccountState(balance=10000.0, equity=10000.0)
+        half.on_bar(bar, acct_half, setup_signal=signal, current_spread=0.15, max_spread=0.35)
+        full.on_bar(bar, acct_full, setup_signal=signal, current_spread=0.15, max_spread=0.35)
+        self.assertIsNotNone(acct_half.pending_order)
+        self.assertIsNotNone(acct_full.pending_order)
+        self.assertGreater(acct_full.pending_order.lot_size, acct_half.pending_order.lot_size)
+
     def test_spread_guard_blocks_new_order_when_blown_out(self):
         account = AccountState(balance=10000.0, equity=10000.0)
         signal = SetupSignal(

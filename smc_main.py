@@ -73,6 +73,7 @@ async def run_smc_live_copilot():
         partial_tp_r=strat_cfg.get("partial_tp_r", 1.0),
         partial_tp_ratio=strat_cfg.get("partial_tp_ratio", 0.5),
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
+        risk_pct=float(strat_cfg.get("risk_pct", 0.005)),
     )
     news_mgr = NewsManager()
     notifier = SMCTelegramNotifier({"telegram": {"enabled": False}})
@@ -120,8 +121,8 @@ async def run_smc_live_copilot():
             spread_raw = connector.get_spread(symbol)
             current_spread = None
             if spread_raw is not None:
-                # If broker quotes in points (e.g. 15 or 25 points = $0.15 or $0.25)
-                current_spread = (spread_raw * 0.01) if spread_raw > 1.0 else float(spread_raw)
+                # MT5Connector.get_spread returns ask−bid in price units (not points).
+                current_spread = float(spread_raw)
             elif dry_run:
                 current_spread = 0.15
 

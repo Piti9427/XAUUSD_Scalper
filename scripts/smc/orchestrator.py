@@ -37,6 +37,7 @@ class StrategyOrchestrator:
         max_hold_bars: Optional[int] = None,
         bar_minutes: int = 5,
         setup_registry: Optional[SetupRegistry] = None,
+        risk_pct: float = 0.005,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
@@ -53,6 +54,7 @@ class StrategyOrchestrator:
         self.max_hold_bars = max_hold_bars
         self.bar_minutes = bar_minutes
         self.setup_registry = setup_registry if setup_registry is not None else SetupRegistry()
+        self.risk_pct = risk_pct
 
     def _evaluate_open_position(
         self,
@@ -388,6 +390,7 @@ class StrategyOrchestrator:
                 entry_price=setup_signal.entry_price,
                 sl_price=setup_signal.sweep_wick,
                 max_sl_cap=self.max_sl_cap,
+                risk_pct=self.risk_pct,
             )
             if lot_res.is_valid and lot_res.lot_size > 0:
                 new_order = OrderIntent(

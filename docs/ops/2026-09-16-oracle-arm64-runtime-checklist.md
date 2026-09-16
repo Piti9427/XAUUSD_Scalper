@@ -17,6 +17,7 @@ One engineering day for Box64 → Wine64 → MT5 / Windows Python compatibility,
 
 ## Evidence required
 
+- Broker identity smoke JSON: `python3 scripts/smoke_broker_identity.py --out docs/ops/<date>-exness-smoke.json`
 - Commands run + timestamps
 - Screenshot or log of MT5 login to Demo
 - Restart/reconnect outcomes

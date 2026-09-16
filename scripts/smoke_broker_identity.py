@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +23,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbol", default="XAUUSD")
     parser.add_argument("--server-substring", default="Exness")
     parser.add_argument("--allow-live", action="store_true", help="Permit non-demo trade_mode")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        help="Write evidence JSON for Issue #1 ops (timestamp + optional git sha)",
+    )
     args = parser.parse_args(argv)
+
+    def _git_head() -> str | None:
+        try:
+            out = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=ROOT,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            return out.strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None
+
+    def _emit(payload: dict) -> None:
+        body = {
+            "captured_at_utc": datetime.now(timezone.utc).isoformat(),
+            "git_head": _git_head(),
+            **payload,
+        }
+        print(json.dumps(body, indent=2))
+        if args.out:
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
 
     try:
         import MetaTrader5 as mt5
@@ -31,16 +61,13 @@ def main(argv: list[str] | None = None) -> int:
             identity_ok=False,
             soak_completed=False,
         )
-        print(
-            json.dumps(
-                {
-                    "ok": False,
-                    "reasons": ["mt5_import_missing"],
-                    "infra_verdict": infra.verdict,
-                    "infra_detail": infra.detail,
-                },
-                indent=2,
-            )
+        _emit(
+            {
+                "ok": False,
+                "reasons": ["mt5_import_missing"],
+                "infra_verdict": infra.verdict,
+                "infra_detail": infra.detail,
+            }
         )
         return 2
 
@@ -50,16 +77,13 @@ def main(argv: list[str] | None = None) -> int:
             identity_ok=False,
             soak_completed=False,
         )
-        print(
-            json.dumps(
-                {
-                    "ok": False,
-                    "reasons": ["mt5_initialize_failed"],
-                    "infra_verdict": infra.verdict,
-                    "infra_detail": infra.detail,
-                },
-                indent=2,
-            )
+        _emit(
+            {
+                "ok": False,
+                "reasons": ["mt5_initialize_failed"],
+                "infra_verdict": infra.verdict,
+                "infra_detail": infra.detail,
+            }
         )
         return 2
     try:
@@ -90,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         "infra_verdict": infra.verdict,
         "infra_detail": infra.detail,
     }
-    print(json.dumps(payload, indent=2))
+    _emit(payload)
     return 0 if report.ok else 1
 
 
