@@ -86,7 +86,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine `path=` → `-6` auth fail; terminal is **MetaQuotes-Demo** not Exness. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-initialize-path.json`. Needs Exness Demo session on host with working MT5 Python IPC. |
 | Oracle ARM64 runtime soak | Checklist ready; SSH hunt to known hosts → publickey denied / timeout (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
+| GitHub API write for issue close comments | **Blocked 2026-09-16:** local `gh` token invalid (`gh auth status` → re-auth). Push to branch still works via HTTPS. Operator: `gh auth refresh -h github.com` then re-comment #1. |
 
 ## Sibling issues #2–#4
 
-Documentation deliverables in-repo. Tracker: **#3/#4/#2 closed** 2026-09-16 via `gh` on `feature/smc-v2-hardening`.
+Documentation deliverables in-repo. Tracker: **#3/#4/#2 closed** 2026-09-16 via `gh` on `feature/smc-v2-hardening` (cannot re-verify via API until token refreshed).

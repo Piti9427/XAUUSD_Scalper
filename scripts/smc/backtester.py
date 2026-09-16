@@ -499,6 +499,7 @@ def format_backtest_summary(summary: BacktestSummary) -> str:
     """Formats BacktestSummary into a clean Markdown table."""
     replay_kind = summary.replay_report.kind.value if summary.replay_report else "unlabeled"
     sample = summary.sample_verdict or "unknown"
+    eval_win = summary.eval_window or "unlabeled"
     net_ops = (
         f"${summary.cost_report.net_operating_profit:,.2f}"
         if summary.cost_report is not None
@@ -514,7 +515,8 @@ def format_backtest_summary(summary: BacktestSummary) -> str:
 | Metric | Value |
 | :--- | :--- |
 | **Replay kind** | `{replay_kind}` |
-| **Sample verdict** | `{sample}` (few trades stay INCONCLUSIVE) |
+| **Eval window** | `{eval_win}` |
+| **Sample verdict** | `{sample}` (few trades stay INCONCLUSIVE; mixed windows refuse merge) |
 | **Wilson 95% win-rate** | {wilson_note} |
 | **Initial Balance** | ${summary.initial_balance:,.2f} |
 | **Final Balance** | ${summary.final_balance:,.2f} |
