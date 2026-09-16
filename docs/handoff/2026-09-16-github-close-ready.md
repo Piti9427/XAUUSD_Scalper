@@ -1,20 +1,30 @@
 # GitHub close-ready notes (blocked by auth)
 
-`gh` keyring invalid + MCP `issue_write`/`add_issue_comment` **403** (PAT lacks **issues write**).
-ConnectScm + `mcp_auth` re-run 2026-09-16: read works; write still 403.
+`gh` keyring invalid + MCP `issue_write`/`push_files` **403** (token is **read-only** — no issues/contents write).
+ConnectScm + `mcp_auth` re-run 2026-09-16: identity `Piti9427` readable; PATCH/POST write still 403.
 Git push also blocked (`osxkeychain` err -25293) — local branch **ahead of origin**.
-Paste when write auth restored via:
+
+**Operator unblock (local Terminal, interactive):**
 
 ```bash
+chmod +x scripts/ops_unblock_github.sh
+./scripts/ops_unblock_github.sh
+```
+
+Or manually:
+
+```bash
+security unlock-keychain ~/Library/Keychains/login.keychain-db
 gh auth refresh -h github.com -s repo
-# unlock keychain / re-auth git HTTPS, then:
 git push origin feature/smc-v2-hardening
 ```
 
+Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **Contents: Write** (read-only app cannot close trackers).
+
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
 
-Branch evidence: `feature/smc-v2-hardening` (local commits incl. webhook `/internal/clock`, frozen-R).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (239).
+Branch evidence: `feature/smc-v2-hardening` (local commits incl. webhook `/internal/clock`, news cancel, 0.5% default risk).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (241).
 
 ---
 
