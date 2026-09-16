@@ -377,6 +377,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
                 entry_price=4049.50,
                 sl_price=4045.00,
                 tp_price=4062.50,
+                lot_size=0.02,
                 order_id="XAUUSD_REAL_FILL",
                 ticket=999888,
                 reason="TradingView Alert Fill Confirmation (Broker Verified)",
