@@ -22,9 +22,10 @@ git push origin feature/smc-v2-hardening
 Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **Contents: Write** (read-only app cannot close trackers).
 
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
+MCP `issue_write` close attempt 2026-09-16: **403 Resource not accessible by personal access token** (read-only).
 
-Branch evidence: `feature/smc-v2-hardening` (**ahead 22** of origin — push blocked).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (263).
+Branch evidence: `feature/smc-v2-hardening` (**ahead 23** of origin — push blocked).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (266).
 Live gate helper: `scripts/ops/foundation_live_gate.sh` (MT5 host required).
 Pre-close audit: `./scripts/audit_local_issue_gates.sh` · JSON: `python3 scripts/generate_close_evidence.py`
 

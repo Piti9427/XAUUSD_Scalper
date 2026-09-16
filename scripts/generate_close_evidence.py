@@ -48,6 +48,7 @@ def main() -> int:
         "contracts": [
             _run_unittest("tests.test_s1_s4_mechanical_spec_contract"),
             _run_unittest("tests.test_s1_s4_research_handoff_contract"),
+            _run_unittest("tests.test_issue2_parent_tracker_contract"),
         ],
         "artifacts": {
             "mechanical_spec": "docs/specs/xauusd-s1-s4-mechanical-v1.md",
