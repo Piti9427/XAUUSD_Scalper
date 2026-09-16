@@ -62,6 +62,10 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Clock tick updates risk_halt on broker-only closes | `apply_broker_lifecycle_losses`; `tests/test_smc_risk_halt.py` |
 | TRADE_CLOSED idempotent after lifecycle reconcile | `webhook_bridge` skips duplicate close + double loss count; `test_trade_closed_webhook_skipped_when_lifecycle_already_logged` |
 | Lifecycle fill → ORDER_FILLED notify + idempotent TV | clock marks `ORDER_FILLED` processed + fill card; `test_clock_marks_order_filled_processed_after_lifecycle_fill` |
+| SetupDecision reject reasons | **Done:** `evaluate_smc_setup` → `SetupDecision`; `smc_main` + backtester wired (`810d17c`) |
+| Real-money approval boundary (story 49) | **Done:** `scripts/smc/real_money_approval.py`; dual env+config; Demo path unchanged (`810d17c`) |
+| Shared behavioral lifecycle boundary (story 47) | **Done:** `tests/test_foundation_behavioral_lifecycle.py` |
+| Open material decisions registry (story 48) | **Done:** `docs/handoff/2026-09-16-open-material-decisions.md` |
 
 ## Still open for issue #1
 
@@ -70,9 +74,6 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Live Exness connect smoke with real credentials | **Blocked on Mac:** native `MetaTrader5` missing; Wine IPC `(-10003)` / auth `(-6)`. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-ipc-reprobe.json`, `docs/ops/2026-09-16-mac-host-confirmed.json`. Needs Windows/Oracle host + Exness Demo session. |
 | Oracle ARM64 runtime soak | Checklist ready; SSH hunt to known hosts → publickey denied / timeout (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
-| Bugbot High (software) | **Done @ `00b2e11`:** TP1/BE foundation gate, live invent-PnL reject, CLOSE_MARKET comment, partial min-lot residual skip |
-| Webhook wall-clock 20:55 rollover flatten | **Done:** `plan_clock_rollover_exits` + `/internal/clock` (ADR-007) even when `max_hold_bars` unset |
-| Clock reconciles uncertain intents (story 35) | **Done:** `list_uncertain_order_ids` + `reconcile_uncertain` on `/internal/clock`; `test_clock_reconciles_uncertain_setup_against_broker` |
 
 ## Sibling issues #2–#4
 

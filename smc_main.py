@@ -198,12 +198,9 @@ async def run_smc_live_copilot():
                             max_mss_to_fvg_bars=strat_cfg.get("max_mss_to_fvg_bars", 4),
                             require_choch=strat_cfg.get("require_choch", True),
                         )
-                        setup = decision.setup if decision.admitted else None
-                        if not decision.admitted and decision.reject_reasons:
-                            logger.debug(
-                                "Setup rejected: %s",
-                                ",".join(decision.reject_reasons),
-                            )
+                        setup = decision.signal if decision.accepted else None
+                        if not decision.accepted and decision.reject_reason:
+                            logger.debug("Setup rejected: %s", decision.reject_reason)
 
                     # Snapshot position before orchestrator step to detect trade close
                     pos_before = account.open_position
