@@ -1,24 +1,23 @@
 # Goal completion audit — fix all open GitHub issues
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
-**Branch:** `feature/smc-v2-hardening` (local ahead of origin; push blocked).  
-**Last verified:** 2026-09-16 ~14:09 ICT — `./scripts/audit_local_issue_gates.sh` OK · `docs/ops/2026-09-16-github-close-evidence.json` · HEAD `09b32f8` · **ahead 27**
+**Branch:** `feature/smc-v2-hardening` @ `1f20ced` (pushed).  
+**Last verified:** 2026-09-16 ~14:17 ICT — push OK · closed #3/#4/#2 via `gh`
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
-| **#3** Mechanical S1–S4 spec | Docs + contract tests | `docs/specs/xauusd-s1-s4-mechanical-v1.md`, `tests/test_s1_s4_mechanical_spec_contract.py` (6/6) | ❌ open (MCP PATCH **403** read-only PAT) | **Software done; tracker open** |
-| **#4** Research handoff | Docs + explicit Gate B/C blockers | `docs/specs/xauusd-s1-s4-research-handoff-v1.md`, `tests/test_s1_s4_research_handoff_contract.py` (6/6) | ❌ open | **Software done; tracker open** |
-| **#2** Parent tracker | Close after #3/#4 | `tests/test_issue2_parent_tracker_contract.py`, local acceptance audit | ❌ open | **Blocked on #3/#4 close** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | Progress map + unit suite OK; Mac smoke = `INCONCLUSIVE_INFRA` | ❌ open | **Live gates + tracker open** |
+| **#3** Mechanical S1–S4 spec | Docs + contract tests | `docs/specs/xauusd-s1-s4-mechanical-v1.md`, contract 6/6 | ✅ closed | **Done** |
+| **#4** Research handoff | Docs + Gate B/C blockers | `docs/specs/xauusd-s1-s4-research-handoff-v1.md`, contract 6/6 | ✅ closed | **Done** |
+| **#2** Parent tracker | Close after #3/#4 | Parent closed on tracker | ✅ closed | **Done** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | Progress map + 268 tests; Mac smoke = `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
 
-## Auth blockers (operator) — rechecked 2026-09-16 14:09
+## Auth / push (resolved 2026-09-16)
 
 | Action | Evidence |
 | --- | --- |
-| Push 27 commits | `gh` token **invalid**; HTTPS keychain `-25293`; SSH `Permission denied (publickey)` |
-| Close #3→#4→#2 | MCP `issue_write` **403** Resource not accessible by personal access token |
-| MCP read | `issue_read` works (issues still `open`) |
-| MCP close attempt | Operator **rejected** MCP `issue_write` close for #3 (2026-09-16); use local `./scripts/ops_unblock_github.sh` instead |
+| Push | `gh auth setup-git` + `git push` → `b1548cc..1f20ced` |
+| Close #3→#4→#2 | `gh issue close` completed with evidence comments |
+| #1 | **Do not close** until live smoke + Oracle soak + Demo 12w |
 
 ## Issue #1 live gates (do not close #1 without)
 
@@ -26,8 +25,11 @@
 2. Oracle ARM64 soak per `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md`  
 3. Forward Demo 12w per `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`  
 
+Helper: `./scripts/ops/foundation_live_gate.sh`
+
 ## Goal complete when
 
-- [ ] All four issues **closed** on GitHub with evidence comments  
-- [ ] Branch pushed; close comments reference commit SHA from `generate_close_evidence.py`  
-- [ ] #1 live artifacts recorded under `docs/ops/` (not `INCONCLUSIVE_INFRA` only)
+- [x] Issues #2/#3/#4 **closed** on GitHub with evidence  
+- [x] Branch pushed (`1f20ced`)  
+- [ ] #1 live artifacts under `docs/ops/` (not `INCONCLUSIVE_INFRA` only)  
+- [ ] Issue #1 closed after live gates
