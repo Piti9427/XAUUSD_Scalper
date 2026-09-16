@@ -1450,6 +1450,46 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)
 
+    def test_trade_closed_reason_only_does_not_invent_pnl_or_circuit_loss(self):
+        from scripts.smc.mt5_adapter import SMCExecutionAdapter
+
+        res = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "TRADE_CLOSED",
+                "order_id": "REASON_ONLY_1",
+                "reason": "STOP LOSS HIT 🛑",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIsNone(data["pnl_r"])
+        self.assertIsNone(data["pnl_dollar"])
+
+        geo = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "TRADE_CLOSED",
+                "order_id": "GEO_R_ONLY",
+                "dir": "BUY",
+                "entry": 100.0,
+                "sl": 90.0,
+                "exit_price": 120.0,
+                "reason": "TP",
+            },
+        ).json()
+        self.assertEqual(geo["pnl_r"], 2.0)
+        self.assertIsNone(geo["pnl_dollar"])
+
+        adapter = SMCExecutionAdapter(dry_run=True, db_path=self.db.name)
+        try:
+            # Reason-only + geometry-only must not invent circuit losses.
+            self.assertEqual(adapter.get_daily_realized_losses(), 0)
+        finally:
+            adapter.close()
+
     def test_trade_closed_uses_frozen_initial_r_from_fill_geometry(self):
         """Dollar PnL + entry/SL/lot → R uses frozen initial denominator."""
         res = self.client.post(

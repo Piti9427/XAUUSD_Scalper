@@ -1,0 +1,8 @@
+{
+  "ok": false,
+  "reasons": [
+    "mt5_import_missing"
+  ],
+  "infra_verdict": "INCONCLUSIVE_INFRA",
+  "infra_detail": "mt5_unavailable_on_host"
+}
