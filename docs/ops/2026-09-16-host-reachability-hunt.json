@@ -1,32 +1,32 @@
 {
-  "captured_at_utc": "2026-09-16T09:14:00.572545+00:00",
-  "git_head": "7f7b94f3b01cc0dc76303c4866619ce351fe5a04",
+  "captured_at_utc": "2026-09-16T09:14:18.771023+00:00",
+  "git_head": "b684fed5523de09c95449960d4a5c02403f9779f",
   "host": "macOS darwin",
   "purpose": "Locate reachable Windows/Oracle MT5 Python host for Gate C",
   "ssh_probes": [
     {
       "host": "158.178.243.98",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "tcp/22 open (auth not tested)"
     },
     {
       "host": "10.21.31.9",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "TimeoutError: timed out"
     },
     {
       "host": "192.168.7.8",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "tcp/22 open (auth not tested)"
     },
     {
       "host": "192.168.7.19",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "tcp/22 open (auth not tested)"
     },
     {
       "host": "192.168.7.21",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "tcp/22 open (auth not tested)"
     },
     {
       "host": "192.168.7.22",
-      "result": "PermissionError: [Errno 1] Operation not permitted"
+      "result": "tcp/22 open (auth not tested)"
     }
   ],
   "local_settings_mt5_server": "empty",
