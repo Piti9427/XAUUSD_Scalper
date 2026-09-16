@@ -359,6 +359,28 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertLess(run_case(1995.0), 0)  # loss path counted
         self.assertEqual(run_case(2000.0), 0)  # flat path counted
 
+    def test_time_exit_on_clock_without_new_bar(self):
+        orch = StrategyOrchestrator(max_hold_bars=2, bar_minutes=5, partial_tp_enabled=False)
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            tp_price=2030.0,
+            lot_size=0.10,
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=10.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+        early = orch.on_clock(account, datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc))
+        self.assertEqual(early, [])
+        self.assertIsNotNone(account.open_position)
+        late = orch.on_clock(account, datetime(2026, 3, 2, 8, 10, tzinfo=timezone.utc))
+        self.assertEqual(len(late), 1)
+        self.assertEqual(late[0].intent_type, OrderIntentType.CLOSE_MARKET)
+        self.assertIn("TIME_EXIT", late[0].reason)
+        # Local state stays open until broker evidence arrives.
+        self.assertIsNotNone(account.open_position)
+
 
 if __name__ == "__main__":
     unittest.main()

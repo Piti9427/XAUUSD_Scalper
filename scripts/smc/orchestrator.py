@@ -35,6 +35,7 @@ class StrategyOrchestrator:
         spread_buffer: float = 0.30,
         be_buffer: float = 0.10,
         max_hold_bars: Optional[int] = None,
+        bar_minutes: int = 5,
         setup_registry: Optional[SetupRegistry] = None,
     ):
         self.max_daily_losses = max_daily_losses
@@ -50,6 +51,7 @@ class StrategyOrchestrator:
         self.spread_buffer = spread_buffer
         self.be_buffer = be_buffer
         self.max_hold_bars = max_hold_bars
+        self.bar_minutes = bar_minutes
         self.setup_registry = setup_registry if setup_registry is not None else SetupRegistry()
 
     def _evaluate_open_position(
@@ -216,6 +218,43 @@ class StrategyOrchestrator:
             account.open_position = None
 
         return intents
+
+    def on_clock(
+        self,
+        account: AccountState,
+        now: datetime,
+    ) -> List[OrderIntent]:
+        """
+        Wall-clock TIME_EXIT when M5 feed stalls (foundation scenario 19).
+
+        Does not invent a broker close confirmation — emits CLOSE_MARKET intent only.
+        Callers must wait for adapter evidence before notifying "closed".
+        """
+        pos = account.open_position
+        if pos is None or self.max_hold_bars is None:
+            return []
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        else:
+            now = now.astimezone(timezone.utc)
+        open_time = pos.open_time
+        if open_time.tzinfo is None:
+            open_time = open_time.replace(tzinfo=timezone.utc)
+        else:
+            open_time = open_time.astimezone(timezone.utc)
+        max_hold = timedelta(minutes=self.max_hold_bars * self.bar_minutes)
+        if now - open_time < max_hold:
+            return []
+        intent = OrderIntent(
+            intent_type=OrderIntentType.CLOSE_MARKET,
+            direction=pos.direction,
+            reason=(
+                f"TIME_EXIT wall-clock after {self.max_hold_bars}*{self.bar_minutes}m "
+                f"without requiring a new bar"
+            ),
+        )
+        # Keep local position until broker confirms; do not clear here.
+        return [intent]
 
     def on_bar(
         self,

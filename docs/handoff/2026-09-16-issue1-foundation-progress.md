@@ -42,6 +42,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Incomplete Asian / prior-day pools unavailable | `compute_liquidity_levels` returns None Asian when incomplete; PDH/PDL `None` (no Asian fallback); detector skips null pools; `tests/test_smc_liquidity.py` |
 | Smoke identity CLI import path fix | `scripts/smoke_broker_identity.py` adds repo root to `sys.path` |
 | Pending fill survives spread blowout (scenario 15) | Orchestrator fills on price touch even if `current_spread > max_spread`; new risk still gated; `test_pending_fill_survives_spread_blowout` |
+| Wall-clock TIME_EXIT without new bars (scenario 19) | `StrategyOrchestrator.on_clock`; keeps local position until broker confirms; `test_time_exit_on_clock_without_new_bar` |
 | Trading vs operating cost layers (scenario 21) | `scripts/smc/cost_accounting.py`; `tests/test_smc_cost_accounting.py` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
