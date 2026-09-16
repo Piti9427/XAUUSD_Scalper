@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T08:59:58.670393+00:00",
-  "git_head": "85588be2013463bc53230876705a83bae9b95724",
+  "captured_at_utc": "2026-09-16T09:02:08.649048+00:00",
+  "git_head": "167e4676e17a829cf9475d609ff9031b59358719",
   "gate_c_exness_smoke": {
     "ok": false,
     "artifact": null,
