@@ -90,11 +90,11 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 
 | Gap | Notes |
 | --- | --- |
-| Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine `path=` → `-6` auth fail; terminal is **MetaQuotes-Demo** not Exness. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-initialize-path.json`. Needs Exness Demo session on host with working MT5 Python IPC. |
-| Oracle ARM64 runtime soak | Checklist ready; SSH hunt to known hosts → publickey denied / timeout (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
+| Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine `path=` → `-6` auth fail; no Exness session. Fresh evidence: `docs/ops/2026-09-16-mac-wine-reprobe-running.json`, `docs/ops/2026-09-16-exness-smoke-mac-retry.json`. Operator: `./scripts/ops/issue1_operator_unblock.sh` |
+| Oracle ARM64 runtime soak | Checklist ready; SSH hunt → publickey denied (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
-| GitHub API write for issue close comments | **Blocked 2026-09-16:** local `gh` token invalid (`gh auth status` → re-auth). Push to branch still works via HTTPS. Operator: `gh auth refresh -h github.com` then re-comment #1. |
+| GitHub API write for issue close comments | **Unblocked:** `gh` auth OK (Piti9427). #1 still open until live artifacts; do not invent PASS |
 
 ## Sibling issues #2–#4
 
-Documentation deliverables in-repo. Tracker: **#3/#4/#2 closed** 2026-09-16 via `gh` on `feature/smc-v2-hardening` (cannot re-verify via API until token refreshed).
+Documentation deliverables in-repo. Tracker: **#3/#4/#2 closed** 2026-09-16. Re-verified CLOSED after `gh auth refresh`.

@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T09:38:35.633775+00:00",
-  "git_head": "d7ebd5f0b9e3837e698f41df158112a402eeedcf",
+  "captured_at_utc": "2026-09-16T09:42:25.803515+00:00",
+  "git_head": "53a4b74f409e332064da9b1730a2c21c49718969",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -9,6 +9,7 @@
   "gate_c_exness_smoke": {
     "ok": false,
     "artifact": null,
+    "latest_attempt_artifact": "docs/ops/2026-09-16-exness-smoke-mac-retry.json",
     "blocker_docs": [
       "docs/ops/2026-09-16-mac-live-gate-blocker.md",
       "docs/ops/2026-09-16-mac-wine-initialize-path.json",
@@ -28,7 +29,9 @@
   "operator_blockers": {
     "gh_auth_ok": true,
     "host_reachability_artifact": "docs/ops/2026-09-16-host-reachability-hunt.json",
-    "utm_app_present_no_vms": true
+    "utm_app_present": true,
+    "utm_app_present_no_vms": true,
+    "next_action": "Authorize Mac SSH pubkey on Oracle/Windows MT5 host, or run ./scripts/ops/foundation_live_gate.sh there with Exness Demo (hedging). See ./scripts/ops/issue1_operator_unblock.sh"
   },
   "issue1_closable": false
 }

@@ -38,7 +38,10 @@ def _gh_auth_ok() -> bool:
             check=False,
         )
         text = (proc.stdout or "") + (proc.stderr or "")
-        if "Failed to log in" in text or "token" in text.lower() and "invalid" in text.lower():
+        # Parentheses matter: status text always contains "Token: …".
+        if ("Failed to log in" in text) or (
+            "token" in text.lower() and "invalid" in text.lower()
+        ):
             return False
         # Probe a cheap authenticated call — status text alone can be misleading.
         api = subprocess.run(
@@ -64,18 +67,34 @@ def _scenario_software_ok() -> bool | None:
     return bool(payload.get("summary", {}).get("software_evidence_complete"))
 
 
-def main() -> int:
-    smoke_ok = False
-    smoke_path = None
-    for p in sorted((ROOT / "docs" / "ops").glob("*-exness-smoke.json")):
-        smoke_path = str(p.relative_to(ROOT))
+def _scan_exness_smoke() -> tuple[bool, str | None, str | None]:
+    """
+    Return (ok, passing_artifact, latest_attempt_artifact).
+
+    Matches both `*-exness-smoke.json` and `*-exness-smoke-*.json` so Mac retry
+    evidence is visible without inventing ok:true.
+    """
+    ops = ROOT / "docs" / "ops"
+    candidates = sorted(
+        set(ops.glob("*-exness-smoke.json")) | set(ops.glob("*-exness-smoke-*.json"))
+    )
+    latest = str(candidates[-1].relative_to(ROOT)) if candidates else None
+    for p in candidates:
         try:
             payload = json.loads(p.read_text(encoding="utf-8"))
-            if payload.get("ok") is True:
-                smoke_ok = True
-                break
         except (OSError, json.JSONDecodeError):
             continue
+        if payload.get("ok") is True:
+            return True, str(p.relative_to(ROOT)), latest
+    return False, None, latest
+
+
+def _utm_app_present() -> bool:
+    return Path("/Applications/UTM.app").is_dir()
+
+
+def main() -> int:
+    smoke_ok, smoke_pass, smoke_latest = _scan_exness_smoke()
 
     host_hunt = "docs/ops/2026-09-16-host-reachability-hunt.json"
     coverage = "docs/ops/2026-09-16-issue1-scenario-coverage.json"
@@ -89,7 +108,8 @@ def main() -> int:
         },
         "gate_c_exness_smoke": {
             "ok": smoke_ok,
-            "artifact": smoke_path,
+            "artifact": smoke_pass,
+            "latest_attempt_artifact": smoke_latest,
             "blocker_docs": [
                 "docs/ops/2026-09-16-mac-live-gate-blocker.md",
                 "docs/ops/2026-09-16-mac-wine-initialize-path.json",
@@ -117,7 +137,13 @@ def main() -> int:
         "operator_blockers": {
             "gh_auth_ok": _gh_auth_ok(),
             "host_reachability_artifact": host_hunt if _exists(host_hunt) else None,
-            "utm_app_present_no_vms": True,
+            "utm_app_present": _utm_app_present(),
+            "utm_app_present_no_vms": _utm_app_present(),
+            "next_action": (
+                "Authorize Mac SSH pubkey on Oracle/Windows MT5 host, or run "
+                "./scripts/ops/foundation_live_gate.sh there with Exness Demo (hedging). "
+                "See ./scripts/ops/issue1_operator_unblock.sh"
+            ),
         },
         "issue1_closable": False,
     }
