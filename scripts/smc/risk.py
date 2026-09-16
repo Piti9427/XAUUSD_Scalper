@@ -120,6 +120,19 @@ def calculate_lot_size(
         final_lot = floored_lot
 
     risk_amount = round(final_lot * risk_per_lot, 2)
+    # Risk Protection Invariant: never admit a lot that spends more than the
+    # configured risk percentage after flooring/clamping.
+    if risk_amount - risk_budget > 1e-6:
+        return LotResult(
+            lot_size=0.0,
+            sl_distance=total_sl_dist,
+            risk_amount=risk_amount,
+            is_valid=False,
+            reason=(
+                f"Risk Protection Invariant: computed risk ${risk_amount:.2f} "
+                f"exceeds budget ${risk_budget:.2f} ({risk_pct*100:.2f}%)"
+            ),
+        )
     return LotResult(
         lot_size=final_lot,
         sl_distance=total_sl_dist,
@@ -127,3 +140,21 @@ def calculate_lot_size(
         is_valid=True,
         reason="Valid lot size calculated"
     )
+
+
+def frozen_initial_r(
+    *,
+    pnl_dollars: float,
+    initial_sl_distance: float,
+    filled_lot: float,
+    contract_size: float = 100.0,
+) -> float:
+    """
+    R multiple using the frozen entry→SL denominator at fill time.
+
+    Never recompute R from later BE moves or partial-close residual volume.
+    """
+    initial_risk = float(initial_sl_distance) * float(filled_lot) * float(contract_size)
+    if initial_risk <= 0:
+        return 0.0
+    return round(float(pnl_dollars) / initial_risk, 4)

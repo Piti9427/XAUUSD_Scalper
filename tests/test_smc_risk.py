@@ -1,5 +1,5 @@
 import unittest
-from scripts.smc.risk import calculate_lot_size, LotResult
+from scripts.smc.risk import calculate_lot_size, LotResult, frozen_initial_r
 from scripts.smc.types import Direction, OrderIntentType, SetupSignal, OrderIntent, AccountState
 
 
@@ -182,6 +182,27 @@ class TestSMCRiskCalculator(unittest.TestCase):
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
+
+    def test_valid_lot_never_exceeds_risk_budget(self):
+        result = calculate_lot_size(
+            balance=10000.0,
+            entry_price=2000.00,
+            sl_price=1996.00,
+            risk_pct=0.005,
+            spread_buffer=0.30,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertLessEqual(result.risk_amount, 10000.0 * 0.005 + 1e-6)
+
+    def test_frozen_initial_r_ignores_later_volume_change(self):
+        # Entry risk locked at 0.10 lot * $5 SL * 100 = $50.
+        r = frozen_initial_r(
+            pnl_dollars=25.0,
+            initial_sl_distance=5.0,
+            filled_lot=0.10,
+            contract_size=100.0,
+        )
+        self.assertEqual(r, 0.5)
 
 
 class TestSMCTypes(unittest.TestCase):

@@ -1,40 +1,65 @@
 # GitHub close-ready notes (blocked by auth)
 
-`gh` keyring invalid + MCP `issue_write` 403 (PAT lacks issues write). Paste when write auth restored.
+`gh` keyring invalid + MCP `issue_write` 403 (PAT lacks **issues write**).
+Paste when write auth restored via:
 
-Retried 2026-09-16: still blocked.
+```bash
+gh auth refresh -h github.com -s repo
+```
+
+Retried 2026-09-16 repeatedly: still 403 / invalid keyring.
+
+Branch evidence: `feature/smc-v2-hardening` (local ahead of origin).
+Unit suite: `python3 -m unittest discover -s tests` → OK (228+).
+
+---
 
 ## Issue #3 — S1–S4 mechanical tables
 
-**Status:** Documentation complete in-repo.
+**Close as completed.** Paste comment:
+
+```
+Mechanical v1 deliverable landed in-repo.
 
 Evidence:
-- `docs/specs/xauusd-s1-s4-mechanical-v1.md` (decision tables, synthetic BUY/SELL, boundaries, coverage map)
-- `tests/test_s1_s4_mechanical_spec_contract.py`
-- ADR-0027 references mechanical rule version `s1-s4-mechanical-v1`
+- docs/specs/xauusd-s1-s4-mechanical-v1.md
+- tests/test_s1_s4_mechanical_spec_contract.py (6/6)
+- ADR-0027 rule version s1-s4-mechanical-v1
 
-Suggested close comment: Mechanical v1 deliverable landed; parent #2 remains open until #4 and foundation gates allow experiment start.
+Parent #2 stays open until #4 closes and Gate A freeze is acknowledged.
+```
 
 ## Issue #4 — Research handoff
 
-**Status:** Documentation complete in-repo; gates intentionally open.
+**Close as completed.** Paste comment:
+
+```
+Research handoff v1 published.
 
 Evidence:
-- `docs/specs/xauusd-s1-s4-research-handoff-v1.md`
-- Explicit non-actions / unresolved blockers listed in §10
-- Specs README marks handoff as “Gates open — not experiment-ready”
+- docs/specs/xauusd-s1-s4-research-handoff-v1.md
+- Explicit unresolved Gate B/C blockers listed (not silent incompleteness)
+- Specs README: gates open — not experiment-ready
 
-Suggested close comment: Handoff published; unresolved Gate B/C items tracked under #1, not silent incompleteness of #4 docs.
+Remaining live/runtime evidence tracked under #1.
+```
 
 ## Issue #2 — Parent S1–S4 experiment
 
-**Status:** Parent ready to close only after children #3/#4 closed on tracker AND Gate A freeze acknowledged.
+**Close only after #3 and #4 are closed on the tracker.** Paste comment:
 
-Local children docs done; tracker closure still blocked by auth.
+```
+Children #3/#4 documentation deliverables are complete in-repo.
+Closing parent tracker item; Gate A freeze / experiment start remains a
+separate operator decision under the research handoff + foundation gates.
+```
 
-## Issue #1 — still NOT close-ready
+## Issue #1 — Gold Playbook Foundation
 
-Remaining evidence gaps (not software stubs):
-1. Live Exness Demo identity smoke (`scripts/smoke_broker_identity.py`)
-2. Oracle ARM64 soak evidence (`docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md`)
-3. Forward Demo 12-week protocol execution (`docs/ops/2026-09-16-foundation-demo-12w-protocol.md`)
+**Do NOT close yet.** Software/runtime gates advanced on branch; still missing:
+
+1. Live Exness Demo identity smoke (`scripts/smoke_broker_identity.py`) — Mac host currently `mt5_import_missing` (see `docs/ops/2026-09-16-smoke-evidence-log.md`)
+2. Oracle ARM64 soak execution evidence
+3. Forward Demo 12-week protocol start (prospective)
+
+Progress map: `docs/handoff/2026-09-16-issue1-foundation-progress.md`
