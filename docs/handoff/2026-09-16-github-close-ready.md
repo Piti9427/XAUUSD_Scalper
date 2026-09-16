@@ -23,10 +23,10 @@ Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **
 
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
 
-Branch evidence: `feature/smc-v2-hardening` (**ahead 20** of origin — push blocked).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (262).
+Branch evidence: `feature/smc-v2-hardening` (**ahead 22** of origin — push blocked).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (263).
 Live gate helper: `scripts/ops/foundation_live_gate.sh` (MT5 host required).
-Pre-close audit: `./scripts/audit_local_issue_gates.sh` (262 tests + #3/#4 contracts).
+Pre-close audit: `./scripts/audit_local_issue_gates.sh` · JSON: `python3 scripts/generate_close_evidence.py`
 
 ---
 
