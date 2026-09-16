@@ -201,6 +201,30 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(result.replay_report.kind, ReplayKind.EXECUTABLE_USD500)
         self.assertIsNotNone(result.replay_report.affordability)
 
+    def test_cost_layers_separate_operating_from_trading(self):
+        from scripts.smc.cost_accounting import expectancy_hides_operating_loss
+
+        result = SMCBacktester(
+            require_choch=False,
+            operating_costs=500.0,
+            fees_and_swap=1.0,
+        ).run(self.df_m5, self.df_h1)
+        self.assertIsNotNone(result.cost_report)
+        self.assertAlmostEqual(result.cost_report.operating_costs, 500.0)
+        self.assertAlmostEqual(
+            result.cost_report.net_trading_profit,
+            result.net_profit - 1.0,
+            places=2,
+        )
+        # Positive trade expectancy must not hide ops burn when ops dominate.
+        if result.net_profit > 1.0:
+            self.assertTrue(
+                expectancy_hides_operating_loss(
+                    positive_trade_expectancy=True,
+                    net_operating_profit=result.cost_report.net_operating_profit,
+                )
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

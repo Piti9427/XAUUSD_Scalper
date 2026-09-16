@@ -17,6 +17,7 @@ from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
 from scripts.smc.funnel import SetupFunnel
 from scripts.smc.replay_report import ReplayKind, ReplayReport, build_replay_report
+from scripts.smc.cost_accounting import CostAccountingReport, summarize_profit_layers
 
 
 @dataclass
@@ -35,6 +36,7 @@ class BacktestSummary:
     trades_df: pd.DataFrame = field(default_factory=lambda: pd.DataFrame())
     funnel: Optional[Dict[str, Any]] = None
     replay_report: Optional[ReplayReport] = None
+    cost_report: Optional[CostAccountingReport] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -79,6 +81,8 @@ class SMCBacktester:
         require_choch: bool = True,
         replay_kind: ReplayKind = ReplayKind.THEORETICAL_TAPE,
         external_account_events: Optional[List[Dict[str, Any]]] = None,
+        operating_costs: float = 0.0,
+        fees_and_swap: float = 0.0,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct
@@ -100,6 +104,8 @@ class SMCBacktester:
         self.require_choch = require_choch
         self.replay_kind = replay_kind
         self.external_account_events = external_account_events
+        self.operating_costs = float(operating_costs)
+        self.fees_and_swap = float(fees_and_swap)
 
     def run(
         self,
@@ -431,6 +437,11 @@ class SMCBacktester:
             external_account_events=self.external_account_events,
             risk_pct=self.risk_pct,
         )
+        cost_report = summarize_profit_layers(
+            bot_realized_pnl=net_profit,
+            fees_and_swap=self.fees_and_swap,
+            operating_costs=self.operating_costs,
+        )
 
         return BacktestSummary(
             initial_balance=self.initial_balance,
@@ -447,6 +458,7 @@ class SMCBacktester:
             trades_df=trades_df,
             funnel=funnel.as_dict(),
             replay_report=replay_report,
+            cost_report=cost_report,
         )
 
 
