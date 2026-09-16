@@ -233,7 +233,9 @@ class TestSMCMT5Adapter(unittest.TestCase):
 
     def test_live_risk_snapshot_reads_balance_equity_and_symbol_volume(self):
         broker = Mock()
-        broker.account_info.return_value = SimpleNamespace(balance=10000.0, equity=6000.0)
+        broker.account_info.return_value = SimpleNamespace(
+            balance=10000.0, equity=6000.0, margin_free=5500.0, trade_allowed=True
+        )
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01, volume_max=5.0, volume_step=0.01,
             trade_contract_size=100.0,
@@ -248,6 +250,21 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.assertEqual(snapshot["max_lot"], 5.0)
         self.assertEqual(snapshot["lot_step"], 0.01)
         self.assertEqual(snapshot["contract_size"], 100.0)
+        self.assertEqual(snapshot["margin_free"], 5500.0)
+        self.assertEqual(snapshot["trade_allowed"], 1.0)
+
+    def test_live_risk_snapshot_none_when_margin_free_missing(self):
+        broker = Mock()
+        broker.account_info.return_value = SimpleNamespace(balance=10000.0, equity=6000.0)
+        broker.symbol_info.return_value = SimpleNamespace(
+            volume_min=0.01, volume_max=5.0, volume_step=0.01,
+            trade_contract_size=100.0,
+        )
+        self.adapter.dry_run = False
+        self.adapter.connected = True
+        with patch("scripts.smc.mt5_adapter.mt5", broker):
+            snapshot = self.adapter.get_risk_snapshot()
+        self.assertIsNone(snapshot)
 
 
 if __name__ == "__main__":

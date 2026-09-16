@@ -74,6 +74,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Live-gate readiness snapshot (no invent PASS) | **Done:** `scripts/ops/issue1_live_gate_readiness.py` → `docs/ops/2026-09-16-issue1-live-gate-readiness.json` (`issue1_closable:false` until real artifacts) |
 | Partial fill / fill-during-cancel in lifecycle (story 34) | **Done:** `reconcile_pending_exposure` wired into `reconcile_broker_lifecycle`; residual TTL cancel; `tests/test_smc_broker_lifecycle.py` |
 | Stale/unknown market+account+news admission (story 32) | **Done:** `scripts/smc/data_freshness.py`; wired in `smc_main` + webhook SETUP; `tests/test_smc_data_freshness.py`, `test_stale_event_time_blocks_setup_pending` |
+| Missing broker margin/sizing metadata blocks new risk | **Done:** `scripts/smc/broker_metadata.py`; `get_risk_snapshot` requires `margin_free`; wired webhook + `smc_main`; `tests/test_smc_broker_metadata.py`, `test_missing_margin_free_blocks_live_setup` |
 
 ## Still open for issue #1
 

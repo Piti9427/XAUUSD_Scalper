@@ -22,6 +22,7 @@ from scripts.smc.risk_halt import (
 from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
 from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_intents
 from scripts.smc.data_freshness import evaluate_new_risk_admission
+from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -736,6 +737,22 @@ def create_app(
                     "event": event,
                     "reason": reason,
                 }
+
+            if not adapter.dry_run:
+                meta_ok, meta_reason = broker_metadata_allows_new_risk(broker_risk)
+                if not meta_ok:
+                    reason = f"Broker metadata gate blocked new risk: {meta_reason}"
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(
+                            mark_processed, order_id, event, "rejected_broker_metadata"
+                        )
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
 
             # 1e2. Story 32: unknown/stale market or incomplete account blocks new risk.
             wall_now = datetime.now(timezone.utc)

@@ -668,14 +668,22 @@ class SMCExecutionAdapter:
         symbol = mt5.symbol_info(self.symbol)
         if account is None or symbol is None:
             return None
-        return {
+        margin_free = getattr(account, "margin_free", None)
+        if margin_free is None:
+            return None
+        trade_allowed = getattr(account, "trade_allowed", None)
+        snapshot = {
             "balance": float(account.balance),
             "equity": float(account.equity),
             "min_lot": float(symbol.volume_min),
             "max_lot": float(symbol.volume_max),
             "lot_step": float(symbol.volume_step),
             "contract_size": float(symbol.trade_contract_size),
+            "margin_free": float(margin_free),
         }
+        if trade_allowed is not None:
+            snapshot["trade_allowed"] = 1.0 if bool(trade_allowed) else 0.0
+        return snapshot
 
     def get_open_exposure(self) -> Optional[List[Any]]:
         """Return all XAUUSD pending orders and positions; None means broker unknown."""

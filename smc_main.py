@@ -9,6 +9,7 @@ from scripts.smc.liquidity import compute_liquidity_levels
 from scripts.smc.detection import evaluate_smc_setup
 from scripts.smc.real_money_approval import require_real_money_approval
 from scripts.smc.data_freshness import evaluate_new_risk_admission
+from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
@@ -197,8 +198,18 @@ async def run_smc_live_copilot():
                     )
                     if not admission.allowed:
                         logger.warning("Admission blocked new risk: %s", admission.reason)
+                    meta_ok, meta_reason = (True, "ok")
+                    if not dry_run:
+                        meta_ok, meta_reason = broker_metadata_allows_new_risk(
+                            adapter.get_risk_snapshot()
+                        )
+                        if not meta_ok:
+                            logger.warning(
+                                "Broker metadata blocked new risk: %s", meta_reason
+                            )
                     if (
                         admission.allowed
+                        and meta_ok
                         and account.open_position is None
                         and account.pending_order is None
                         and h1_ready
