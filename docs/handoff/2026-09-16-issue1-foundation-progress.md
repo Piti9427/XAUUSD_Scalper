@@ -32,6 +32,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Webhook Demo admission: risk_halt + identity + news unknown | `scripts/webhook_bridge.py` (`risk_halt_path`, `identity_gate` / live identity); `tests/test_webhook_bridge.py::TestWebhookFoundationGates` |
 | Two net losses update persistent risk_halt on TRADE_CLOSED | webhook + `smc_main.py` call `record_net_losing_trade`; test `test_two_net_losses_trip_risk_halt_on_next_setup` |
 | TIME_EXIT max-hold accounting (P/L/flat) | `StrategyOrchestrator.max_hold_bars`; backtester `exit_reason=TIME_EXIT`; `test_time_exit_after_max_hold_bars_profit_loss_flat` |
+| Setup identity + no revive after TTL (B16) | `scripts/smc/setup_identity.py`; orchestrator registry; detection stamps `setup_id`; `tests/test_smc_setup_identity.py` |
+| Dataset provenance reason codes (B20) | `scripts/smc/provenance.py`; `tests/test_smc_provenance.py` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
 

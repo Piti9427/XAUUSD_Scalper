@@ -11,6 +11,7 @@ from scripts.smc.types import (
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import RiskHaltState
 from scripts.smc.quotes import ohlc_dual_touch_flag, first_exit_from_ticks
+from scripts.smc.setup_identity import SetupRegistry, make_setup_id
 
 
 class StrategyOrchestrator:
@@ -34,6 +35,7 @@ class StrategyOrchestrator:
         spread_buffer: float = 0.30,
         be_buffer: float = 0.10,
         max_hold_bars: Optional[int] = None,
+        setup_registry: Optional[SetupRegistry] = None,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
@@ -48,6 +50,7 @@ class StrategyOrchestrator:
         self.spread_buffer = spread_buffer
         self.be_buffer = be_buffer
         self.max_hold_bars = max_hold_bars
+        self.setup_registry = setup_registry if setup_registry is not None else SetupRegistry()
 
     def _evaluate_open_position(
         self,
@@ -282,7 +285,9 @@ class StrategyOrchestrator:
                     intent_type=OrderIntentType.CANCEL_LIMIT,
                     direction=order.direction,
                     reason=f"Order TTL expired ({order.expire_bars} bars without fill)",
+                    order_id=order.order_id,
                 )
+                self.setup_registry.mark_terminal(order.order_id, "ttl_expired")
                 account.pending_order = None
                 account.pending_bars_held = 0
                 intents.append(cancel_intent)
@@ -306,6 +311,24 @@ class StrategyOrchestrator:
         if setup_signal is not None:
             if current_spread is not None and current_spread > max_spread:
                 return []
+            setup_id = setup_signal.setup_id
+            if not setup_id:
+                ts = setup_signal.timestamp
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                else:
+                    ts = ts.astimezone(timezone.utc)
+                setup_id = make_setup_id(
+                    direction=setup_signal.direction.value,
+                    entry_price=setup_signal.entry_price,
+                    sl_price=setup_signal.sl_price,
+                    tp_price=setup_signal.tp_price,
+                    sweep_wick=setup_signal.sweep_wick,
+                    available_at=ts.isoformat(),
+                )
+            allowed, _admit_reason = self.setup_registry.admit(setup_id)
+            if not allowed:
+                return []
             lot_res = calculate_lot_size(
                 balance=account.balance,
                 entry_price=setup_signal.entry_price,
@@ -322,6 +345,7 @@ class StrategyOrchestrator:
                     lot_size=lot_res.lot_size,
                     reason=setup_signal.reason,
                     expire_bars=self.ttl_expire_bars,
+                    order_id=setup_id,
                 )
                 account.pending_order = new_order
                 account.pending_bars_held = 0

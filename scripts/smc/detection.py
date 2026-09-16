@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scripts.smc.types import Direction, SetupSignal, LiquidityLevels
 from scripts.smc.liquidity import select_nearest_opposing_pool_tp
+from scripts.smc.setup_identity import make_setup_id
 from scripts.smc.structure import (
     find_fractals_5bar,
     check_displacement,
@@ -353,6 +354,19 @@ def detect_smc_setup(
 
     structure_label = "CHOCH" if require_choch else "MSS"
     target_note = f" pool={pool_tp_name}" if pool_tp_name else ""
+    ts = current_time
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    else:
+        ts = ts.astimezone(timezone.utc)
+    setup_id = make_setup_id(
+        direction=bias.value,
+        entry_price=float(entry_limit_price),
+        sl_price=float(sl_price),
+        tp_price=float(tp_price),
+        sweep_wick=float(true_sweep_wick),
+        available_at=ts.isoformat(),
+    )
     return SetupSignal(
         direction=bias,
         sweep_price=float(swept_level),
@@ -369,5 +383,6 @@ def detect_smc_setup(
             f"{bias.value} SMC Setup: Swept {swept_level} -> {structure_label} "
             f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}"
         ),
-        timestamp=current_time
+        timestamp=current_time,
+        setup_id=setup_id,
     )

@@ -44,6 +44,7 @@ class SetupSignal:
     fvg_low: float
     reason: str
     timestamp: datetime
+    setup_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
