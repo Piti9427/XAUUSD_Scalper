@@ -1225,6 +1225,25 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertEqual(data["status"], "rejected")
         self.assertIn("risk halt", data["reason"].lower())
 
+    def test_risk_halt_reports_flatten_actions_field(self):
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_HALT_FLAT",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-09-14 14:00:00",
+        }
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("flatten_actions", data)
+        self.assertIsInstance(data["flatten_actions"], list)
+
 
 if __name__ == "__main__":
     unittest.main()

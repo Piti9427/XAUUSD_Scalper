@@ -18,6 +18,7 @@ from scripts.smc.risk_halt import (
     record_net_losing_trade,
     save_risk_halt_state,
 )
+from scripts.smc.halt_actions import plan_halt_flatten_intents
 from scripts.smc.chart import generate_setup_chart
 from pathlib import Path
 from scripts.smc.notifier import (
@@ -211,6 +212,32 @@ async def run_smc_live_copilot():
                     # Persistent equity gates (5% DD / 1% daily) before new risk
                     observe_equity(risk_halt, account.equity, now=now_utc)
                     save_risk_halt_state(risk_halt_path, risk_halt)
+                    if risk_halt.halted:
+                        pending_ids = []
+                        open_ids = []
+                        if account.pending_order is not None and account.pending_order.order_id:
+                            pending_ids.append(account.pending_order.order_id)
+                        # Local simulation has no broker ticket list; clear local bot state.
+                        if account.open_position is not None:
+                            open_ids.append(getattr(account.open_position, "order_id", None) or "LOCAL_OPEN")
+                        for flatten_intent in plan_halt_flatten_intents(
+                            pending_order_ids=pending_ids,
+                            open_position_ids=[i for i in open_ids if i != "LOCAL_OPEN"],
+                            reason="foundation_risk_halt",
+                        ):
+                            adapter.execute_intent(flatten_intent)
+                        if account.pending_order is not None:
+                            account.pending_order = None
+                            account.pending_bars_held = 0
+                        if account.open_position is not None:
+                            account.open_position = None
+                        logger.warning(
+                            "Risk halt active — flattened local bot exposure "
+                            "(dd=%s daily=%s losses=%s)",
+                            risk_halt.drawdown_halt,
+                            risk_halt.daily_equity_halt,
+                            risk_halt.net_losing_trades_today,
+                        )
 
                     # Step Orchestrator
                     intents = orchestrator.on_bar(

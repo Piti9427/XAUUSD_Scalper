@@ -19,6 +19,7 @@ from scripts.smc.risk_halt import (
     save_risk_halt_state,
 )
 from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
+from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_intents
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -178,6 +179,27 @@ def create_app(
                 observe_equity(risk_halt, equity_now, now=datetime.now(timezone.utc))
                 await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
                 if risk_halt.halted:
+                    # Story 10: request cancel/close of bot-owned exposure, then block new risk.
+                    exposure = None
+                    if not adapter.dry_run:
+                        exposure = await asyncio.to_thread(adapter.get_open_exposure)
+                    bot_ids = bot_owned_order_ids(exposure)
+                    flatten = plan_halt_flatten_intents(
+                        pending_order_ids=bot_ids,
+                        open_position_ids=bot_ids,
+                        reason="foundation_risk_halt",
+                    )
+                    flatten_results = []
+                    for intent in flatten:
+                        result = await asyncio.to_thread(adapter.execute_intent, intent)
+                        flatten_results.append(
+                            {
+                                "intent": intent.intent_type.value,
+                                "order_id": intent.order_id,
+                                "success": result.success,
+                                "message": result.message,
+                            }
+                        )
                     reason = (
                         "Foundation risk halt active: "
                         f"dd={risk_halt.drawdown_halt} daily={risk_halt.daily_equity_halt} "
@@ -191,6 +213,7 @@ def create_app(
                         "order_id": order_id,
                         "event": event,
                         "reason": reason,
+                        "flatten_actions": flatten_results,
                     }
 
             # 1a1. Broker/Demo identity gate before new risk
