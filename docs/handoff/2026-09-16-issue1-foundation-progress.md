@@ -48,7 +48,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Mac-off / Oracle infra ≠ strategy PnL (scenario 24) | `scripts/smc/infra_verdict.py`; smoke CLI emits `infra_verdict`; `InfraVerdictTests` |
 | News pending cancel without force-closing positions (scenario 18) | `NewsManager.should_cancel_pending`; orchestrator cancels unfilled pending; fill-on-touch still wins; wired in `smc_main.py`; `tests/test_smc_news.py`, `test_news_blackout_cancels_pending_but_fill_wins_same_bar` |
 | Dataset file SHA-256 hashes (Gate B) | `sha256_file` / `hash_dataset_files` in `scripts/smc/provenance.py`; snapshot `docs/ops/2026-09-16-dataset-hashes.json`; `tests/test_smc_provenance.py` |
-| Risk-budget invariant + frozen initial R | `calculate_lot_size` rejects over-budget after floor; `frozen_initial_r`; `tests/test_smc_risk.py` |
+| Risk-budget invariant + frozen initial R | `calculate_lot_size` rejects over-budget after floor; `frozen_initial_r`; webhook TRADE_CLOSED derives R from entry/SL/lot when missing; `tests/test_smc_risk.py`, `test_trade_closed_uses_frozen_initial_r_from_fill_geometry` |
 | Trading vs operating cost layers (scenario 21) | `scripts/smc/cost_accounting.py`; `aggregate_deal_cashflows` used by adapter; `tests/test_smc_cost_accounting.py` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
