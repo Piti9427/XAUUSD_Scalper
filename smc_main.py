@@ -15,6 +15,7 @@ from scripts.smc.risk_halt import (
     load_risk_halt_state,
     new_risk_halt_state,
     observe_equity,
+    record_net_losing_trade,
     save_risk_halt_state,
 )
 from scripts.smc.chart import generate_setup_chart
@@ -293,6 +294,9 @@ async def run_smc_live_copilot():
                                 symbol=symbol,
                             )
                         )
+                        if pnl_r < 0 or pnl_dollars < 0:
+                            record_net_losing_trade(risk_halt)
+                            save_risk_halt_state(risk_halt_path, risk_halt)
 
                     # Check Milestone Notifications
                     if account.open_position is not None:

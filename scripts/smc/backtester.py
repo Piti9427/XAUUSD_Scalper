@@ -277,8 +277,14 @@ class SMCBacktester:
                     x.intent_type == OrderIntentType.CLOSE_MARKET and "AMBIGUOUS" in x.reason
                     for x in intents
                 )
+                time_exit = any(
+                    x.intent_type == OrderIntentType.CLOSE_MARKET and "TIME_EXIT" in x.reason
+                    for x in intents
+                )
                 rollover = any(
-                    x.intent_type == OrderIntentType.CLOSE_MARKET and "AMBIGUOUS" not in x.reason
+                    x.intent_type == OrderIntentType.CLOSE_MARKET
+                    and "AMBIGUOUS" not in x.reason
+                    and "TIME_EXIT" not in x.reason
                     for x in intents
                 )
                 stop_hit = (float(current_bar["low"]) <= before.sl_price
@@ -306,6 +312,10 @@ class SMCBacktester:
                     exit_price, exit_reason = None, "AMBIGUOUS"
                     total_cash = None
                     pnl_r = None
+                elif time_exit:
+                    exit_price, exit_reason, total_cash, pnl_r = _book(
+                        float(current_bar["close"]), "TIME_EXIT"
+                    )
                 elif rollover:
                     exit_price, exit_reason, total_cash, pnl_r = _book(
                         float(current_bar["close"]), "ROLLOVER_FLAT"

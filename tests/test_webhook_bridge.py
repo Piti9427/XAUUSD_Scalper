@@ -1154,6 +1154,77 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertEqual(data["status"], "rejected")
         self.assertIn("identity", data["reason"].lower())
 
+    def test_two_net_losses_trip_risk_halt_on_next_setup(self):
+        from scripts.smc.broker_identity import BrokerIdentityReport
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state, load_risk_halt_state
+        from scripts.webhook_bridge import create_app
+        from pathlib import Path
+        import os
+
+        ok_identity = BrokerIdentityReport(
+            ok=True,
+            broker_server="Exness-MT5Trial",
+            account_login=1,
+            currency="USD",
+            trade_mode=0,
+            symbol="XAUUSD",
+            reasons=(),
+        )
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=500.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: ok_identity,
+            max_daily_losses=99,  # isolate foundation halt from ADR-011 circuit
+        )
+        self.client = TestClient(self.app)
+
+        for oid in ("LOSS_1", "LOSS_2"):
+            res = self.client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": oid,
+                    "symbol": "XAUUSD",
+                    "reason": "SL_HIT",
+                    "pnl_r": -1.0,
+                    "pnl_dollar": -2.5,
+                    "time": "2026-09-14 14:00:00",
+                },
+                headers=self.headers,
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.json()["status"], "success")
+
+        halted = load_risk_halt_state(Path(self.halt_path))
+        self.assertIsNotNone(halted)
+        self.assertGreaterEqual(halted.net_losing_trades_today, 2)
+        self.assertTrue(halted.halted)
+
+        setup = self.client.post(
+            "/webhook/tradingview",
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "AFTER_TWO_LOSSES",
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "limit": 4050.00,
+                "sl": 4045.00,
+                "tp1": 4055.00,
+                "tp2": 4062.50,
+                "time": "2026-09-14 15:00:00",
+            },
+            headers=self.headers,
+        )
+        self.assertEqual(setup.status_code, 200)
+        data = setup.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("risk halt", data["reason"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

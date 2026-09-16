@@ -15,6 +15,7 @@ from scripts.smc.risk_halt import (
     load_risk_halt_state,
     new_risk_halt_state,
     observe_equity,
+    record_net_losing_trade,
     save_risk_halt_state,
 )
 from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
@@ -735,6 +736,15 @@ def create_app(
                 pnl_r=pnl_r,
                 reason=reason,
             )
+            # Foundation risk halt: two net losing bot closes trip daily loss gate.
+            if risk_halt is not None and halt_path is not None:
+                is_net_loss = (
+                    (pnl_r is not None and float(pnl_r) < 0)
+                    or (pnl_dollar is not None and float(pnl_dollar) < 0)
+                )
+                if is_net_loss:
+                    record_net_losing_trade(risk_halt)
+                    await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
             if order_id:
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
 

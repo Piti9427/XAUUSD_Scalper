@@ -75,6 +75,7 @@ class Position:
     partial_closed: bool = False
     partial_alerted: bool = False
     remaining_ratio: float = 1.0
+    bars_held: int = 0
 
 
 @dataclass

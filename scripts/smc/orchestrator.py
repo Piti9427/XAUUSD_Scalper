@@ -33,6 +33,7 @@ class StrategyOrchestrator:
         be_trigger_r: float = 1.0,
         spread_buffer: float = 0.30,
         be_buffer: float = 0.10,
+        max_hold_bars: Optional[int] = None,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
@@ -46,6 +47,7 @@ class StrategyOrchestrator:
         self.be_trigger_r = be_trigger_r
         self.spread_buffer = spread_buffer
         self.be_buffer = be_buffer
+        self.max_hold_bars = max_hold_bars
 
     def _evaluate_open_position(
         self,
@@ -57,6 +59,8 @@ class StrategyOrchestrator:
         pos = account.open_position
         if pos is None:
             return intents
+
+        pos.bars_held += 1
 
         # Rollover Flat Check (ADR-007: Flat before 21:00 UTC)
         if (bar_time.hour > self.rollover_hour_utc) or (
@@ -120,6 +124,18 @@ class StrategyOrchestrator:
 
         # Dual-touch resolved to TP by ticks: close immediately (no BE invention).
         if exit_flag == "TP" and sl_hit:
+            account.open_position = None
+            return intents
+
+        # Foundation TIME_EXIT after protective levels checked (scenario 16/19)
+        if self.max_hold_bars is not None and pos.bars_held >= self.max_hold_bars:
+            intents.append(
+                OrderIntent(
+                    intent_type=OrderIntentType.CLOSE_MARKET,
+                    direction=pos.direction,
+                    reason=f"TIME_EXIT after {pos.bars_held} bars (max_hold_bars={self.max_hold_bars})",
+                )
+            )
             account.open_position = None
             return intents
 

@@ -320,6 +320,46 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertEqual(account.daily_loss_count, 0)
         self.assertEqual(intents, [])
 
+    def test_time_exit_after_max_hold_bars_profit_loss_flat(self):
+        orch = StrategyOrchestrator(max_hold_bars=2, be_trigger_r=99.0)
+
+        def run_case(close_px: float):
+            pos = Position(
+                direction=Direction.BUY,
+                entry_price=2000.0,
+                sl_price=1990.0,
+                tp_price=2030.0,
+                lot_size=0.10,
+                open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+                initial_sl_distance=10.0,
+            )
+            account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+            bar1 = {
+                "time": datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
+                "open": 2000.0,
+                "high": 2001.0,
+                "low": 1999.0,
+                "close": 2000.5,
+            }
+            bar2 = {
+                "time": datetime(2026, 3, 2, 8, 10, tzinfo=timezone.utc),
+                "open": 2000.5,
+                "high": max(close_px, 2000.5),
+                "low": min(close_px, 1999.0),
+                "close": close_px,
+            }
+            self.assertEqual(orch.on_bar(bar1, account), [])
+            self.assertIsNotNone(account.open_position)
+            intents = orch.on_bar(bar2, account)
+            self.assertIsNone(account.open_position)
+            self.assertEqual(len(intents), 1)
+            self.assertIn("TIME_EXIT", intents[0].reason)
+            return close_px - 2000.0
+
+        self.assertGreater(run_case(2005.0), 0)  # profit path counted
+        self.assertLess(run_case(1995.0), 0)  # loss path counted
+        self.assertEqual(run_case(2000.0), 0)  # flat path counted
+
 
 if __name__ == "__main__":
     unittest.main()
