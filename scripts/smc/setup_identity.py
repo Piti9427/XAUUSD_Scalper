@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Set
+from pathlib import Path
+from typing import Dict, Optional, Set, Union
 
 
 def make_setup_id(
@@ -43,6 +45,7 @@ class SetupRegistry:
 
     _terminal: Set[str] = field(default_factory=set)
     _reasons: Dict[str, str] = field(default_factory=dict)
+    _persist_path: Optional[Path] = field(default=None, repr=False)
 
     def is_blocked(self, setup_id: Optional[str]) -> bool:
         if not setup_id:
@@ -54,6 +57,7 @@ class SetupRegistry:
             return
         self._terminal.add(setup_id)
         self._reasons[setup_id] = reason
+        self._persist()
 
     def terminal_reason(self, setup_id: str) -> Optional[str]:
         return self._reasons.get(setup_id)
@@ -64,6 +68,54 @@ class SetupRegistry:
         if self.is_blocked(setup_id):
             return False, f"setup_id_terminal:{self._reasons.get(setup_id, 'unknown')}"
         return True, "ok"
+
+    def to_dict(self) -> Dict[str, str]:
+        """Serialize terminal reasons (id → reason)."""
+        return dict(self._reasons)
+
+    def _persist(self) -> None:
+        if self._persist_path is None:
+            return
+        save_setup_registry(self._persist_path, self)
+
+
+def load_setup_registry(path: Union[str, Path]) -> SetupRegistry:
+    """
+    Load terminal setup IDs from disk.
+
+    Missing/corrupt files start empty (fail closed on admit still works once
+    marks exist). Restart after expiry must not revive the same SETUP_ID.
+    """
+    path = Path(path)
+    registry = SetupRegistry(_persist_path=path)
+    if not path.is_file():
+        return registry
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return registry
+    reasons = payload.get("reasons") if isinstance(payload, dict) else None
+    if not isinstance(reasons, dict):
+        return registry
+    for setup_id, reason in reasons.items():
+        if not setup_id:
+            continue
+        registry._terminal.add(str(setup_id))
+        registry._reasons[str(setup_id)] = str(reason or "unknown")
+    return registry
+
+
+def save_setup_registry(path: Union[str, Path], registry: SetupRegistry) -> None:
+    """Atomically persist terminal setup identities for restart survival."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "version": 1,
+        "reasons": registry.to_dict(),
+    }
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
 
 
 def pending_h1_bias_allows(

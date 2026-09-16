@@ -83,6 +83,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | H1 EMA bias flip cancels pending (scenario 8) | **Done:** `pending_h1_bias_allows` + `resolve_h1_ema_bias`; wired `smc_main` / backtester / orchestrator; `test_h1_bias_flip_cancels_pending_and_blocks_revive` |
 | Filled setup identity consumed (no revive) | **Done:** orchestrator `mark_terminal(..., "filled")` on pending fill; `test_fill_marks_setup_terminal_blocks_revive` |
 | Required-scenario coverage matrix (1–24) | **Done:** `scripts/ops/issue1_scenario_coverage.py` → `docs/ops/2026-09-16-issue1-scenario-coverage.json`; scenarios 1–23 software_evidence_complete; 24 live_ops_required; readiness embeds Gate B summary |
+| Setup registry survives process restart (scenario 8) | **Done:** `load_setup_registry` / `save_setup_registry`; `smc_main` loads `data/setup_registry.json`; `test_registry_survives_restart_after_ttl` |
 
 ## Still open for issue #1
 

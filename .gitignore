@@ -27,6 +27,8 @@ config/settings.yaml
 data/*.db
 data/smc_trades.db
 data/news_cache.json
+data/setup_registry.json
+data/risk_halt_state.json
 
 # Logs
 *.log

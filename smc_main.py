@@ -10,6 +10,7 @@ from scripts.smc.detection import evaluate_smc_setup, resolve_h1_ema_bias
 from scripts.smc.real_money_approval import require_real_money_approval
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
+from scripts.smc.setup_identity import load_setup_registry
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
@@ -80,6 +81,10 @@ async def run_smc_live_copilot():
     adapter = SMCExecutionAdapter(
         symbol=symbol, dry_run=dry_run, terminal_path=terminal_path
     )
+    setup_registry_path = Path(
+        strat_cfg.get("setup_registry_path", "data/setup_registry.json")
+    )
+    setup_registry = load_setup_registry(setup_registry_path)
     orchestrator = StrategyOrchestrator(
         max_daily_losses=strat_cfg.get("max_daily_losses", 2),
         cooldown_minutes=strat_cfg.get("cooldown_mins", 30),
@@ -91,6 +96,7 @@ async def run_smc_live_copilot():
         be_enabled=bool(strat_cfg.get("be_enabled", False)),
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
         risk_pct=float(strat_cfg.get("risk_pct", 0.005)),
+        setup_registry=setup_registry,
     )
     news_mgr = NewsManager()
     notifier = SMCTelegramNotifier({"telegram": {"enabled": False}})

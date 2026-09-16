@@ -91,6 +91,7 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/setup_identity.py",
             "scripts/smc/orchestrator.py",
+            "smc_main.py",
             "tests/test_smc_setup_identity.py",
         ],
     },

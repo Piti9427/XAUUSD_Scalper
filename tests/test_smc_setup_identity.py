@@ -230,6 +230,68 @@ class SetupIdentityTests(unittest.TestCase):
         self.assertEqual(revive, [])
         self.assertIsNone(account.pending_order)
 
+    def test_registry_survives_restart_after_ttl(self):
+        import tempfile
+        from pathlib import Path
+        from scripts.smc.setup_identity import load_setup_registry, save_setup_registry
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "setup_registry.json"
+            registry = load_setup_registry(path)
+            orch = StrategyOrchestrator(setup_registry=registry)
+            setup_id = make_setup_id(
+                direction="BUY",
+                entry_price=2010.0,
+                sl_price=2005.0,
+                tp_price=2020.0,
+                sweep_wick=2005.0,
+                available_at="2026-03-02T08:00:00+00:00",
+            )
+            signal = SetupSignal(
+                direction=Direction.BUY,
+                sweep_price=2010.0,
+                sweep_wick=2005.0,
+                mss_price=2012.0,
+                entry_price=2010.0,
+                sl_price=2005.0,
+                tp_price=2020.0,
+                sl_distance=5.0,
+                risk_r=2.0,
+                fvg_high=2011.0,
+                fvg_low=2009.0,
+                reason="test",
+                timestamp=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+                setup_id=setup_id,
+            )
+            account = AccountState(balance=10000.0, equity=10000.0)
+            bar0 = {
+                "time": datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+                "open": 2015,
+                "high": 2016,
+                "low": 2014,
+                "close": 2015,
+            }
+            orch.on_bar(bar0, account, signal)
+            for minute in (5, 10, 15, 20):
+                bar = {
+                    "time": datetime(2026, 3, 2, 8, minute, tzinfo=timezone.utc),
+                    "open": 2015,
+                    "high": 2016,
+                    "low": 2014,
+                    "close": 2015,
+                }
+                orch.on_bar(bar, account, None)
+            self.assertTrue(path.is_file())
+            self.assertEqual(registry.terminal_reason(setup_id), "ttl_expired")
+
+            # Simulate process restart: new registry + orchestrator from disk.
+            restarted = load_setup_registry(path)
+            orch2 = StrategyOrchestrator(setup_registry=restarted)
+            account2 = AccountState(balance=10000.0, equity=10000.0)
+            revive = orch2.on_bar(bar0, account2, signal)
+            self.assertEqual(revive, [])
+            self.assertTrue(restarted.is_blocked(setup_id))
+
 
 if __name__ == "__main__":
     unittest.main()
