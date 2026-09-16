@@ -210,6 +210,33 @@ class TestSMCMT5Adapter(unittest.TestCase):
                         dry_run=False, db_path=str(Path(directory) / "trades.db")
                     )
 
+    def test_live_init_forwards_account_kwargs(self):
+        from scripts.smc.mt5_init import MT5InitResult
+
+        with tempfile.TemporaryDirectory() as directory:
+            fake_init = Mock(
+                return_value=MT5InitResult(
+                    ok=True, path_used="C:\\MT5\\terminal64.exe", last_error=None, detail="initialized"
+                )
+            )
+            with patch("scripts.smc.mt5_adapter.mt5", Mock()):
+                with patch("scripts.smc.mt5_adapter.initialize_mt5", fake_init):
+                    adapter = SMCExecutionAdapter(
+                        dry_run=False,
+                        db_path=str(Path(directory) / "trades.db"),
+                        terminal_path="C:\\MT5\\terminal64.exe",
+                        login=12345678,
+                        password="secret",
+                        server="Exness-MT5Trial",
+                    )
+                    adapter.close()
+            fake_init.assert_called_once()
+            kwargs = fake_init.call_args.kwargs
+            self.assertEqual(kwargs["path"], "C:\\MT5\\terminal64.exe")
+            self.assertEqual(kwargs["login"], 12345678)
+            self.assertEqual(kwargs["password"], "secret")
+            self.assertEqual(kwargs["server"], "Exness-MT5Trial")
+
     def test_live_place_limit_includes_type_filling(self):
         broker = Mock()
         broker.ORDER_TYPE_BUY_LIMIT = 2

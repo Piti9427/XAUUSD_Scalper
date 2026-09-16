@@ -52,16 +52,27 @@ class SMCExecutionAdapter:
         dry_run: bool = False,
         db_path: str = "data/smc_trades.db",
         terminal_path: Optional[str] = None,
+        login: Optional[int] = None,
+        password: Optional[str] = None,
+        server: Optional[str] = None,
     ):
         self.symbol = symbol
         self.dry_run = dry_run
         self.terminal_path = terminal_path
+        self.login = login
+        self.server = server
         if not dry_run and db_path == ":memory:":
             raise OSError("Live execution requires persistent SQLite journal")
         if not dry_run:
             if mt5 is None:
                 raise RuntimeError("MT5 live mode requested but MetaTrader5 package missing")
-            init = initialize_mt5(mt5, path=terminal_path)
+            init = initialize_mt5(
+                mt5,
+                path=terminal_path,
+                login=login,
+                password=password,
+                server=server,
+            )
             if not init.ok:
                 raise RuntimeError(
                     f"MT5 live mode unavailable ({init.detail}): {init.last_error}"

@@ -78,8 +78,14 @@ async def run_smc_live_copilot():
     )
 
     strat_cfg = config.get("strategy", {})
+    mt5_cfg = config.get("mt5", {}) or {}
     adapter = SMCExecutionAdapter(
-        symbol=symbol, dry_run=dry_run, terminal_path=terminal_path
+        symbol=symbol,
+        dry_run=dry_run,
+        terminal_path=terminal_path,
+        login=mt5_cfg.get("login"),
+        password=mt5_cfg.get("password"),
+        server=mt5_cfg.get("server"),
     )
     setup_registry_path = Path(
         strat_cfg.get("setup_registry_path", "data/setup_registry.json")

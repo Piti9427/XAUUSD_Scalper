@@ -109,6 +109,10 @@ def main():
     setup_registry_path = strategy_cfg.get(
         "setup_registry_path", "data/setup_registry.json"
     )
+    mt5_cfg = cfg.get("mt5", {}) or {}
+    mt5_login = mt5_cfg.get("login")
+    mt5_password = mt5_cfg.get("password")
+    mt5_server = mt5_cfg.get("server")
 
     news_mgr = NewsManager()
     # Unknown schedule blocks new risk / cancels pendings until operator loads events.
@@ -163,6 +167,9 @@ def main():
         be_buffer=be_buffer,
         terminal_path=terminal_path,
         setup_registry_path=setup_registry_path,
+        mt5_login=mt5_login,
+        mt5_password=mt5_password,
+        mt5_server=mt5_server,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

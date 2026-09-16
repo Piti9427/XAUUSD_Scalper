@@ -55,6 +55,9 @@ def create_app(
     be_buffer: float = 0.10,
     terminal_path: Optional[str] = None,
     setup_registry_path: Optional[str] = None,
+    mt5_login: Optional[int] = None,
+    mt5_password: Optional[str] = None,
+    mt5_server: Optional[str] = None,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -71,6 +74,9 @@ def create_app(
         dry_run=dry_run,
         db_path=db_path,
         terminal_path=terminal_path,
+        login=mt5_login,
+        password=mt5_password,
+        server=mt5_server,
     )
     app.state.adapter = adapter
 
