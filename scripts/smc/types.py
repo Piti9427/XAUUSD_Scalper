@@ -22,8 +22,8 @@ class OrderIntentType(Enum):
 class LiquidityLevels:
     asian_high: float
     asian_low: float
-    pdh: float
-    pdl: float
+    pdh: Optional[float]
+    pdl: Optional[float]
     date_str: str
     london_high: Optional[float] = None
     london_low: Optional[float] = None

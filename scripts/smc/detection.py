@@ -161,13 +161,19 @@ def detect_smc_setup(
     # For BUY: sweep of Asian Low or PDL
     # For SELL: sweep of Asian High or PDH
     if bias == Direction.BUY:
-        levels_to_check = [liquidity.asian_low, liquidity.pdl]
+        levels_to_check = [
+            lvl for lvl in [liquidity.asian_low, liquidity.pdl] if lvl is not None
+        ]
         if current_time.hour >= 12 and liquidity.london_low is not None:
             levels_to_check.append(liquidity.london_low)
     else:
-        levels_to_check = [liquidity.asian_high, liquidity.pdh]
+        levels_to_check = [
+            lvl for lvl in [liquidity.asian_high, liquidity.pdh] if lvl is not None
+        ]
         if current_time.hour >= 12 and liquidity.london_high is not None:
             levels_to_check.append(liquidity.london_high)
+    if not levels_to_check:
+        return None
     is_high_level = (bias == Direction.SELL)
 
     # Search backwards for a valid sweep bar within the last sweep_lookback bars

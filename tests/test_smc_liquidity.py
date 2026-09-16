@@ -72,6 +72,42 @@ class TestSMCLiquidityMapping(unittest.TestCase):
         levels = compute_liquidity_levels(empty_df, date(2026, 3, 2))
         self.assertIsNone(levels)
 
+    def test_incomplete_prior_day_marks_pdh_pdl_unavailable(self):
+        # Only a few prior-day bars — must not invent PDH/PDL from Asian.
+        records = []
+        for i in range(10):
+            ts = datetime(2026, 3, 1, 12, i * 5, tzinfo=timezone.utc)
+            records.append({
+                "time": ts, "open": 2025.0, "high": 2100.0, "low": 1900.0,
+                "close": 2025.0, "tick_volume": 100,
+            })
+        for i in range(84):
+            hour = (i * 5) // 60
+            minute = (i * 5) % 60
+            ts = datetime(2026, 3, 2, hour, minute, tzinfo=timezone.utc)
+            records.append({
+                "time": ts, "open": 2020.0, "high": 2030.0, "low": 2010.0,
+                "close": 2020.0, "tick_volume": 100,
+            })
+        df = pd.DataFrame(records)
+        levels = compute_liquidity_levels(df, date(2026, 3, 2))
+        self.assertIsNotNone(levels)
+        self.assertIsNone(levels.pdh)
+        self.assertIsNone(levels.pdl)
+        self.assertEqual(levels.asian_high, 2030.0)
+        self.assertEqual(levels.asian_low, 2010.0)
+
+    def test_incomplete_asian_session_returns_none(self):
+        records = []
+        for i in range(12):  # only first hour of Asian
+            ts = datetime(2026, 3, 2, 0, i * 5, tzinfo=timezone.utc)
+            records.append({
+                "time": ts, "open": 2020.0, "high": 2030.0, "low": 2010.0,
+                "close": 2020.0, "tick_volume": 100,
+            })
+        df = pd.DataFrame(records)
+        self.assertIsNone(compute_liquidity_levels(df, date(2026, 3, 2)))
+
 
 if __name__ == "__main__":
     unittest.main()

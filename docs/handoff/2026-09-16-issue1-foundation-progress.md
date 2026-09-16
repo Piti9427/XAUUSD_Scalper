@@ -39,6 +39,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | SetupFunnel stage counters + backtest wiring | `scripts/smc/funnel.py`; `SMCBacktester` bumps stages + `summary.funnel`; MAE/MFE R on trade log; `tests/test_smc_funnel.py` |
 | Incomplete/stale account history gate | `RiskHaltState.history_ready`; `observe_equity(..., history_ready=)`; live webhook/smc_main treat missing equity as incomplete; `tests/test_smc_risk_halt.py`, `test_incomplete_broker_equity_blocks_without_resetting_marks` |
 | Locked H1 warmup convention (1000 bars) | `scripts/smc/warmup.py`; smc_main requests/gates new setups; `tests/test_smc_warmup.py` |
+| Incomplete Asian / prior-day pools unavailable | `compute_liquidity_levels` returns None Asian when incomplete; PDH/PDL `None` (no Asian fallback); detector skips null pools; `tests/test_smc_liquidity.py` |
+| Smoke identity CLI import path fix | `scripts/smoke_broker_identity.py` adds repo root to `sys.path` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
 

@@ -1,58 +1,91 @@
-from datetime import date, datetime, timezone
+"""Liquidity pool computation with incomplete-session unavailability."""
+
+from __future__ import annotations
+
+from datetime import date
 from typing import Optional
+
 import pandas as pd
+
 from scripts.smc.types import LiquidityLevels
+
+# M5 bars expected in Asian 00:00–07:00 UTC (7h * 12).
+ASIAN_SESSION_M5_BARS = 84
+# Prior calendar day completeness floor (full day = 288 M5 bars).
+PREV_DAY_MIN_M5_BARS = 200
+
+
+def _ensure_utc_time(df: pd.DataFrame) -> pd.DataFrame:
+    out = df
+    if not pd.api.types.is_datetime64_any_dtype(out["time"]):
+        out = out.copy()
+        out["time"] = pd.to_datetime(out["time"], utc=True)
+    elif out["time"].dt.tz is None:
+        out = out.copy()
+        out["time"] = out["time"].dt.tz_localize("UTC")
+    else:
+        out = out.copy()
+        out["time"] = out["time"].dt.tz_convert("UTC")
+    return out
+
+
+def _asian_session_complete(asian_df: pd.DataFrame, start_hour: int, end_hour: int) -> bool:
+    if asian_df.empty:
+        return False
+    hours = set(int(h) for h in asian_df["time"].dt.hour.unique())
+    required = set(range(start_hour, end_hour))
+    if not required.issubset(hours):
+        return False
+    return len(asian_df) >= ASIAN_SESSION_M5_BARS
+
+
+def _prev_day_complete(prev_df: pd.DataFrame) -> bool:
+    if prev_df.empty:
+        return False
+    return len(prev_df) >= PREV_DAY_MIN_M5_BARS
 
 
 def compute_liquidity_levels(
     m5_df: pd.DataFrame,
     target_date: date,
     asian_start_hour: int = 0,
-    asian_end_hour: int = 7
+    asian_end_hour: int = 7,
 ) -> Optional[LiquidityLevels]:
     """
     Computes Asian Range High/Low (00:00–07:00 UTC) for target_date and
-    Previous Day High/Low (PDH/PDL) from the immediately preceding trading day in the DataFrame.
+    Previous Day High/Low (PDH/PDL) from the immediately preceding trading day.
+
+    Incomplete Asian session or incomplete prior day makes that pool unavailable
+    (None). Never fabricate PDH/PDL from Asian levels.
     """
     if m5_df is None or m5_df.empty:
         return None
 
-    df = m5_df.copy()
-    if not pd.api.types.is_datetime64_any_dtype(df["time"]):
-        df["time"] = pd.to_datetime(df["time"], utc=True)
-    elif df["time"].dt.tz is None:
-        df["time"] = df["time"].dt.tz_localize("UTC")
-    else:
-        df["time"] = df["time"].dt.tz_convert("UTC")
+    df = _ensure_utc_time(m5_df)
 
-    # Extract target day's Asian session: target_date between 00:00 and 07:00 UTC
     target_mask = df["time"].dt.date == target_date
     asian_mask = (
         target_mask
         & (df["time"].dt.hour >= asian_start_hour)
         & (df["time"].dt.hour < asian_end_hour)
     )
-
     asian_df = df[asian_mask]
-    if asian_df.empty:
+    if not _asian_session_complete(asian_df, asian_start_hour, asian_end_hour):
         return None
 
     asian_high = float(asian_df["high"].max())
     asian_low = float(asian_df["low"].min())
 
-    # Find the previous trading day's data
+    pdh: Optional[float] = None
+    pdl: Optional[float] = None
     prev_dates = df[df["time"].dt.date < target_date]["time"].dt.date.unique()
-    if len(prev_dates) == 0:
-        # If no previous day in dataset, fallback to Asian levels
-        pdh = asian_high
-        pdl = asian_low
-    else:
+    if len(prev_dates) > 0:
         prev_date = max(prev_dates)
         prev_df = df[df["time"].dt.date == prev_date]
-        pdh = float(prev_df["high"].max())
-        pdl = float(prev_df["low"].min())
+        if _prev_day_complete(prev_df):
+            pdh = float(prev_df["high"].max())
+            pdl = float(prev_df["low"].min())
 
-    # Compute London session high/low (07:00 - 12:00 UTC) if available
     london_mask = (
         target_mask
         & (df["time"].dt.hour >= 7)
