@@ -14,6 +14,11 @@ gh auth refresh -h github.com -s repo
 echo "==> Verify scopes"
 gh auth status
 
+echo "==> Local software gate audit (optional)"
+if [[ -x "$ROOT/scripts/audit_local_issue_gates.sh" ]]; then
+  "$ROOT/scripts/audit_local_issue_gates.sh"
+fi
+
 echo "==> Push feature/smc-v2-hardening"
 git push -u origin feature/smc-v2-hardening
 

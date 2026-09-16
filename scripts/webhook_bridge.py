@@ -173,6 +173,44 @@ def create_app(
             )
             await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
 
+        for close in lifecycle.get("broker_closes", []):
+            order_id = close.get("order_id")
+            pnl_dollar = close.get("pnl_dollar")
+            pnl_r = close.get("pnl_r")
+            if (
+                notifier
+                and getattr(notifier, "enabled", False)
+                and order_id
+                and pnl_dollar is not None
+                and pnl_r is not None
+                and may_notify_close(
+                    broker_close_success=False,
+                    already_flat_on_broker=True,
+                )
+            ):
+                try:
+                    from scripts.smc.notifier import format_trade_closed_card
+
+                    fill = await asyncio.to_thread(adapter.get_fill_geometry, order_id)
+                    dir_raw = (fill or {}).get("direction", "BUY")
+                    tc_dir = (
+                        Direction.BUY
+                        if str(dir_raw).upper() == "BUY"
+                        else Direction.SELL
+                    )
+                    card = format_trade_closed_card(
+                        direction=tc_dir,
+                        exit_price=0.0,
+                        pnl_dollars=float(pnl_dollar),
+                        pnl_r=float(pnl_r),
+                        reason="broker_lifecycle_close_detected",
+                    )
+                    background_tasks.add_task(_dispatch_tg_safe, card)
+                except Exception as exc:
+                    logger.warning(
+                        "Lifecycle close notify failed for %s: %s", order_id, exc
+                    )
+
         # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
         if news_manager is not None and hasattr(news_manager, "should_cancel_pending"):
             events = getattr(news_manager, "events", None)
