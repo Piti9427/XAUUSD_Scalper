@@ -39,6 +39,8 @@ def main() -> int:
     suite = subprocess.run(
         [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
         cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     payload = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
