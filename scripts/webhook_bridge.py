@@ -467,6 +467,21 @@ def create_app(
                     "reason": f"Execution uncertain: {exc}. Broker reconciliation required.",
                 }
             if not exec_res.success:
+                from scripts.smc.notification_policy import classify_exec_outcome
+                outcome = classify_exec_outcome(
+                    success=exec_res.success,
+                    status=getattr(exec_res, "status", None),
+                )
+                if outcome == "uncertain":
+                    if not adapter.dry_run and order_id:
+                        await asyncio.to_thread(adapter.update_setup_status, order_id, "uncertain")
+                    return {
+                        "status": "uncertain",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": exec_res.message,
+                        "exec_status": getattr(exec_res, "status", "UNKNOWN"),
+                    }
                 if not adapter.dry_run and order_id:
                     await asyncio.to_thread(adapter.update_setup_status, order_id, "rejected")
                 return {
@@ -474,36 +489,33 @@ def create_app(
                     "order_id": order_id,
                     "event": event,
                     "reason": exec_res.message,
+                    "exec_status": getattr(exec_res, "status", "REJECTED"),
                 }
             if not adapter.dry_run and order_id:
                 await asyncio.to_thread(adapter.update_setup_status, order_id, "accepted", exec_res.order_id)
             if order_id:
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
 
-            # Pattern B: Fire-and-forget Telegram notification
-            if notifier and getattr(notifier, "enabled", False):
+            # Pattern B: accepted-pending card only (never a fill/phantom trade card).
+            from scripts.smc.notification_policy import may_notify_execution
+            if (
+                notifier
+                and getattr(notifier, "enabled", False)
+                and may_notify_execution(
+                    success=exec_res.success,
+                    status=getattr(exec_res, "status", "OK"),
+                )
+            ):
                 try:
-                    from scripts.smc.types import SetupSignal
-                    from scripts.smc.notifier import format_smc_trade_card
-                    sig = SetupSignal(
+                    from scripts.smc.notifier import format_order_accepted_card
+                    card = format_order_accepted_card(
                         direction=direction,
-                        sweep_price=sl,
-                        sweep_wick=sl,
-                        mss_price=entry,
-                        entry_price=entry,
+                        limit_price=entry,
                         sl_price=sl,
                         tp_price=tp2 if tp2 > 0 else tp1,
-                        sl_distance=lot_result.sl_distance,
-                        risk_r=tp_r,
-                        fvg_high=max(entry, sl),
-                        fvg_low=min(entry, sl),
-                        reason=payload.get("type", "SMC_PRIME"),
-                        timestamp=event_dt,
-                    )
-                    card = format_smc_trade_card(
-                        signal=sig,
                         lot_size=lot_result.lot_size,
-                        risk_amount=lot_result.risk_amount,
+                        order_id=order_id,
+                        ticket=exec_res.order_id,
                     )
                     background_tasks.add_task(_dispatch_tg_safe, card)
                 except Exception as exc:
@@ -563,6 +575,9 @@ def create_app(
                 try:
                     from scripts.smc.types import Position
                     from scripts.smc.notifier import format_order_filled_card
+                    from scripts.smc.notification_policy import may_notify_execution
+                    if not may_notify_execution(success=True, status="FILLED"):
+                        raise RuntimeError("notification policy blocked fill card")
                     fill_lot = float(pos.volume) if not adapter.dry_run and 'pos' in locals() and pos else float(payload.get("lot_size") or 0.01)
                     pos_card = Position(
                         direction=direction,

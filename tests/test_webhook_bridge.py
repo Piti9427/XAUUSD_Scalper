@@ -896,7 +896,8 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
         # Ensure Telegram message was dispatched via BackgroundTasks
         self.mock_notifier.send_message.assert_called_once()
         card_content = self.mock_notifier.send_message.call_args[0][0]
-        self.assertIn("XAUUSD SMC SIGNAL", card_content)
+        self.assertIn("ORDER ACCEPTED (PENDING)", card_content)
+        self.assertNotIn("ORDER FILLED", card_content)
 
     def test_two_tier_idempotency_fast_path(self):
         payload = {

@@ -68,6 +68,34 @@ def format_order_filled_card(position: Position, symbol: str = "XAUUSD") -> str:
     return card
 
 
+def format_order_accepted_card(
+    *,
+    direction: Direction,
+    limit_price: float,
+    sl_price: float,
+    tp_price: float,
+    lot_size: float,
+    order_id: Optional[str] = None,
+    ticket: Optional[int] = None,
+    symbol: str = "XAUUSD",
+) -> str:
+    """Broker-accepted pending only — must not be confused with a fill card."""
+    direction_emoji = "🟢 BUY" if direction == Direction.BUY else "🔴 SELL"
+    oid = order_id or "n/a"
+    tix = ticket if ticket is not None else "n/a"
+    card = f"""📥 *{symbol} ORDER ACCEPTED (PENDING): {direction.value}* {direction_emoji}
+━━━━━━━━━━━━━━━━━━━━━
+📍 *Limit:* `{limit_price:.2f}`
+🛑 *Stop Loss:* `{sl_price:.2f}`
+🎯 *Take Profit:* `{tp_price:.2f}`
+💼 *Volume:* `{lot_size:.2f} Lot`
+🆔 *Order ID:* `{oid}`
+🎫 *Ticket:* `{tix}`
+⚠️ *Not filled yet* — await ORDER_FILLED / broker fill evidence
+━━━━━━━━━━━━━━━━━━━━━"""
+    return card
+
+
 def format_be_moved_card(position: Position, symbol: str = "XAUUSD") -> str:
     """Formats a milestone card when SL is moved to Breakeven (+1.0R)."""
     direction_emoji = "🟢 BUY" if position.direction == Direction.BUY else "🔴 SELL"
