@@ -677,19 +677,22 @@ class SMCExecutionAdapter:
         freeze_level = getattr(symbol, "trade_freeze_level", None)
         if point is None or stops_level is None:
             return None
-        snapshot = {
-            "balance": float(account.balance),
-            "equity": float(account.equity),
-            "min_lot": float(symbol.volume_min),
-            "max_lot": float(symbol.volume_max),
-            "lot_step": float(symbol.volume_step),
-            "contract_size": float(symbol.trade_contract_size),
-            "margin_free": float(margin_free),
-            "point": float(point),
-            "stops_level": float(stops_level),
-        }
-        if freeze_level is not None:
-            snapshot["freeze_level"] = float(freeze_level)
+        try:
+            snapshot = {
+                "balance": float(account.balance),
+                "equity": float(account.equity),
+                "min_lot": float(symbol.volume_min),
+                "max_lot": float(symbol.volume_max),
+                "lot_step": float(symbol.volume_step),
+                "contract_size": float(symbol.trade_contract_size),
+                "margin_free": float(margin_free),
+                "point": float(point),
+                "stops_level": float(stops_level),
+            }
+            if freeze_level is not None:
+                snapshot["freeze_level"] = float(freeze_level)
+        except (TypeError, ValueError):
+            return None
         if trade_allowed is not None:
             snapshot["trade_allowed"] = 1.0 if bool(trade_allowed) else 0.0
         return snapshot

@@ -29,6 +29,21 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
         broker.ORDER_TYPE_BUY_LIMIT = 2
         broker.TRADE_ACTION_PENDING = 5
         broker.ORDER_TIME_GTC = 0
+        broker.SYMBOL_FILLING_IOC = 2
+        broker.ORDER_FILLING_RETURN = 2
+        broker.account_info.return_value = SimpleNamespace(
+            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+        )
+        broker.symbol_info.return_value = SimpleNamespace(
+            filling_mode=2,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
+            trade_contract_size=100.0,
+            point=0.01,
+            trade_stops_level=0,
+            trade_freeze_level=0,
+        )
         broker.order_send.return_value = None
 
         with patch("scripts.smc.mt5_adapter.mt5", broker):
