@@ -1484,7 +1484,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         self.assertEqual(res2.json()["checked"], 0)
         self.assertEqual(res2.json()["exits"], [])
 
-    def test_clock_disabled_without_max_hold(self):
+    def test_clock_idle_without_max_hold_still_runs_lifecycle(self):
         from scripts.webhook_bridge import create_app
         import tempfile
 
@@ -1499,11 +1499,57 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             )
             self.assertEqual(res.status_code, 200)
             data = res.json()
-            self.assertEqual(data["status"], "disabled")
+            # Rollover planner remains armed even when max_hold unset.
+            self.assertEqual(data["status"], "ok")
             self.assertEqual(data["exits"], [])
             self.assertEqual(data["cancels"], [])
             self.assertIn("lifecycle", data)
             self.assertEqual(data["lifecycle"]["ttl_cancels"], [])
+            self.assertIsNone(data.get("max_hold_bars"))
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
+    def test_clock_rollover_closes_open_fill_at_cutoff(self):
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=db.name,
+            # max_hold unset — rollover must still flatten
+            rollover_hour_utc=20,
+            rollover_minute_utc=55,
+        )
+        client = TestClient(app)
+        try:
+            adapter = app.state.adapter
+            adapter.log_lifecycle_event(
+                event_type="ORDER_FILLED",
+                order_id="ROLL_FILL_1",
+                direction="BUY",
+                timestamp="2026-03-02T18:00:00+00:00",
+            )
+            fake_now = datetime(2026, 3, 2, 20, 55, tzinfo=timezone.utc)
+            with patch("scripts.webhook_bridge.datetime") as mock_dt:
+                mock_dt.now.return_value = fake_now
+                mock_dt.side_effect = lambda *a, **k: datetime(*a, **k)
+                # Keep timezone utilities working if referenced
+                mock_dt.now = lambda tz=None: fake_now
+                res = client.post(
+                    "/internal/clock",
+                    headers={"Authorization": f"Bearer {self.secret}"},
+                )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(len(data["exits"]), 1)
+            self.assertEqual(data["exits"][0]["order_id"], "ROLL_FILL_1")
+            self.assertIn("ROLLOVER", data["exits"][0]["reason"].upper())
         finally:
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)

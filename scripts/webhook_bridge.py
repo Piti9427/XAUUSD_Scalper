@@ -143,7 +143,11 @@ def create_app(
         TRADE CLOSED without broker evidence.
         """
         from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
-        from scripts.smc.clock_exit import OpenFill, plan_clock_time_exits
+        from scripts.smc.clock_exit import (
+            OpenFill,
+            plan_clock_time_exits,
+            plan_clock_rollover_exits,
+        )
         from scripts.smc.notification_policy import may_notify_close, may_notify_execution
         from scripts.smc.types import Position as PosCard
 
@@ -296,18 +300,6 @@ def create_app(
                         }
                     )
 
-        if max_hold_bars is None:
-            has_work = bool(cancel_results or lifecycle.get("ttl_cancels"))
-            return {
-                "status": "ok" if has_work else "disabled",
-                "action": "CLOCK_TICK",
-                "cancels": cancel_results,
-                "exits": [],
-                "lifecycle": lifecycle,
-                "reason": None if has_work else "max_hold_bars_not_configured",
-                "timestamp": now_utc.isoformat(),
-            }
-
         open_rows = await asyncio.to_thread(adapter.list_open_fills)
         fills = [
             OpenFill(
@@ -317,12 +309,26 @@ def create_app(
             )
             for row in open_rows
         ]
-        plans = plan_clock_time_exits(
+        # ADR-007 rollover always; TIME_EXIT only when max_hold configured.
+        plans_by_id = {}
+        for plan in plan_clock_rollover_exits(
             fills,
             now=now_utc,
-            max_hold_bars=max_hold_bars,
-            bar_minutes=bar_minutes,
-        )
+            rollover_hour_utc=rollover_hour_utc,
+            rollover_minute_utc=rollover_minute_utc,
+        ):
+            plans_by_id[plan.order_id] = plan
+        if max_hold_bars is not None:
+            for plan in plan_clock_time_exits(
+                fills,
+                now=now_utc,
+                max_hold_bars=max_hold_bars,
+                bar_minutes=bar_minutes,
+            ):
+                # Prefer existing ROLLOVER reason if both fire.
+                plans_by_id.setdefault(plan.order_id, plan)
+        plans = list(plans_by_id.values())
+
         for plan in plans:
             intent = OrderIntent(
                 intent_type=OrderIntentType.CLOSE_MARKET,
@@ -426,13 +432,28 @@ def create_app(
                 }
             )
 
+        has_work = bool(
+            cancel_results
+            or exit_results
+            or lifecycle.get("ttl_cancels")
+            or lifecycle.get("broker_fills")
+            or lifecycle.get("broker_closes")
+        )
+        status_out = "ok"
+        reason_out = None
+        if max_hold_bars is None and not plans and not has_work:
+            # Idle tick: rollover planner still armed; max_hold optional.
+            status_out = "ok"
+            reason_out = "idle_clock_tick"
         return {
-            "status": "ok",
+            "status": status_out,
             "action": "CLOCK_TICK",
             "checked": len(fills),
             "cancels": cancel_results,
             "exits": exit_results,
             "lifecycle": lifecycle,
+            "reason": reason_out,
+            "max_hold_bars": max_hold_bars,
             "timestamp": now_utc.isoformat(),
         }
 

@@ -1,0 +1,21 @@
+{
+  "captured_at_utc": "2026-09-16T08:00:00+00:00",
+  "git_head": "782bae531307c56b8e2423cae5787ea583ba96f0",
+  "host": "macOS darwin",
+  "purpose": "Locate reachable Windows/Oracle MT5 Python host for Gate C",
+  "ssh_probes": [
+    {"host": "158.178.243.98", "result": "Permission denied (publickey) for nopparuj/ubuntu/opc"},
+    {"host": "10.21.31.9", "result": "connect timeout"},
+    {"host": "192.168.7.8", "result": "Permission denied (publickey)"},
+    {"host": "192.168.7.19", "result": "Permission denied (publickey)"},
+    {"host": "192.168.7.21", "result": "Permission denied (publickey)"},
+    {"host": "192.168.7.22", "result": "Permission denied (publickey)"}
+  ],
+  "local_settings_mt5_server": "empty",
+  "utm_vms_found": false,
+  "oci_config": false,
+  "oracle_hostname_resolvable": false,
+  "wine_ipc": "INCONCLUSIVE_INFRA (-10003)",
+  "gate_c_reachable_from_this_mac": false,
+  "next_operator_action": "Provide SSH identity for Oracle/Windows MT5 host or run foundation_live_gate.sh there with Exness Demo session"
+}

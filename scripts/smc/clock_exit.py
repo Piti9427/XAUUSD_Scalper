@@ -60,3 +60,36 @@ def plan_clock_time_exits(
             )
         )
     return plans
+
+
+def plan_clock_rollover_exits(
+    fills: Iterable[OpenFill],
+    *,
+    now: datetime,
+    rollover_hour_utc: int = 20,
+    rollover_minute_utc: int = 55,
+) -> List[ClockExitPlan]:
+    """
+    ADR-007 / foundation: request flat of open bot fills at/after UTC rollover cutoff.
+
+    Pure planner — independent of max_hold_bars. Callers execute CLOSE_MARKET with
+    ROLLOVER in reason so adapter ownership rules apply.
+    """
+    now_utc = _as_utc(now)
+    past_cutoff = (now_utc.hour > rollover_hour_utc) or (
+        now_utc.hour == rollover_hour_utc and now_utc.minute >= rollover_minute_utc
+    )
+    if not past_cutoff:
+        return []
+    return [
+        ClockExitPlan(
+            order_id=fill.order_id,
+            direction=fill.direction,
+            reason=(
+                f"ROLLOVER flat wall-clock at/after "
+                f"{rollover_hour_utc}:{rollover_minute_utc:02d} UTC"
+            ),
+        )
+        for fill in fills
+        if fill.order_id
+    ]
