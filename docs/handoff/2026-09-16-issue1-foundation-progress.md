@@ -67,9 +67,10 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 
 | Gap | Notes |
 | --- | --- |
-| Live Exness connect smoke with real credentials | **Blocked on Mac:** native `MetaTrader5` missing; Wine IPC `(-10003)` / auth `(-6)`. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`. Needs Windows/Oracle host + Exness Demo session. |
-| Oracle ARM64 runtime soak | Checklist ready; needs executed soak evidence |
+| Live Exness connect smoke with real credentials | **Blocked on Mac:** native `MetaTrader5` missing; Wine IPC `(-10003)` / auth `(-6)`. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-ipc-reprobe.json`, `docs/ops/2026-09-16-mac-host-confirmed.json`. Needs Windows/Oracle host + Exness Demo session. |
+| Oracle ARM64 runtime soak | Checklist ready; needs executed soak evidence; no `oracle` SSH host from this Mac |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
+| Bugbot High (software) | **Done @ `00b2e11`:** TP1/BE foundation gate, live invent-PnL reject, CLOSE_MARKET comment, partial min-lot residual skip |
 
 ## Sibling issues #2–#4
 

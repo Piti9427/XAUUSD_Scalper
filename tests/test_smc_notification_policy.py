@@ -45,6 +45,18 @@ class NotificationPolicyTests(unittest.TestCase):
             )
         )
 
+    def test_ohlc_invent_pnl_only_in_dry_run(self):
+        from scripts.smc.notification_policy import (
+            may_use_ohlc_invented_close_pnl,
+            require_broker_cash_for_live_close,
+        )
+
+        self.assertTrue(may_use_ohlc_invented_close_pnl(dry_run=True))
+        self.assertFalse(may_use_ohlc_invented_close_pnl(dry_run=False))
+        self.assertTrue(require_broker_cash_for_live_close(dry_run=True, broker_pnl=None))
+        self.assertFalse(require_broker_cash_for_live_close(dry_run=False, broker_pnl=None))
+        self.assertTrue(require_broker_cash_for_live_close(dry_run=False, broker_pnl=-12.5))
+
 
 class InfraVerdictTests(unittest.TestCase):
     def test_mac_off_mt5_is_inconclusive_not_strategy_fail(self):

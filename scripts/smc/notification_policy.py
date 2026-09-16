@@ -50,3 +50,27 @@ def may_notify_close(
     already_flat_on_broker covers 'position not found' after a successful broker flat.
     """
     return bool(broker_close_success or already_flat_on_broker)
+
+
+def may_use_ohlc_invented_close_pnl(*, dry_run: bool) -> bool:
+    """
+    Live / Demo paths must never invent close dollars from OHLC bars.
+
+    Dry-run simulation may estimate PnL from bar geometry for offline cards only.
+    """
+    return bool(dry_run)
+
+
+def require_broker_cash_for_live_close(
+    *,
+    dry_run: bool,
+    broker_pnl: Optional[float],
+) -> bool:
+    """
+    True when close cash is admissible for notify/halt.
+
+    Live requires broker deal cashflow; dry-run may proceed without it.
+    """
+    if dry_run:
+        return True
+    return broker_pnl is not None

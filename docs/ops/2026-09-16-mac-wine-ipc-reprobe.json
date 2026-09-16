@@ -1,0 +1,16 @@
+{
+  "captured_at_utc": "2026-09-16T07:55:00+00:00",
+  "host": "macOS darwin",
+  "operator_confirmed_mac": true,
+  "git_head": "0c1b1da3aaadf48a748398afaf02509da63d87b1",
+  "probe": "wine_python_mt5_initialize",
+  "wine_python": "C:\\tools\\python312\\python.exe",
+  "wineprefix": "~/Library/Application Support/net.metaquotes.wine.metatrader5",
+  "import_ok": true,
+  "initialize_ok": false,
+  "last_error": [-10003, "IPC initialize failed, MetaTrader 5 x64 not found"],
+  "infra_verdict": "INCONCLUSIVE_INFRA",
+  "infra_detail": "wine_ipc_unavailable",
+  "ok": false,
+  "interpretation": "Mac Wine MetaTrader5 import works; terminal IPC still fails. Not Gate C PASS."
+}

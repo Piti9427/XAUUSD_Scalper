@@ -284,6 +284,10 @@ async def run_smc_live_copilot():
                     )
 
                     from scripts.smc.notification_policy import may_notify_close, may_notify_execution
+                    from scripts.smc.notification_policy import (
+                        may_use_ohlc_invented_close_pnl,
+                        require_broker_cash_for_live_close,
+                    )
 
                     for intent in intents:
                         logger.info("Executing OrderIntent: %s (%s)", intent.intent_type.value, intent.reason)
@@ -315,6 +319,7 @@ async def run_smc_live_copilot():
 
                     # Check Milestone Notifications: Trade Closed
                     # Dry-run OHLC exits clear position inside on_bar; treat that as broker evidence in dry_run.
+                    # Live must never invent dollars from OHLC — broker deal cashflow only.
                     if pos_before is not None and account.open_position is None:
                         if not may_notify_close(
                             broker_close_success=last_close_broker_ok or dry_run,
@@ -324,65 +329,101 @@ async def run_smc_live_copilot():
                         else:
                             from scripts.smc.risk import frozen_initial_r
 
-                            if pos_before.direction == Direction.BUY:
-                                if float(last_closed_bar["low"]) <= pos_before.sl_price:
-                                    exit_price = pos_before.sl_price
-                                    exit_reason = (
-                                        "Hit Breakeven Stop Loss"
-                                        if pos_before.be_moved
-                                        else "Hit Stop Loss"
-                                    )
-                                elif float(last_closed_bar["high"]) >= pos_before.tp_price:
-                                    exit_price = pos_before.tp_price
-                                    exit_reason = "Hit Take Profit Target"
-                                else:
-                                    exit_price = float(last_closed_bar["close"])
-                                    exit_reason = "Market / Rollover Closure"
-                                pnl_dollars = round(
-                                    (exit_price - pos_before.entry_price)
-                                    * pos_before.lot_size
-                                    * 100.0,
-                                    2,
-                                )
-                            else:  # SELL
-                                if float(last_closed_bar["high"]) >= pos_before.sl_price:
-                                    exit_price = pos_before.sl_price
-                                    exit_reason = (
-                                        "Hit Breakeven Stop Loss"
-                                        if pos_before.be_moved
-                                        else "Hit Stop Loss"
-                                    )
-                                elif float(last_closed_bar["low"]) <= pos_before.tp_price:
-                                    exit_price = pos_before.tp_price
-                                    exit_reason = "Hit Take Profit Target"
-                                else:
-                                    exit_price = float(last_closed_bar["close"])
-                                    exit_reason = "Market / Rollover Closure"
-                                pnl_dollars = round(
-                                    (pos_before.entry_price - exit_price)
-                                    * pos_before.lot_size
-                                    * 100.0,
-                                    2,
-                                )
-                            pnl_r = frozen_initial_r(
-                                pnl_dollars=pnl_dollars,
-                                initial_sl_distance=pos_before.initial_sl_distance,
-                                filled_lot=pos_before.lot_size,
-                            )
+                            order_id = getattr(pos_before, "order_id", None)
+                            broker_pnl = None
+                            if not dry_run and order_id:
+                                broker_pnl = adapter.get_realized_pnl_for_order(str(order_id))
 
-                            await notifier.send_message(
-                                format_trade_closed_card(
-                                    direction=pos_before.direction,
-                                    exit_price=exit_price,
-                                    pnl_dollars=pnl_dollars,
-                                    pnl_r=pnl_r,
-                                    reason=exit_reason,
-                                    symbol=symbol,
+                            if not require_broker_cash_for_live_close(
+                                dry_run=dry_run, broker_pnl=broker_pnl
+                            ):
+                                logger.warning(
+                                    "TRADE CLOSED notify suppressed — live broker cashflow missing "
+                                    "(order_id=%s)",
+                                    order_id,
                                 )
-                            )
-                            if pnl_r < 0 or pnl_dollars < 0:
-                                record_net_losing_trade(risk_halt)
-                                save_risk_halt_state(risk_halt_path, risk_halt)
+                            elif may_use_ohlc_invented_close_pnl(dry_run=dry_run):
+                                if pos_before.direction == Direction.BUY:
+                                    if float(last_closed_bar["low"]) <= pos_before.sl_price:
+                                        exit_price = pos_before.sl_price
+                                        exit_reason = (
+                                            "Hit Breakeven Stop Loss"
+                                            if pos_before.be_moved
+                                            else "Hit Stop Loss"
+                                        )
+                                    elif float(last_closed_bar["high"]) >= pos_before.tp_price:
+                                        exit_price = pos_before.tp_price
+                                        exit_reason = "Hit Take Profit Target"
+                                    else:
+                                        exit_price = float(last_closed_bar["close"])
+                                        exit_reason = "Market / Rollover Closure"
+                                    pnl_dollars = round(
+                                        (exit_price - pos_before.entry_price)
+                                        * pos_before.lot_size
+                                        * 100.0,
+                                        2,
+                                    )
+                                else:  # SELL
+                                    if float(last_closed_bar["high"]) >= pos_before.sl_price:
+                                        exit_price = pos_before.sl_price
+                                        exit_reason = (
+                                            "Hit Breakeven Stop Loss"
+                                            if pos_before.be_moved
+                                            else "Hit Stop Loss"
+                                        )
+                                    elif float(last_closed_bar["low"]) <= pos_before.tp_price:
+                                        exit_price = pos_before.tp_price
+                                        exit_reason = "Hit Take Profit Target"
+                                    else:
+                                        exit_price = float(last_closed_bar["close"])
+                                        exit_reason = "Market / Rollover Closure"
+                                    pnl_dollars = round(
+                                        (pos_before.entry_price - exit_price)
+                                        * pos_before.lot_size
+                                        * 100.0,
+                                        2,
+                                    )
+                                pnl_r = frozen_initial_r(
+                                    pnl_dollars=pnl_dollars,
+                                    initial_sl_distance=pos_before.initial_sl_distance,
+                                    filled_lot=pos_before.lot_size,
+                                )
+
+                                await notifier.send_message(
+                                    format_trade_closed_card(
+                                        direction=pos_before.direction,
+                                        exit_price=exit_price,
+                                        pnl_dollars=pnl_dollars,
+                                        pnl_r=pnl_r,
+                                        reason=exit_reason,
+                                        symbol=symbol,
+                                    )
+                                )
+                                if pnl_r < 0 or pnl_dollars < 0:
+                                    record_net_losing_trade(risk_halt)
+                                    save_risk_halt_state(risk_halt_path, risk_halt)
+                            else:
+                                # Live with broker cash: notify from deal PnL + frozen R.
+                                pnl_dollars = float(broker_pnl)
+                                pnl_r = frozen_initial_r(
+                                    pnl_dollars=pnl_dollars,
+                                    initial_sl_distance=pos_before.initial_sl_distance,
+                                    filled_lot=pos_before.lot_size,
+                                )
+                                exit_price = float(last_closed_bar["close"])
+                                await notifier.send_message(
+                                    format_trade_closed_card(
+                                        direction=pos_before.direction,
+                                        exit_price=exit_price,
+                                        pnl_dollars=pnl_dollars,
+                                        pnl_r=pnl_r,
+                                        reason="Broker-confirmed close",
+                                        symbol=symbol,
+                                    )
+                                )
+                                if pnl_r < 0 or pnl_dollars < 0:
+                                    record_net_losing_trade(risk_halt)
+                                    save_risk_halt_state(risk_halt_path, risk_halt)
 
                     # Check Milestone Notifications
                     if account.open_position is not None:
