@@ -1307,6 +1307,15 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertFalse(restored.history_ready)
 
 
+class TestWebhookFoundationRiskDefault(unittest.TestCase):
+    def test_create_app_defaults_to_half_percent_risk(self):
+        import inspect
+        from scripts.webhook_bridge import create_app
+
+        default = inspect.signature(create_app).parameters["risk_pct"].default
+        self.assertEqual(default, 0.005)
+
+
 class TestWebhookClockTimeExit(unittest.TestCase):
     def setUp(self):
         import tempfile

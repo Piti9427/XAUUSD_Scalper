@@ -51,7 +51,7 @@ def main():
     secret_token = os.environ.get("WEBHOOK_SECRET") or wh_cfg.get("secret_token", "XAUUSD_MASTER_SECRET_2026")
     dry_run = args.dry_run if args.dry_run is not None else wh_cfg.get("dry_run", True)
     account_balance = args.balance or wh_cfg.get("account_balance", 10000.0)
-    risk_pct = args.risk or wh_cfg.get("risk_pct", 0.01)
+    risk_pct = args.risk or wh_cfg.get("risk_pct", 0.005)
     commission_per_lot = wh_cfg.get("commission_per_lot")
     slippage_allowance = wh_cfg.get("slippage_allowance")
     max_daily_losses = wh_cfg.get("max_daily_losses", 2)
@@ -81,6 +81,11 @@ def main():
     if require_broker_identity is None:
         require_broker_identity = not dry_run
 
+    max_hold_bars = strategy_cfg.get("max_hold_bars")
+    if max_hold_bars is not None:
+        max_hold_bars = int(max_hold_bars)
+    bar_minutes = int(strategy_cfg.get("bar_minutes", 5))
+
     app = create_app(
         auth_token=secret_token,
         dry_run=dry_run,
@@ -96,6 +101,8 @@ def main():
         partial_tp_r=partial_tp_r,
         risk_halt_path=risk_halt_path,
         require_broker_identity=require_broker_identity,
+        max_hold_bars=max_hold_bars,
+        bar_minutes=bar_minutes,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")
