@@ -289,6 +289,32 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertEqual(pos.sl_price, 2000.0 + orch.be_buffer)
         self.assertAlmostEqual(pos.lot_size, 0.05)
 
+    def test_partial_skips_when_residual_would_floor_up_past_min_lot(self):
+        """Risk invariant: never invent residual lot via max(0.01, remaining)."""
+        orch = StrategyOrchestrator(partial_tp_enabled=True, partial_tp_r=1.0, partial_tp_ratio=0.5)
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.01,  # half rounds below broker min lot
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=5.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2002,
+            "high": 2005.5,
+            "low": 2001,
+            "close": 2005,
+        }
+        intents = orch.on_bar(bar, account)
+        intent_types = [i.intent_type for i in intents]
+        self.assertNotIn(OrderIntentType.PARTIAL_CLOSE, intent_types)
+        self.assertFalse(pos.partial_closed)
+        self.assertAlmostEqual(pos.lot_size, 0.01)
+
     def test_fill_bar_immediate_stop_out(self):
         # Pending BUY limit at 2010.0, SL at 2005.0, TP at 2020.0
         limit_order = OrderIntent(

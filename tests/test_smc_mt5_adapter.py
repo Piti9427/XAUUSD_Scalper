@@ -229,6 +229,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.assertTrue(result.success)
         sent = broker.order_send.call_args[0][0]
         self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_IOC)
+        self.assertEqual(sent["comment"], "SMC_owned-6")
 
     def test_live_risk_snapshot_reads_balance_equity_and_symbol_volume(self):
         broker = Mock()

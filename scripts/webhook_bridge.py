@@ -46,6 +46,9 @@ def create_app(
     max_hold_bars: Optional[int] = None,
     bar_minutes: int = 5,
     order_ttl_bars: Optional[int] = 4,
+    partial_tp_enabled: bool = False,
+    be_enabled: bool = False,
+    be_buffer: float = 0.10,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -927,9 +930,43 @@ def create_app(
 
         # 3. TP1_HIT_MOVE_BE: 50% Volume Scale-Out & Breakeven Relocation (ADR-018)
         elif event == "TP1_HIT_MOVE_BE":
+            if not (partial_tp_enabled and be_enabled):
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": (
+                        "TP1_HIT_MOVE_BE disabled by foundation defaults "
+                        f"(partial_tp_enabled={partial_tp_enabled}, be_enabled={be_enabled})"
+                    ),
+                }
+
             new_sl = float(payload.get("new_sl") or 0.0)
             entry = float(payload.get("entry") or 0.0)
             close_pct = int(payload.get("close_percent") or 50)
+            direction_raw = str(payload.get("dir", "BUY")).upper()
+            if entry <= 0 or new_sl <= 0:
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": "TP1_HIT_MOVE_BE requires positive entry and new_sl",
+                }
+            # new_sl must sit on profit-side BE band (entry ± be_buffer), not unconstrained.
+            if direction_raw == "BUY":
+                be_lo, be_hi = entry, entry + be_buffer + 0.05
+            else:
+                be_lo, be_hi = entry - be_buffer - 0.05, entry
+            if not (be_lo <= new_sl <= be_hi):
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": (
+                        f"new_sl {new_sl} outside BE band [{be_lo}, {be_hi}] "
+                        f"for {direction_raw} entry={entry} be_buffer={be_buffer}"
+                    ),
+                }
 
             # 3a. Partial Close 50%
             intent_close = OrderIntent(
@@ -1103,15 +1140,36 @@ def create_app(
                 # Release inbox on dry-run success and on fill-during-cancel "not found".
                 if adapter.dry_run or already_closed_by_broker:
                     await asyncio.to_thread(adapter.finish_setup, order_id)
-                elif not adapter.dry_run:
-                    exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)
-                    if exposure_after_close == []:
-                        await asyncio.to_thread(adapter.finish_setup, order_id)
+                if not adapter.dry_run:
+                    if exec_close.success:
+                        exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)
+                        if exposure_after_close == []:
+                            await asyncio.to_thread(adapter.finish_setup, order_id)
                     broker_pnl = await asyncio.to_thread(
                         adapter.get_realized_pnl_for_order, order_id
                     )
                     if broker_pnl is not None:
                         pnl_dollar = broker_pnl
+                    else:
+                        # Live: never halt/notify on TradingView invent cash.
+                        pnl_dollar = None
+                        pnl_r = None
+                        if order_id:
+                            await asyncio.to_thread(
+                                mark_processed, order_id, event, "reconcile_required"
+                            )
+                        return {
+                            "status": "reconcile_required",
+                            "order_id": order_id,
+                            "event": event,
+                            "reason": "broker deal cashflow missing for live TRADE_CLOSED",
+                            "pnl_r": None,
+                            "pnl_dollar": None,
+                            "execution": {
+                                "success": exec_close.success,
+                                "message": exec_close.message,
+                            },
+                        }
 
             # Scenario 21: dollars only from payload/broker; R from frozen geometry.
             # Never invent cash from entry/exit/lot without broker/payload dollars.
@@ -1130,8 +1188,14 @@ def create_app(
                     initial_sl_distance=initial_dist,
                     filled_lot=lot,
                 )
-            elif pnl_r is None and initial_dist > 0 and entry and exit_px:
-                # Lot/cash unknown: geometric R only (not dollar invent).
+            elif (
+                adapter.dry_run
+                and pnl_r is None
+                and initial_dist > 0
+                and entry
+                and exit_px
+            ):
+                # Dry-run only: geometric R from TV exit (not live invent cash).
                 signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
                 pnl_r = round(signed / initial_dist, 4)
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
+import logging
 from scripts.smc.types import (
     Direction,
     OrderIntentType,
@@ -159,32 +160,50 @@ class StrategyOrchestrator:
                     partial_hit = True
 
             if partial_hit:
-                pos.partial_closed = True
+                min_lot = 0.01
                 partial_lot = round(pos.lot_size * self.partial_tp_ratio, 2)
-                pos.lot_size = max(0.01, round(pos.lot_size - partial_lot, 2))
-                pos.remaining_ratio = 1.0 - self.partial_tp_ratio
-                intents.append(
-                    OrderIntent(
-                        intent_type=OrderIntentType.PARTIAL_CLOSE,
-                        direction=pos.direction,
-                        lot_size=partial_lot,
-                        reason=f"Partial TP hit (+{self.partial_tp_r}R): Closed {partial_lot} lots",
+                remaining = round(pos.lot_size - partial_lot, 2)
+                # Risk invariant: never invent residual via floor-up past true remaining.
+                if partial_lot < min_lot or remaining < min_lot:
+                    logger = logging.getLogger("smc.orchestrator")
+                    logger.warning(
+                        "Skip partial TP: cannot split lot safely "
+                        "(lot=%.4f partial=%.4f remaining=%.4f min=%.2f)",
+                        pos.lot_size,
+                        partial_lot,
+                        remaining,
+                        min_lot,
                     )
-                )
-                # Automatically lock in breakeven with be_buffer (ADR-018/ADR-024)
-                if not pos.be_moved:
-                    pos.be_moved = True
-                    be_price = round(pos.entry_price + (self.be_buffer if pos.direction == Direction.BUY else -self.be_buffer), 2)
-                    pos.sl_price = be_price
+                else:
+                    pos.partial_closed = True
+                    pos.lot_size = remaining
+                    pos.remaining_ratio = 1.0 - self.partial_tp_ratio
                     intents.append(
                         OrderIntent(
-                            intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                            intent_type=OrderIntentType.PARTIAL_CLOSE,
                             direction=pos.direction,
-                            limit_price=be_price,
-                            sl_price=be_price,
-                            reason=f"Partial TP reached: SL moved to Breakeven ({be_price})",
+                            lot_size=partial_lot,
+                            reason=f"Partial TP hit (+{self.partial_tp_r}R): Closed {partial_lot} lots",
                         )
                     )
+                    # Automatically lock in breakeven with be_buffer (ADR-018/ADR-024)
+                    if not pos.be_moved:
+                        pos.be_moved = True
+                        be_price = round(
+                            pos.entry_price
+                            + (self.be_buffer if pos.direction == Direction.BUY else -self.be_buffer),
+                            2,
+                        )
+                        pos.sl_price = be_price
+                        intents.append(
+                            OrderIntent(
+                                intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                                direction=pos.direction,
+                                limit_price=be_price,
+                                sl_price=be_price,
+                                reason=f"Partial TP reached: SL moved to Breakeven ({be_price})",
+                            )
+                        )
 
         # Breakeven Relocation (optional — foundation BaselinePlay keeps be_enabled=False)
         if self.be_enabled and not pos.be_moved:

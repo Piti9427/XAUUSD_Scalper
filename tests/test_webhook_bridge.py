@@ -279,6 +279,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         app.state.adapter.execute_intent = Mock(
             return_value=ExecutionResult(True, 42, "accepted")
         )
+        app.state.adapter.get_realized_pnl_for_order = Mock(return_value=0.0)
         client = TestClient(app)
         def setup(oid):
             return client.post(
@@ -418,6 +419,50 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             self.assertEqual(call_kwargs["pnl_dollar"], -150.0)
         finally:
             app.state.adapter.close()
+
+    def test_live_trade_closed_without_broker_pnl_rejects_tv_invent_halt(self):
+        """Live close must not halt/notify on TradingView cash when broker cashflow miss."""
+        import os
+        from scripts.webhook_bridge import create_app
+        from scripts.smc.mt5_adapter import ExecutionResult
+
+        halt_path = self.db_path + ".halt_no_broker_pnl.json"
+        app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_no_broker_pnl",
+            risk_pct=0.01,
+            risk_halt_path=halt_path,
+            max_daily_losses=2,
+        )
+        app.state.adapter.dry_run = False
+        app.state.adapter.execute_intent = Mock(
+            return_value=ExecutionResult(True, 999888, "Closed on broker")
+        )
+        app.state.adapter.get_open_exposure = Mock(return_value=[])
+        app.state.adapter.get_realized_pnl_for_order = Mock(return_value=None)
+        try:
+            client = TestClient(app)
+            res = client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": "TV_INVENT_LOSS",
+                    "reason": "SL_HIT",
+                    "pnl_dollar": -200.0,
+                    "pnl_r": -1.0,
+                },
+                headers=self.headers,
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data["status"], "reconcile_required")
+            self.assertIsNone(data["pnl_dollar"])
+            self.assertEqual(app.state.risk_halt.net_losing_trades_today, 0)
+        finally:
+            app.state.adapter.close()
+            if os.path.exists(halt_path):
+                os.unlink(halt_path)
 
     def test_live_setup_broker_rejection_frees_inbox_for_subsequent_setup(self):
         from scripts.webhook_bridge import create_app
@@ -561,12 +606,15 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades_scaleout.db")
         self.secret_token = "TEST_SECRET_TOKEN_789"
+        # Explicit opt-in: foundation defaults keep partial/BE off.
         self.app = create_app(
             auth_token=self.secret_token,
             dry_run=True,
             db_path=self.db_path,
             account_balance=10000.0,
             risk_pct=0.01,
+            partial_tp_enabled=True,
+            be_enabled=True,
         )
         self.client = TestClient(self.app)
         self.headers = {"Authorization": f"Bearer {self.secret_token}"}
@@ -575,6 +623,58 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         if hasattr(self.app.state, "adapter") and self.app.state.adapter:
             self.app.state.adapter.close()
         self.temp_dir.cleanup()
+
+    def test_tp1_rejected_when_foundation_partial_be_disabled(self):
+        import tempfile
+        import os
+        from scripts.webhook_bridge import create_app
+
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            app = create_app(
+                auth_token=self.secret_token,
+                dry_run=True,
+                db_path=os.path.join(tmp.name, "foundation.db"),
+                account_balance=10000.0,
+                # defaults: partial_tp_enabled=False, be_enabled=False
+            )
+            client = TestClient(app)
+            res = client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TP1_HIT_MOVE_BE",
+                    "order_id": "FOUNDATION_NO_TP1",
+                    "entry": 4050.0,
+                    "new_sl": 4050.1,
+                    "dir": "BUY",
+                },
+                headers=self.headers,
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data["status"], "rejected")
+            self.assertIn("partial_tp_enabled", data["reason"])
+            self.assertIn("be_enabled", data["reason"])
+            app.state.adapter.close()
+        finally:
+            tmp.cleanup()
+
+    def test_tp1_rejects_new_sl_off_breakeven_band(self):
+        res = self.client.post(
+            "/webhook/tradingview",
+            json={
+                "event": "TP1_HIT_MOVE_BE",
+                "order_id": "BAD_BE_SL",
+                "entry": 4050.0,
+                "new_sl": 4100.0,  # unconstrained invent BE
+                "dir": "BUY",
+            },
+            headers=self.headers,
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("new_sl", data["reason"])
 
     def test_order_filled_and_tp1_partial_close_and_be(self):
         # 1. Place limit

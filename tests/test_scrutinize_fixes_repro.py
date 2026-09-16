@@ -169,6 +169,8 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
             dry_run=True,
             db_path=self.db_path,
             notifier=mock_notifier,
+            partial_tp_enabled=True,
+            be_enabled=True,
         )
         client = TestClient(app)
         headers = {"Authorization": "Bearer NOTIF_SECRET"}

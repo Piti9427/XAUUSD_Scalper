@@ -89,6 +89,9 @@ def main():
     order_ttl_bars = strategy_cfg.get("order_ttl_bars", 4)
     if order_ttl_bars is not None:
         order_ttl_bars = int(order_ttl_bars)
+    partial_tp_enabled = bool(strategy_cfg.get("partial_tp_enabled", False))
+    be_enabled = bool(strategy_cfg.get("be_enabled", False))
+    be_buffer = float(strategy_cfg.get("be_buffer", 0.10))
 
     news_mgr = NewsManager()
     # Unknown schedule blocks new risk / cancels pendings until operator loads events.
@@ -138,6 +141,9 @@ def main():
         max_hold_bars=max_hold_bars,
         bar_minutes=bar_minutes,
         order_ttl_bars=order_ttl_bars,
+        partial_tp_enabled=partial_tp_enabled,
+        be_enabled=be_enabled,
+        be_buffer=be_buffer,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

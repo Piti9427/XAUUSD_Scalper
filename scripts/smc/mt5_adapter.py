@@ -908,6 +908,11 @@ class SMCExecutionAdapter:
                                 intent.ticket,
                                 "Cannot resolve type_filling for market close",
                             )
+                        close_comment = (
+                            f"SMC_{intent.order_id}"
+                            if intent.order_id
+                            else (getattr(pos, "comment", "") or BOT_COMMENT_PREFIX)
+                        )
                         req = {
                             "action": mt5.TRADE_ACTION_DEAL,
                             "position": pos.ticket,
@@ -917,6 +922,7 @@ class SMCExecutionAdapter:
                             "price": price,
                             "deviation": 20,
                             "type_filling": deal_filling,
+                            "comment": close_comment[:31],
                         }
                         result = mt5.order_send(req)
                         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
