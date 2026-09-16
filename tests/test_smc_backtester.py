@@ -242,6 +242,17 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertFalse(result.provenance.ok)
         self.assertEqual(result.sample_verdict, "DATA_PROXY_FEED")
 
+    def test_mixed_dev_holdout_bars_refuse_evaluable(self):
+        # Graft a holdout-day bar onto an otherwise development tape.
+        hold = self.df_m5.iloc[:5].copy()
+        hold["time"] = [
+            datetime(2026, 7, 1, 12, i * 5, tzinfo=timezone.utc) for i in range(5)
+        ]
+        mixed = pd.concat([self.df_m5, hold], ignore_index=True)
+        result = SMCBacktester(require_choch=False).run(mixed, self.df_h1)
+        self.assertIsNone(result.eval_window)
+        self.assertIn("refuse_merge", result.sample_verdict)
+
 
 if __name__ == "__main__":
     unittest.main()

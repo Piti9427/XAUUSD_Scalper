@@ -20,6 +20,7 @@ from scripts.smc.replay_report import ReplayKind, ReplayReport, build_replay_rep
 from scripts.smc.cost_accounting import CostAccountingReport, summarize_profit_layers
 from scripts.smc.stats_protocol import WilsonInterval, sample_verdict, wilson_interval
 from scripts.smc.provenance import ProvenanceReport, classify_dataset_provenance
+from scripts.smc.eval_windows import assert_single_window_or_reason
 
 
 @dataclass
@@ -42,6 +43,7 @@ class BacktestSummary:
     sample_verdict: Optional[str] = None
     wilson: Optional[WilsonInterval] = None
     provenance: Optional[ProvenanceReport] = None
+    eval_window: Optional[str] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -461,9 +463,13 @@ class SMCBacktester:
             is_proxy=self.is_proxy_feed,
             source_label=self.source_label,
         )
+        # Gate D: refuse a single sample that mixes development + holdout bars.
+        eval_window, window_reason = assert_single_window_or_reason(list(m5["time"]))
         verdict = sample_verdict(n=scored_n)
         if not provenance.ok:
             verdict = provenance.code
+        elif eval_window is None:
+            verdict = window_reason
         wilson = wilson_interval(wins=winning_trades, n=scored_n) if scored_n > 0 else None
 
         return BacktestSummary(
@@ -485,6 +491,7 @@ class SMCBacktester:
             sample_verdict=verdict,
             wilson=wilson,
             provenance=provenance,
+            eval_window=eval_window,
         )
 
 
