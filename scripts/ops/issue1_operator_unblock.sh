@@ -42,8 +42,10 @@ fi
 echo ""
 
 echo "==> 3) After smoke ok:true, still required before closing #1"
-echo "    - Oracle soak completed JSON matching docs/ops/*-oracle-soak*.json"
-echo "    - Demo 12w start JSON matching docs/ops/*-demo-12w-start*.json"
+echo "    - Oracle soak: copy docs/ops/oracle-soak-result.template.json → docs/ops/<date>-oracle-soak.json"
+echo "      set completed=true + infra_status + host (never invent PASS_INFRA)"
+echo "    - Demo 12w: copy docs/ops/demo-12w-start.template.json → docs/ops/<date>-demo-12w-start.json"
+echo "      set started=true + start_utc + rule_commit_sha + account identity"
 echo "    - Refresh: python3 scripts/ops/issue1_live_gate_readiness.py  (issue1_closable must become true)"
 echo ""
 

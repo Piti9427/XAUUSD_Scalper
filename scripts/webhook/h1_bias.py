@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Callable, Mapping, Optional, Tuple
 
 
 def parse_h1_bias_fields(payload: Optional[Mapping[str, Any]]) -> Tuple[Optional[str], bool]:
@@ -37,6 +37,24 @@ def coalesce_h1_bias(
     h1_bias, h1_bias_known = parse_h1_bias_fields(payload)
     if h1_bias_known:
         return h1_bias, True
+    if live_known:
+        return live_bias, True
+    return None, False
+
+
+def resolve_h1_bias_lazy(
+    payload: Optional[Mapping[str, Any]],
+    live_resolver: Callable[[], Tuple[Optional[str], bool]],
+) -> Tuple[Optional[str], bool]:
+    """
+    Use payload bias when known; only call live_resolver as fallback.
+
+    Avoids MT5 H1 copy_rates when TradingView/cron already supplied bias.
+    """
+    h1_bias, h1_bias_known = parse_h1_bias_fields(payload)
+    if h1_bias_known:
+        return h1_bias, True
+    live_bias, live_known = live_resolver()
     if live_known:
         return live_bias, True
     return None, False

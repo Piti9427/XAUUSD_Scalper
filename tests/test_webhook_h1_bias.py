@@ -46,6 +46,37 @@ class TestParseH1BiasFields(unittest.TestCase):
         self.assertEqual(bias, "SELL")
         self.assertTrue(known)
 
+    def test_lazy_skips_live_resolver_when_payload_known(self):
+        from scripts.webhook.h1_bias import resolve_h1_bias_lazy
+
+        calls = {"n": 0}
+
+        def live():
+            calls["n"] += 1
+            return ("SELL", True)
+
+        bias, known = resolve_h1_bias_lazy(
+            {"h1_bias": "BUY", "h1_bias_known": True},
+            live,
+        )
+        self.assertEqual(bias, "BUY")
+        self.assertTrue(known)
+        self.assertEqual(calls["n"], 0)
+
+    def test_lazy_calls_live_when_payload_unknown(self):
+        from scripts.webhook.h1_bias import resolve_h1_bias_lazy
+
+        calls = {"n": 0}
+
+        def live():
+            calls["n"] += 1
+            return ("SELL", True)
+
+        bias, known = resolve_h1_bias_lazy({}, live)
+        self.assertEqual(bias, "SELL")
+        self.assertTrue(known)
+        self.assertEqual(calls["n"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

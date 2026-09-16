@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T10:10:17.262668+00:00",
-  "git_head": "b6cc53cfdb52c0da4a8397869f172bc9f576a83c",
+  "captured_at_utc": "2026-09-16T10:15:52.243613+00:00",
+  "git_head": "73087f35ec8f0e10e84c38760762e189d8bfd67c",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -21,11 +21,15 @@
   },
   "gate_c_oracle_soak": {
     "checklist_present": true,
-    "completed_artifact_present": false
+    "completed_artifact_present": false,
+    "artifact": null,
+    "template": "docs/ops/oracle-soak-result.template.json"
   },
   "gate_d_demo_12w": {
     "protocol_present": true,
     "start_artifact_present": false,
+    "artifact": null,
+    "template": "docs/ops/demo-12w-start.template.json",
     "note": "Do not invent a start artifact; operator fills after Gates B/C."
   },
   "operator_blockers": {

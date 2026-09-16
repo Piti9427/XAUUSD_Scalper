@@ -74,6 +74,81 @@ class Issue1LiveGateReadinessTests(unittest.TestCase):
         artifact = ROOT / "docs" / "ops" / "2026-09-16-exness-smoke-mac-probe.json"
         self.assertTrue(artifact.is_file())
 
+    def test_oracle_soak_rejects_template_and_placeholders(self):
+        from scripts.ops import issue1_live_gate_readiness as mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs_ops = root / "docs" / "ops"
+            docs_ops.mkdir(parents=True)
+            (docs_ops / "oracle-soak-result.template.json").write_text(
+                json.dumps({"completed": True, "infra_status": "PASS_INFRA"}),
+                encoding="utf-8",
+            )
+            (docs_ops / "2026-09-16-oracle-soak-fake.json").write_text(
+                json.dumps(
+                    {
+                        "captured_at_utc": "TBD",
+                        "host": "TBD",
+                        "infra_status": "PASS_INFRA",
+                        "completed": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with mock.patch.object(mod, "ROOT", root):
+                ok, art = mod._scan_oracle_soak()
+            self.assertFalse(ok)
+            self.assertIsNone(art)
+
+    def test_oracle_soak_accepts_completed_non_placeholder(self):
+        from scripts.ops import issue1_live_gate_readiness as mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs_ops = root / "docs" / "ops"
+            docs_ops.mkdir(parents=True)
+            path = docs_ops / "2026-09-16-oracle-soak.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "captured_at_utc": "2026-09-16T12:00:00+00:00",
+                        "host": "oracle-arm64-demo",
+                        "infra_status": "PASS_INFRA",
+                        "completed": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with mock.patch.object(mod, "ROOT", root):
+                ok, art = mod._scan_oracle_soak()
+            self.assertTrue(ok)
+            self.assertTrue(str(art).endswith("2026-09-16-oracle-soak.json"))
+
+    def test_demo_12w_start_rejects_unstarted_template_values(self):
+        from scripts.ops import issue1_live_gate_readiness as mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs_ops = root / "docs" / "ops"
+            docs_ops.mkdir(parents=True)
+            (docs_ops / "2026-09-16-demo-12w-start.json").write_text(
+                json.dumps(
+                    {
+                        "start_utc": "TBD",
+                        "rule_commit_sha": "abc",
+                        "account_login": "123",
+                        "account_server": "Exness",
+                        "started": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with mock.patch.object(mod, "ROOT", root):
+                ok, art = mod._scan_demo_12w_start()
+            self.assertFalse(ok)
+            self.assertIsNone(art)
+
 
 if __name__ == "__main__":
     unittest.main()

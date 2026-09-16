@@ -25,7 +25,7 @@ from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
 from scripts.webhook.auth import make_verify_auth
-from scripts.webhook.h1_bias import coalesce_h1_bias
+from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.idempotency import make_idempotency_helpers
 from scripts.smc.setup_identity import SetupRegistry, load_setup_registry, pending_h1_bias_allows
 
@@ -331,9 +331,10 @@ def create_app(
 
         # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
         # Prefer explicit clock JSON; else live MT5 resolve (Gate C cron empty body).
-        live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
-        h1_bias, h1_bias_known = coalesce_h1_bias(
-            clock_payload, live_bias, live_known
+        h1_bias, h1_bias_known = await asyncio.to_thread(
+            resolve_h1_bias_lazy,
+            clock_payload,
+            adapter.resolve_live_h1_bias,
         )
         if h1_bias_known:
             pending_ids = await asyncio.to_thread(adapter.list_unfilled_pendings)
@@ -874,8 +875,11 @@ def create_app(
 
             # Scenario 8: invalidation before submission on known opposing H1 bias.
             # Prefer TV payload fields; else live MT5 resolve (Gate C when TV omits bias).
-            live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
-            h1_bias, h1_bias_known = coalesce_h1_bias(payload, live_bias, live_known)
+            h1_bias, h1_bias_known = await asyncio.to_thread(
+                resolve_h1_bias_lazy,
+                payload,
+                adapter.resolve_live_h1_bias,
+            )
             if h1_bias_known:
                 bias_ok, bias_reason = pending_h1_bias_allows(
                     pending_direction=direction,

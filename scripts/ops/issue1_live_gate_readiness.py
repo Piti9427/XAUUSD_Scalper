@@ -94,8 +94,75 @@ def _utm_app_present() -> bool:
     return Path("/Applications/UTM.app").is_dir()
 
 
+_ORACLE_SOAK_STATUSES = frozenset({"PASS_INFRA", "FAIL_INFRA", "INCONCLUSIVE_INFRA"})
+_PLACEHOLDER_MARKERS = frozenset({"", "TBD", "TODO", "REPLACE_ME", "null", "None"})
+
+
+def _is_filled(value: object) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip()
+    return text not in _PLACEHOLDER_MARKERS
+
+
+def _scan_oracle_soak() -> tuple[bool, str | None]:
+    """
+    Completed soak only when JSON has infra status + non-placeholder evidence fields.
+
+    Mere presence of *-oracle-soak*.json (or a template) does not invent completion.
+    """
+    ops = ROOT / "docs" / "ops"
+    candidates = sorted(ops.glob("*-oracle-soak*.json"), key=lambda p: p.stat().st_mtime)
+    for path in reversed(candidates):
+        if "template" in path.name.lower():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        status = str(payload.get("infra_status") or payload.get("status") or "").strip()
+        if status not in _ORACLE_SOAK_STATUSES:
+            continue
+        if not _is_filled(payload.get("captured_at_utc")):
+            continue
+        if not _is_filled(payload.get("host") or payload.get("vm_image")):
+            continue
+        if payload.get("completed") is not True:
+            continue
+        return True, str(path.relative_to(ROOT))
+    return False, None
+
+
+def _scan_demo_12w_start() -> tuple[bool, str | None]:
+    """Demo start only when UTC start + rule SHA + account identity are filled."""
+    ops = ROOT / "docs" / "ops"
+    candidates = sorted(ops.glob("*-demo-12w-start*.json"), key=lambda p: p.stat().st_mtime)
+    for path in reversed(candidates):
+        if "template" in path.name.lower():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        required = (
+            payload.get("start_utc"),
+            payload.get("rule_commit_sha") or payload.get("git_head"),
+            payload.get("account_login") or payload.get("login"),
+            payload.get("account_server") or payload.get("server"),
+        )
+        if all(_is_filled(v) for v in required) and payload.get("started") is True:
+            return True, str(path.relative_to(ROOT))
+    return False, None
+
+
 def main() -> int:
     smoke_ok, smoke_pass, smoke_latest = _scan_exness_smoke()
+    soak_ok, soak_artifact = _scan_oracle_soak()
+    demo_ok, demo_artifact = _scan_demo_12w_start()
 
     host_hunt = "docs/ops/2026-09-16-host-reachability-hunt.json"
     coverage = "docs/ops/2026-09-16-issue1-scenario-coverage.json"
@@ -124,17 +191,17 @@ def main() -> int:
             "checklist_present": _exists(
                 "docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md"
             ),
-            "completed_artifact_present": any(
-                (ROOT / "docs" / "ops").glob("*-oracle-soak*.json")
-            ),
+            "completed_artifact_present": soak_ok,
+            "artifact": soak_artifact,
+            "template": "docs/ops/oracle-soak-result.template.json",
         },
         "gate_d_demo_12w": {
             "protocol_present": _exists(
                 "docs/ops/2026-09-16-foundation-demo-12w-protocol.md"
             ),
-            "start_artifact_present": any(
-                (ROOT / "docs" / "ops").glob("*-demo-12w-start*.json")
-            ),
+            "start_artifact_present": demo_ok,
+            "artifact": demo_artifact,
+            "template": "docs/ops/demo-12w-start.template.json",
             "note": "Do not invent a start artifact; operator fills after Gates B/C.",
         },
         "operator_blockers": {

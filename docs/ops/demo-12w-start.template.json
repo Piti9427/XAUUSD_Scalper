@@ -1,0 +1,10 @@
+{
+  "start_utc": "TBD",
+  "rule_commit_sha": "TBD",
+  "account_login": "TBD",
+  "account_server": "TBD",
+  "started": false,
+  "protocol": "docs/ops/2026-09-16-foundation-demo-12w-protocol.md",
+  "preconditions_met": false,
+  "notes": "Copy to docs/ops/<date>-demo-12w-start.json after Gates B/C. Set started=true only with real Demo start — never invent."
+}
