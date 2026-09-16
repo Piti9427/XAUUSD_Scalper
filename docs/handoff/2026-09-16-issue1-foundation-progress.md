@@ -71,6 +71,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Trading vs operating profit on backtest summary (story 41) | **Done:** backtester `cost_report` via `summarize_profit_layers` |
 | Frozen sample/Wilson on backtest summary (stories 42–43) | **Done:** `sample_verdict` + `wilson_interval` attached; few trades → INCONCLUSIVE |
 | Nearest pool TP min-R / consumed (scenario 7) | **Done:** `tests/test_smc_liquidity_tp.py` covers nearest-not-farther, R&lt;1.5 reject, consumed skip |
+| Live-gate readiness snapshot (no invent PASS) | **Done:** `scripts/ops/issue1_live_gate_readiness.py` → `docs/ops/2026-09-16-issue1-live-gate-readiness.json` (`issue1_closable:false` until real artifacts) |
 
 ## Still open for issue #1
 
