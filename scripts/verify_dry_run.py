@@ -6,15 +6,24 @@ Runs end-to-end verification of the FastAPI ASGI app without external network de
 import sys
 import os
 import tempfile
+from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 
 # Ensure project root is on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.webhook_bridge import create_app
 
+
+def _fresh_time(offset_minutes: int = 0) -> str:
+    """Wall-clock UTC string so story-32 admission does not treat fixtures as stale."""
+    return (datetime.now(timezone.utc) - timedelta(minutes=offset_minutes)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+
 def run_verification():
     print("=" * 60)
-    print("🧪 Starting End-to-End Dry-Run Verification...")
+    print("Starting End-to-End Dry-Run Verification...")
     print("=" * 60)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -57,12 +66,12 @@ def run_verification():
             "tp1": 2655.00,
             "tp2": 2662.50,
             "ttl": 4,
-            "time": "2026-09-14 10:00:00",
+            "time": _fresh_time(2),
         }
         res = client.post("/webhook/tradingview", json=payload_setup, headers=headers)
         assert res.status_code == 200, f"SETUP_PENDING failed: {res.text}"
         data = res.json()
-        assert data["status"] == "success"
+        assert data["status"] == "success", data
         assert data["action"] == "LIMIT_PLACED"
         assert data["lot_size"] == 0.20, f"Expected 0.20 lots, got {data['lot_size']}"
         assert data["ticket"] is not None
@@ -88,15 +97,15 @@ def run_verification():
             "sl": 2645.00,
             "tp1": 2655.00,
             "tp2": 2662.50,
-            "time": "2026-09-14 10:15:00",
+            "time": _fresh_time(1),
         }
         res = client.post("/webhook/tradingview", json=payload_fill, headers=headers)
         assert res.status_code == 200
         assert res.json()["status"] == "success"
         print("  -> ORDER_FILLED OK: active trade synchronized")
 
-        # 5. TP1_HIT_MOVE_BE (Partial Close 50% + SL to BE)
-        print("[5/8] Verifying TP1_HIT_MOVE_BE (Partial Scale-Out & Breakeven)...")
+        # 5. TP1_HIT_MOVE_BE blocked under foundation BaselinePlay defaults
+        print("[5/8] Verifying TP1_HIT_MOVE_BE rejected when partial/BE disabled...")
         payload_tp1 = {
             "event": "TP1_HIT_MOVE_BE",
             "order_id": "VERIFY_XAU_01",
@@ -106,15 +115,14 @@ def run_verification():
             "close_percent": 50,
             "entry": 2650.00,
             "new_sl": 2650.10,
-            "time": "2026-09-14 10:30:00",
+            "time": _fresh_time(0),
         }
         res = client.post("/webhook/tradingview", json=payload_tp1, headers=headers)
         assert res.status_code == 200
         data_tp1 = res.json()
-        assert data_tp1["status"] == "success"
-        assert data_tp1["action"] == "PARTIAL_CLOSE_AND_BE_MOVED"
-        assert data_tp1["new_sl"] == 2650.10
-        print("  -> TP1_HIT_MOVE_BE OK: 50% scale-out simulated, SL moved to BE (+0.10 buffer)")
+        assert data_tp1["status"] == "rejected", data_tp1
+        assert "partial_tp_enabled=False" in data_tp1["reason"]
+        print("  -> TP1_HIT_MOVE_BE correctly blocked under foundation defaults")
 
         # 6. TRADE_CLOSED (Runner TP2 Hit)
         print("[6/8] Verifying TRADE_CLOSED Event (TP2 Runner Hit)...")
@@ -122,10 +130,10 @@ def run_verification():
             "event": "TRADE_CLOSED",
             "order_id": "VERIFY_XAU_01",
             "symbol": "XAUUSD",
-            "reason": "FULL TP2 HIT (+2.5R) 🎯",
+            "reason": "FULL TP2 HIT (+2.5R)",
             "pnl_r": 2.5,
             "pnl_dollar": 250.0,
-            "time": "2026-09-14 11:00:00",
+            "time": _fresh_time(0),
         }
         res = client.post("/webhook/tradingview", json=payload_closed, headers=headers)
         assert res.status_code == 200
@@ -144,15 +152,17 @@ def run_verification():
             "dir": "SELL",
             "limit": 2670.00,
             "sl": 2675.00,
-            "time": "2026-09-14 12:00:00",
+            "time": _fresh_time(0),
         }
-        client.post("/webhook/tradingview", json=payload_setup2, headers=headers)
+        setup2 = client.post("/webhook/tradingview", json=payload_setup2, headers=headers)
+        assert setup2.status_code == 200
+        assert setup2.json()["status"] == "success", setup2.json()
         payload_cancel = {
             "event": "ORDER_CANCELED",
             "order_id": "VERIFY_XAU_02",
             "symbol": "XAUUSD",
             "reason": "TTL_EXPIRED (4 bars elapsed)",
-            "time": "2026-09-14 13:00:00",
+            "time": _fresh_time(0),
         }
         res = client.post("/webhook/tradingview", json=payload_cancel, headers=headers)
         assert res.status_code == 200
@@ -164,8 +174,12 @@ def run_verification():
         print("[8/8] Verifying Daily Circuit Breaker Guard (ADR-011)...")
         adapter = app.state.adapter
         # Simulate 2 consecutive losses today in SQLite
-        adapter.log_lifecycle_event(event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 1")
-        adapter.log_lifecycle_event(event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 2")
+        adapter.log_lifecycle_event(
+            event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 1"
+        )
+        adapter.log_lifecycle_event(
+            event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 2"
+        )
         payload_setup3 = {
             "event": "SETUP_PENDING",
             "order_id": "VERIFY_XAU_03",
@@ -173,22 +187,23 @@ def run_verification():
             "dir": "BUY",
             "limit": 2650.00,
             "sl": 2645.00,
-            "time": "2026-09-14 14:00:00",
+            "time": _fresh_time(0),
         }
         res = client.post("/webhook/tradingview", json=payload_setup3, headers=headers)
         assert res.status_code == 200
         data_cb = res.json()
         assert data_cb["status"] == "rejected"
         assert "Circuit Breaker" in data_cb["reason"]
-        print(f"  -> Circuit Breaker OK: 3rd trade successfully blocked after 2 daily losses")
+        print("  -> Circuit Breaker OK: 3rd trade successfully blocked after 2 daily losses")
 
         # Cleanup adapter
         if hasattr(app.state, "adapter") and app.state.adapter:
             app.state.adapter.close()
 
     print("=" * 60)
-    print("✅ ALL 8 DRY-RUN VERIFICATION GATES PASSED 100%!")
+    print("ALL 8 DRY-RUN VERIFICATION GATES PASSED 100%!")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     run_verification()
