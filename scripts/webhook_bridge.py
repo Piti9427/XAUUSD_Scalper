@@ -141,7 +141,8 @@ def create_app(
         """
         from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
         from scripts.smc.clock_exit import OpenFill, plan_clock_time_exits
-        from scripts.smc.notification_policy import may_notify_close
+        from scripts.smc.notification_policy import may_notify_close, may_notify_execution
+        from scripts.smc.types import Position as PosCard
 
         now_utc = datetime.now(timezone.utc)
         cancel_results = []
@@ -173,10 +174,49 @@ def create_app(
             )
             await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
 
+        for fill_row in lifecycle.get("broker_fills", []):
+            order_id = fill_row.get("order_id")
+            if not order_id:
+                continue
+            await asyncio.to_thread(mark_processed, order_id, "ORDER_FILLED", "success")
+            if not (notifier and getattr(notifier, "enabled", False)):
+                continue
+            if not may_notify_execution(success=True, status="FILLED"):
+                continue
+            try:
+                from scripts.smc.notifier import format_order_filled_card
+
+                geom = await asyncio.to_thread(adapter.get_fill_geometry, order_id)
+                if not geom or not geom.get("entry_price") or not geom.get("sl_price"):
+                    continue
+                entry = float(geom["entry_price"])
+                sl = float(geom["sl_price"])
+                lot = float(geom.get("lot_size") or 0.0) or 0.01
+                dir_raw = str(geom.get("direction") or "BUY").upper()
+                fill_dir = Direction.BUY if dir_raw == "BUY" else Direction.SELL
+                pos_card = PosCard(
+                    direction=fill_dir,
+                    entry_price=entry,
+                    sl_price=sl,
+                    tp_price=0.0,
+                    lot_size=lot,
+                    open_time=now_utc,
+                    initial_sl_distance=abs(entry - sl),
+                )
+                background_tasks.add_task(
+                    _dispatch_tg_safe, format_order_filled_card(pos_card)
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Lifecycle fill notify failed for %s: %s", order_id, exc
+                )
+
         for close in lifecycle.get("broker_closes", []):
             order_id = close.get("order_id")
             pnl_dollar = close.get("pnl_dollar")
             pnl_r = close.get("pnl_r")
+            if order_id:
+                await asyncio.to_thread(mark_processed, order_id, "TRADE_CLOSED", "success")
             if (
                 notifier
                 and getattr(notifier, "enabled", False)

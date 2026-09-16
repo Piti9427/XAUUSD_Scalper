@@ -1559,6 +1559,38 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         ]
         self.assertEqual(len(closed_rows), 1)
 
+    def test_clock_marks_order_filled_processed_after_lifecycle_fill(self):
+        from unittest.mock import patch
+
+        adapter = self.app.state.adapter
+        adapter.claim_setup({"order_id": "LC_FILL_1", "limit": 4050.0})
+        adapter.update_setup_status("LC_FILL_1", "accepted", ticket=42)
+        fake_lifecycle = {
+            "ttl_cancels": [],
+            "broker_fills": [{"order_id": "LC_FILL_1", "ticket": 42}],
+            "broker_closes": [],
+        }
+        with patch(
+            "scripts.smc.broker_lifecycle.reconcile_broker_lifecycle",
+            return_value=fake_lifecycle,
+        ):
+            res = self.client.post("/internal/clock", headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(adapter.is_webhook_processed("LC_FILL_1", "ORDER_FILLED"))
+        dup = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "ORDER_FILLED",
+                "order_id": "LC_FILL_1",
+                "dir": "BUY",
+                "entry": 4050.0,
+                "sl": 4045.0,
+                "lot_size": 0.01,
+            },
+        )
+        self.assertEqual(dup.json()["status"], "ignored_duplicate")
+
     def test_trade_closed_uses_frozen_initial_r_from_fill_geometry(self):
         """Dollar PnL + entry/SL/lot → R uses frozen initial denominator."""
         res = self.client.post(

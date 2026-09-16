@@ -59,6 +59,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Broker lifecycle reconciler (TTL / fill / close) | `scripts/smc/broker_lifecycle.py`; webhook `POST /internal/clock`; `tests/test_smc_broker_lifecycle.py` |
 | Clock tick updates risk_halt on broker-only closes | `apply_broker_lifecycle_losses`; `tests/test_smc_risk_halt.py` |
 | TRADE_CLOSED idempotent after lifecycle reconcile | `webhook_bridge` skips duplicate close + double loss count; `test_trade_closed_webhook_skipped_when_lifecycle_already_logged` |
+| Lifecycle fill → ORDER_FILLED notify + idempotent TV | clock marks `ORDER_FILLED` processed + fill card; `test_clock_marks_order_filled_processed_after_lifecycle_fill` |
 
 ## Still open for issue #1
 
