@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T10:24:32.581287+00:00",
-  "git_head": "09afb17296ce7f52a27ec62c326f7dd24db927c9",
+  "captured_at_utc": "2026-09-16T15:44:33.188665+00:00",
+  "git_head": "0c8852424db2f50073b8dadc8382707088baf774",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -33,7 +33,7 @@
     "note": "Do not invent a start artifact; operator fills after Gates B/C."
   },
   "operator_blockers": {
-    "gh_auth_ok": false,
+    "gh_auth_ok": true,
     "host_reachability_artifact": "docs/ops/2026-09-16-host-reachability-hunt.json",
     "utm_app_present": true,
     "utm_app_present_no_vms": true,

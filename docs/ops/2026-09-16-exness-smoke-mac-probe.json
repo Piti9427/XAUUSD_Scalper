@@ -1,9 +1,9 @@
 {
-  "captured_at_utc": "2026-09-16T10:15:52.398066+00:00",
+  "captured_at_utc": "2026-09-16T15:44:34.278002+00:00",
   "host": "mac",
-  "git_head": "73087f35ec8f0e10e84c38760762e189d8bfd67c",
+  "git_head": "0c8852424db2f50073b8dadc8382707088baf774",
   "ok": false,
-  "path_resolved": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+  "path_resolved": null,
   "account_kwargs_complete": false,
   "package": "missing:No module named 'MetaTrader5'",
   "blocker": "MetaTrader5 package missing on this Mac venv; run Gate C on Windows/Wine Exness Demo host via ./scripts/ops/foundation_live_gate.sh"
