@@ -173,10 +173,18 @@ def create_app(
         if event == "SETUP_PENDING":
             # 1a0. Persistent foundation risk halt (5% DD / daily gates)
             if risk_halt is not None and halt_path is not None:
+                equity_raw = await asyncio.to_thread(adapter.get_account_equity)
+                # Dry-run uses configured balance; live must see broker equity or stay blocked.
+                history_ready = adapter.dry_run or equity_raw is not None
                 equity_now = (
-                    await asyncio.to_thread(adapter.get_account_equity)
-                ) or account_balance
-                observe_equity(risk_halt, equity_now, now=datetime.now(timezone.utc))
+                    float(equity_raw) if equity_raw is not None else float(account_balance)
+                )
+                observe_equity(
+                    risk_halt,
+                    equity_now,
+                    now=datetime.now(timezone.utc),
+                    history_ready=history_ready,
+                )
                 await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
                 if risk_halt.halted:
                     # Story 10: request cancel/close of bot-owned exposure, then block new risk.
@@ -203,7 +211,8 @@ def create_app(
                     reason = (
                         "Foundation risk halt active: "
                         f"dd={risk_halt.drawdown_halt} daily={risk_halt.daily_equity_halt} "
-                        f"losses_today={risk_halt.net_losing_trades_today}"
+                        f"losses_today={risk_halt.net_losing_trades_today} "
+                        f"history_ready={risk_halt.history_ready}"
                     )
                     logger.warning(reason)
                     if order_id:

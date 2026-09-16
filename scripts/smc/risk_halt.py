@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -17,10 +17,16 @@ class RiskHaltState:
     drawdown_halt: bool = False
     daily_equity_halt: bool = False
     net_losing_trades_today: int = 0
+    history_ready: bool = True
 
     @property
     def halted(self) -> bool:
-        return self.drawdown_halt or self.daily_equity_halt or self.net_losing_trades_today >= 2
+        return (
+            (not self.history_ready)
+            or self.drawdown_halt
+            or self.daily_equity_halt
+            or self.net_losing_trades_today >= 2
+        )
 
 
 def _utc_today(now: Optional[datetime] = None) -> str:
@@ -38,6 +44,7 @@ def new_risk_halt_state(equity: float, now: Optional[datetime] = None) -> RiskHa
         high_water_equity=float(equity),
         day_start_equity=float(equity),
         day_utc=day,
+        history_ready=True,
     )
 
 
@@ -48,13 +55,22 @@ def observe_equity(
     now: Optional[datetime] = None,
     drawdown_pct: float = 0.05,
     daily_decline_pct: float = 0.01,
+    history_ready: bool = True,
 ) -> RiskHaltState:
     """
     Update high-water / daily equity gates.
 
     Drawdown halt persists across days/restarts once tripped.
     Daily equity halt resets only on a new UTC day together with losing-trade count.
+
+    Incomplete/stale account history must not invent a fresh day start, zero the
+    losing-trade count, or collapse the high-water mark. New risk stays blocked
+    until history_ready is true again.
     """
+    state.history_ready = bool(history_ready)
+    if not state.history_ready:
+        return state
+
     day = _utc_today(now)
     equity = float(equity)
     if day != state.day_utc:
@@ -94,4 +110,6 @@ def load_risk_halt_state(path: Path) -> Optional[RiskHaltState]:
     if not path.is_file():
         return None
     raw = json.loads(path.read_text())
-    return RiskHaltState(**raw)
+    allowed = {f.name for f in fields(RiskHaltState)}
+    filtered = {k: v for k, v in raw.items() if k in allowed}
+    return RiskHaltState(**filtered)

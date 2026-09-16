@@ -19,7 +19,7 @@ from scripts.smc.risk_halt import (
     save_risk_halt_state,
 )
 from scripts.smc.halt_actions import plan_halt_flatten_intents
-from scripts.smc.chart import generate_setup_chart
+from scripts.smc.warmup import H1_WARMUP_BARS, h1_warmup_ok
 from pathlib import Path
 from scripts.smc.notifier import (
     SMCTelegramNotifier,
@@ -125,9 +125,9 @@ async def run_smc_live_copilot():
             elif dry_run:
                 current_spread = 0.15
 
-            # 6. Fetch Multi-Timeframe Candles (500 M5 bars = ~41 hours to cover Asian Range & PDH/PDL)
+            # 6. Fetch Multi-Timeframe Candles (M5 covers Asian/PDH-PDL; H1 uses locked warmup)
             df_m5 = connector.get_candles(symbol, "M5", 500)
-            df_h1 = connector.get_candles(symbol, "H1", 250)
+            df_h1 = connector.get_candles(symbol, "H1", H1_WARMUP_BARS)
 
             if df_m5 is not None and len(df_m5) >= 2:
                 current_m5_time = df_m5.iloc[-1]["time"]
@@ -138,6 +138,14 @@ async def run_smc_live_copilot():
                     bar_time = last_closed_bar["time"]
 
                     logger.info("Evaluating M5 Bar closed at %s (Spread: %s)", bar_time, f"${current_spread:.2f}" if current_spread else "N/A")
+
+                    h1_ready = df_h1 is not None and h1_warmup_ok(len(df_h1))
+                    if not h1_ready:
+                        logger.warning(
+                            "H1 warmup insufficient (have=%s need>=%s); block new setups",
+                            0 if df_h1 is None else len(df_h1),
+                            H1_WARMUP_BARS,
+                        )
 
                     # Reset circuit breaker alert on new UTC day
                     bar_date_str = bar_time.date().isoformat() if hasattr(bar_time, "date") else now_utc.date().isoformat()
@@ -185,9 +193,14 @@ async def run_smc_live_copilot():
                     target_date = bar_time.date() if hasattr(bar_time, "date") else now_utc.date()
                     liquidity = compute_liquidity_levels(df_m5, target_date)
 
-                    # Pure Detection Seam (skip if blackout)
+                    # Pure Detection Seam (skip if blackout / incomplete H1 warmup)
                     setup = None
-                    if account.open_position is None and account.pending_order is None and not is_blackout:
+                    if (
+                        account.open_position is None
+                        and account.pending_order is None
+                        and not is_blackout
+                        and h1_ready
+                    ):
                         setup = detect_smc_setup(
                             h1_candles=df_h1,
                             m5_candles=df_m5,
@@ -209,8 +222,17 @@ async def run_smc_live_copilot():
                     # Snapshot position before orchestrator step to detect trade close
                     pos_before = account.open_position
 
-                    # Persistent equity gates (5% DD / 1% daily) before new risk
-                    observe_equity(risk_halt, account.equity, now=now_utc)
+                    # Persistent equity gates (5% DD / 1% daily) before new risk.
+                    # Incomplete broker equity must not invent a fresh high-water / day start.
+                    equity_raw = adapter.get_account_equity()
+                    history_ready = dry_run or equity_raw is not None
+                    equity_now = float(equity_raw) if equity_raw is not None else account.equity
+                    observe_equity(
+                        risk_halt,
+                        equity_now,
+                        now=now_utc,
+                        history_ready=history_ready,
+                    )
                     save_risk_halt_state(risk_halt_path, risk_halt)
                     if risk_halt.halted:
                         pending_ids = []

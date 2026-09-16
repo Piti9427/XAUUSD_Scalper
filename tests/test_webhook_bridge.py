@@ -1244,6 +1244,67 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertIn("flatten_actions", data)
         self.assertIsInstance(data["flatten_actions"], list)
 
+    def test_incomplete_broker_equity_blocks_without_resetting_marks(self):
+        from scripts.smc.broker_identity import BrokerIdentityReport
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state, load_risk_halt_state
+        from scripts.webhook_bridge import create_app
+        from pathlib import Path
+        from unittest.mock import Mock
+
+        ok_identity = BrokerIdentityReport(
+            ok=True,
+            broker_server="Exness-MT5Trial",
+            account_login=1,
+            currency="USD",
+            trade_mode=0,
+            symbol="XAUUSD",
+            reasons=(),
+        )
+        state = new_risk_halt_state(500.0)
+        state.high_water_equity = 520.0
+        state.net_losing_trades_today = 1
+        save_risk_halt_state(Path(self.halt_path), state)
+
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=500.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: ok_identity,
+            max_daily_losses=99,
+        )
+        # Simulate live path without requiring a real MT5 terminal.
+        self.app.state.adapter.dry_run = False
+        self.app.state.adapter.connected = True
+        self.app.state.adapter.get_account_equity = Mock(return_value=None)
+        self.app.state.adapter.get_open_exposure = Mock(return_value=[])
+        self.client = TestClient(self.app)
+
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_HIST_INCOMPLETE",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-09-14 14:00:00",
+        }
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("history_ready=False", data["reason"])
+
+        restored = load_risk_halt_state(Path(self.halt_path))
+        self.assertIsNotNone(restored)
+        self.assertEqual(restored.high_water_equity, 520.0)
+        self.assertEqual(restored.net_losing_trades_today, 1)
+        self.assertFalse(restored.history_ready)
+
 
 if __name__ == "__main__":
     unittest.main()

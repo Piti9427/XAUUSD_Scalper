@@ -47,6 +47,37 @@ class RiskHaltPersistenceTests(unittest.TestCase):
         self.assertTrue(state2.daily_equity_halt)
         self.assertTrue(state2.halted)
 
+    def test_incomplete_history_blocks_risk_and_does_not_reset_marks(self):
+        state = new_risk_halt_state(500.0, now=datetime(2026, 3, 2, 8, tzinfo=timezone.utc))
+        state.high_water_equity = 520.0
+        record_net_losing_trade(state)
+        self.assertEqual(state.net_losing_trades_today, 1)
+
+        observe_equity(
+            state,
+            100.0,
+            now=datetime(2026, 3, 3, 1, tzinfo=timezone.utc),
+            history_ready=False,
+        )
+        self.assertFalse(state.history_ready)
+        self.assertTrue(state.halted)
+        self.assertEqual(state.high_water_equity, 520.0)
+        self.assertEqual(state.net_losing_trades_today, 1)
+        self.assertEqual(state.day_utc, "2026-03-02")
+        self.assertEqual(state.day_start_equity, 500.0)
+
+    def test_load_tolerates_legacy_payload_without_history_ready(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "risk_halt.json"
+            path.write_text(
+                '{"high_water_equity": 500.0, "day_start_equity": 500.0, '
+                '"day_utc": "2026-03-02", "drawdown_halt": false, '
+                '"daily_equity_halt": false, "net_losing_trades_today": 0}\n'
+            )
+            restored = load_risk_halt_state(path)
+            self.assertIsNotNone(restored)
+            self.assertTrue(restored.history_ready)
+
 
 if __name__ == "__main__":
     unittest.main()
