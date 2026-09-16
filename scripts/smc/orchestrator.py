@@ -326,6 +326,8 @@ class StrategyOrchestrator:
                 # Scenario 15: once pending is accepted, a later spread blowout must not
                 # invent a no-fill when price already touched the limit. Spread gates
                 # only new risk admission (below), not authoritative broker fills.
+                # Consumed identity: filled setup must not revive as a fresh pending.
+                self.setup_registry.mark_terminal(order.order_id, "filled")
                 sl_dist = abs(order.limit_price - order.sl_price)
                 account.open_position = Position(
                     direction=order.direction,

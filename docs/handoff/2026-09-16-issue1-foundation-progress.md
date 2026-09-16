@@ -79,6 +79,9 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Development vs holdout window labels (Gate D proposal) | **Done:** `scripts/smc/eval_windows.py` refuses merge of development+holdout samples; wired into backtester `eval_window` / `sample_verdict`; `tests/test_smc_eval_windows.py`, `test_mixed_dev_holdout_bars_refuse_evaluable` |
 | Dry-run verifier aligned to foundation + admission | **Done:** `scripts/verify_dry_run.py` uses fresh UTC times; TP1 expects reject under BaselinePlay defaults |
 | Broker stops_level / point geometry (scenario 10) | **Done:** `scripts/smc/stops_geometry.py`; snapshot requires `point`+`stops_level`; webhook SETUP gated; `tests/test_smc_stops_geometry.py`, `test_stops_geometry_blocks_tight_sl` |
+| Freeze_level blocks SL mods near market | **Done:** `sl_modify_freeze_allows`; adapter MOVE_SL + live TP1 pre-check; snapshot requires `freeze_level`; `test_live_be_rejected_inside_freeze_level`, `test_live_tp1_rejects_before_partial_when_freeze_blocks_be` |
+| H1 EMA bias flip cancels pending (scenario 8) | **Done:** `pending_h1_bias_allows` + `resolve_h1_ema_bias`; wired `smc_main` / backtester / orchestrator; `test_h1_bias_flip_cancels_pending_and_blocks_revive` |
+| Filled setup identity consumed (no revive) | **Done:** orchestrator `mark_terminal(..., "filled")` on pending fill; `test_fill_marks_setup_terminal_blocks_revive` |
 
 ## Still open for issue #1
 
