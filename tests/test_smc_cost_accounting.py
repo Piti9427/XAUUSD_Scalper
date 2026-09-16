@@ -3,7 +3,9 @@ import unittest
 from scripts.smc.cost_accounting import (
     expectancy_hides_operating_loss,
     summarize_profit_layers,
+    aggregate_deal_cashflows,
 )
+from types import SimpleNamespace
 
 
 class CostAccountingTests(unittest.TestCase):
@@ -29,6 +31,14 @@ class CostAccountingTests(unittest.TestCase):
                 net_operating_profit=report.net_operating_profit,
             )
         )
+
+    def test_aggregates_partial_deals_with_fees(self):
+        deals = [
+            SimpleNamespace(profit=100.0, commission=-2.0, swap=0.0, fee=-0.5),
+            SimpleNamespace(profit=50.0, commission=-1.0, swap=-0.25, fee=0.0),
+        ]
+        self.assertEqual(aggregate_deal_cashflows(deals), 146.25)
+        self.assertIsNone(aggregate_deal_cashflows([]))
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 
 @dataclass(frozen=True)
@@ -56,3 +56,23 @@ def expectancy_hides_operating_loss(
 ) -> bool:
     """True when positive trade expectancy would mask ops burn — reporting hazard."""
     return bool(positive_trade_expectancy) and float(net_operating_profit) < 0.0
+
+
+def aggregate_deal_cashflows(deals: Iterable[Any]) -> Optional[float]:
+    """
+    Sum profit + commission + swap + fee across deals for one position lifecycle.
+
+    Does not subtract spread again — assumes fills already used bid/ask prices.
+    """
+    total = 0.0
+    found = False
+    for d in deals:
+        profit = getattr(d, "profit", 0.0) or 0.0
+        commission = getattr(d, "commission", 0.0) or 0.0
+        swap = getattr(d, "swap", 0.0) or 0.0
+        fee = getattr(d, "fee", 0.0) or 0.0
+        total += float(profit) + float(commission) + float(swap) + float(fee)
+        found = True
+    if not found:
+        return None
+    return round(total, 2)

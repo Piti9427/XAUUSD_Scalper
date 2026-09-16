@@ -488,20 +488,16 @@ class SMCExecutionAdapter:
         deals = mt5.history_deals_get(from_date, now)
         if deals is None:
             return None
-        matching_pnl = 0.0
-        found = False
+        from scripts.smc.cost_accounting import aggregate_deal_cashflows
+
         target_comment = f"SMC_{order_id}"
         partial_comment = f"SMC_Partial_{order_id}"
-        for d in deals:
-            deal_comment = getattr(d, "comment", "")
-            if deal_comment == target_comment or deal_comment == partial_comment:
-                profit = getattr(d, "profit", 0.0) or 0.0
-                commission = getattr(d, "commission", 0.0) or 0.0
-                swap = getattr(d, "swap", 0.0) or 0.0
-                fee = getattr(d, "fee", 0.0) or 0.0
-                matching_pnl += (profit + commission + swap + fee)
-                found = True
-        return round(matching_pnl, 2) if found else None
+        matching = [
+            d
+            for d in deals
+            if getattr(d, "comment", "") in {target_comment, partial_comment}
+        ]
+        return aggregate_deal_cashflows(matching)
 
     def execute_intent(self, intent: OrderIntent) -> ExecutionResult:
         """Translates domain OrderIntent into MT5 broker calls or dry-run simulation."""
