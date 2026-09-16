@@ -31,6 +31,7 @@ class StrategyOrchestrator:
         partial_tp_enabled: bool = False,
         partial_tp_r: float = 1.2,
         partial_tp_ratio: float = 0.5,
+        be_enabled: bool = False,
         be_trigger_r: float = 1.0,
         spread_buffer: float = 0.30,
         be_buffer: float = 0.10,
@@ -48,6 +49,7 @@ class StrategyOrchestrator:
         self.partial_tp_enabled = partial_tp_enabled
         self.partial_tp_r = partial_tp_r
         self.partial_tp_ratio = partial_tp_ratio
+        self.be_enabled = be_enabled
         self.be_trigger_r = be_trigger_r
         self.spread_buffer = spread_buffer
         self.be_buffer = be_buffer
@@ -184,8 +186,8 @@ class StrategyOrchestrator:
                         )
                     )
 
-        # Breakeven Relocation Check (Move SL to BE at be_trigger_r if partial TP disabled or didn't move it)
-        if not pos.be_moved:
+        # Breakeven Relocation (optional — foundation BaselinePlay keeps be_enabled=False)
+        if self.be_enabled and not pos.be_moved:
             if pos.direction == Direction.BUY:
                 if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.be_trigger_r):
                     pos.be_moved = True
@@ -391,6 +393,7 @@ class StrategyOrchestrator:
                 sl_price=setup_signal.sweep_wick,
                 max_sl_cap=self.max_sl_cap,
                 risk_pct=self.risk_pct,
+                equity=account.equity,
             )
             if lot_res.is_valid and lot_res.lot_size > 0:
                 new_order = OrderIntent(

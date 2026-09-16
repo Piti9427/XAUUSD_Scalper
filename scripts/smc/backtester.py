@@ -65,6 +65,7 @@ class SMCBacktester:
         partial_tp_enabled: bool = False,
         partial_tp_r: float = 1.2,
         partial_tp_ratio: float = 0.5,
+        be_enabled: bool = False,
         be_trigger_r: float = 1.0,
         extended_killzones: bool = True,
         tp_r: float = 2.0,
@@ -83,6 +84,7 @@ class SMCBacktester:
         self.partial_tp_enabled = partial_tp_enabled
         self.partial_tp_r = partial_tp_r
         self.partial_tp_ratio = partial_tp_ratio
+        self.be_enabled = be_enabled
         self.be_trigger_r = be_trigger_r
         self.extended_killzones = extended_killzones
         self.tp_r = tp_r
@@ -160,6 +162,7 @@ class SMCBacktester:
             partial_tp_enabled=self.partial_tp_enabled,
             partial_tp_r=self.partial_tp_r,
             partial_tp_ratio=self.partial_tp_ratio,
+            be_enabled=self.be_enabled,
             be_trigger_r=self.be_trigger_r,
             spread_buffer=self.spread_buffer,
             be_buffer=0.10,

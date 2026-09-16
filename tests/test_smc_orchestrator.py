@@ -56,6 +56,8 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertIsNone(account.pending_order)
 
     def test_limit_order_fills_and_moves_to_be_at_1r(self):
+        # Opt-in BE path (foundation BaselinePlay keeps be_enabled=False)
+        orch = StrategyOrchestrator(be_enabled=True, be_trigger_r=1.0)
         # Scenario: Limit order filled on Bar 1, then reaches +1.0R on Bar 2 -> MOVE_SL_TO_BE emitted
         limit_order = OrderIntent(
             intent_type=OrderIntentType.PLACE_LIMIT,
@@ -75,7 +77,7 @@ class TestSMCOrchestrator(unittest.TestCase):
         
         # Bar 1: Low dips to 2009.5 (touches 2010.0) -> Limit order fills! Position opened
         bar1 = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
-        intents1 = self.orchestrator.on_bar(bar1, account)
+        intents1 = orch.on_bar(bar1, account)
         self.assertIsNotNone(account.open_position)
         self.assertIsNone(account.pending_order)
         self.assertEqual(account.open_position.entry_price, 2010.0)
@@ -83,10 +85,60 @@ class TestSMCOrchestrator(unittest.TestCase):
         # Bar 2: Price reaches +1.0R (2010.0 + 5.00 = 2015.00) -> High touches 2015.5
         # Must emit MOVE_SL_TO_BE!
         bar2 = {"time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc), "open": 2011, "high": 2015.5, "low": 2010.8, "close": 2015.0}
-        intents2 = self.orchestrator.on_bar(bar2, account)
+        intents2 = orch.on_bar(bar2, account)
         self.assertEqual(len(intents2), 1)
         self.assertEqual(intents2[0].intent_type, OrderIntentType.MOVE_SL_TO_BE)
         self.assertTrue(account.open_position.be_moved)
+
+    def test_foundation_baseline_does_not_move_be(self):
+        limit_order = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=4,
+        )
+        account = AccountState(
+            balance=10000.0,
+            equity=10000.0,
+            pending_order=limit_order,
+            pending_bars_held=0,
+        )
+        bar1 = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
+        self.orchestrator.on_bar(bar1, account)
+        bar2 = {"time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc), "open": 2011, "high": 2015.5, "low": 2010.8, "close": 2015.0}
+        intents2 = self.orchestrator.on_bar(bar2, account)
+        self.assertEqual(intents2, [])
+        self.assertFalse(account.open_position.be_moved)
+        self.assertEqual(account.open_position.sl_price, 2005.0)
+
+    def test_lot_size_uses_min_balance_equity(self):
+        signal = SetupSignal(
+            direction=Direction.BUY,
+            sweep_price=2010.0,
+            sweep_wick=2000.0,
+            mss_price=2014.0,
+            entry_price=2010.0,
+            sl_price=2000.0,
+            tp_price=2030.0,
+            sl_distance=10.0,
+            risk_r=2.0,
+            fvg_high=2011.0,
+            fvg_low=2009.0,
+            reason="BUY SMC Setup",
+            timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
+        )
+        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011.0, "close": 2012}
+        orch = StrategyOrchestrator(risk_pct=0.005)
+        rich = AccountState(balance=10000.0, equity=10000.0)
+        poor_equity = AccountState(balance=10000.0, equity=5000.0)
+        orch.on_bar(bar, rich, setup_signal=signal, current_spread=0.15, max_spread=0.35)
+        orch.on_bar(bar, poor_equity, setup_signal=signal, current_spread=0.15, max_spread=0.35)
+        self.assertIsNotNone(rich.pending_order)
+        self.assertIsNotNone(poor_equity.pending_order)
+        self.assertGreater(rich.pending_order.lot_size, poor_equity.pending_order.lot_size)
 
     def test_rollover_flat_before_21_utc(self):
         # Scenario: Position is open at 20:55 UTC. Must emit CLOSE_MARKET before 21:00 UTC rollover.

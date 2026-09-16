@@ -72,6 +72,7 @@ async def run_smc_live_copilot():
         partial_tp_enabled=strat_cfg.get("partial_tp_enabled", False),
         partial_tp_r=strat_cfg.get("partial_tp_r", 1.0),
         partial_tp_ratio=strat_cfg.get("partial_tp_ratio", 0.5),
+        be_enabled=bool(strat_cfg.get("be_enabled", False)),
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
         risk_pct=float(strat_cfg.get("risk_pct", 0.005)),
     )

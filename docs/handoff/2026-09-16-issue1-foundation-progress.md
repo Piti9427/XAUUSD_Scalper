@@ -13,7 +13,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Protected-swing CHoCH ≠ latest-fractal MSS | `scripts/smc/structure.py`, `tests/test_smc_structure_choch.py`, ADR-0027 |
 | Demo detection requires CHoCH | `detect_smc_setup(..., require_choch=True)` **default True**; rejection/accept tests in `tests/test_smc_detection.py` |
 | Foundation detection/TTL defaults | Defaults: sweep→MSS 8, MSS→FVG 4, body 0.45, SL cap $25, pierce $8, lookback 25, pending TTL 4; `test_foundation_detection_signature_defaults`; webhook create_app default `risk_pct=0.005` |
-| Baseline no partial/BE default in Demo loop | `smc_main.py` `partial_tp_enabled` default False |
+| Baseline no partial/BE default in Demo loop | `be_enabled` default False; `partial_tp_enabled` default False; `smc_main` + orchestrator; `test_foundation_baseline_does_not_move_be` |
+| Risk uses min(balance, equity) | `calculate_lot_size(..., equity=)`; orchestrator passes `account.equity`; `test_lot_size_uses_min_balance_equity` |
 | Nearest opposing pool TP + min 1.5R | `scripts/smc/liquidity.py`, `tests/test_smc_pool_tp.py` |
 | Fib/OTE research log without filter | `scripts/smc/fibonacci.py`, `tests/test_smc_fibonacci.py` |
 | 5% DD + 2 losses / 1% daily halt persistence | `scripts/smc/risk_halt.py`, `tests/test_smc_risk_halt.py`; orchestrator honors `risk_halt.halted` |
