@@ -11,13 +11,10 @@ from fastapi import BackgroundTasks
 
 from scripts.smc.types import Direction, OrderIntent, OrderIntentType
 from scripts.smc.risk_halt import (
-    observe_equity,
     record_net_losing_trade,
     save_risk_halt_state,
 )
 from scripts.smc.stops_geometry import sl_modify_freeze_allows
-from scripts.smc.setup_identity import pending_h1_bias_allows
-from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 
 logger = logging.getLogger("webhook_bridge")
