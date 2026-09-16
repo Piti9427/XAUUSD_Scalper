@@ -24,10 +24,19 @@ Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
 MCP `issue_write` close attempt 2026-09-16: **403 Resource not accessible by personal access token** (read-only).
 
-Branch evidence: `feature/smc-v2-hardening` (**ahead 25** of origin — push blocked).
+Branch evidence: `feature/smc-v2-hardening` (**ahead 26** of origin — push blocked).
 Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (266).
 Live gate helper: `scripts/ops/foundation_live_gate.sh` (MT5 host required).
 Pre-close audit: `./scripts/audit_local_issue_gates.sh` · JSON: `python3 scripts/generate_close_evidence.py`
+Goal matrix: `docs/handoff/2026-09-16-goal-completion-audit.md`
+
+**Operator:** run in Terminal.app (GUI keychain + browser):
+
+```bash
+./scripts/ops_unblock_github.sh
+```
+
+Script now: unlock keychain → `gh auth login` if invalid → `gh auth setup-git` → audit → push → close #3→#4→#2.
 
 ---
 

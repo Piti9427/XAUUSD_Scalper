@@ -15,10 +15,11 @@
 
 | Action | Evidence |
 | --- | --- |
-| Push 25 commits | `gh auth login` + keychain unlock; `git push origin feature/smc-v2-hardening` |
-| Close #3→#4→#2 | `./scripts/ops_unblock_github.sh` (needs `repo` scope + **issues write**) |
+| Push 26+ commits | `./scripts/ops_unblock_github.sh` runs `gh auth login` + `gh auth setup-git` |
+| Close #3→#4→#2 | Same script; needs `repo` scope (issues write) |
 | Cursor GitHub MCP | PAT/app must not be read-only (403 on `issue_write`) |
 | MCP rate limit | Wait or use local `gh` after re-auth |
+| SSH | `Permission denied (publickey)` until key uploaded to GitHub; pub: `~/.ssh/id_ed25519.pub` |
 
 ## Issue #1 live gates (do not close #1 without)
 

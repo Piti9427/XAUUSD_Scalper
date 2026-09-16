@@ -5,20 +5,37 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if ! gh auth status -h github.com >/dev/null 2>&1; then
-  echo "==> gh token invalid — run interactive login first:"
-  echo "    gh auth login -h github.com"
-  exit 1
-fi
-
 echo "==> Unlock login keychain (prompt)"
-security unlock-keychain ~/Library/Keychains/login.keychain-db
+security unlock-keychain ~/Library/Keychains/login.keychain-db || true
 
-echo "==> Refresh gh with repo scope (browser)"
-gh auth refresh -h github.com -s repo
+if ! gh auth status -h github.com >/dev/null 2>&1; then
+  echo "==> gh token invalid/missing — interactive login (browser)"
+  # Prefer HTTPS + repo scope so issue close + push both work.
+  gh auth login -h github.com -p https -s repo,read:org --web
+else
+  echo "==> Refresh gh with repo scope (browser)"
+  gh auth refresh -h github.com -s repo || {
+    echo "==> refresh failed — falling back to full login"
+    gh auth login -h github.com -p https -s repo,read:org --web
+  }
+fi
 
 echo "==> Verify scopes"
 gh auth status
+# Prefer git credential from gh (avoids stale osxkeychain -25293).
+gh auth setup-git
+
+echo "==> Optional SSH fallback (if HTTPS push still fails)"
+if [[ -f "$HOME/.ssh/id_ed25519" ]]; then
+  ssh-add --apple-use-keychain "$HOME/.ssh/id_ed25519" 2>/dev/null \
+    || ssh-add "$HOME/.ssh/id_ed25519" 2>/dev/null \
+    || true
+fi
+if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
+  echo "    Public key (add at https://github.com/settings/keys if SSH auth fails):"
+  cat "$HOME/.ssh/id_ed25519.pub"
+  echo "    Then: git remote set-url origin git@github.com:Piti9427/XAUUSD_Scalper.git && git push -u origin HEAD"
+fi
 
 echo "==> Local software gate audit (optional)"
 if [[ -x "$ROOT/scripts/audit_local_issue_gates.sh" ]]; then
