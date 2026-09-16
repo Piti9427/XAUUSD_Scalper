@@ -1,0 +1,39 @@
+{
+  "generated_at_utc": "2026-09-16T07:09:21.015778+00:00",
+  "git_head": "09b32f829b9290481d45a2acb114837db131a192",
+  "branch": "feature/smc-v2-hardening",
+  "unit_suite_ok": true,
+  "contracts": [
+    {
+      "module": "tests.test_s1_s4_mechanical_spec_contract",
+      "ok": true,
+      "returncode": 0
+    },
+    {
+      "module": "tests.test_s1_s4_research_handoff_contract",
+      "ok": true,
+      "returncode": 0
+    },
+    {
+      "module": "tests.test_issue2_parent_tracker_contract",
+      "ok": true,
+      "returncode": 0
+    }
+  ],
+  "artifacts": {
+    "mechanical_spec": "docs/specs/xauusd-s1-s4-mechanical-v1.md",
+    "research_handoff": "docs/specs/xauusd-s1-s4-research-handoff-v1.md",
+    "issue1_progress": "docs/handoff/2026-09-16-issue1-foundation-progress.md",
+    "local_acceptance_audit": "docs/handoff/2026-09-16-issues-3-4-local-acceptance-audit.md"
+  },
+  "github_close_order": [
+    "#3",
+    "#4",
+    "#2"
+  ],
+  "issue1_live_gates_open": [
+    "Exness Demo identity smoke with MT5",
+    "Oracle ARM64 soak evidence",
+    "Forward Demo 12-week protocol"
+  ]
+}

@@ -2,24 +2,23 @@
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
 **Branch:** `feature/smc-v2-hardening` (local ahead of origin; push blocked).  
-**Last verified:** `./scripts/audit_local_issue_gates.sh` + `python3 scripts/generate_close_evidence.py`
+**Last verified:** 2026-09-16 ~14:09 ICT — `./scripts/audit_local_issue_gates.sh` OK · `docs/ops/2026-09-16-github-close-evidence.json` · HEAD `09b32f8` · **ahead 27**
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
-| **#3** Mechanical S1–S4 spec | Docs + contract tests | `docs/specs/xauusd-s1-s4-mechanical-v1.md`, `tests/test_s1_s4_mechanical_spec_contract.py` (6/6) | ❌ | **Software done; tracker open** |
-| **#4** Research handoff | Docs + explicit Gate B/C blockers | `docs/specs/xauusd-s1-s4-research-handoff-v1.md`, `tests/test_s1_s4_research_handoff_contract.py` (6/6) | ❌ | **Software done; tracker open** |
-| **#2** Parent tracker | Close after #3/#4 | `tests/test_issue2_parent_tracker_contract.py`, local acceptance audit | ❌ | **Blocked on #3/#4 close** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | Progress map + 266 unit tests; smoke Mac = `INCONCLUSIVE_INFRA` | ❌ | **Live gates + tracker open** |
+| **#3** Mechanical S1–S4 spec | Docs + contract tests | `docs/specs/xauusd-s1-s4-mechanical-v1.md`, `tests/test_s1_s4_mechanical_spec_contract.py` (6/6) | ❌ open (MCP PATCH **403** read-only PAT) | **Software done; tracker open** |
+| **#4** Research handoff | Docs + explicit Gate B/C blockers | `docs/specs/xauusd-s1-s4-research-handoff-v1.md`, `tests/test_s1_s4_research_handoff_contract.py` (6/6) | ❌ open | **Software done; tracker open** |
+| **#2** Parent tracker | Close after #3/#4 | `tests/test_issue2_parent_tracker_contract.py`, local acceptance audit | ❌ open | **Blocked on #3/#4 close** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo gates | Progress map + unit suite OK; Mac smoke = `INCONCLUSIVE_INFRA` | ❌ open | **Live gates + tracker open** |
 
-## Auth blockers (operator)
+## Auth blockers (operator) — rechecked 2026-09-16 14:09
 
 | Action | Evidence |
 | --- | --- |
-| Push 26+ commits | `./scripts/ops_unblock_github.sh` runs `gh auth login` + `gh auth setup-git` |
-| Close #3→#4→#2 | Same script; needs `repo` scope (issues write) |
-| Cursor GitHub MCP | PAT/app must not be read-only (403 on `issue_write`) |
-| MCP rate limit | Wait or use local `gh` after re-auth |
-| SSH | `Permission denied (publickey)` until key uploaded to GitHub; pub: `~/.ssh/id_ed25519.pub` |
+| Push 27 commits | `gh` token **invalid**; HTTPS keychain `-25293`; SSH `Permission denied (publickey)` |
+| Close #3→#4→#2 | MCP `issue_write` **403** Resource not accessible by personal access token |
+| MCP read | `issue_read` works (issues still `open`) |
+| Offline push handoff | `/tmp/smc-v2-hardening-ahead.bundle` (requires base `b1548cc`) |
 
 ## Issue #1 live gates (do not close #1 without)
 
