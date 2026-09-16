@@ -74,6 +74,12 @@ def main():
     strategy_cfg = cfg.get("strategy", {})
     tp_r = float(strategy_cfg.get("tp_r", 2.5))
     partial_tp_r = float(strategy_cfg.get("partial_tp_r", 1.0))
+    risk_halt_path = strategy_cfg.get("risk_halt_path") or wh_cfg.get(
+        "risk_halt_path", "data/risk_halt_state.json"
+    )
+    require_broker_identity = wh_cfg.get("require_broker_identity")
+    if require_broker_identity is None:
+        require_broker_identity = not dry_run
 
     app = create_app(
         auth_token=secret_token,
@@ -88,6 +94,8 @@ def main():
         slippage_allowance=slippage_allowance,
         tp_r=tp_r,
         partial_tp_r=partial_tp_r,
+        risk_halt_path=risk_halt_path,
+        require_broker_identity=require_broker_identity,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")
