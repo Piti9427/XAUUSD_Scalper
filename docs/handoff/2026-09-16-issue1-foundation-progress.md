@@ -16,7 +16,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Baseline no partial/BE default in Demo loop | `be_enabled` default False; `partial_tp_enabled` default False; `smc_main` + orchestrator; `test_foundation_baseline_does_not_move_be` |
 | Risk uses min(balance, equity) | `calculate_lot_size(..., equity=)`; orchestrator passes `account.equity`; `apply_broker_capital` syncs live snapshots in `smc_main`; `test_lot_size_uses_min_balance_equity`, `tests/test_smc_account_sync.py` |
 | Nearest opposing pool TP + min 1.5R | `scripts/smc/liquidity.py`, `tests/test_smc_pool_tp.py` |
-| Fib/OTE research log without filter | `scripts/smc/fibonacci.py`, `tests/test_smc_fibonacci.py` |
+| Fib/OTE research log without filter | `scripts/smc/fibonacci.py`, wired into `detect_smc_setup` → `SetupSignal.fib_*` + reason tag (ADR-0028); `tests/test_smc_fibonacci.py`, `test_detection_logs_fib_ote_without_filtering_admission` |
 | 5% DD + 2 losses / 1% daily halt persistence | `scripts/smc/risk_halt.py`, `tests/test_smc_risk_halt.py`; orchestrator honors `risk_halt.halted` |
 | 0.5% risk floor/reject (pre-existing) | `scripts/smc/risk.py`, `tests/test_smc_risk.py`; webhook/staging default `risk_pct=0.005` (`test_create_app_defaults_to_half_percent_risk`) |
 | Bot-only cancel/close (comment ownership) | `is_bot_owned_comment` + adapter cancel/close/rollover guards; `tests/test_smc_ownership.py` |

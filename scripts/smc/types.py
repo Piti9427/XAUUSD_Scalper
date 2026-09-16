@@ -45,6 +45,10 @@ class SetupSignal:
     reason: str
     timestamp: datetime
     setup_id: Optional[str] = None
+    # Research-only Fib/OTE (ADR-0028) — never used as admit/reject filter.
+    fib_retracement: Optional[float] = None
+    fib_in_ote: bool = False
+    fib_reason: str = "not_computed"
 
 
 @dataclass(frozen=True)

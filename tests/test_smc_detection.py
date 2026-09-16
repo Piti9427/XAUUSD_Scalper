@@ -152,6 +152,19 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         self.assertAlmostEqual(signal.sl_distance, 5.80, places=2)
         self.assertAlmostEqual(signal.tp_price, 2014.0 + (5.80 * 2.0), places=2) # 2R TP
 
+    def test_detection_logs_fib_ote_without_filtering_admission(self):
+        """ADR-0028 / issue #1: Fib/OTE recorded at decision time; never blocks setup."""
+        signal = detect_smc_setup(*self.valid_setup_inputs(), require_choch=False)
+        self.assertIsNotNone(signal)
+        self.assertEqual(signal.fib_reason, "ok")
+        self.assertIsNotNone(signal.fib_retracement)
+        # Entry at CE inside impulse — may or may not be OTE; either way setup stays.
+        self.assertIn("fib=", signal.reason)
+        # Explicit: fib_in_ote False must not reject (signal already non-None).
+        if not signal.fib_in_ote:
+            again = detect_smc_setup(*self.valid_setup_inputs(), require_choch=False)
+            self.assertIsNotNone(again)
+
     def test_broken_other_level_preserves_fresh_sweep(self):
         for direction in Direction:
             with self.subTest(direction=direction):

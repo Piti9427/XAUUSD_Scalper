@@ -5,6 +5,7 @@ import numpy as np
 from scripts.smc.types import Direction, SetupSignal, LiquidityLevels
 from scripts.smc.liquidity import select_nearest_opposing_pool_tp
 from scripts.smc.setup_identity import make_setup_id
+from scripts.smc.fibonacci import compute_fibonacci_features
 from scripts.smc.structure import (
     find_fractals_5bar,
     check_displacement,
@@ -374,6 +375,24 @@ def detect_smc_setup(
         sweep_wick=float(true_sweep_wick),
         available_at=ts.isoformat(),
     )
+    # ADR-0028: Fib/OTE research log on Sweep→break range — never filters admission.
+    if bias == Direction.BUY:
+        fib_high = float(mss_swing_price)
+        fib_low = float(true_sweep_wick)
+    else:
+        fib_high = float(true_sweep_wick)
+        fib_low = float(mss_swing_price)
+    fib = compute_fibonacci_features(
+        direction=bias.value,
+        swing_high=fib_high,
+        swing_low=fib_low,
+        entry=float(entry_limit_price),
+    )
+    ote_note = (
+        f" fib={fib.retracement:.4f} ote={fib.in_ote}"
+        if fib.available and fib.retracement is not None
+        else f" fib={fib.reason}"
+    )
     return SetupSignal(
         direction=bias,
         sweep_price=float(swept_level),
@@ -388,8 +407,11 @@ def detect_smc_setup(
         fvg_low=float(fvg_low_val),
         reason=(
             f"{bias.value} SMC Setup: Swept {swept_level} -> {structure_label} "
-            f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}"
+            f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}{ote_note}"
         ),
         timestamp=current_time,
         setup_id=setup_id,
+        fib_retracement=fib.retracement,
+        fib_in_ote=bool(fib.in_ote),
+        fib_reason=fib.reason,
     )
