@@ -42,7 +42,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Incomplete Asian / prior-day pools unavailable | `compute_liquidity_levels` returns None Asian when incomplete; PDH/PDL `None` (no Asian fallback); detector skips null pools; `tests/test_smc_liquidity.py` |
 | Smoke identity CLI import path fix | `scripts/smoke_broker_identity.py` adds repo root to `sys.path` |
 | Pending fill survives spread blowout (scenario 15) | Orchestrator fills on price touch even if `current_spread > max_spread`; new risk still gated; `test_pending_fill_survives_spread_blowout` |
-| Wall-clock TIME_EXIT without new bars (scenario 19) | `StrategyOrchestrator.on_clock`; wired in `smc_main.py` before `on_bar`; keeps local position until broker confirms; `test_time_exit_on_clock_without_new_bar` |
+| Wall-clock TIME_EXIT without new bars (scenario 19) | `StrategyOrchestrator.on_clock` + webhook `POST /internal/clock` via `plan_clock_time_exits` / `list_open_fills`; notify gated by `may_notify_close`; `tests/test_smc_clock_exit.py`, `TestWebhookClockTimeExit` |
 | Accepted vs fill notifications (scenario 20) | `format_order_accepted_card` + `notification_policy`; UNKNOWN→uncertain (no phantom); webhook SETUP_PENDING uses accepted card; TRADE_CLOSED gated by `may_notify_close`; `tests/test_smc_notification_policy.py` |
 | Frozen Wilson/sample protocol (scenario 23) | `scripts/smc/stats_protocol.py`; few trades → INCONCLUSIVE; `tests/test_smc_stats_protocol.py` |
 | Mac-off / Oracle infra ≠ strategy PnL (scenario 24) | `scripts/smc/infra_verdict.py`; smoke CLI emits `infra_verdict`; `InfraVerdictTests` |

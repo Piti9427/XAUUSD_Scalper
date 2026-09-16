@@ -385,6 +385,50 @@ class SMCExecutionAdapter:
         rows = [dict(row) for row in cursor.fetchall()]
         return rows
 
+    def list_open_fills(self) -> List[Dict[str, Any]]:
+        """
+        Fills still open locally: ORDER_FILLED with no later TRADE_CLOSED.
+
+        Used by wall-clock TIME_EXIT when the M5/TV feed stalls.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT order_id, MIN(timestamp) AS open_ts, MAX(direction) AS direction
+            FROM trade_lifecycle
+            WHERE event_type = 'ORDER_FILLED'
+              AND order_id IS NOT NULL
+              AND order_id NOT IN (
+                  SELECT order_id FROM trade_lifecycle
+                  WHERE event_type = 'TRADE_CLOSED' AND order_id IS NOT NULL
+              )
+            GROUP BY order_id
+            ORDER BY open_ts ASC
+            """
+        )
+        rows = []
+        for order_id, open_ts, direction in cursor.fetchall():
+            if not open_ts:
+                continue
+            try:
+                open_time = datetime.fromisoformat(
+                    str(open_ts).replace("Z", "+00:00").replace(" ", "T")
+                )
+            except ValueError:
+                continue
+            if open_time.tzinfo is None:
+                open_time = open_time.replace(tzinfo=timezone.utc)
+            else:
+                open_time = open_time.astimezone(timezone.utc)
+            rows.append(
+                {
+                    "order_id": order_id,
+                    "open_time": open_time,
+                    "direction": direction,
+                }
+            )
+        return rows
+
     def get_daily_realized_losses(self, date_utc_str: Optional[str] = None) -> int:
         """Queries SQLite for number of realized loss trades today (ADR-011)."""
         if date_utc_str is None:

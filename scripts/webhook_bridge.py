@@ -42,6 +42,8 @@ def create_app(
     risk_halt_path: Optional[str] = None,
     require_broker_identity: Optional[bool] = None,
     identity_gate: Optional[Callable[[], BrokerIdentityReport]] = None,
+    max_hold_bars: Optional[int] = None,
+    bar_minutes: int = 5,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -121,8 +123,128 @@ def create_app(
             "circuit_breaker_tripped": circuit_tripped,
             "uptime_seconds": round(time.time() - start_time, 2),
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "max_hold_bars": max_hold_bars,
         }
 
+    @app.post("/internal/clock")
+    async def handle_clock_tick(
+        background_tasks: BackgroundTasks,
+        authorized: bool = Depends(verify_auth),
+    ):
+        """
+        Wall-clock TIME_EXIT when TV/M5 feed stalls (foundation scenario 19).
+
+        Emits CLOSE_MARKET only; TRADE CLOSED Telegram waits for broker evidence.
+        """
+        from scripts.smc.clock_exit import OpenFill, plan_clock_time_exits
+        from scripts.smc.notification_policy import may_notify_close
+
+        if max_hold_bars is None:
+            return {
+                "status": "disabled",
+                "action": "CLOCK_TICK",
+                "exits": [],
+                "reason": "max_hold_bars_not_configured",
+            }
+
+        now_utc = datetime.now(timezone.utc)
+        open_rows = await asyncio.to_thread(adapter.list_open_fills)
+        fills = [
+            OpenFill(
+                order_id=row["order_id"],
+                open_time=row["open_time"],
+                direction=row.get("direction"),
+            )
+            for row in open_rows
+        ]
+        plans = plan_clock_time_exits(
+            fills,
+            now=now_utc,
+            max_hold_bars=max_hold_bars,
+            bar_minutes=bar_minutes,
+        )
+        results = []
+        for plan in plans:
+            intent = OrderIntent(
+                intent_type=OrderIntentType.CLOSE_MARKET,
+                order_id=plan.order_id,
+                reason=plan.reason,
+            )
+            exec_close = await asyncio.to_thread(adapter.execute_intent, intent)
+            already_flat = (
+                not exec_close.success
+                and "not found" in (exec_close.message or "").lower()
+            )
+            if not exec_close.success and not already_flat:
+                results.append(
+                    {
+                        "order_id": plan.order_id,
+                        "status": "rejected",
+                        "message": exec_close.message,
+                    }
+                )
+                continue
+
+            if not adapter.dry_run:
+                exposure_after = await asyncio.to_thread(adapter.get_open_exposure)
+                if exposure_after == []:
+                    await asyncio.to_thread(adapter.finish_setup, plan.order_id)
+
+            await asyncio.to_thread(
+                adapter.log_lifecycle_event,
+                event_type="TRADE_CLOSED",
+                order_id=plan.order_id,
+                direction=plan.direction,
+                reason=plan.reason,
+            )
+            if notifier and getattr(notifier, "enabled", False):
+                if may_notify_close(
+                    broker_close_success=bool(exec_close.success),
+                    already_flat_on_broker=already_flat,
+                ):
+                    try:
+                        from scripts.smc.notifier import format_trade_closed_card
+                        from scripts.smc.types import Direction as Dir
+
+                        tc_dir = (
+                            Dir.BUY
+                            if str(plan.direction or "BUY").upper() == "BUY"
+                            else Dir.SELL
+                        )
+                        card = format_trade_closed_card(
+                            direction=tc_dir,
+                            exit_price=0.0,
+                            pnl_dollars=0.0,
+                            pnl_r=0.0,
+                            reason=plan.reason,
+                        )
+                        background_tasks.add_task(_dispatch_tg_safe, card)
+                    except Exception as exc:
+                        logger.warning("Clock TIME_EXIT notify failed: %s", exc)
+                else:
+                    logger.warning(
+                        "Clock TIME_EXIT notify suppressed — no broker evidence (%s)",
+                        plan.order_id,
+                    )
+            results.append(
+                {
+                    "order_id": plan.order_id,
+                    "status": "success",
+                    "reason": plan.reason,
+                    "execution": {
+                        "success": exec_close.success,
+                        "message": exec_close.message,
+                    },
+                }
+            )
+
+        return {
+            "status": "ok",
+            "action": "CLOCK_TICK",
+            "checked": len(fills),
+            "exits": results,
+            "timestamp": now_utc.isoformat(),
+        }
 
     @app.post("/webhook/tradingview")
     async def handle_tradingview_webhook(

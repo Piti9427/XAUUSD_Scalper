@@ -1307,5 +1307,76 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertFalse(restored.history_ready)
 
 
+class TestWebhookClockTimeExit(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from scripts.webhook_bridge import create_app
+
+        self.Path = Path
+        self.secret = "CLOCK_SECRET"
+        self.db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db.close()
+        self.app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=self.db.name,
+            max_hold_bars=2,
+            bar_minutes=5,
+        )
+        self.client = TestClient(self.app)
+        self.headers = {"Authorization": f"Bearer {self.secret}"}
+
+    def tearDown(self):
+        self.app.state.adapter.conn.close()
+        self.Path(self.db.name).unlink(missing_ok=True)
+
+    def test_clock_closes_stale_fill_without_new_bar(self):
+        from datetime import datetime, timezone, timedelta
+
+        adapter = self.app.state.adapter
+        # Seed open_time = now - 20m so 2*5m max hold is exceeded.
+        recent_old = datetime.now(timezone.utc) - timedelta(minutes=20)
+        adapter.log_lifecycle_event(
+            event_type="ORDER_FILLED",
+            order_id="CLOCK_FILL_1",
+            direction="BUY",
+            timestamp=recent_old.isoformat(),
+        )
+
+        res = self.client.post("/internal/clock", headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["action"], "CLOCK_TICK")
+        self.assertEqual(data["checked"], 1)
+        self.assertEqual(len(data["exits"]), 1)
+        self.assertEqual(data["exits"][0]["status"], "success")
+        self.assertIn("TIME_EXIT", data["exits"][0]["reason"])
+
+        # Second tick: already closed — no duplicate exit
+        res2 = self.client.post("/internal/clock", headers=self.headers)
+        self.assertEqual(res2.json()["checked"], 0)
+        self.assertEqual(res2.json()["exits"], [])
+
+    def test_clock_disabled_without_max_hold(self):
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        client = TestClient(app)
+        try:
+            res = client.post(
+                "/internal/clock",
+                headers={"Authorization": f"Bearer {self.secret}"},
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.json()["status"], "disabled")
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
+
 if __name__ == "__main__":
     unittest.main()

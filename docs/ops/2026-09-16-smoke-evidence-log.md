@@ -1,6 +1,6 @@
 # Smoke / infra evidence log (Issue #1)
 
-## 2026-09-16 — local Mac smoke attempt
+## 2026-09-16 — local Mac smoke attempt (updated)
 
 Command:
 ```bash
@@ -9,9 +9,14 @@ Command:
 
 Result:
 ```json
-{"ok": false, "reasons": ["mt5_import_missing"]}
+{
+  "ok": false,
+  "reasons": ["mt5_import_missing"],
+  "infra_verdict": "INCONCLUSIVE_INFRA",
+  "infra_detail": "mt5_unavailable_on_host"
+}
 ```
 
-Interpretation: `MetaTrader5` Python package unavailable on this host. Not a PASS/FAIL of Exness Demo identity — environment lacks MT5 binding. Oracle ARM64 soak and Demo 12w remain unexecuted.
+Interpretation: `MetaTrader5` Python package unavailable on this host. Scored as **INCONCLUSIVE_INFRA** (not strategy FAIL). Oracle ARM64 soak and Demo 12w remain unexecuted.
 
-GitHub issue close: MCP `issue_write` and `gh` both return 403 / invalid keyring for issues write scope.
+GitHub issue close: MCP `issue_write` and `gh` both return 403 / invalid keyring for issues write; MCP also hit rate limit (~31m). Git push to `feature/smc-v2-hardening` works.

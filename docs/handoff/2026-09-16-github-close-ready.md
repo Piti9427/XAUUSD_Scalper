@@ -9,8 +9,8 @@ gh auth refresh -h github.com -s repo
 
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring.
 
-Branch evidence: `feature/smc-v2-hardening` (local ahead of origin).
-Unit suite: `python3 -m unittest discover -s tests` → OK (228+).
+Branch evidence: `feature/smc-v2-hardening` (synced to origin).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (238).
 
 ---
 
