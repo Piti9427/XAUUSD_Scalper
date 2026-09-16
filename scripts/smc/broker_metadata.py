@@ -14,6 +14,8 @@ REQUIRED_SIZING_KEYS = (
     "lot_step",
     "contract_size",
     "margin_free",
+    "point",
+    "stops_level",
 )
 
 
@@ -46,6 +48,8 @@ def broker_metadata_allows_new_risk(
     lot_step = float(snapshot["lot_step"])
     contract_size = float(snapshot["contract_size"])
     margin_free = float(snapshot["margin_free"])
+    point = float(snapshot["point"])
+    stops_level = float(snapshot["stops_level"])
 
     if balance <= 0 or equity <= 0:
         return False, "non_positive_capital"
@@ -55,6 +59,10 @@ def broker_metadata_allows_new_risk(
         return False, "max_lot_below_min_lot"
     if margin_free < 0:
         return False, "negative_margin_free"
+    if point <= 0:
+        return False, "invalid_point"
+    if stops_level < 0:
+        return False, "invalid_stops_level"
 
     if "trade_allowed" in snapshot and snapshot["trade_allowed"] is not None:
         try:

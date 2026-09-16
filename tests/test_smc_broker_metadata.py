@@ -16,6 +16,8 @@ def _ok_snapshot(**overrides):
         "lot_step": 0.01,
         "contract_size": 100.0,
         "margin_free": 480.0,
+        "point": 0.01,
+        "stops_level": 0.0,
         "trade_allowed": 1.0,
     }
     base.update(overrides)
@@ -49,6 +51,13 @@ class BrokerMetadataGateTests(unittest.TestCase):
         ok, reason = broker_metadata_allows_new_risk(_ok_snapshot(trade_allowed=0.0))
         self.assertFalse(ok)
         self.assertEqual(reason, "trade_not_allowed")
+
+    def test_missing_point_blocks(self):
+        snap = _ok_snapshot()
+        del snap["point"]
+        ok, reason = broker_metadata_allows_new_risk(snap)
+        self.assertFalse(ok)
+        self.assertEqual(reason, "missing_point")
 
 
 if __name__ == "__main__":

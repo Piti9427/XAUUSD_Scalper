@@ -238,7 +238,8 @@ class TestSMCMT5Adapter(unittest.TestCase):
         )
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01, volume_max=5.0, volume_step=0.01,
-            trade_contract_size=100.0,
+            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            trade_freeze_level=0,
         )
         self.adapter.dry_run = False
         self.adapter.connected = True
@@ -252,6 +253,8 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.assertEqual(snapshot["contract_size"], 100.0)
         self.assertEqual(snapshot["margin_free"], 5500.0)
         self.assertEqual(snapshot["trade_allowed"], 1.0)
+        self.assertEqual(snapshot["point"], 0.01)
+        self.assertEqual(snapshot["stops_level"], 0.0)
 
     def test_live_risk_snapshot_none_when_margin_free_missing(self):
         broker = Mock()

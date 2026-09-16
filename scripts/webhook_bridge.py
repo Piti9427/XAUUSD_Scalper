@@ -23,6 +23,7 @@ from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityRe
 from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_intents
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
+from scripts.smc.stops_geometry import pending_stops_geometry_allows
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -824,6 +825,30 @@ def create_app(
                     "event": event,
                     "reason": f"ADR-020 Small-Account Risk Gate: {lot_result.reason}",
                 }
+
+            # Scenario 10: broker stops_level / point conversion must allow SL/TP geometry.
+            if not adapter.dry_run and broker_risk is not None:
+                tp_for_geom = tp2 if tp2 > 0 else (tp1 if tp1 > 0 else None)
+                geom_ok, geom_reason = pending_stops_geometry_allows(
+                    entry_price=entry,
+                    sl_price=sl,
+                    tp_price=tp_for_geom,
+                    point=float(broker_risk["point"]),
+                    stops_level=float(broker_risk["stops_level"]),
+                )
+                if not geom_ok:
+                    reason = f"Stops geometry gate blocked new risk: {geom_reason}"
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(
+                            mark_processed, order_id, event, "rejected_stops_geometry"
+                        )
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
 
             if not adapter.dry_run:
                 claim = await asyncio.to_thread(adapter.claim_setup, payload)

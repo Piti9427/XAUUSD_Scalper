@@ -672,6 +672,11 @@ class SMCExecutionAdapter:
         if margin_free is None:
             return None
         trade_allowed = getattr(account, "trade_allowed", None)
+        point = getattr(symbol, "point", None)
+        stops_level = getattr(symbol, "trade_stops_level", None)
+        freeze_level = getattr(symbol, "trade_freeze_level", None)
+        if point is None or stops_level is None:
+            return None
         snapshot = {
             "balance": float(account.balance),
             "equity": float(account.equity),
@@ -680,7 +685,11 @@ class SMCExecutionAdapter:
             "lot_step": float(symbol.volume_step),
             "contract_size": float(symbol.trade_contract_size),
             "margin_free": float(margin_free),
+            "point": float(point),
+            "stops_level": float(stops_level),
         }
+        if freeze_level is not None:
+            snapshot["freeze_level"] = float(freeze_level)
         if trade_allowed is not None:
             snapshot["trade_allowed"] = 1.0 if bool(trade_allowed) else 0.0
         return snapshot

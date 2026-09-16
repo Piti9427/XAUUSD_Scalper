@@ -78,6 +78,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Provenance gap/proxy cannot claim EVALUABLE (scenario 22) | **Done:** backtester attaches `provenance`; proxy/insufficiency overrides `sample_verdict`; `test_proxy_feed_cannot_claim_evaluable` |
 | Development vs holdout window labels (Gate D proposal) | **Done:** `scripts/smc/eval_windows.py` refuses merge of development+holdout samples; wired into backtester `eval_window` / `sample_verdict`; `tests/test_smc_eval_windows.py`, `test_mixed_dev_holdout_bars_refuse_evaluable` |
 | Dry-run verifier aligned to foundation + admission | **Done:** `scripts/verify_dry_run.py` uses fresh UTC times; TP1 expects reject under BaselinePlay defaults |
+| Broker stops_level / point geometry (scenario 10) | **Done:** `scripts/smc/stops_geometry.py`; snapshot requires `point`+`stops_level`; webhook SETUP gated; `tests/test_smc_stops_geometry.py`, `test_stops_geometry_blocks_tight_sl` |
 
 ## Still open for issue #1
 
