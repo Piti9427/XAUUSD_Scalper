@@ -288,10 +288,36 @@ class TestSMCOrchestrator(unittest.TestCase):
             "low": 1994.0,
             "close": 2002.0,
             "has_tick_order": True,
+            "ticks": [2000.0, 1994.0, 2011.0],
         }
         intents = self.orchestrator.on_bar(bar, account)
         self.assertIsNone(account.open_position)
         self.assertEqual(account.daily_loss_count, 1)
+        self.assertEqual(intents, [])
+
+    def test_dual_touch_tick_order_can_take_tp_first(self):
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.10,
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=5.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2000.0,
+            "high": 2011.0,
+            "low": 1994.0,
+            "close": 2002.0,
+            "has_tick_order": True,
+            "ticks": [2000.0, 2011.0, 1994.0],
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertIsNone(account.open_position)
+        self.assertEqual(account.daily_loss_count, 0)
         self.assertEqual(intents, [])
 
 

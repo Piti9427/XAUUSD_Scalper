@@ -10,7 +10,7 @@ from scripts.smc.types import (
 )
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import RiskHaltState
-from scripts.smc.quotes import ohlc_dual_touch_flag
+from scripts.smc.quotes import ohlc_dual_touch_flag, first_exit_from_ticks
 
 
 class StrategyOrchestrator:
@@ -83,10 +83,19 @@ class StrategyOrchestrator:
             tp_hit = (float(bar["low"]) + self.spread_buffer) <= pos.tp_price
 
         has_tick_order = bool(bar.get("has_tick_order", False))
+        tick_first_exit = bar.get("tick_first_exit")
+        if tick_first_exit is None and has_tick_order and bar.get("ticks"):
+            tick_first_exit = first_exit_from_ticks(
+                direction=pos.direction.value,
+                sl_price=pos.sl_price,
+                tp_price=pos.tp_price,
+                ticks=bar["ticks"],
+            )
         exit_flag = ohlc_dual_touch_flag(
             sl_touched=sl_hit,
             tp_touched=tp_hit,
             has_tick_order=has_tick_order,
+            tick_first_exit=tick_first_exit,
         )
         if exit_flag == "AMBIGUOUS":
             intents.append(
@@ -106,6 +115,11 @@ class StrategyOrchestrator:
             if not pos.be_moved:
                 account.daily_loss_count += 1
                 account.last_loss_time = bar_time
+            account.open_position = None
+            return intents
+
+        # Dual-touch resolved to TP by ticks: close immediately (no BE invention).
+        if exit_flag == "TP" and sl_hit:
             account.open_position = None
             return intents
 
@@ -178,7 +192,7 @@ class StrategyOrchestrator:
                         )
                     )
 
-        # Check Full TP hits (Ask-calibrated on SELL); dual-touch already handled above
+        # Full TP (OHLC TP-only path; dual-touch TP already returned above)
         if exit_flag == "TP":
             account.open_position = None
 

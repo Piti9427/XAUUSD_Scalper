@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.smc.quotes import executable_price, ohlc_dual_touch_flag
+from scripts.smc.quotes import executable_price, first_exit_from_ticks, ohlc_dual_touch_flag
 
 
 class QuoteSideTests(unittest.TestCase):
@@ -19,8 +19,55 @@ class QuoteSideTests(unittest.TestCase):
             "AMBIGUOUS",
         )
         self.assertEqual(
-            ohlc_dual_touch_flag(sl_touched=True, tp_touched=True, has_tick_order=True),
+            ohlc_dual_touch_flag(
+                sl_touched=True,
+                tp_touched=True,
+                has_tick_order=True,
+                tick_first_exit="SL",
+            ),
             "SL",
+        )
+        self.assertEqual(
+            ohlc_dual_touch_flag(
+                sl_touched=True,
+                tp_touched=True,
+                has_tick_order=True,
+                tick_first_exit="TP",
+            ),
+            "TP",
+        )
+        self.assertEqual(
+            ohlc_dual_touch_flag(sl_touched=True, tp_touched=True, has_tick_order=True),
+            "AMBIGUOUS",
+        )
+
+    def test_first_exit_from_ticks_respects_order(self):
+        self.assertEqual(
+            first_exit_from_ticks(
+                direction="BUY",
+                sl_price=1995.0,
+                tp_price=2010.0,
+                ticks=[2000.0, 2011.0, 1994.0],
+            ),
+            "TP",
+        )
+        self.assertEqual(
+            first_exit_from_ticks(
+                direction="BUY",
+                sl_price=1995.0,
+                tp_price=2010.0,
+                ticks=[2000.0, 1994.0, 2011.0],
+            ),
+            "SL",
+        )
+        self.assertEqual(
+            first_exit_from_ticks(
+                direction="SELL",
+                sl_price=2010.0,
+                tp_price=1990.0,
+                ticks=[(2000.0, 2000.2), (1989.0, 1989.2), (2011.0, 2011.2)],
+            ),
+            "TP",
         )
 
 
