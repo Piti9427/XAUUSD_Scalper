@@ -767,6 +767,7 @@ def create_app(
                 pnl_dollar=pnl_dollar,
                 pnl_r=pnl_r,
                 reason=reason,
+                timestamp=payload.get("time"),
             )
             # Foundation risk halt: two net losing bot closes trip daily loss gate.
             if risk_halt is not None and halt_path is not None:

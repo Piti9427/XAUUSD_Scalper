@@ -337,9 +337,23 @@ class SMCExecutionAdapter:
         reason: str = "",
         order_id: Optional[str] = None,
         ticket: Optional[int] = None,
+        timestamp: Optional[str] = None,
     ):
         cursor = self.conn.cursor()
-        now_utc = datetime.now(timezone.utc).isoformat()
+        if timestamp:
+            ts = timestamp
+            # Normalize payload clock times into ISO so daily LIKE filters stay stable.
+            try:
+                parsed = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00").replace(" ", "T"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                else:
+                    parsed = parsed.astimezone(timezone.utc)
+                ts = parsed.isoformat()
+            except ValueError:
+                ts = datetime.now(timezone.utc).isoformat()
+        else:
+            ts = datetime.now(timezone.utc).isoformat()
         cursor.execute(
             """
             INSERT INTO trade_lifecycle (
@@ -348,7 +362,7 @@ class SMCExecutionAdapter:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                now_utc,
+                ts,
                 event_type,
                 direction,
                 entry_price,
