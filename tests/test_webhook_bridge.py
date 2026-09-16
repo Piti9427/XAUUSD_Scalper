@@ -1372,7 +1372,54 @@ class TestWebhookClockTimeExit(unittest.TestCase):
                 headers={"Authorization": f"Bearer {self.secret}"},
             )
             self.assertEqual(res.status_code, 200)
-            self.assertEqual(res.json()["status"], "disabled")
+            data = res.json()
+            self.assertEqual(data["status"], "disabled")
+            self.assertEqual(data["exits"], [])
+            self.assertEqual(data["cancels"], [])
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
+    def test_clock_cancels_unfilled_pending_on_news_blackout(self):
+        from datetime import datetime, timezone, timedelta
+        from scripts.smc.news import NewsManager, NewsEvent
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        news = NewsManager()
+        news.events = [
+            NewsEvent(
+                time=datetime.now(timezone.utc) + timedelta(minutes=5),
+                currency="USD",
+                impact="HIGH",
+                name="NFP",
+            )
+        ]
+        news.schedule_known = True
+        app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=db.name,
+            news_manager=news,
+            # max_hold unset: news cancel must still run
+        )
+        client = TestClient(app)
+        try:
+            adapter = app.state.adapter
+            adapter.claim_setup({"order_id": "NEWS_PEND_1", "limit": 2000.0})
+            adapter.update_setup_status("NEWS_PEND_1", "accepted", ticket=1)
+            res = client.post(
+                "/internal/clock",
+                headers={"Authorization": f"Bearer {self.secret}"},
+            )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(len(data["cancels"]), 1)
+            self.assertEqual(data["cancels"][0]["order_id"], "NEWS_PEND_1")
+            self.assertEqual(data["cancels"][0]["status"], "success")
+            self.assertEqual(data["exits"], [])
         finally:
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)

@@ -132,22 +132,68 @@ def create_app(
         authorized: bool = Depends(verify_auth),
     ):
         """
-        Wall-clock TIME_EXIT when TV/M5 feed stalls (foundation scenario 19).
+        Periodic reconciler: news-cancel unfilled pendings + wall-clock TIME_EXIT.
 
-        Emits CLOSE_MARKET only; TRADE CLOSED Telegram waits for broker evidence.
+        Scenario 18/19 — never force-close filled positions on news; never notify
+        TRADE CLOSED without broker evidence.
         """
         from scripts.smc.clock_exit import OpenFill, plan_clock_time_exits
         from scripts.smc.notification_policy import may_notify_close
 
+        now_utc = datetime.now(timezone.utc)
+        cancel_results = []
+        exit_results = []
+
+        # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
+        if news_manager is not None and hasattr(news_manager, "should_cancel_pending"):
+            events = getattr(news_manager, "events", None)
+            schedule_known = bool(
+                getattr(news_manager, "schedule_known", events is not None)
+            )
+            cancel_pending, cancel_reason = await asyncio.to_thread(
+                news_manager.should_cancel_pending,
+                now_utc,
+                events,
+                schedule_known=schedule_known,
+                window_mins=30,
+            )
+            if cancel_pending:
+                pending_ids = await asyncio.to_thread(adapter.list_unfilled_pendings)
+                for oid in pending_ids:
+                    intent = OrderIntent(
+                        intent_type=OrderIntentType.CANCEL_LIMIT,
+                        order_id=oid,
+                        reason=f"news_pending_cancel:{cancel_reason}",
+                    )
+                    exec_cancel = await asyncio.to_thread(adapter.execute_intent, intent)
+                    if exec_cancel.success:
+                        await asyncio.to_thread(
+                            adapter.log_lifecycle_event,
+                            event_type="ORDER_CANCELED",
+                            order_id=oid,
+                            reason=f"news_pending_cancel:{cancel_reason}",
+                        )
+                        if not adapter.dry_run:
+                            await asyncio.to_thread(adapter.finish_setup, oid)
+                    cancel_results.append(
+                        {
+                            "order_id": oid,
+                            "status": "success" if exec_cancel.success else "rejected",
+                            "reason": cancel_reason,
+                            "message": exec_cancel.message,
+                        }
+                    )
+
         if max_hold_bars is None:
             return {
-                "status": "disabled",
+                "status": "ok" if cancel_results else "disabled",
                 "action": "CLOCK_TICK",
+                "cancels": cancel_results,
                 "exits": [],
-                "reason": "max_hold_bars_not_configured",
+                "reason": None if cancel_results else "max_hold_bars_not_configured",
+                "timestamp": now_utc.isoformat(),
             }
 
-        now_utc = datetime.now(timezone.utc)
         open_rows = await asyncio.to_thread(adapter.list_open_fills)
         fills = [
             OpenFill(
@@ -163,7 +209,6 @@ def create_app(
             max_hold_bars=max_hold_bars,
             bar_minutes=bar_minutes,
         )
-        results = []
         for plan in plans:
             intent = OrderIntent(
                 intent_type=OrderIntentType.CLOSE_MARKET,
@@ -176,7 +221,7 @@ def create_app(
                 and "not found" in (exec_close.message or "").lower()
             )
             if not exec_close.success and not already_flat:
-                results.append(
+                exit_results.append(
                     {
                         "order_id": plan.order_id,
                         "status": "rejected",
@@ -226,7 +271,7 @@ def create_app(
                         "Clock TIME_EXIT notify suppressed — no broker evidence (%s)",
                         plan.order_id,
                     )
-            results.append(
+            exit_results.append(
                 {
                     "order_id": plan.order_id,
                     "status": "success",
@@ -242,7 +287,8 @@ def create_app(
             "status": "ok",
             "action": "CLOCK_TICK",
             "checked": len(fills),
-            "exits": results,
+            "cancels": cancel_results,
+            "exits": exit_results,
             "timestamp": now_utc.isoformat(),
         }
 

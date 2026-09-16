@@ -429,6 +429,26 @@ class SMCExecutionAdapter:
             )
         return rows
 
+    def list_unfilled_pendings(self) -> List[str]:
+        """
+        Accepted/submitted setups with no ORDER_FILLED yet.
+
+        Used to cancel unfilled pendings on news blackout without touching fills.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT order_id FROM setup_inbox
+            WHERE status IN ('claimed', 'submitted', 'accepted', 'uncertain')
+              AND order_id NOT IN (
+                  SELECT order_id FROM trade_lifecycle
+                  WHERE event_type = 'ORDER_FILLED' AND order_id IS NOT NULL
+              )
+            ORDER BY created_at ASC
+            """
+        )
+        return [str(row[0]) for row in cursor.fetchall() if row and row[0]]
+
     def get_daily_realized_losses(self, date_utc_str: Optional[str] = None) -> int:
         """Queries SQLite for number of realized loss trades today (ADR-011)."""
         if date_utc_str is None:
