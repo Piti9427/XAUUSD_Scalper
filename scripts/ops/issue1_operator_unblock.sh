@@ -17,6 +17,11 @@ echo "    export MT5_TERMINAL_PATH='C:\\Program Files\\MetaTrader 5\\terminal64.
 echo "    ./scripts/ops/foundation_live_gate.sh"
 echo "    Expect: docs/ops/<date>-exness-smoke.json with ok:true"
 echo ""
+echo "==> 1b) Mac Wine alone is NOT enough today"
+echo "    - terminal64 may run, but Wine Python initialize is still -6 Authorization failed"
+echo "    - Wine prefix has zero Exness configs (see docs/ops/2026-09-16-mac-wine-exness-prefix-hunt.json)"
+echo "    - Logging into Exness in the GUI does not clear Gate C until smoke ok:true exists"
+echo ""
 
 echo "==> 2) Or: authorize this Mac SSH key on that host, then re-run from here"
 PUB="${HOME}/.ssh/id_ed25519.pub"
