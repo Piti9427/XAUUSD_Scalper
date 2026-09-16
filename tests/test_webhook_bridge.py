@@ -1528,6 +1528,37 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         finally:
             adapter.close()
 
+    def test_trade_closed_webhook_skipped_when_lifecycle_already_logged(self):
+        adapter = self.app.state.adapter
+        adapter.log_lifecycle_event(
+            event_type="TRADE_CLOSED",
+            order_id="LC_DUP_1",
+            pnl_dollar=-10.0,
+            pnl_r=-1.0,
+            reason="broker_lifecycle_close_detected",
+        )
+        before_losses = adapter.get_daily_realized_losses()
+        res = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "TRADE_CLOSED",
+                "order_id": "LC_DUP_1",
+                "reason": "SL_HIT",
+                "pnl_dollar": -10.0,
+                "pnl_r": -1.0,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["status"], "ignored_duplicate")
+        self.assertEqual(adapter.get_daily_realized_losses(), before_losses)
+        closed_rows = [
+            row
+            for row in adapter.get_lifecycle_logs()
+            if row.get("event_type") == "TRADE_CLOSED" and row.get("order_id") == "LC_DUP_1"
+        ]
+        self.assertEqual(len(closed_rows), 1)
+
     def test_trade_closed_uses_frozen_initial_r_from_fill_geometry(self):
         """Dollar PnL + entry/SL/lot → R uses frozen initial denominator."""
         res = self.client.post(

@@ -22,6 +22,9 @@ fi
 echo "==> Push feature/smc-v2-hardening"
 git push -u origin feature/smc-v2-hardening
 
+echo "==> Close evidence JSON (paste into issue comments if helpful)"
+python3 "$ROOT/scripts/generate_close_evidence.py" | tee "$ROOT/docs/ops/$(date -u +%Y-%m-%d)-github-close-evidence.json"
+
 echo "==> Close #3 (mechanical spec)"
 gh issue close 3 -R Piti9427/XAUUSD_Scalper --reason completed --comment "$(cat <<'EOF'
 Mechanical v1 deliverable landed in-repo.

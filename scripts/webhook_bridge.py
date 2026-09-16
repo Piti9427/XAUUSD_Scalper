@@ -999,6 +999,18 @@ def create_app(
 
         # 5. TRADE_CLOSED: Finalize Position Lifecycle & Execute Broker Close
         elif event == "TRADE_CLOSED":
+            if order_id and await asyncio.to_thread(
+                adapter.has_lifecycle_event, order_id, "TRADE_CLOSED"
+            ):
+                if order_id:
+                    await asyncio.to_thread(mark_processed, order_id, event, "success")
+                return {
+                    "status": "ignored_duplicate",
+                    "order_id": order_id,
+                    "event": event,
+                    "message": "TRADE_CLOSED already recorded (broker lifecycle or prior webhook)",
+                }
+
             reason = payload.get("reason", "POSITION_CLOSED")
             # Never invent R/$ from reason text — only explicit payload, broker cashflow,
             # or frozen_initial_r from fill geometry (entry/sl/lot).
