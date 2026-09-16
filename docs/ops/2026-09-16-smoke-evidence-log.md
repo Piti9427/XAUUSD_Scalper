@@ -25,3 +25,15 @@ empty login/password/server.
 
 Artifact: `docs/ops/2026-09-16-mac-wine-reprobe-running.json`  
 Verdict: still `INCONCLUSIVE_INFRA` — not Gate C PASS.
+
+## 2026-09-16 — Wine re-probe while terminal still up @ `d7ebd5f`
+
+`terminal64.exe` still running. Native `.venv` smoke → `mt5_import_missing`
+(`docs/ops/2026-09-16-exness-smoke-mac-retry.json`). Wine-Python initialize
+with path still `[-6, "Terminal: Authorization failed"]`; account fields null;
+no Exness server string.
+
+Artifact: `docs/ops/2026-09-16-mac-wine-reprobe-running.json` (refreshed)  
+Process snapshot: `docs/ops/2026-09-16-mac-terminal-process-present.json`  
+`gh` auth: OK. Operator still must authorize SSH key or run live gate on
+Exness host. Do not invent Gate C PASS.

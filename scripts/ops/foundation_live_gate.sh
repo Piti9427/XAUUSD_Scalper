@@ -48,4 +48,5 @@ echo "    - Forward Demo 12w: docs/ops/2026-09-16-foundation-demo-12w-protocol.m
 echo "    - gh auth refresh -h github.com (needed to close/comment #1)"
 echo ""
 echo "Tracker: #2/#3/#4 already closed. Do NOT close #1 until smoke ok:true + soak + Demo start evidence."
+echo "Note: gh auth may already be valid on operator Mac — re-check with: gh auth status -h github.com"
 exit "$SMOKE_RC"
