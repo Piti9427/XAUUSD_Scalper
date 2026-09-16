@@ -18,6 +18,7 @@ from scripts.smc.quotes import first_exit_from_ticks
 from scripts.smc.funnel import SetupFunnel
 from scripts.smc.replay_report import ReplayKind, ReplayReport, build_replay_report
 from scripts.smc.cost_accounting import CostAccountingReport, summarize_profit_layers
+from scripts.smc.stats_protocol import WilsonInterval, sample_verdict, wilson_interval
 
 
 @dataclass
@@ -37,6 +38,8 @@ class BacktestSummary:
     funnel: Optional[Dict[str, Any]] = None
     replay_report: Optional[ReplayReport] = None
     cost_report: Optional[CostAccountingReport] = None
+    sample_verdict: Optional[str] = None
+    wilson: Optional[WilsonInterval] = None
 
 
 class _RecordingOrchestrator(StrategyOrchestrator):
@@ -442,6 +445,9 @@ class SMCBacktester:
             fees_and_swap=self.fees_and_swap,
             operating_costs=self.operating_costs,
         )
+        # Story 42/43: freeze sample sufficiency before claiming PASS; few trades → INCONCLUSIVE.
+        verdict = sample_verdict(n=scored_n)
+        wilson = wilson_interval(wins=winning_trades, n=scored_n) if scored_n > 0 else None
 
         return BacktestSummary(
             initial_balance=self.initial_balance,
@@ -459,18 +465,36 @@ class SMCBacktester:
             funnel=funnel.as_dict(),
             replay_report=replay_report,
             cost_report=cost_report,
+            sample_verdict=verdict,
+            wilson=wilson,
         )
 
 
 def format_backtest_summary(summary: BacktestSummary) -> str:
     """Formats BacktestSummary into a clean Markdown table."""
+    replay_kind = summary.replay_report.kind.value if summary.replay_report else "unlabeled"
+    sample = summary.sample_verdict or "unknown"
+    net_ops = (
+        f"${summary.cost_report.net_operating_profit:,.2f}"
+        if summary.cost_report is not None
+        else "n/a"
+    )
+    wilson_note = (
+        f"{summary.wilson.lower:.3f}–{summary.wilson.upper:.3f}"
+        if summary.wilson is not None
+        else "n/a"
+    )
     return f"""
 # SMC Trading System v1 — Backtest Results
 | Metric | Value |
 | :--- | :--- |
+| **Replay kind** | `{replay_kind}` |
+| **Sample verdict** | `{sample}` (few trades stay INCONCLUSIVE) |
+| **Wilson 95% win-rate** | {wilson_note} |
 | **Initial Balance** | ${summary.initial_balance:,.2f} |
 | **Final Balance** | ${summary.final_balance:,.2f} |
-| **Net Profit** | ${summary.net_profit:,.2f} ({(summary.net_profit / summary.initial_balance * 100):.2f}%) |
+| **Net Profit (trading)** | ${summary.net_profit:,.2f} ({(summary.net_profit / summary.initial_balance * 100):.2f}%) |
+| **Net operating profit** | {net_ops} |
 | **Total Trades** | {summary.total_trades} |
 | **Winning Trades** | {summary.winning_trades} |
 | **Losing Trades** | {summary.losing_trades} |

@@ -69,6 +69,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | MT5 initialize path helper (Wine/Mac IPC) | **Done:** `scripts/smc/mt5_init.py`; smoke `--path` / `MT5_TERMINAL_PATH`; connector+adapter wired |
 | Research vs USD500 / shared-account replay labels (stories 39–40) | **Done:** `scripts/smc/replay_report.py`; backtester attaches `replay_report`; no shared-account parity without events |
 | Trading vs operating profit on backtest summary (story 41) | **Done:** backtester `cost_report` via `summarize_profit_layers` |
+| Frozen sample/Wilson on backtest summary (stories 42–43) | **Done:** `sample_verdict` + `wilson_interval` attached; few trades → INCONCLUSIVE |
 
 ## Still open for issue #1
 

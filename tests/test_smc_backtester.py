@@ -225,6 +225,12 @@ class TestSMCBacktester(unittest.TestCase):
                 )
             )
 
+    def test_few_trades_sample_verdict_is_inconclusive(self):
+        result = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
+        self.assertEqual(result.sample_verdict, "INCONCLUSIVE")
+        if result.winning_trades + result.losing_trades + result.be_trades > 0:
+            self.assertIsNotNone(result.wilson)
+
 
 if __name__ == "__main__":
     unittest.main()
