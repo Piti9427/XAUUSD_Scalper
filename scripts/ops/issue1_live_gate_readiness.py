@@ -76,7 +76,8 @@ def _scan_exness_smoke() -> tuple[bool, str | None, str | None]:
     """
     ops = ROOT / "docs" / "ops"
     candidates = sorted(
-        set(ops.glob("*-exness-smoke.json")) | set(ops.glob("*-exness-smoke-*.json"))
+        set(ops.glob("*-exness-smoke.json")) | set(ops.glob("*-exness-smoke-*.json")),
+        key=lambda p: p.stat().st_mtime,
     )
     latest = str(candidates[-1].relative_to(ROOT)) if candidates else None
     for p in candidates:
@@ -114,6 +115,8 @@ def main() -> int:
                 "docs/ops/2026-09-16-mac-live-gate-blocker.md",
                 "docs/ops/2026-09-16-mac-wine-initialize-path.json",
                 "docs/ops/2026-09-16-mac-wine-reprobe-running.json",
+                "docs/ops/2026-09-16-exness-smoke-mac-post-split.json",
+                "docs/ops/2026-09-16-host-ssh-reprobe.json",
                 host_hunt,
             ],
         },

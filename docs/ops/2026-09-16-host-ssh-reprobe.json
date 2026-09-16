@@ -1,0 +1,148 @@
+{
+  "captured_at_utc": "2026-09-16T09:57:09.225918+00:00",
+  "purpose": "Re-probe Gate C SSH after adapter account wire + package split",
+  "results": [
+    {
+      "host": "158.178.243.98",
+      "tcp22": "open",
+      "error": null,
+      "auth_attempts": [
+        {
+          "user": "nopparuj",
+          "rc": 255,
+          "stderr_tail": "Warning: Permanently added '158.178.243.98' (ED25519) to the list of known hosts.\nnopparuj@158.178.243.98: Permission denied (publickey)."
+        },
+        {
+          "user": "ubuntu",
+          "rc": 255,
+          "stderr_tail": "Warning: Permanently added '158.178.243.98' (ED25519) to the list of known hosts.\nubuntu@158.178.243.98: Permission denied (publickey)."
+        },
+        {
+          "user": "opc",
+          "rc": 255,
+          "stderr_tail": "Warning: Permanently added '158.178.243.98' (ED25519) to the list of known hosts.\nopc@158.178.243.98: Permission denied (publickey)."
+        },
+        {
+          "user": "root",
+          "rc": 255,
+          "stderr_tail": "Warning: Permanently added '158.178.243.98' (ED25519) to the list of known hosts.\nroot@158.178.243.98: Permission denied (publickey)."
+        }
+      ]
+    },
+    {
+      "host": "192.168.7.8",
+      "tcp22": "open",
+      "error": null,
+      "auth_attempts": [
+        {
+          "user": "nopparuj",
+          "rc": 255,
+          "stderr_tail": "Permanently added '192.168.7.8' (ED25519) to the list of known hosts.\nnopparuj@192.168.7.8: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "ubuntu",
+          "rc": 255,
+          "stderr_tail": ": Permanently added '192.168.7.8' (ED25519) to the list of known hosts.\nubuntu@192.168.7.8: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "opc",
+          "rc": 255,
+          "stderr_tail": "ing: Permanently added '192.168.7.8' (ED25519) to the list of known hosts.\nopc@192.168.7.8: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "root",
+          "rc": 255,
+          "stderr_tail": "ng: Permanently added '192.168.7.8' (ED25519) to the list of known hosts.\nroot@192.168.7.8: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        }
+      ]
+    },
+    {
+      "host": "192.168.7.19",
+      "tcp22": "open",
+      "error": null,
+      "auth_attempts": [
+        {
+          "user": "nopparuj",
+          "rc": 255,
+          "stderr_tail": "rmanently added '192.168.7.19' (ED25519) to the list of known hosts.\nnopparuj@192.168.7.19: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "ubuntu",
+          "rc": 255,
+          "stderr_tail": "Permanently added '192.168.7.19' (ED25519) to the list of known hosts.\nubuntu@192.168.7.19: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "opc",
+          "rc": 255,
+          "stderr_tail": "g: Permanently added '192.168.7.19' (ED25519) to the list of known hosts.\nopc@192.168.7.19: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "root",
+          "rc": 255,
+          "stderr_tail": ": Permanently added '192.168.7.19' (ED25519) to the list of known hosts.\nroot@192.168.7.19: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        }
+      ]
+    },
+    {
+      "host": "192.168.7.21",
+      "tcp22": "open",
+      "error": null,
+      "auth_attempts": [
+        {
+          "user": "nopparuj",
+          "rc": 255,
+          "stderr_tail": "rmanently added '192.168.7.21' (ED25519) to the list of known hosts.\nnopparuj@192.168.7.21: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "ubuntu",
+          "rc": 255,
+          "stderr_tail": "Permanently added '192.168.7.21' (ED25519) to the list of known hosts.\nubuntu@192.168.7.21: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "opc",
+          "rc": 255,
+          "stderr_tail": "g: Permanently added '192.168.7.21' (ED25519) to the list of known hosts.\nopc@192.168.7.21: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "root",
+          "rc": 255,
+          "stderr_tail": ": Permanently added '192.168.7.21' (ED25519) to the list of known hosts.\nroot@192.168.7.21: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        }
+      ]
+    },
+    {
+      "host": "192.168.7.22",
+      "tcp22": "open",
+      "error": null,
+      "auth_attempts": [
+        {
+          "user": "nopparuj",
+          "rc": 255,
+          "stderr_tail": "rmanently added '192.168.7.22' (ED25519) to the list of known hosts.\nnopparuj@192.168.7.22: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "ubuntu",
+          "rc": 255,
+          "stderr_tail": "Permanently added '192.168.7.22' (ED25519) to the list of known hosts.\nubuntu@192.168.7.22: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "opc",
+          "rc": 255,
+          "stderr_tail": "g: Permanently added '192.168.7.22' (ED25519) to the list of known hosts.\nopc@192.168.7.22: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        },
+        {
+          "user": "root",
+          "rc": 255,
+          "stderr_tail": ": Permanently added '192.168.7.22' (ED25519) to the list of known hosts.\nroot@192.168.7.22: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password)."
+        }
+      ]
+    },
+    {
+      "host": "10.21.31.9",
+      "tcp22": "timeout",
+      "error": "timed out",
+      "auth_attempts": []
+    }
+  ],
+  "any_auth_ok": false
+}

@@ -1,12 +1,19 @@
 {
-  "checked_at": "2026-09-16T15:18+07",
-  "rows": [
+  "captured_at_utc": "2026-09-16T09:56:24.331330+00:00",
+  "results": [
     {
-      "host": "158.178.243.98",
+      "host": "127.0.0.1",
       "port": 22,
-      "tcp_ok": true,
-      "ms": 104,
-      "error": null
+      "tcp_ok": false,
+      "error": "[Errno 61] Connection refused",
+      "ssh": null
+    },
+    {
+      "host": "localhost",
+      "port": 22,
+      "tcp_ok": false,
+      "error": "[Errno 61] Connection refused",
+      "ssh": null
     }
   ]
 }

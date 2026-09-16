@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T09:54:57.812689+00:00",
-  "git_head": "3a09d3db63b23217827b94c241b4fdd5c8990421",
+  "captured_at_utc": "2026-09-16T09:59:13.540222+00:00",
+  "git_head": "ee8222c1d358753c0f5c09d16c99bda8f87fe77a",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -9,11 +9,13 @@
   "gate_c_exness_smoke": {
     "ok": false,
     "artifact": null,
-    "latest_attempt_artifact": "docs/ops/2026-09-16-exness-smoke-mac-retry.json",
+    "latest_attempt_artifact": "docs/ops/2026-09-16-exness-smoke-mac-probe.json",
     "blocker_docs": [
       "docs/ops/2026-09-16-mac-live-gate-blocker.md",
       "docs/ops/2026-09-16-mac-wine-initialize-path.json",
       "docs/ops/2026-09-16-mac-wine-reprobe-running.json",
+      "docs/ops/2026-09-16-exness-smoke-mac-post-split.json",
+      "docs/ops/2026-09-16-host-ssh-reprobe.json",
       "docs/ops/2026-09-16-host-reachability-hunt.json"
     ]
   },

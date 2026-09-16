@@ -25,6 +25,7 @@ echo "==> 1b) Mac Wine alone is NOT enough today"
 echo "    - terminal64 may run, but Wine Python initialize is still -6 Authorization failed"
 echo "    - Wine prefix has zero Exness configs (see docs/ops/2026-09-16-mac-wine-exness-prefix-hunt.json)"
 echo "    - Logging into Exness in the GUI does not clear Gate C until smoke ok:true exists"
+echo "    - Quick Mac probe (expect ok:false here): python3 scripts/ops/issue1_mac_gate_c_probe.py"
 echo ""
 
 echo "==> 2) Or: authorize this Mac SSH key on that host, then re-run from here"
