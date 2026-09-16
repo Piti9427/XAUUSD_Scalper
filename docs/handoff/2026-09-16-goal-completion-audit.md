@@ -1,15 +1,15 @@
 # Goal completion audit — fix all open GitHub issues
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
-**Branch:** `feature/smc-v2-hardening` @ `bc6b1b4`  
-**Last verified:** 2026-09-16 ~16:18 ICT
+**Branch:** `feature/smc-v2-hardening`  
+**Last verified:** 2026-09-16 ~16:35 ICT
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
-| **#3** Mechanical S1–S4 spec | Docs + contract tests | specs + contracts | ✅ closed (local close evidence; re-verify after `gh auth refresh`) | **Done** |
-| **#4** Research handoff | Docs + Gate B/C blockers | specs + contracts | ✅ closed (same) | **Done** |
-| **#2** Parent tracker | Close after #3/#4 | Parent closed | ✅ closed (same) | **Done** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | 351 tests; scenarios 1–23 software matrix OK; Mac `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
+| **#3** Mechanical S1–S4 spec | Docs + contract tests | specs + contracts | ✅ closed | **Done** |
+| **#4** Research handoff | Docs + Gate B/C blockers | specs + contracts | ✅ closed | **Done** |
+| **#2** Parent tracker | Close after #3/#4 | Parent closed | ✅ closed | **Done** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | 353+ tests; scenarios 1–23 software matrix OK; Mac `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
 
 ## Issue #1 live gates (do not close without)
 
@@ -21,12 +21,12 @@ Helper: `./scripts/ops/foundation_live_gate.sh`
 Mac blocker: `docs/ops/2026-09-16-mac-live-gate-blocker.md`  
 Readiness: `docs/ops/2026-09-16-issue1-live-gate-readiness.json` (`issue1_closable: false`)  
 Operator host: macOS (confirmed)  
-`gh` token: **invalid** — operator must `gh auth refresh -h github.com` before closing #1 or re-verifying #2–#4
+`gh` auth: **OK** (Piti9427) — #1 progress comment posted; #2/#3/#4 re-verified CLOSED
 
 ## Goal complete when
 
 - [x] #2/#3/#4 closed with evidence  
 - [x] Branch pushed with foundation software  
+- [x] `gh` can re-verify issue states  
 - [ ] #1 live artifacts (not Mac `INCONCLUSIVE_INFRA` only)  
 - [ ] #1 closed after live gates  
-- [ ] `gh` can re-verify issue states  

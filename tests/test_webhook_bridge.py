@@ -1576,6 +1576,135 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertEqual(data["status"], "rejected")
         self.assertIn("missing_margin_free", data["reason"])
 
+    def test_terminal_setup_registry_blocks_revive_after_restart(self):
+        """Scenario 8: expired SETUP_ID must not revive via webhook after process restart."""
+        import os
+        from pathlib import Path
+        from datetime import datetime, timezone
+        from scripts.smc.broker_identity import BrokerIdentityReport
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
+        from scripts.smc.setup_identity import SetupRegistry, load_setup_registry
+        from scripts.webhook_bridge import create_app
+
+        registry_path = Path(self.temp_dir.name) / "setup_registry.json"
+        prior = SetupRegistry(_persist_path=registry_path)
+        prior.mark_terminal("SMC_REVIVE_1", "ttl_expired")
+
+        ok_identity = BrokerIdentityReport(
+            ok=True,
+            broker_server="Exness-MT5Trial",
+            account_login=1,
+            currency="USD",
+            trade_mode=0,
+            symbol="XAUUSD",
+            reasons=(),
+        )
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
+        self.app.state.adapter.close()
+        fresh_db = os.path.join(self.temp_dir.name, "revive_trades.db")
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=fresh_db,
+            account_balance=10000.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: ok_identity,
+            max_daily_losses=99,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
+            setup_registry_path=str(registry_path),
+        )
+        self.client = TestClient(self.app)
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "SMC_REVIVE_1",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        res = self.client.post(
+            "/webhook/tradingview", json=payload, headers=self.headers
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("setup_id_terminal", data["reason"])
+        # Disk still holds terminal mark for the next process.
+        reloaded = load_setup_registry(registry_path)
+        self.assertTrue(reloaded.is_blocked("SMC_REVIVE_1"))
+
+    def test_order_canceled_marks_setup_terminal(self):
+        """ORDER_CANCELED (TTL) stamps registry so a new app cannot re-admit."""
+        import os
+        from pathlib import Path
+        from scripts.smc.setup_identity import load_setup_registry
+        from scripts.webhook_bridge import create_app
+
+        registry_path = Path(self.temp_dir.name) / "setup_registry_cancel.json"
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=10000.0,
+            setup_registry_path=str(registry_path),
+        )
+        self.client = TestClient(self.app)
+        cancel = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "ORDER_CANCELED",
+                "order_id": "SMC_TTL_1",
+                "reason": "TTL_EXPIRED",
+            },
+        )
+        self.assertEqual(cancel.status_code, 200)
+        self.assertEqual(cancel.json()["status"], "success")
+
+        # Fresh process + fresh webhook DB: only registry should block revive.
+        fresh_db = os.path.join(self.temp_dir.name, "after_cancel.db")
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=fresh_db,
+            account_balance=10000.0,
+            setup_registry_path=str(registry_path),
+            max_daily_losses=99,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
+        )
+        self.client = TestClient(self.app)
+        from datetime import datetime, timezone
+
+        revive = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "SMC_TTL_1",
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "limit": 4050.00,
+                "sl": 4045.00,
+                "tp1": 4055.00,
+                "tp2": 4062.50,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            },
+        )
+        self.assertEqual(revive.status_code, 200)
+        self.assertEqual(revive.json()["status"], "rejected")
+        self.assertIn("setup_id_terminal", revive.json()["reason"])
+        self.assertEqual(
+            load_setup_registry(registry_path).terminal_reason("SMC_TTL_1"),
+            "TTL_EXPIRED",
+        )
+
     def test_stops_geometry_blocks_tight_sl(self):
         from scripts.smc.broker_identity import BrokerIdentityReport
         from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state

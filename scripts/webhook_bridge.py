@@ -24,6 +24,7 @@ from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_inte
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
+from scripts.smc.setup_identity import SetupRegistry, load_setup_registry
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -53,6 +54,7 @@ def create_app(
     be_enabled: bool = False,
     be_buffer: float = 0.10,
     terminal_path: Optional[str] = None,
+    setup_registry_path: Optional[str] = None,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -82,6 +84,13 @@ def create_app(
     if halt_path is not None:
         risk_halt = load_risk_halt_state(halt_path) or new_risk_halt_state(account_balance)
         app.state.risk_halt = risk_halt
+
+    # Scenario 8: terminal SETUP_IDs survive restart (shared path with smc_main).
+    if setup_registry_path:
+        setup_registry = load_setup_registry(Path(setup_registry_path))
+    else:
+        setup_registry = SetupRegistry()
+    app.state.setup_registry = setup_registry
 
     # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
     memory_idempotency_cache: Set[Tuple[str, str]] = set()
@@ -205,6 +214,7 @@ def create_app(
             order_id = fill_row.get("order_id")
             if not order_id:
                 continue
+            setup_registry.mark_terminal(order_id, "filled")
             await asyncio.to_thread(mark_processed, order_id, "ORDER_FILLED", "success")
             if not (notifier and getattr(notifier, "enabled", False)):
                 continue
@@ -307,9 +317,13 @@ def create_app(
                             order_id=oid,
                             reason=f"news_pending_cancel:{cancel_reason}",
                         )
+                        setup_registry.mark_terminal(
+                            oid, f"news_pending_cancel:{cancel_reason}"
+                        )
                         await asyncio.to_thread(adapter.finish_setup, oid)
                     elif "not found" in (exec_cancel.message or "").lower():
                         # Fill-during-cancel: release inbox so clock does not re-spam.
+                        setup_registry.mark_terminal(oid, "filled_during_cancel")
                         await asyncio.to_thread(adapter.finish_setup, oid)
                     cancel_results.append(
                         {
@@ -528,6 +542,22 @@ def create_app(
 
         # 1. SETUP_PENDING: Place Pending Limit with Dynamic Risk Sizing
         if event == "SETUP_PENDING":
+            # 1a00. Terminal SETUP_ID must never revive (scenario 8 / B16).
+            if order_id:
+                allowed_id, admit_reason = setup_registry.admit(order_id)
+                if not allowed_id:
+                    reason = f"Setup identity gate blocked new risk: {admit_reason}"
+                    logger.warning(reason)
+                    await asyncio.to_thread(
+                        mark_processed, order_id, event, "rejected_setup_terminal"
+                    )
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
+
             # 1a0. Persistent foundation risk halt (5% DD / daily gates)
             if risk_halt is not None and halt_path is not None:
                 equity_raw = await asyncio.to_thread(adapter.get_account_equity)
@@ -1007,6 +1037,7 @@ def create_app(
             if order_id and ticket and not adapter.dry_run:
                 await asyncio.to_thread(adapter.update_setup_status, order_id, "accepted", ticket)
             if order_id:
+                setup_registry.mark_terminal(order_id, "filled")
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
 
             if notifier and getattr(notifier, "enabled", False):
@@ -1218,6 +1249,7 @@ def create_app(
                 reason=reason,
             )
             if order_id:
+                setup_registry.mark_terminal(order_id, str(reason or "canceled"))
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
 
             return {

@@ -106,6 +106,9 @@ def main():
         or cfg.get("mt5", {}).get("terminal_path")
         or os.environ.get("MT5_TERMINAL_PATH")
     )
+    setup_registry_path = strategy_cfg.get(
+        "setup_registry_path", "data/setup_registry.json"
+    )
 
     news_mgr = NewsManager()
     # Unknown schedule blocks new risk / cancels pendings until operator loads events.
@@ -159,6 +162,7 @@ def main():
         be_enabled=be_enabled,
         be_buffer=be_buffer,
         terminal_path=terminal_path,
+        setup_registry_path=setup_registry_path,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")
