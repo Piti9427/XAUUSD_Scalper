@@ -7,6 +7,7 @@ import unittest
 from scripts.smc.stops_geometry import (
     min_stop_distance_price,
     pending_stops_geometry_allows,
+    sl_modify_freeze_allows,
 )
 
 
@@ -49,6 +50,28 @@ class StopsGeometryTests(unittest.TestCase):
         )
         self.assertFalse(ok)
         self.assertEqual(reason, "invalid_point")
+
+    def test_freeze_level_blocks_near_market_sl(self):
+        ok, reason = sl_modify_freeze_allows(
+            new_sl=2000.0,
+            market_bid=2000.1,
+            market_ask=2000.3,
+            point=0.01,
+            freeze_level=50,  # 0.50
+        )
+        self.assertFalse(ok)
+        self.assertIn("sl_inside_freeze_level", reason)
+
+    def test_freeze_level_zero_allows(self):
+        ok, reason = sl_modify_freeze_allows(
+            new_sl=2000.0,
+            market_bid=2000.1,
+            market_ask=2000.3,
+            point=0.01,
+            freeze_level=0,
+        )
+        self.assertTrue(ok)
+        self.assertEqual(reason, "ok")
 
 
 if __name__ == "__main__":

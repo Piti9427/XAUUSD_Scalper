@@ -127,8 +127,18 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.positions_get.return_value = [SimpleNamespace(
             ticket=42, comment="SMC_owned-4", tp=4062.5,
         )]
+        broker.account_info.return_value = SimpleNamespace(
+            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+        )
+        broker.symbol_info.return_value = SimpleNamespace(
+            volume_min=0.01, volume_max=5.0, volume_step=0.01,
+            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            trade_freeze_level=0,
+        )
+        broker.symbol_info_tick.return_value = SimpleNamespace(bid=4055.0, ask=4055.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
+        self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.MOVE_SL_TO_BE,
@@ -139,6 +149,33 @@ class TestSMCMT5Adapter(unittest.TestCase):
             row["event_type"] == "MOVE_SL_TO_BE"
             for row in self.adapter.get_lifecycle_logs()
         ))
+
+    def test_live_be_rejected_inside_freeze_level(self):
+        broker = Mock()
+        broker.TRADE_ACTION_SLTP = 6
+        broker.TRADE_RETCODE_DONE = 10009
+        broker.positions_get.return_value = [SimpleNamespace(
+            ticket=42, comment="SMC_owned-freeze", tp=4062.5,
+        )]
+        broker.account_info.return_value = SimpleNamespace(
+            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+        )
+        broker.symbol_info.return_value = SimpleNamespace(
+            volume_min=0.01, volume_max=5.0, volume_step=0.01,
+            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            trade_freeze_level=50,  # 0.50 price units
+        )
+        broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.2, ask=4050.4)
+        self.adapter.dry_run = False
+        self.adapter.connected = True
+        with patch("scripts.smc.mt5_adapter.mt5", broker):
+            result = self.adapter.execute_intent(OrderIntent(
+                intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                order_id="owned-freeze", sl_price=4050.0,
+            ))
+        self.assertFalse(result.success)
+        self.assertIn("sl_inside_freeze_level", result.message)
+        broker.order_send.assert_not_called()
 
     def test_live_partial_rejected_by_broker_is_not_recorded_as_success(self):
         broker = Mock()
@@ -267,6 +304,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.assertEqual(snapshot["trade_allowed"], 1.0)
         self.assertEqual(snapshot["point"], 0.01)
         self.assertEqual(snapshot["stops_level"], 0.0)
+        self.assertEqual(snapshot["freeze_level"], 0.0)
 
     def test_live_risk_snapshot_none_when_margin_free_missing(self):
         broker = Mock()

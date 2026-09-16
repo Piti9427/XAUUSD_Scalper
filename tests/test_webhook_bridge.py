@@ -126,7 +126,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         self.app.state.adapter.execute_intent = Mock()
         response = self.client.post(
@@ -155,7 +155,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.execute_intent = Mock(
@@ -190,7 +190,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         app.state.adapter.get_open_exposure = Mock(return_value=["unknown-position"])
         app.state.adapter.execute_intent = Mock(
@@ -226,7 +226,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
                 "min_lot": 0.01, "max_lot": 5.0,
                 "lot_step": 0.01, "contract_size": 100.0,
                 "margin_free": 5500.0, "trade_allowed": 1.0,
-                "point": 0.01, "stops_level": 0.0,
+                "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
             })
             app.state.adapter.get_open_exposure = Mock(return_value=[])
             app.state.adapter.execute_intent = Mock(
@@ -285,7 +285,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.execute_intent = Mock(
@@ -490,7 +490,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 9000.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.execute_intent = Mock(side_effect=[
@@ -529,7 +529,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "min_lot": 0.01, "max_lot": 5.0,
             "lot_step": 0.01, "contract_size": 100.0,
             "margin_free": 9000.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
         })
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.execute_intent = Mock(side_effect=TimeoutError("Broker socket timed out"))
@@ -784,6 +784,32 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
             OrderIntentType.CLOSE_MARKET,
         ])
         self.assertEqual(response.json()["status"], "closed_for_safety")
+
+    def test_live_tp1_rejects_before_partial_when_freeze_blocks_be(self):
+        from scripts.smc.mt5_adapter import ExecutionResult
+        self.app.state.adapter.dry_run = False
+        self.app.state.adapter.get_risk_snapshot = Mock(return_value={
+            "balance": 10000.0, "equity": 10000.0,
+            "min_lot": 0.01, "max_lot": 5.0,
+            "lot_step": 0.01, "contract_size": 100.0,
+            "margin_free": 9000.0, "trade_allowed": 1.0,
+            "point": 0.01, "stops_level": 0.0, "freeze_level": 50.0,
+        })
+        self.app.state.adapter.get_market_quotes = Mock(return_value={
+            "bid": 4050.2, "ask": 4050.4,
+        })
+        self.app.state.adapter.execute_intent = Mock(
+            return_value=ExecutionResult(True, 42, "should not run")
+        )
+        response = self.client.post(
+            "/webhook/tradingview",
+            json={"event": "TP1_HIT_MOVE_BE", "order_id": "FREEZE_BLOCK_1",
+                  "entry": 4050.0, "new_sl": 4050.0, "dir": "BUY"},
+            headers=self.headers,
+        )
+        self.assertEqual(response.json()["status"], "rejected")
+        self.assertIn("rejected_freeze_level", response.json()["reason"])
+        self.app.state.adapter.execute_intent.assert_not_called()
 
 
 class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
@@ -1596,6 +1622,7 @@ class TestWebhookFoundationGates(unittest.TestCase):
                 "trade_allowed": 1.0,
                 "point": 0.01,
                 "stops_level": 50.0,  # requires $0.50 min SL distance
+                "freeze_level": 0.0,
             }
         )
         self.app.state.adapter.get_open_exposure = Mock(return_value=[])

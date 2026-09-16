@@ -68,3 +68,35 @@ def pending_stops_geometry_allows(
             return False, f"tp_inside_stops_level:{tp_dist:.5f}<{min_dist:.5f}"
 
     return True, "ok"
+
+
+def sl_modify_freeze_allows(
+    *,
+    new_sl: float,
+    market_bid: Optional[float],
+    market_ask: Optional[float],
+    point: float,
+    freeze_level: float,
+) -> Tuple[bool, str]:
+    """
+    Fail closed when market is inside freeze distance of the new SL.
+
+    Uses the nearer executable side available; missing both quotes blocks.
+    freeze_level=0 means no freeze constraint beyond known metadata.
+    """
+    if new_sl is None or not math.isfinite(float(new_sl)):
+        return False, "invalid_new_sl"
+    if point is None or not math.isfinite(float(point)) or float(point) <= 0:
+        return False, "invalid_point"
+    if freeze_level is None or not math.isfinite(float(freeze_level)) or float(freeze_level) < 0:
+        return False, "invalid_freeze_level"
+
+    quotes = [q for q in (market_bid, market_ask) if q is not None and math.isfinite(float(q))]
+    if not quotes:
+        return False, "missing_market_quote"
+
+    min_dist = float(freeze_level) * float(point)
+    nearest = min(abs(float(new_sl) - float(q)) for q in quotes)
+    if nearest + 1e-12 < min_dist:
+        return False, f"sl_inside_freeze_level:{nearest:.5f}<{min_dist:.5f}"
+    return True, "ok"

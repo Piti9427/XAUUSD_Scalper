@@ -23,7 +23,7 @@ from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityRe
 from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_intents
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
-from scripts.smc.stops_geometry import pending_stops_geometry_allows
+from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -1077,6 +1077,39 @@ def create_app(
                         f"for {direction_raw} entry={entry} be_buffer={be_buffer}"
                     ),
                 }
+
+            # Fail closed before partial: freeze distance must allow the BE SL move.
+            if not adapter.dry_run:
+                snap = await asyncio.to_thread(adapter.get_risk_snapshot)
+                if snap is None:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": "broker risk snapshot unavailable for freeze check",
+                    }
+                quotes = await asyncio.to_thread(adapter.get_market_quotes)
+                if quotes is None:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": "broker market quotes unavailable for freeze check",
+                    }
+                freeze_ok, freeze_reason = sl_modify_freeze_allows(
+                    new_sl=new_sl,
+                    market_bid=float(quotes["bid"]),
+                    market_ask=float(quotes["ask"]),
+                    point=float(snap["point"]),
+                    freeze_level=float(snap["freeze_level"]),
+                )
+                if not freeze_ok:
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": f"rejected_freeze_level:{freeze_reason}",
+                    }
 
             # 3a. Partial Close 50%
             intent_close = OrderIntent(

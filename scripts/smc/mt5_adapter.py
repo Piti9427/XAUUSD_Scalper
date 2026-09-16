@@ -675,7 +675,7 @@ class SMCExecutionAdapter:
         point = getattr(symbol, "point", None)
         stops_level = getattr(symbol, "trade_stops_level", None)
         freeze_level = getattr(symbol, "trade_freeze_level", None)
-        if point is None or stops_level is None:
+        if point is None or stops_level is None or freeze_level is None:
             return None
         try:
             snapshot = {
@@ -688,14 +688,29 @@ class SMCExecutionAdapter:
                 "margin_free": float(margin_free),
                 "point": float(point),
                 "stops_level": float(stops_level),
+                "freeze_level": float(freeze_level),
             }
-            if freeze_level is not None:
-                snapshot["freeze_level"] = float(freeze_level)
         except (TypeError, ValueError):
             return None
         if trade_allowed is not None:
             snapshot["trade_allowed"] = 1.0 if bool(trade_allowed) else 0.0
         return snapshot
+
+    def get_market_quotes(self) -> Optional[Dict[str, float]]:
+        """Return current bid/ask for freeze-level SL checks, or None if unknown."""
+        if self.dry_run or mt5 is None or not self.connected:
+            return None
+        tick = mt5.symbol_info_tick(self.symbol)
+        if tick is None:
+            return None
+        bid = getattr(tick, "bid", None)
+        ask = getattr(tick, "ask", None)
+        try:
+            if bid is None or ask is None:
+                return None
+            return {"bid": float(bid), "ask": float(ask)}
+        except (TypeError, ValueError):
+            return None
 
     def get_open_exposure(self) -> Optional[List[Any]]:
         """Return all XAUUSD pending orders and positions; None means broker unknown."""
@@ -933,6 +948,36 @@ class SMCExecutionAdapter:
             )
 
         elif intent.intent_type == OrderIntentType.MOVE_SL_TO_BE:
+            # Defense in depth: reject SL mods inside broker freeze distance.
+            from scripts.smc.stops_geometry import sl_modify_freeze_allows
+
+            snap = self.get_risk_snapshot()
+            if snap is None:
+                return ExecutionResult(
+                    False,
+                    intent.ticket,
+                    "MOVE_SL_TO_BE rejected: broker risk snapshot unavailable",
+                )
+            tick = mt5.symbol_info_tick(self.symbol)
+            if tick is None:
+                return ExecutionResult(
+                    False,
+                    intent.ticket,
+                    "MOVE_SL_TO_BE rejected: broker symbol tick unavailable",
+                )
+            freeze_ok, freeze_reason = sl_modify_freeze_allows(
+                new_sl=float(intent.sl_price),
+                market_bid=float(getattr(tick, "bid", float("nan"))),
+                market_ask=float(getattr(tick, "ask", float("nan"))),
+                point=float(snap["point"]),
+                freeze_level=float(snap["freeze_level"]),
+            )
+            if not freeze_ok:
+                return ExecutionResult(
+                    False,
+                    intent.ticket,
+                    f"MOVE_SL_TO_BE rejected: {freeze_reason}",
+                )
             positions = mt5.positions_get(symbol=self.symbol)
             moved_count = 0
             if positions:
