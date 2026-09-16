@@ -699,6 +699,18 @@ class SMCExecutionAdapter:
                 return pos
         return None
 
+    def get_matching_pending_order(self, order_id: str) -> Optional[Any]:
+        """Find open pending order matching SMC_{order_id} comment on broker."""
+        if self.dry_run or mt5 is None or not self.connected:
+            return None
+        orders = mt5.orders_get(symbol=self.symbol)
+        if not orders:
+            return None
+        for order in orders:
+            if getattr(order, "comment", "") == f"SMC_{order_id}":
+                return order
+        return None
+
     def get_realized_pnl_for_order(self, order_id: str) -> Optional[float]:
         """Calculate net realized PnL (profit + swap + commission + fee) from broker deal history."""
         if self.dry_run or mt5 is None or not self.connected:

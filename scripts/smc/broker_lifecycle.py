@@ -1,10 +1,11 @@
-"""Active broker lifecycle reconciliation (foundation scenario 8/14/15)."""
+"""Active broker lifecycle reconciliation (foundation scenario 8/14/15/34)."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from scripts.smc.reconcile import PendingExposure, reconcile_pending_exposure
 from scripts.smc.types import OrderIntent, OrderIntentType
 
 if TYPE_CHECKING:
@@ -42,10 +43,12 @@ def reconcile_broker_lifecycle(
     Poll broker + local ledger: TTL cancel, fill detection, close detection.
 
     BaselinePlay: no partial TP / BE — unlock setup_inbox when broker goes flat.
+    Broker partial fills (story 34) keep residual pending visible until cancel/expiry.
     """
     ttl_cancels: List[Dict[str, Any]] = []
     broker_fills: List[Dict[str, Any]] = []
     broker_closes: List[Dict[str, Any]] = []
+    exposure_reconciles: List[Dict[str, Any]] = []
 
     if order_ttl_bars is not None and order_ttl_bars > 0:
         for row in adapter.list_unfilled_pending_setups():
@@ -82,6 +85,7 @@ def reconcile_broker_lifecycle(
             "ttl_cancels": ttl_cancels,
             "broker_fills": broker_fills,
             "broker_closes": broker_closes,
+            "exposure_reconciles": exposure_reconciles,
         }
 
     for row in adapter.list_unfilled_pending_setups():
@@ -89,13 +93,63 @@ def reconcile_broker_lifecycle(
         if adapter.has_lifecycle_event(order_id, "ORDER_FILLED"):
             continue
         position = adapter.get_matching_position(order_id)
+        pending = adapter.get_matching_pending_order(order_id)
+        if position is None and pending is None:
+            continue
+
+        pos_vol = float(getattr(position, "volume", 0.0) or 0.0) if position is not None else 0.0
+        pend_vol = 0.0
+        if pending is not None:
+            pend_vol = float(
+                getattr(pending, "volume_current", None)
+                or getattr(pending, "volume_initial", None)
+                or getattr(pending, "volume", 0.0)
+                or 0.0
+            )
+        requested = max(pos_vol + pend_vol, pos_vol, pend_vol)
+        cancel_requested = adapter.has_lifecycle_event(order_id, "ORDER_CANCELED")
+        decision = reconcile_pending_exposure(
+            PendingExposure(
+                order_id=order_id,
+                requested_volume=requested if requested > 0 else max(pos_vol, 0.01),
+                filled_volume=pos_vol,
+                cancel_requested=cancel_requested,
+                broker_pending_volume=(
+                    pend_vol if pending is not None else (0.0 if position is not None else None)
+                ),
+                broker_position_volume=pos_vol if position is not None else None,
+            )
+        )
+        exposure_reconciles.append(
+            {
+                "order_id": order_id,
+                "status": decision.status,
+                "filled_volume": decision.filled_volume,
+                "residual_pending_volume": decision.residual_pending_volume,
+                "reason": decision.reason,
+            }
+        )
+
+        if decision.status not in {
+            "filled",
+            "filled_during_cancel",
+            "partial_fill_with_residual",
+        }:
+            continue
         if position is None:
             continue
+
         entry = float(getattr(position, "price_open", 0.0) or 0.0)
         sl = float(getattr(position, "sl", 0.0) or 0.0)
-        lot = float(getattr(position, "volume", 0.0) or 0.0)
+        lot = float(decision.filled_volume or getattr(position, "volume", 0.0) or 0.0)
         direction = "BUY" if getattr(position, "type", 0) == 0 else "SELL"
         ticket = getattr(position, "ticket", None)
+        if decision.status == "filled_during_cancel":
+            fill_reason = "broker_lifecycle_fill_during_cancel"
+        elif decision.status == "partial_fill_with_residual":
+            fill_reason = "broker_lifecycle_partial_fill"
+        else:
+            fill_reason = "broker_lifecycle_fill_detected"
         adapter.log_lifecycle_event(
             event_type="ORDER_FILLED",
             order_id=order_id,
@@ -104,14 +158,76 @@ def reconcile_broker_lifecycle(
             sl_price=sl or None,
             lot_size=lot or None,
             ticket=ticket,
-            reason="broker_lifecycle_fill_detected",
+            reason=fill_reason,
         )
+        if decision.status == "partial_fill_with_residual":
+            adapter.log_lifecycle_event(
+                event_type="PARTIAL_FILL_RESIDUAL",
+                order_id=order_id,
+                lot_size=decision.residual_pending_volume,
+                reason=decision.reason,
+            )
         adapter.update_setup_status(order_id, "accepted", ticket=ticket)
-        broker_fills.append({"order_id": order_id, "ticket": ticket})
+        broker_fills.append(
+            {
+                "order_id": order_id,
+                "ticket": ticket,
+                "status": decision.status,
+                "filled_volume": decision.filled_volume,
+                "residual_pending_volume": decision.residual_pending_volume,
+            }
+        )
+
+    # Residual pending after partial fill: TTL cancel still applies.
+    if order_ttl_bars is not None and order_ttl_bars > 0:
+        for fill in broker_fills:
+            if float(fill.get("residual_pending_volume") or 0.0) <= 0:
+                continue
+            order_id = fill["order_id"]
+            status = adapter.get_setup_status(order_id) or {}
+            created_raw = status.get("created_at")
+            if not created_raw:
+                continue
+            try:
+                created_at = datetime.fromisoformat(
+                    str(created_raw).replace("Z", "+00:00").replace(" ", "T")
+                )
+            except ValueError:
+                continue
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            if not pending_ttl_elapsed(created_at, now, order_ttl_bars, bar_minutes):
+                continue
+            if adapter.get_matching_pending_order(order_id) is None:
+                continue
+            reason = f"TTL_EXPIRED_RESIDUAL ({order_ttl_bars} bars)"
+            intent = OrderIntent(
+                intent_type=OrderIntentType.CANCEL_LIMIT,
+                order_id=order_id,
+                reason=reason,
+            )
+            exec_cancel = adapter.execute_intent(intent)
+            released = exec_cancel.success or "not found" in (exec_cancel.message or "").lower()
+            if released:
+                adapter.log_lifecycle_event(
+                    event_type="ORDER_CANCELED",
+                    order_id=order_id,
+                    reason=reason,
+                )
+            ttl_cancels.append(
+                {
+                    "order_id": order_id,
+                    "status": "success" if released else "rejected",
+                    "reason": reason,
+                    "message": exec_cancel.message,
+                }
+            )
 
     for row in adapter.list_open_fills():
         order_id = row["order_id"]
         if adapter.get_matching_position(order_id) is not None:
+            continue
+        if adapter.get_matching_pending_order(order_id) is not None:
             continue
         pnl_dollar = adapter.get_realized_pnl_for_order(order_id)
         if pnl_dollar is None:
@@ -149,4 +265,5 @@ def reconcile_broker_lifecycle(
         "ttl_cancels": ttl_cancels,
         "broker_fills": broker_fills,
         "broker_closes": broker_closes,
+        "exposure_reconciles": exposure_reconciles,
     }
