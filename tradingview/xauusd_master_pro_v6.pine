@@ -265,8 +265,10 @@ var bool   tradeActive       = false
 var int    tradeDir          = 0
 var float  tradeEntry        = na
 var float  tradeSl           = na
+var float  tradeInitialSl    = na
 var float  tradeTp1          = na
 var float  tradeTp2          = na
+var float  tradeExitPrice    = na
 var string tradeOrderId      = ""
 var bool   isBeRelocated     = false
 var int    tp1Bar            = na
@@ -393,8 +395,10 @@ if triggerNewMarket and barConfirmed
     tradeDir         := newDir
     tradeEntry       := newEntry
     tradeSl          := newSl
+    tradeInitialSl   := newSl
     tradeTp1         := newTp1
     tradeTp2         := newTp2
+    tradeExitPrice   := na
     tradeOrderId     := syminfo.ticker + "_" + str.tostring(bar_index)
     isBeRelocated    := false
     tp1Bar           := na
@@ -419,8 +423,10 @@ if pendingActive and not tradeActive and (bar_index > pendingBar)
         tradeDir         := pendingDir
         tradeEntry       := pendingLimit
         tradeSl          := pendingSl
+        tradeInitialSl   := pendingSl
         tradeTp1         := pendingTp1
         tradeTp2         := pendingTp2
+        tradeExitPrice   := na
         tradeOrderId     := pendingOrderId
         isBeRelocated    := false
         tp1Bar           := na
@@ -542,6 +548,12 @@ if eventOrderFilled or (tradeActive and barstate.islast)
     lineTp2   := line.new(bar_index - 5, tradeTp2, bar_index + 15, tradeTp2, color=color.green, width=2, style=line.style_solid)
 
 if eventTradeClosed
+    if str.contains(closeReason, "STOP LOSS") or str.contains(closeReason, "BREAKEVEN")
+        tradeExitPrice := tradeSl
+    else if str.contains(closeReason, "TP2")
+        tradeExitPrice := tradeTp2
+    else
+        tradeExitPrice := close
     line.delete(lineEntry)
     line.delete(lineSl)
     line.delete(lineTp1)
@@ -576,8 +588,8 @@ if eventOrderExpired and alertOutput != "Off"
     alert(alertOutput == "Bot JSON" ? cancelJson : cancelCard, alert.freq_once_per_bar)
 
 if eventTradeClosed and alertOutput != "Off"
-    closedJson = '{"event":"TRADE_CLOSED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","reason":"' + closeReason + '","time":"' + utcTimeStr + '"}'
-    closedCard = str.format("🏁 [XAUUSD Master Pro] MODEL CLOSED\n📌 Reason: {0}\n⏰ Time: {1} UTC", closeReason, utcTimeStr)
+    closedJson = '{"event":"TRADE_CLOSED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (tradeDir == 1 ? "BUY" : "SELL") + '","entry":' + str.tostring(tradeEntry, "#.##") + ',"sl":' + str.tostring(tradeInitialSl, "#.##") + ',"exit_price":' + str.tostring(tradeExitPrice, "#.##") + ',"reason":"' + closeReason + '","time":"' + utcTimeStr + '"}'
+    closedCard = str.format("🏁 [XAUUSD Master Pro] MODEL CLOSED\n📌 Reason: {0}\n💰 Entry: {1,number,#.##} → Exit: {2,number,#.##}\n🛑 Initial SL: {3,number,#.##}\n⏰ Time: {4} UTC", closeReason, tradeEntry, tradeExitPrice, tradeInitialSl, utcTimeStr)
     alert(alertOutput == "Bot JSON" ? closedJson : closedCard, alert.freq_once_per_bar)
 
 alertcondition(eventSetupPending, title="Setup Pending Alert", message="⏳ XAUUSD Setup Pending Limit Order")

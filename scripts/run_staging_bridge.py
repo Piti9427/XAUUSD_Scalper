@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import uvicorn
 from scripts.webhook_bridge import create_app
 from scripts.smc.notifier import SMCTelegramNotifier
+from scripts.smc.news import NewsManager
 
 
 logging.basicConfig(
@@ -86,6 +87,35 @@ def main():
         max_hold_bars = int(max_hold_bars)
     bar_minutes = int(strategy_cfg.get("bar_minutes", 5))
 
+    news_mgr = NewsManager()
+    # Unknown schedule blocks new risk / cancels pendings until operator loads events.
+    news_mgr.events = None
+    news_mgr.schedule_known = False
+    news_cfg = cfg.get("news", {})
+    if news_cfg.get("schedule_known") and isinstance(news_cfg.get("events"), list):
+        # Optional static schedule from settings for Demo ops; missing ≠ permission.
+        from datetime import datetime, timezone
+        from scripts.smc.news import NewsEvent
+
+        loaded = []
+        for raw in news_cfg["events"]:
+            try:
+                ts = datetime.fromisoformat(str(raw["time"]).replace("Z", "+00:00"))
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                loaded.append(
+                    NewsEvent(
+                        time=ts,
+                        currency=str(raw.get("currency", "USD")),
+                        impact=str(raw.get("impact", "HIGH")),
+                        name=str(raw.get("name", "event")),
+                    )
+                )
+            except Exception as exc:
+                logger.warning("Skipping malformed news event %s: %s", raw, exc)
+        news_mgr.events = loaded
+        news_mgr.schedule_known = True
+
     app = create_app(
         auth_token=secret_token,
         dry_run=dry_run,
@@ -95,6 +125,7 @@ def main():
         rollover_hour_utc=rollover_hour_utc,
         rollover_minute_utc=rollover_minute_utc,
         notifier=notifier,
+        news_manager=news_mgr,
         commission_per_lot=commission_per_lot,
         slippage_allowance=slippage_allowance,
         tp_r=tp_r,

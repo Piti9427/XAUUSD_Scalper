@@ -1007,7 +1007,9 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
                 "symbol": "XAUUSD",
                 "reason": "TP2_RUNNER_HIT",
                 "dir": "BUY",
-                "exit_price": 4062.50,
+                "entry": 4050.0,
+                "sl": 4040.0,
+                "exit_price": 4075.0,
             }
             res = client.post("/webhook/tradingview", json=payload, headers=self.headers)
             self.assertEqual(res.status_code, 200)
@@ -1036,24 +1038,38 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
         )
         try:
             client = TestClient(app)
-            # 1. Test TP2 with tp_r=3.5
+            # Reason-only payload must NOT invent R from tp_r config.
+            res_reason_only = client.post("/webhook/tradingview", json={
+                "event": "TRADE_CLOSED",
+                "order_id": "ORDER_REASON_ONLY",
+                "symbol": "XAUUSD",
+                "reason": "TP2_RUNNER_HIT",
+            }, headers=self.headers)
+            self.assertEqual(res_reason_only.status_code, 200)
+            self.assertIsNone(res_reason_only.json()["pnl_r"])
+            self.assertIsNone(res_reason_only.json()["pnl_dollar"])
+
+            # Explicit payload wins (operator/broker evidence).
             res_tp2 = client.post("/webhook/tradingview", json={
                 "event": "TRADE_CLOSED",
                 "order_id": "ORDER_TP2_CUSTOM",
                 "symbol": "XAUUSD",
                 "reason": "TP2_RUNNER_HIT",
+                "pnl_r": 3.5,
+                "pnl_dollar": 350.0,
             }, headers=self.headers)
             self.assertEqual(res_tp2.status_code, 200)
             data_tp2 = res_tp2.json()
             self.assertEqual(data_tp2["pnl_r"], 3.5)
             self.assertEqual(data_tp2["pnl_dollar"], 350.0)
 
-            # 2. Test TP1 with partial_tp_r=1.5
             res_tp1 = client.post("/webhook/tradingview", json={
                 "event": "TRADE_CLOSED",
                 "order_id": "ORDER_TP1_CUSTOM",
                 "symbol": "XAUUSD",
                 "reason": "TP1_SCALE_OUT",
+                "pnl_r": 1.5,
+                "pnl_dollar": 150.0,
             }, headers=self.headers)
             self.assertEqual(res_tp1.status_code, 200)
             data_tp1 = res_tp1.json()

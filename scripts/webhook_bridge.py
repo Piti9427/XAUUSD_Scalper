@@ -173,8 +173,10 @@ def create_app(
                             order_id=oid,
                             reason=f"news_pending_cancel:{cancel_reason}",
                         )
-                        if not adapter.dry_run:
-                            await asyncio.to_thread(adapter.finish_setup, oid)
+                        await asyncio.to_thread(adapter.finish_setup, oid)
+                    elif "not found" in (exec_cancel.message or "").lower():
+                        # Fill-during-cancel: release inbox so clock does not re-spam.
+                        await asyncio.to_thread(adapter.finish_setup, oid)
                     cancel_results.append(
                         {
                             "order_id": oid,
@@ -235,18 +237,30 @@ def create_app(
                 if exposure_after == []:
                     await asyncio.to_thread(adapter.finish_setup, plan.order_id)
 
+            pnl_dollar = None
+            pnl_r = None
+            if not adapter.dry_run:
+                broker_pnl = await asyncio.to_thread(
+                    adapter.get_realized_pnl_for_order, plan.order_id
+                )
+                if broker_pnl is not None:
+                    pnl_dollar = broker_pnl
+
             await asyncio.to_thread(
                 adapter.log_lifecycle_event,
                 event_type="TRADE_CLOSED",
                 order_id=plan.order_id,
                 direction=plan.direction,
                 reason=plan.reason,
+                pnl_dollar=pnl_dollar,
+                pnl_r=pnl_r,
             )
             if notifier and getattr(notifier, "enabled", False):
+                # No phantom WIN card: require broker evidence AND known PnL.
                 if may_notify_close(
                     broker_close_success=bool(exec_close.success),
                     already_flat_on_broker=already_flat,
-                ):
+                ) and pnl_dollar is not None and pnl_r is not None:
                     try:
                         from scripts.smc.notifier import format_trade_closed_card
                         from scripts.smc.types import Direction as Dir
@@ -259,8 +273,8 @@ def create_app(
                         card = format_trade_closed_card(
                             direction=tc_dir,
                             exit_price=0.0,
-                            pnl_dollars=0.0,
-                            pnl_r=0.0,
+                            pnl_dollars=float(pnl_dollar),
+                            pnl_r=float(pnl_r),
                             reason=plan.reason,
                         )
                         background_tasks.add_task(_dispatch_tg_safe, card)
@@ -268,14 +282,20 @@ def create_app(
                         logger.warning("Clock TIME_EXIT notify failed: %s", exc)
                 else:
                     logger.warning(
-                        "Clock TIME_EXIT notify suppressed — no broker evidence (%s)",
+                        "Clock TIME_EXIT notify suppressed — need broker evidence "
+                        "and known PnL (%s success=%s pnl=%s/%s)",
                         plan.order_id,
+                        exec_close.success,
+                        pnl_dollar,
+                        pnl_r,
                     )
             exit_results.append(
                 {
                     "order_id": plan.order_id,
                     "status": "success",
                     "reason": plan.reason,
+                    "pnl_dollar": pnl_dollar,
+                    "pnl_r": pnl_r,
                     "execution": {
                         "success": exec_close.success,
                         "message": exec_close.message,
@@ -894,28 +914,20 @@ def create_app(
         # 5. TRADE_CLOSED: Finalize Position Lifecycle & Execute Broker Close
         elif event == "TRADE_CLOSED":
             reason = payload.get("reason", "POSITION_CLOSED")
+            # Never invent R/$ from reason text — only explicit payload, broker cashflow,
+            # or frozen_initial_r from fill geometry (entry/sl/lot).
             pnl_r = payload.get("pnl_r")
             pnl_dollar = payload.get("pnl_dollar")
-
-            # Determine PnL from reason if not explicitly provided
-            if pnl_r is None:
-                upper_reason = reason.upper()
-                if "SL" in upper_reason or "STOP LOSS" in upper_reason:
-                    pnl_r = -1.0
-                    if pnl_dollar is None:
-                        pnl_dollar = - round(account_balance * risk_pct, 2)
-                elif "TP2" in upper_reason or "RUNNER" in upper_reason:
-                    pnl_r = tp_r
-                    if pnl_dollar is None:
-                        pnl_dollar = round(account_balance * risk_pct * tp_r, 2)
-                elif "TP1" in upper_reason:
-                    pnl_r = partial_tp_r
-                    if pnl_dollar is None:
-                        pnl_dollar = round(account_balance * risk_pct * partial_tp_r, 2)
-                elif "BE" in upper_reason or "BREAKEVEN" in upper_reason:
-                    pnl_r = 0.0
-                    if pnl_dollar is None:
-                        pnl_dollar = 0.0
+            if pnl_r is not None:
+                try:
+                    pnl_r = float(pnl_r)
+                except (TypeError, ValueError):
+                    pnl_r = None
+            if pnl_dollar is not None:
+                try:
+                    pnl_dollar = float(pnl_dollar)
+                except (TypeError, ValueError):
+                    pnl_dollar = None
 
             # Execute close market on broker if position is active or rollover flat
             intent_close = OrderIntent(
@@ -938,28 +950,44 @@ def create_app(
                         "reason": exec_close.message,
                     }
 
-            if not adapter.dry_run:
-                exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)
-                if exposure_after_close == []:
+            if already_closed_by_broker or exec_close.success:
+                # Release inbox on dry-run success and on fill-during-cancel "not found".
+                if adapter.dry_run or already_closed_by_broker:
                     await asyncio.to_thread(adapter.finish_setup, order_id)
-                broker_pnl = await asyncio.to_thread(adapter.get_realized_pnl_for_order, order_id)
-                if broker_pnl is not None:
-                    pnl_dollar = broker_pnl
-
-            # Scenario 21: freeze R denominator from entry→SL at fill; never invent from BE.
-            if pnl_r is None and pnl_dollar is not None:
-                entry = float(payload.get("entry") or 0.0)
-                sl = float(payload.get("sl") or 0.0)
-                lot = float(payload.get("lot_size") or 0.0)
-                initial_dist = abs(entry - sl) if entry and sl else 0.0
-                if initial_dist > 0 and lot > 0:
-                    from scripts.smc.risk import frozen_initial_r
-
-                    pnl_r = frozen_initial_r(
-                        pnl_dollars=float(pnl_dollar),
-                        initial_sl_distance=initial_dist,
-                        filled_lot=lot,
+                elif not adapter.dry_run:
+                    exposure_after_close = await asyncio.to_thread(adapter.get_open_exposure)
+                    if exposure_after_close == []:
+                        await asyncio.to_thread(adapter.finish_setup, order_id)
+                    broker_pnl = await asyncio.to_thread(
+                        adapter.get_realized_pnl_for_order, order_id
                     )
+                    if broker_pnl is not None:
+                        pnl_dollar = broker_pnl
+
+            # Scenario 21: freeze R from entry→initial SL; never from later BE.
+            entry = float(payload.get("entry") or 0.0)
+            sl = float(payload.get("sl") or 0.0)
+            lot = float(payload.get("lot_size") or 0.0)
+            exit_px = float(payload.get("exit_price") or 0.0)
+            direction = str(payload.get("dir", "BUY")).upper()
+            initial_dist = abs(entry - sl) if entry and sl else 0.0
+
+            if pnl_dollar is None and entry and exit_px and lot > 0:
+                signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
+                pnl_dollar = round(signed * lot * 100.0, 2)
+
+            if pnl_r is None and pnl_dollar is not None and initial_dist > 0 and lot > 0:
+                from scripts.smc.risk import frozen_initial_r
+
+                pnl_r = frozen_initial_r(
+                    pnl_dollars=float(pnl_dollar),
+                    initial_sl_distance=initial_dist,
+                    filled_lot=lot,
+                )
+            elif pnl_r is None and initial_dist > 0 and entry and exit_px:
+                # Lot unknown: geometric R from price path only (not dollar invent).
+                signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
+                pnl_r = round(signed / initial_dist, 4)
 
             await asyncio.to_thread(
                 adapter.log_lifecycle_event,
@@ -986,25 +1014,31 @@ def create_app(
                 try:
                     from scripts.smc.notifier import format_trade_closed_card
                     from scripts.smc.notification_policy import may_notify_close
-                    if may_notify_close(
-                        broker_close_success=bool(exec_close.success),
-                        already_flat_on_broker=already_closed_by_broker,
+                    known_pnl = pnl_r is not None and pnl_dollar is not None
+                    if (
+                        may_notify_close(
+                            broker_close_success=bool(exec_close.success),
+                            already_flat_on_broker=already_closed_by_broker,
+                        )
+                        and known_pnl
                     ):
                         tc_dir = Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
                         card = format_trade_closed_card(
                             direction=tc_dir,
                             exit_price=float(payload.get("exit_price") or 0.0),
-                            pnl_dollars=pnl_dollar or 0.0,
-                            pnl_r=pnl_r or 0.0,
+                            pnl_dollars=float(pnl_dollar),
+                            pnl_r=float(pnl_r),
                             reason=reason,
                         )
                         background_tasks.add_task(_dispatch_tg_safe, card)
                     else:
                         logger.warning(
-                            "TRADE_CLOSED notify suppressed — no broker close evidence "
-                            "(order_id=%s success=%s)",
+                            "TRADE_CLOSED notify suppressed — need broker evidence "
+                            "and known PnL (order_id=%s success=%s pnl=%s/%s)",
                             order_id,
                             exec_close.success,
+                            pnl_dollar,
+                            pnl_r,
                         )
                 except Exception as exc:
                     logger.warning(f"Failed to schedule Telegram notification: {exc}")

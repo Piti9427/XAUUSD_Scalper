@@ -274,6 +274,7 @@ async def run_smc_live_copilot():
                     # Wall-clock TIME_EXIT when M5 feed stalls (scenario 19).
                     # Emit CLOSE_MARKET only; clear local position after adapter evidence.
                     clock_intents = orchestrator.on_clock(account, now_utc)
+                    last_close_broker_ok = False
                     for intent in clock_intents:
                         logger.info(
                             "Executing clock OrderIntent: %s (%s)",
@@ -288,6 +289,7 @@ async def run_smc_live_copilot():
                             and account.open_position is not None
                         ):
                             account.open_position = None
+                            last_close_broker_ok = True
 
                     intents = orchestrator.on_bar(
                         bar=last_closed_bar,
@@ -302,7 +304,6 @@ async def run_smc_live_copilot():
 
                     from scripts.smc.notification_policy import may_notify_close, may_notify_execution
 
-                    last_close_broker_ok = False
                     for intent in intents:
                         logger.info("Executing OrderIntent: %s (%s)", intent.intent_type.value, intent.reason)
                         res = adapter.execute_intent(intent)
