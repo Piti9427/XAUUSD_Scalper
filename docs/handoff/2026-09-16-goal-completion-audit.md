@@ -26,7 +26,10 @@
 
 - H1 lazy resolve: skip live MT5 when payload bias known (`resolve_h1_bias_lazy`)
 - Readiness: soak/demo scanners reject templates/placeholders
-- Webhook monolith split: `webhook_bridge.create_app` + `clock_routes` / `tradingview_routes` / `runtime`
+- Webhook package split (async I/O stays on `asyncio.to_thread`):
+  - `webhook_bridge.create_app` (~178 LOC factory)
+  - `webhook/runtime.py`, `clock_routes.py`, `tradingview_routes.py`
+  - `setup_pending.py`, `lifecycle_events.py`, auth/idempotency/h1_bias
 
 ## Operator unblock
 

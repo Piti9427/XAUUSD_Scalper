@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-16T10:23:19.822011+00:00",
-  "git_head": "10a043f8835120d0055a3372d4d15f8b37a9e547",
+  "captured_at_utc": "2026-09-16T10:24:32.581287+00:00",
+  "git_head": "09afb17296ce7f52a27ec62c326f7dd24db927c9",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
