@@ -44,6 +44,7 @@ def create_app(
     identity_gate: Optional[Callable[[], BrokerIdentityReport]] = None,
     max_hold_bars: Optional[int] = None,
     bar_minutes: int = 5,
+    order_ttl_bars: Optional[int] = 4,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -137,12 +138,20 @@ def create_app(
         Scenario 18/19 — never force-close filled positions on news; never notify
         TRADE CLOSED without broker evidence.
         """
+        from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
         from scripts.smc.clock_exit import OpenFill, plan_clock_time_exits
         from scripts.smc.notification_policy import may_notify_close
 
         now_utc = datetime.now(timezone.utc)
         cancel_results = []
         exit_results = []
+        lifecycle = await asyncio.to_thread(
+            reconcile_broker_lifecycle,
+            adapter,
+            now=now_utc,
+            order_ttl_bars=order_ttl_bars,
+            bar_minutes=bar_minutes,
+        )
 
         # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
         if news_manager is not None and hasattr(news_manager, "should_cancel_pending"):
@@ -187,12 +196,14 @@ def create_app(
                     )
 
         if max_hold_bars is None:
+            has_work = bool(cancel_results or lifecycle.get("ttl_cancels"))
             return {
-                "status": "ok" if cancel_results else "disabled",
+                "status": "ok" if has_work else "disabled",
                 "action": "CLOCK_TICK",
                 "cancels": cancel_results,
                 "exits": [],
-                "reason": None if cancel_results else "max_hold_bars_not_configured",
+                "lifecycle": lifecycle,
+                "reason": None if has_work else "max_hold_bars_not_configured",
                 "timestamp": now_utc.isoformat(),
             }
 
@@ -320,6 +331,7 @@ def create_app(
             "checked": len(fills),
             "cancels": cancel_results,
             "exits": exit_results,
+            "lifecycle": lifecycle,
             "timestamp": now_utc.isoformat(),
         }
 

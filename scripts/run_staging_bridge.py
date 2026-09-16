@@ -86,6 +86,9 @@ def main():
     if max_hold_bars is not None:
         max_hold_bars = int(max_hold_bars)
     bar_minutes = int(strategy_cfg.get("bar_minutes", 5))
+    order_ttl_bars = strategy_cfg.get("order_ttl_bars", 4)
+    if order_ttl_bars is not None:
+        order_ttl_bars = int(order_ttl_bars)
 
     news_mgr = NewsManager()
     # Unknown schedule blocks new risk / cancels pendings until operator loads events.
@@ -134,6 +137,7 @@ def main():
         require_broker_identity=require_broker_identity,
         max_hold_bars=max_hold_bars,
         bar_minutes=bar_minutes,
+        order_ttl_bars=order_ttl_bars,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

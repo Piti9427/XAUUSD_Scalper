@@ -436,10 +436,14 @@ class SMCExecutionAdapter:
 
         Used to cancel unfilled pendings on news blackout without touching fills.
         """
+        return [row["order_id"] for row in self.list_unfilled_pending_setups()]
+
+    def list_unfilled_pending_setups(self) -> List[Dict[str, Any]]:
+        """Pending setups with parsed UTC created_at for TTL reconciliation."""
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT order_id FROM setup_inbox
+            SELECT order_id, created_at FROM setup_inbox
             WHERE status IN ('claimed', 'submitted', 'accepted', 'uncertain')
               AND order_id NOT IN (
                   SELECT order_id FROM trade_lifecycle
@@ -448,7 +452,34 @@ class SMCExecutionAdapter:
             ORDER BY created_at ASC
             """
         )
-        return [str(row[0]) for row in cursor.fetchall() if row and row[0]]
+        rows: List[Dict[str, Any]] = []
+        for order_id, created_raw in cursor.fetchall():
+            if not order_id or not created_raw:
+                continue
+            try:
+                created_at = datetime.fromisoformat(
+                    str(created_raw).replace("Z", "+00:00").replace(" ", "T")
+                )
+            except ValueError:
+                continue
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            else:
+                created_at = created_at.astimezone(timezone.utc)
+            rows.append({"order_id": str(order_id), "created_at": created_at})
+        return rows
+
+    def has_lifecycle_event(self, order_id: str, event_type: str) -> bool:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT 1 FROM trade_lifecycle
+            WHERE order_id = ? AND event_type = ?
+            LIMIT 1
+            """,
+            (order_id, event_type),
+        )
+        return cursor.fetchone() is not None
 
     def get_daily_realized_losses(self, date_utc_str: Optional[str] = None) -> int:
         """Queries SQLite for number of realized loss trades today (ADR-011)."""
