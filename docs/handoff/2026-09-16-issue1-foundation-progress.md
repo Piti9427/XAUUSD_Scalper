@@ -32,6 +32,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Tick CSV bar annotation + backtester feed | `scripts/smc/tick_feed.py`; `SMCBacktester.run(..., df_ticks=)`; `tests/test_smc_tick_feed.py`, `test_dual_touch_with_tick_feed_takes_tp_first` |
 | Broker identity smoke CLI (no orders) | `scripts/smoke_broker_identity.py` |
 | Webhook Demo admission: risk_halt + identity + news unknown | `scripts/webhook_bridge.py` (`risk_halt_path`, `identity_gate` / live identity); `tests/test_webhook_bridge.py::TestWebhookFoundationGates` |
+| Dry-run SETUP claims inbox for clock cancels | **Done:** dry-run `SETUP_PENDING` uses `claim_setup` + `accepted` so news/H1/TTL clock paths see pendings; `test_dry_run_setup_claims_inbox_for_clock_cancels` |
 | Two net losses update persistent risk_halt on TRADE_CLOSED | webhook + `smc_main.py` call `record_net_losing_trade`; test `test_two_net_losses_trip_risk_halt_on_next_setup` |
 | TIME_EXIT max-hold accounting (P/L/flat) | `StrategyOrchestrator.max_hold_bars`; backtester `exit_reason=TIME_EXIT`; `test_time_exit_after_max_hold_bars_profit_loss_flat` |
 | Setup identity + no revive after TTL (B16) | `scripts/smc/setup_identity.py`; orchestrator registry; detection stamps `setup_id`; `tests/test_smc_setup_identity.py` |

@@ -552,7 +552,7 @@ def create_app(
         order_id = payload.get("order_id")
         logger.info(f"Received verified webhook event: {event} for order_id: {order_id}")
 
-        if event == "SETUP_PENDING" and order_id and not adapter.dry_run:
+        if event == "SETUP_PENDING" and order_id:
             existing_setup = await asyncio.to_thread(adapter.inspect_setup, payload)
             if existing_setup is not None:
                 return {
@@ -942,7 +942,8 @@ def create_app(
                         "reason": reason,
                     }
 
-            if not adapter.dry_run:
+            claim: Optional[Dict[str, str]] = None
+            if order_id:
                 claim = await asyncio.to_thread(adapter.claim_setup, payload)
                 if claim["status"] == "duplicate":
                     return {
@@ -972,7 +973,7 @@ def create_app(
                 exec_res = await asyncio.to_thread(adapter.execute_intent, intent)
             except Exception as exc:
                 logger.error(f"Execution error or timeout for {order_id}: {exc}")
-                if not adapter.dry_run and order_id:
+                if order_id:
                     await asyncio.to_thread(adapter.update_setup_status, order_id, "uncertain")
                 return {
                     "status": "uncertain",
@@ -987,7 +988,7 @@ def create_app(
                     status=getattr(exec_res, "status", None),
                 )
                 if outcome == "uncertain":
-                    if not adapter.dry_run and order_id:
+                    if order_id:
                         await asyncio.to_thread(adapter.update_setup_status, order_id, "uncertain")
                     return {
                         "status": "uncertain",
@@ -996,7 +997,7 @@ def create_app(
                         "reason": exec_res.message,
                         "exec_status": getattr(exec_res, "status", "UNKNOWN"),
                     }
-                if not adapter.dry_run and order_id:
+                if order_id:
                     await asyncio.to_thread(adapter.update_setup_status, order_id, "rejected")
                 return {
                     "status": "rejected",
@@ -1005,7 +1006,7 @@ def create_app(
                     "reason": exec_res.message,
                     "exec_status": getattr(exec_res, "status", "REJECTED"),
                 }
-            if not adapter.dry_run and order_id:
+            if order_id:
                 await asyncio.to_thread(adapter.update_setup_status, order_id, "accepted", exec_res.order_id)
             if order_id:
                 await asyncio.to_thread(mark_processed, order_id, event, "success")
@@ -1039,7 +1040,7 @@ def create_app(
                 "status": "success",
                 "action": "LIMIT_PLACED",
                 "order_id": order_id,
-                **({"receipt_id": claim["receipt_id"]} if not adapter.dry_run else {}),
+                **({"receipt_id": claim["receipt_id"]} if claim else {}),
                 "lot_size": lot_result.lot_size,
                 "ticket": exec_res.order_id,
                 "message": exec_res.message,

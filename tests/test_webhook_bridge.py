@@ -2234,9 +2234,65 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         # risk = 10 * 0.01 * 100 = 10; pnl 10 → 1.0R
         self.assertEqual(data["pnl_r"], 1.0)
 
+class TestWebhookDryRunSetupInbox(unittest.TestCase):
+    def test_dry_run_setup_claims_inbox_for_clock_cancels(self):
+        """Staging dry-run must track pendings so news/H1/TTL clock paths work."""
+        from scripts.webhook_bridge import create_app
+        import tempfile
+        from pathlib import Path
 
-if __name__ == "__main__":
-    unittest.main()
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        secret = "DRY_CLAIM_SECRET"
+        app = create_app(
+            auth_token=secret,
+            dry_run=True,
+            db_path=db.name,
+            commission_per_lot=0.0,
+            slippage_allowance=0.0,
+        )
+        client = TestClient(app)
+        headers = {"Authorization": f"Bearer {secret}"}
+        try:
+            res = client.post(
+                "/webhook/tradingview",
+                headers=headers,
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "DRY_CLAIM_1",
+                    "dir": "BUY",
+                    "limit": 2400.0,
+                    "sl": 2390.0,
+                    "tp1": 2420.0,
+                },
+            )
+            self.assertEqual(res.status_code, 200)
+            body = res.json()
+            self.assertEqual(body["status"], "success")
+            self.assertIn("receipt_id", body)
+            adapter = app.state.adapter
+            self.assertIn("DRY_CLAIM_1", adapter.list_unfilled_pendings())
+            self.assertEqual(adapter.get_pending_direction("DRY_CLAIM_1"), "BUY")
+            info = adapter.get_setup_status("DRY_CLAIM_1")
+            self.assertEqual(info["status"], "accepted")
+
+            res2 = client.post(
+                "/webhook/tradingview",
+                headers=headers,
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "DRY_CLAIM_2",
+                    "dir": "SELL",
+                    "limit": 2390.0,
+                    "sl": 2400.0,
+                    "tp1": 2370.0,
+                },
+            )
+            self.assertEqual(res2.json()["status"], "rejected")
+            self.assertIn("busy", res2.json()["reason"].lower())
+        finally:
+            app.state.adapter.close()
+            Path(db.name).unlink(missing_ok=True)
 
 
 class TestWebhookH1BiasGate(unittest.TestCase):
@@ -2288,18 +2344,20 @@ class TestWebhookH1BiasGate(unittest.TestCase):
 
     def test_clock_cancels_pending_when_known_h1_bias_flips(self):
         adapter = self.app.state.adapter
-        # Dry-run SETUP does not claim inbox; seed accepted pending like news-cancel tests.
-        adapter.claim_setup(
-            {"order_id": "H1_FLIP_1", "dir": "BUY", "limit": 2400.0, "sl": 2390.0}
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "H1_FLIP_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
         )
-        adapter.update_setup_status("H1_FLIP_1", "accepted", ticket=1)
-        adapter.log_lifecycle_event(
-            event_type="PLACE_LIMIT",
-            order_id="H1_FLIP_1",
-            direction="BUY",
-            entry_price=2400.0,
-            sl_price=2390.0,
-        )
+        self.assertEqual(place.status_code, 200)
+        self.assertEqual(place.json()["status"], "success")
         self.assertIn("H1_FLIP_1", adapter.list_unfilled_pendings())
 
         res = self.client.post(
@@ -2319,13 +2377,23 @@ class TestWebhookH1BiasGate(unittest.TestCase):
 
     def test_unknown_h1_bias_does_not_invent_clock_cancel(self):
         adapter = self.app.state.adapter
-        adapter.claim_setup(
-            {"order_id": "H1_UNKNOWN_1", "dir": "BUY", "limit": 2400.0, "sl": 2390.0}
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "H1_UNKNOWN_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
         )
-        adapter.update_setup_status("H1_UNKNOWN_1", "accepted", ticket=1)
+        self.assertEqual(place.json()["status"], "success")
         res = self.client.post("/internal/clock", headers=self.headers, json={})
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json().get("h1_bias_cancels") or [], [])
         self.assertIn("H1_UNKNOWN_1", adapter.list_unfilled_pendings())
 
-
+if __name__ == "__main__":
+    unittest.main()
