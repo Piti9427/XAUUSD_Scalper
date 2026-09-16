@@ -1,6 +1,6 @@
 {
   "captured_at_utc": "2026-09-16T09:15:30+00:00",
-  "git_head": "a4704ae361c33d065635d76510ee67376a34424f",
+  "git_head": "c4c97e72157acf83a404040b99de2c4fdef8aebf",
   "host": "macOS darwin",
   "purpose": "Locate reachable Windows/Oracle MT5 Python host for Gate C",
   "ssh_probes": [
@@ -35,7 +35,7 @@
       "auth": "Permission denied (publickey,...) for nopparuj/ubuntu/opc/root"
     }
   ],
-  "local_ssh_pubkey": "id_ed25519.pub present; not authorized on probed hosts",
+  "local_ssh_pubkey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO2tN+89r1bT9rrROO8mJ6Y632YN0Hx+bucIxmaooqAU",
   "utm_vms_found": false,
   "oci_config": false,
   "wine_ipc": "INCONCLUSIVE_INFRA (see mac-wine-*.json)",
