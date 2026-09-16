@@ -18,6 +18,32 @@ class BrokerMixin:
         info = runtime.mt5.account_info()
         return float(info.equity) if info else None
 
+    def resolve_live_h1_bias(self) -> tuple[Optional[str], bool]:
+        """
+        Resolve H1 EMA200 bias from live MT5 bars for webhook clock cancels.
+
+        Returns (direction|None, bias_known). Dry-run / missing package / insufficient
+        history → bias_known=False (never invent a cancel).
+        """
+        if self.dry_run or runtime.mt5 is None or not self.connected:
+            return None, False
+        from scripts.smc.detection import resolve_h1_ema_bias
+        from scripts.smc.warmup import H1_WARMUP_BARS
+        import pandas as pd
+
+        tf = getattr(runtime.mt5, "TIMEFRAME_H1", 60)
+        rates = runtime.mt5.copy_rates_from_pos(self.symbol, tf, 0, int(H1_WARMUP_BARS))
+        if rates is None or len(rates) == 0:
+            return None, False
+        df = pd.DataFrame(rates)
+        if "close" not in df.columns:
+            return None, False
+        bias, reason = resolve_h1_ema_bias(df)
+        if reason == "h1_warmup_insufficient":
+            return None, False
+        # Directional or flat with enough history: bias is known.
+        return (bias.value if bias is not None else None), True
+
     def _type_filling_for_symbol(self, *, for_pending: bool) -> Optional[int]:
         if runtime.mt5 is None or not self.connected:
             return None

@@ -91,10 +91,12 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/setup_identity.py",
             "scripts/smc/orchestrator.py",
+            "scripts/smc/mt5_adapter/broker.py",
             "scripts/webhook_bridge.py",
             "scripts/webhook/h1_bias.py",
             "smc_main.py",
             "tests/test_smc_setup_identity.py",
+            "tests/test_smc_live_h1_bias.py",
             "tests/test_webhook_bridge.py",
             "tests/test_webhook_h1_bias.py",
         ],

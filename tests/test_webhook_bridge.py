@@ -2375,6 +2375,61 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.assertTrue(self.app.state.setup_registry.is_blocked("H1_FLIP_1"))
         self.assertNotIn("H1_FLIP_1", adapter.list_unfilled_pendings())
 
+
+    def test_clock_uses_live_h1_bias_when_body_omits_bias(self):
+        """Live Gate C cron (empty body) must still cancel on broker H1 bias."""
+        from unittest.mock import patch
+        adapter = self.app.state.adapter
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "H1_LIVE_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
+        )
+        self.assertEqual(place.json()["status"], "success")
+        with patch.object(
+            adapter,
+            "resolve_live_h1_bias",
+            return_value=("SELL", True),
+        ):
+            res = self.client.post("/internal/clock", headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        cancels = res.json().get("h1_bias_cancels") or []
+        self.assertTrue(cancels, msg=res.json())
+        self.assertEqual(cancels[0]["order_id"], "H1_LIVE_1")
+        self.assertNotIn("H1_LIVE_1", adapter.list_unfilled_pendings())
+
+    def test_clock_does_not_invent_h1_cancel_when_live_bias_unknown(self):
+        from unittest.mock import patch
+        adapter = self.app.state.adapter
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "H1_LIVE_UNK",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
+        )
+        self.assertEqual(place.json()["status"], "success")
+        with patch.object(
+            adapter,
+            "resolve_live_h1_bias",
+            return_value=(None, False),
+        ):
+            res = self.client.post("/internal/clock", headers=self.headers)
+        self.assertEqual(res.json().get("h1_bias_cancels") or [], [])
+        self.assertIn("H1_LIVE_UNK", adapter.list_unfilled_pendings())
+
     def test_unknown_h1_bias_does_not_invent_clock_cancel(self):
         adapter = self.app.state.adapter
         place = self.client.post(

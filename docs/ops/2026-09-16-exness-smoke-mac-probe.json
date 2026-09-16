@@ -1,7 +1,7 @@
 {
-  "captured_at_utc": "2026-09-16T10:05:40.888634+00:00",
+  "captured_at_utc": "2026-09-16T10:08:17.643778+00:00",
   "host": "mac",
-  "git_head": "8593ecd57e9a1c37b4e8e7f1bb31063800e9a946",
+  "git_head": "23db3588f6a33e5bebf39d62f528299df9978341",
   "ok": false,
   "path_resolved": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
   "account_kwargs_complete": false,

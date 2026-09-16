@@ -330,7 +330,12 @@ def create_app(
                     )
 
         # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
+        # Prefer explicit clock JSON; else live MT5 resolve (Gate C cron empty body).
         h1_bias, h1_bias_known = parse_h1_bias_fields(clock_payload)
+        if not h1_bias_known:
+            live_bias, live_known = await asyncio.to_thread(adapter.resolve_live_h1_bias)
+            if live_known:
+                h1_bias, h1_bias_known = live_bias, True
         if h1_bias_known:
             pending_ids = await asyncio.to_thread(adapter.list_unfilled_pendings)
             for oid in pending_ids:

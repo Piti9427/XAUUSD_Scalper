@@ -42,6 +42,7 @@ fi
 echo ""
 echo "==> After smoke ok:true, also verify:"
 echo "    - Webhook /internal/clock reconciles uncertain intents + ROLLOVER 20:55 + TIME_EXIT"
+echo "    - Empty-body clock cron OK on live MT5 (auto H1 bias); see scripts/ops/webhook-clock-cron.example.sh"
 echo "    - Cron: scripts/ops/webhook-clock-cron.example.sh"
 echo ""
 echo "==> Remaining manual gates:"
