@@ -12,7 +12,7 @@ from scripts.smc.types import (
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import RiskHaltState
 from scripts.smc.quotes import ohlc_dual_touch_flag, first_exit_from_ticks
-from scripts.smc.setup_identity import SetupRegistry, make_setup_id
+from scripts.smc.setup_identity import SetupRegistry, make_setup_id, pending_h1_bias_allows
 
 
 class StrategyOrchestrator:
@@ -289,6 +289,8 @@ class StrategyOrchestrator:
         risk_halt: Optional[RiskHaltState] = None,
         news_cancel_pending: bool = False,
         news_cancel_reason: str = "",
+        h1_bias: Optional[Direction] = None,
+        h1_bias_known: bool = False,
     ) -> List[OrderIntent]:
         intents: List[OrderIntent] = []
 
@@ -350,6 +352,24 @@ class StrategyOrchestrator:
                 self.setup_registry.mark_terminal(
                     order.order_id, news_cancel_reason or "news_cancel"
                 )
+                account.pending_order = None
+                account.pending_bars_held = 0
+                intents.append(cancel_intent)
+                return intents
+
+            bias_ok, bias_reason = pending_h1_bias_allows(
+                pending_direction=order.direction,
+                h1_bias=h1_bias,
+                bias_known=h1_bias_known,
+            )
+            if not bias_ok:
+                cancel_intent = OrderIntent(
+                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                    direction=order.direction,
+                    reason=f"H1 bias invalidation: {bias_reason}",
+                    order_id=order.order_id,
+                )
+                self.setup_registry.mark_terminal(order.order_id, bias_reason)
                 account.pending_order = None
                 account.pending_bars_held = 0
                 intents.append(cancel_intent)

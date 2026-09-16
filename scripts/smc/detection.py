@@ -47,6 +47,27 @@ def calculate_ema(series: pd.Series, length: int) -> pd.Series:
     return series.ewm(span=length, adjust=False).mean()
 
 
+def resolve_h1_ema_bias(h1_candles: pd.DataFrame) -> Tuple[Optional[Direction], str]:
+    """
+    H1 EMA200 bias from closed H1 data (ADR-006).
+
+    Returns (Direction, "ok") when directional, (None, reason) when flat/unknown.
+    Does not invent bias from insufficient history.
+    """
+    if h1_candles is None or len(h1_candles) < 200:
+        return None, "h1_warmup_insufficient"
+    latest_h1_close = float(h1_candles["close"].iloc[-1])
+    if "ema200" in h1_candles.columns:
+        latest_h1_ema = float(h1_candles["ema200"].iloc[-1])
+    else:
+        latest_h1_ema = float(calculate_ema(h1_candles["close"], 200).iloc[-1])
+    if latest_h1_close > latest_h1_ema:
+        return Direction.BUY, "ok"
+    if latest_h1_close < latest_h1_ema:
+        return Direction.SELL, "ok"
+    return None, "h1_bias_flat"
+
+
 def evaluate_smc_setup(
     h1_candles: pd.DataFrame,
     m5_candles: pd.DataFrame,
@@ -111,19 +132,9 @@ def evaluate_smc_setup(
         effective_sl_cap = max_sl_cap
 
     # 1. H1 Direction Bias (ADR-006: EMA 200 filter) - O(1) if precomputed
-    latest_h1_close = h1_candles["close"].iloc[-1]
-    if "ema200" in h1_candles.columns:
-        latest_h1_ema = h1_candles["ema200"].iloc[-1]
-    else:
-        h1_ema200 = calculate_ema(h1_candles["close"], 200)
-        latest_h1_ema = h1_ema200.iloc[-1]
-
-    if latest_h1_close > latest_h1_ema:
-        bias = Direction.BUY
-    elif latest_h1_close < latest_h1_ema:
-        bias = Direction.SELL
-    else:
-        return SetupDecision(None, "h1_bias_flat")
+    bias, bias_reason = resolve_h1_ema_bias(h1_candles)
+    if bias is None:
+        return SetupDecision(None, bias_reason)
 
     # 2. Slice M5 data up to current_time (avoid redundant full copy if already aligned)
     if current_time.tzinfo is None:

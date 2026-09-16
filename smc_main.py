@@ -6,7 +6,7 @@ from scripts.config_loader import load_config, setup_logging, ConfigError
 from scripts.mt5_connector import MT5Connector
 from scripts.smc.types import AccountState, OrderIntent, OrderIntentType, Direction
 from scripts.smc.liquidity import compute_liquidity_levels
-from scripts.smc.detection import evaluate_smc_setup
+from scripts.smc.detection import evaluate_smc_setup, resolve_h1_ema_bias
 from scripts.smc.real_money_approval import require_real_money_approval
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
@@ -181,6 +181,11 @@ async def run_smc_live_copilot():
 
                     # Pure Detection Seam (skip if blackout / incomplete H1 warmup / stale data)
                     setup = None
+                    h1_bias_dir = None
+                    h1_bias_known = False
+                    if h1_ready:
+                        h1_bias_dir, h1_bias_reason = resolve_h1_ema_bias(df_h1)
+                        h1_bias_known = h1_bias_reason in ("ok", "h1_bias_flat")
                     equity_probe = adapter.get_account_equity()
                     admission = evaluate_new_risk_admission(
                         last_bar_time=bar_time if isinstance(bar_time, datetime) else None,
@@ -326,6 +331,8 @@ async def run_smc_live_copilot():
                         risk_halt=risk_halt,
                         news_cancel_pending=news_cancel,
                         news_cancel_reason=news_cancel_reason,
+                        h1_bias=h1_bias_dir,
+                        h1_bias_known=h1_bias_known,
                     )
 
                     from scripts.smc.notification_policy import may_notify_close, may_notify_execution

@@ -64,3 +64,27 @@ class SetupRegistry:
         if self.is_blocked(setup_id):
             return False, f"setup_id_terminal:{self._reasons.get(setup_id, 'unknown')}"
         return True, "ok"
+
+
+def pending_h1_bias_allows(
+    *,
+    pending_direction: str,
+    h1_bias: Optional[str],
+    bias_known: bool,
+) -> tuple[bool, str]:
+    """
+    Pending must die when known H1 bias no longer supports its direction.
+
+    Unknown bias (caller could not compute) does not invent a cancel.
+    Flat bias (bias_known and h1_bias is None) invalidates pending.
+    pending_direction / h1_bias are Direction.value strings or Direction enums.
+    """
+    if not bias_known:
+        return True, "ok_bias_unknown"
+    if h1_bias is None:
+        return False, "h1_bias_flat"
+    pending = getattr(pending_direction, "value", pending_direction)
+    bias = getattr(h1_bias, "value", h1_bias)
+    if str(bias).upper() != str(pending).upper():
+        return False, "h1_bias_invalidated"
+    return True, "ok"

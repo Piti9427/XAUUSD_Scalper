@@ -11,7 +11,7 @@ from scripts.smc.types import (
     LiquidityLevels,
 )
 from scripts.smc.liquidity import compute_liquidity_levels
-from scripts.smc.detection import evaluate_smc_setup, is_in_session
+from scripts.smc.detection import evaluate_smc_setup, is_in_session, resolve_h1_ema_bias
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
@@ -248,9 +248,14 @@ class SMCBacktester:
 
             # Evaluate detection only if no active position and no pending order and in session
             setup_signal = None
+            h1_bias_dir = None
+            h1_bias_known = False
+            sub_h1 = h1.iloc[:h1_idx]
+            if len(sub_h1) >= 200:
+                h1_bias_dir, h1_bias_reason = resolve_h1_ema_bias(sub_h1)
+                h1_bias_known = h1_bias_reason in ("ok", "h1_bias_flat")
             if account.open_position is None and account.pending_order is None:
                 if is_in_session(bar_time, extended=self.extended_killzones):
-                    sub_h1 = h1.iloc[:h1_idx]
                     sub_m5 = m5.iloc[: i + 1]
                     decision = evaluate_smc_setup(
                         sub_h1,
@@ -281,7 +286,13 @@ class SMCBacktester:
             # solely from the position remaining open at the end of a candle.
             orchestrator.evaluated_before = None
             orchestrator.evaluated_after = None
-            intents = orchestrator.on_bar(current_bar, account, setup_signal)
+            intents = orchestrator.on_bar(
+                current_bar,
+                account,
+                setup_signal,
+                h1_bias=h1_bias_dir,
+                h1_bias_known=h1_bias_known,
+            )
             for intent in intents:
                 if intent.intent_type == OrderIntentType.PLACE_LIMIT:
                     funnel.bump("affordable")
@@ -293,6 +304,8 @@ class SMCBacktester:
                     reason = intent.reason or "canceled"
                     if "ttl" in reason.lower() or "expire" in reason.lower():
                         funnel.reject("NO_FILL_TTL")
+                    elif "h1_bias" in reason.lower():
+                        funnel.reject("H1_BIAS_INVALIDATED")
                     else:
                         funnel.reject(reason)
             before = orchestrator.evaluated_before
