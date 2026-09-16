@@ -82,6 +82,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Freeze_level blocks SL mods near market | **Done:** `sl_modify_freeze_allows`; adapter MOVE_SL + live TP1 pre-check; snapshot requires `freeze_level`; `test_live_be_rejected_inside_freeze_level`, `test_live_tp1_rejects_before_partial_when_freeze_blocks_be` |
 | H1 EMA bias flip cancels pending (scenario 8) | **Done:** `pending_h1_bias_allows` + `resolve_h1_ema_bias`; wired `smc_main` / backtester / orchestrator; `test_h1_bias_flip_cancels_pending_and_blocks_revive` |
 | Filled setup identity consumed (no revive) | **Done:** orchestrator `mark_terminal(..., "filled")` on pending fill; `test_fill_marks_setup_terminal_blocks_revive` |
+| Required-scenario coverage matrix (1–24) | **Done:** `scripts/ops/issue1_scenario_coverage.py` → `docs/ops/2026-09-16-issue1-scenario-coverage.json`; scenarios 1–23 software_evidence_complete; 24 live_ops_required; readiness embeds Gate B summary |
 
 ## Still open for issue #1
 

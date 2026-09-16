@@ -28,6 +28,42 @@ def _exists(rel: str) -> bool:
     return (ROOT / rel).is_file()
 
 
+def _gh_auth_ok() -> bool:
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "status", "-h", "github.com"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        text = (proc.stdout or "") + (proc.stderr or "")
+        if "Failed to log in" in text or "token" in text.lower() and "invalid" in text.lower():
+            return False
+        # Probe a cheap authenticated call — status text alone can be misleading.
+        api = subprocess.run(
+            ["gh", "api", "user", "-q", ".login"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return api.returncode == 0 and bool((api.stdout or "").strip())
+    except FileNotFoundError:
+        return False
+
+
+def _scenario_software_ok() -> bool | None:
+    path = ROOT / "docs" / "ops" / "2026-09-16-issue1-scenario-coverage.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return bool(payload.get("summary", {}).get("software_evidence_complete"))
+
+
 def main() -> int:
     smoke_ok = False
     smoke_path = None
@@ -41,15 +77,23 @@ def main() -> int:
         except (OSError, json.JSONDecodeError):
             continue
 
+    host_hunt = "docs/ops/2026-09-16-host-reachability-hunt.json"
+    coverage = "docs/ops/2026-09-16-issue1-scenario-coverage.json"
     report = {
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
         "git_head": _git_head(),
+        "gate_b_scenario_software": {
+            "artifact": coverage if _exists(coverage) else None,
+            "software_evidence_complete": _scenario_software_ok(),
+            "note": "Scenarios 1–23 software only; does not close #1",
+        },
         "gate_c_exness_smoke": {
             "ok": smoke_ok,
             "artifact": smoke_path,
             "blocker_docs": [
                 "docs/ops/2026-09-16-mac-live-gate-blocker.md",
                 "docs/ops/2026-09-16-mac-wine-initialize-path.json",
+                host_hunt,
             ],
         },
         "gate_c_oracle_soak": {
@@ -68,6 +112,11 @@ def main() -> int:
                 (ROOT / "docs" / "ops").glob("*-demo-12w-start*.json")
             ),
             "note": "Do not invent a start artifact; operator fills after Gates B/C.",
+        },
+        "operator_blockers": {
+            "gh_auth_ok": _gh_auth_ok(),
+            "host_reachability_artifact": host_hunt if _exists(host_hunt) else None,
+            "utm_app_present_no_vms": True,
         },
         "issue1_closable": False,
     }
