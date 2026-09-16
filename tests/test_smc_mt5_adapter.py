@@ -173,6 +173,63 @@ class TestSMCMT5Adapter(unittest.TestCase):
                         dry_run=False, db_path=str(Path(directory) / "trades.db")
                     )
 
+    def test_live_place_limit_includes_type_filling(self):
+        broker = Mock()
+        broker.ORDER_TYPE_BUY_LIMIT = 2
+        broker.TRADE_ACTION_PENDING = 5
+        broker.TRADE_RETCODE_DONE = 10009
+        broker.ORDER_TIME_GTC = 0
+        broker.SYMBOL_FILLING_IOC = 2
+        broker.SYMBOL_FILLING_FOK = 1
+        broker.ORDER_FILLING_IOC = 1
+        broker.ORDER_FILLING_FOK = 0
+        broker.ORDER_FILLING_RETURN = 2
+        broker.symbol_info.return_value = SimpleNamespace(filling_mode=broker.SYMBOL_FILLING_IOC)
+        broker.order_send.return_value = SimpleNamespace(retcode=10009, order=999, comment="done")
+        self.adapter.dry_run = False
+        self.adapter.connected = True
+        with patch("scripts.smc.mt5_adapter.mt5", broker):
+            result = self.adapter.execute_intent(OrderIntent(
+                intent_type=OrderIntentType.PLACE_LIMIT,
+                direction=Direction.BUY,
+                limit_price=4050.0,
+                sl_price=4040.0,
+                tp_price=4070.0,
+                lot_size=0.01,
+                order_id="fill-mode-1",
+                reason="test",
+            ))
+        self.assertTrue(result.success)
+        sent = broker.order_send.call_args[0][0]
+        self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_RETURN)
+
+    def test_live_market_close_includes_ioc_filling(self):
+        broker = Mock()
+        broker.ORDER_TYPE_BUY = 0
+        broker.ORDER_TYPE_SELL = 1
+        broker.TRADE_ACTION_DEAL = 1
+        broker.TRADE_RETCODE_DONE = 10009
+        broker.SYMBOL_FILLING_IOC = 2
+        broker.SYMBOL_FILLING_FOK = 1
+        broker.ORDER_FILLING_IOC = 1
+        broker.ORDER_FILLING_FOK = 0
+        broker.ORDER_FILLING_RETURN = 2
+        broker.positions_get.return_value = [SimpleNamespace(
+            ticket=42, comment="SMC_owned-6", type=broker.ORDER_TYPE_BUY, volume=0.02,
+        )]
+        broker.symbol_info.return_value = SimpleNamespace(filling_mode=broker.SYMBOL_FILLING_IOC)
+        broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.0, ask=4050.3)
+        broker.order_send.return_value = SimpleNamespace(retcode=10009, comment="done")
+        self.adapter.dry_run = False
+        self.adapter.connected = True
+        with patch("scripts.smc.mt5_adapter.mt5", broker):
+            result = self.adapter.execute_intent(OrderIntent(
+                intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-6",
+            ))
+        self.assertTrue(result.success)
+        sent = broker.order_send.call_args[0][0]
+        self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_IOC)
+
     def test_live_risk_snapshot_reads_balance_equity_and_symbol_volume(self):
         broker = Mock()
         broker.account_info.return_value = SimpleNamespace(balance=10000.0, equity=6000.0)

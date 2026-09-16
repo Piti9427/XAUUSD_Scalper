@@ -72,6 +72,10 @@ class MT5Connector:
         if symbol_info is None:
             logger.warning("No symbol info found for %s", symbol)
             return None
+        ask = getattr(symbol_info, "ask", None)
+        bid = getattr(symbol_info, "bid", None)
+        if ask is not None and bid is not None and ask > 0 and bid > 0:
+            return round(float(ask) - float(bid), 4)
         return symbol_info.spread
 
     def disconnect(self):

@@ -52,6 +52,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Trading vs operating cost layers (scenario 21) | `scripts/smc/cost_accounting.py`; `aggregate_deal_cashflows` used by adapter; `tests/test_smc_cost_accounting.py` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 | GH close paste pack for #2–#4 | `docs/handoff/2026-09-16-github-close-ready.md` |
+| MT5 `type_filling` from symbol `filling_mode` (Exness 10030) | `scripts/smc/mt5_filling.py`; wired in `mt5_adapter` PLACE_LIMIT + DEAL; `tests/test_smc_mt5_filling.py`, `test_live_place_limit_includes_type_filling` |
+| Spread from ask−bid (3-digit Gold) | `MT5Connector.get_spread()`; `tests/test_mt5_connector.py` |
 
 ## Still open for issue #1
 

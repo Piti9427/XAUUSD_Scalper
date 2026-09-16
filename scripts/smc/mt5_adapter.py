@@ -8,6 +8,7 @@ import json
 import threading
 from uuid import uuid4
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
+from scripts.smc.mt5_filling import resolve_type_filling
 
 logger = logging.getLogger(__name__)
 
@@ -514,6 +515,23 @@ class SMCExecutionAdapter:
         info = mt5.account_info()
         return float(info.equity) if info else None
 
+    def _type_filling_for_symbol(self, *, for_pending: bool) -> Optional[int]:
+        if mt5 is None or not self.connected:
+            return None
+        sym = mt5.symbol_info(self.symbol)
+        if sym is None:
+            return None
+        raw_mode = getattr(sym, "filling_mode", 0)
+        if isinstance(raw_mode, (int, float)):
+            filling_mode = int(raw_mode)
+        else:
+            filling_mode = 0
+        return resolve_type_filling(
+            filling_mode,
+            for_pending=for_pending,
+            mt5_mod=mt5,
+        )
+
     def get_risk_snapshot(self) -> Optional[Dict[str, float]]:
         """Return current broker account and XAUUSD sizing rules, or None."""
         if self.dry_run or mt5 is None or not self.connected:
@@ -644,6 +662,14 @@ class SMCExecutionAdapter:
                 order_id=intent.order_id,
                 ticket=intent.ticket,
             )
+            type_filling = self._type_filling_for_symbol(for_pending=True)
+            if type_filling is None:
+                return ExecutionResult(
+                    success=False,
+                    order_id=None,
+                    message="Cannot resolve type_filling for symbol — broker symbol_info unavailable",
+                    status="REJECTED",
+                )
             request = {
                 "action": mt5.TRADE_ACTION_PENDING,
                 "symbol": self.symbol,
@@ -653,6 +679,7 @@ class SMCExecutionAdapter:
                 "sl": intent.sl_price,
                 "tp": intent.tp_price,
                 "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": type_filling,
                 "comment": comment_str,
             }
             result = mt5.order_send(request)
@@ -781,6 +808,13 @@ class SMCExecutionAdapter:
                             return ExecutionResult(False, intent.ticket, "Broker symbol tick unavailable")
                         price = tick.bid if close_type == mt5.ORDER_TYPE_SELL else tick.ask
                         vol = min(pos.volume, intent.lot_size or (pos.volume * 0.5))
+                        deal_filling = self._type_filling_for_symbol(for_pending=False)
+                        if deal_filling is None:
+                            return ExecutionResult(
+                                False,
+                                intent.ticket,
+                                "Cannot resolve type_filling for market deal",
+                            )
                         req = {
                             "action": mt5.TRADE_ACTION_DEAL,
                             "position": pos.ticket,
@@ -790,6 +824,7 @@ class SMCExecutionAdapter:
                             "price": price,
                             "deviation": 20,
                             "type_time": mt5.ORDER_TIME_GTC,
+                            "type_filling": deal_filling,
                             "comment": f"SMC_Partial_{intent.order_id or ''}",
                         }
                         result = mt5.order_send(req)
@@ -835,6 +870,13 @@ class SMCExecutionAdapter:
                         if tick is None:
                             return ExecutionResult(False, intent.ticket, "Broker symbol tick unavailable")
                         price = tick.bid if close_type == mt5.ORDER_TYPE_SELL else tick.ask
+                        deal_filling = self._type_filling_for_symbol(for_pending=False)
+                        if deal_filling is None:
+                            return ExecutionResult(
+                                False,
+                                intent.ticket,
+                                "Cannot resolve type_filling for market close",
+                            )
                         req = {
                             "action": mt5.TRADE_ACTION_DEAL,
                             "position": pos.ticket,
@@ -843,6 +885,7 @@ class SMCExecutionAdapter:
                             "type": close_type,
                             "price": price,
                             "deviation": 20,
+                            "type_filling": deal_filling,
                         }
                         result = mt5.order_send(req)
                         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
