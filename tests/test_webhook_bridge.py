@@ -1979,7 +1979,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
                 timestamp="2026-03-02T18:00:00+00:00",
             )
             fake_now = datetime(2026, 3, 2, 20, 55, tzinfo=timezone.utc)
-            with patch("scripts.webhook_bridge.datetime") as mock_dt:
+            with patch("scripts.webhook.clock_routes.datetime") as mock_dt:
                 mock_dt.now.return_value = fake_now
                 mock_dt.side_effect = lambda *a, **k: datetime(*a, **k)
                 # Keep timezone utilities working if referenced
