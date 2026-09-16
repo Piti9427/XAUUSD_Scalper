@@ -1,0 +1,22 @@
+{
+  "captured_at_utc": "2026-09-16T08:39:48.870696+00:00",
+  "git_head": "244543d8a57ae86f5f6ff1b10fcbcaf9f7878aed",
+  "gate_c_exness_smoke": {
+    "ok": false,
+    "artifact": null,
+    "blocker_docs": [
+      "docs/ops/2026-09-16-mac-live-gate-blocker.md",
+      "docs/ops/2026-09-16-mac-wine-initialize-path.json"
+    ]
+  },
+  "gate_c_oracle_soak": {
+    "checklist_present": true,
+    "completed_artifact_present": false
+  },
+  "gate_d_demo_12w": {
+    "protocol_present": true,
+    "start_artifact_present": false,
+    "note": "Do not invent a start artifact; operator fills after Gates B/C."
+  },
+  "issue1_closable": false
+}

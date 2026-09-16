@@ -17,8 +17,15 @@ if [[ -n "${1:-}" ]]; then
 fi
 
 echo "==> Broker identity + hedging mode smoke (no orders)"
+set +e
 python3 scripts/smoke_broker_identity.py "${SMOKE_ARGS[@]}"
+SMOKE_RC=$?
+set -e
 cat "$OUT"
+
+echo ""
+echo "==> Issue #1 live-gate readiness snapshot (never invents PASS)"
+python3 scripts/ops/issue1_live_gate_readiness.py || true
 
 echo ""
 echo "==> After smoke ok:true, also verify:"
@@ -30,3 +37,4 @@ echo "    - Oracle ARM64 soak: docs/ops/2026-09-16-oracle-arm64-runtime-checklis
 echo "    - Forward Demo 12w: docs/ops/2026-09-16-foundation-demo-12w-protocol.md"
 echo ""
 echo "Tracker: #2/#3/#4 already closed. Do NOT close #1 until smoke ok:true + soak + Demo start evidence."
+exit "$SMOKE_RC"
