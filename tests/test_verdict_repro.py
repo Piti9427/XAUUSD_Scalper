@@ -134,10 +134,10 @@ class TestVerdictRepro(unittest.TestCase):
 
     def test_repro_orchestrator_breakeven_buffer(self):
         """
-        Fail Path 4: Current orchestrator moves SL to exact entry_price (2500.0),
-        failing to add the +0.10 be_buffer required by ADR-018 and Pine script.
+        Fail Path 4: When be_enabled, orchestrator must move SL to entry + be_buffer
+        (ADR-018 / ADR-024). Foundation BaselinePlay keeps be_enabled=False by default.
         """
-        orch = StrategyOrchestrator()
+        orch = StrategyOrchestrator(be_enabled=True)
         account = AccountState(balance=10000.0, equity=10000.0)
         pos = Position(
             direction=Direction.BUY,
