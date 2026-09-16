@@ -976,5 +976,13 @@ if __name__ == "__main__":
     import os
 
     secret = os.environ.get("WEBHOOK_SECRET", "DEV_SECRET_123")
-    app = create_app(auth_token=secret, dry_run=True)
+    hold_raw = os.environ.get("SMC_MAX_HOLD_BARS")
+    max_hold_bars = int(hold_raw) if hold_raw not in (None, "") else None
+    bar_minutes = int(os.environ.get("SMC_BAR_MINUTES", "5"))
+    app = create_app(
+        auth_token=secret,
+        dry_run=True,
+        max_hold_bars=max_hold_bars,
+        bar_minutes=bar_minutes,
+    )
     uvicorn.run(app, host="0.0.0.0", port=8000)
