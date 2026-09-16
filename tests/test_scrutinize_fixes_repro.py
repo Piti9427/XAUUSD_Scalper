@@ -46,7 +46,7 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
         )
         broker.order_send.return_value = None
 
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             adapter = SMCExecutionAdapter(dry_run=False, db_path=self.db_path)
             try:
                 intent = OrderIntent(
@@ -75,7 +75,7 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
         mock_pos = SimpleNamespace(ticket=123, type=0, volume=0.2, comment="SMC_TEST_TICK")
         broker.positions_get.return_value = [mock_pos]
 
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             adapter = SMCExecutionAdapter(dry_run=False, db_path=self.db_path)
             try:
                 intent = OrderIntent(
@@ -117,7 +117,7 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
 
         broker.history_deals_get.side_effect = mock_history_deals_get
 
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             adapter = SMCExecutionAdapter(dry_run=False, db_path=self.db_path)
             try:
                 # Add setup in inbox with created_at = 1 day ago
@@ -155,7 +155,7 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
         )
         broker.history_orders_get.return_value = [mock_hist_order]
 
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             adapter = SMCExecutionAdapter(dry_run=False, db_path=self.db_path)
             try:
                 adapter.claim_setup({"order_id": "FILLED_ORDER"})

@@ -5,7 +5,7 @@ import time
 from typing import Optional, Dict, Any, Set, Tuple, Callable
 import logging
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, Header, Request, BackgroundTasks, status
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
@@ -25,6 +25,8 @@ from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows, sl_modify_freeze_allows
 from scripts.smc.setup_identity import SetupRegistry, load_setup_registry
+from scripts.webhook.auth import make_verify_auth
+from scripts.webhook.idempotency import make_idempotency_helpers
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -100,18 +102,10 @@ def create_app(
 
     # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
     memory_idempotency_cache: Set[Tuple[str, str]] = set()
-
-    def is_processed(oid: str, ev: str) -> bool:
-        if (oid, ev) in memory_idempotency_cache:
-            return True
-        if adapter.is_webhook_processed(oid, ev):
-            memory_idempotency_cache.add((oid, ev))
-            return True
-        return False
-
-    def mark_processed(oid: str, ev: str, status_str: str = "success"):
-        memory_idempotency_cache.add((oid, ev))
-        adapter.mark_webhook_processed(oid, ev, status=status_str)
+    is_processed, mark_processed = make_idempotency_helpers(
+        adapter, memory_idempotency_cache
+    )
+    verify_auth = make_verify_auth(auth_token)
 
     # Pattern B: Safe Non-Blocking Dispatcher for Side-Effects (Telegram Notifier)
     def _dispatch_tg_safe(card: str):
@@ -120,23 +114,6 @@ def create_app(
                 notifier.send_message(card)
             except Exception as exc:
                 logger.warning(f"Background Telegram dispatch error: {exc}")
-
-    async def verify_auth(
-        authorization: Optional[str] = Header(None),
-        x_webhook_secret: Optional[str] = Header(None),
-    ):
-        token = None
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization[len("Bearer ") :].strip()
-        elif x_webhook_secret:
-            token = x_webhook_secret.strip()
-
-        if not token or token != auth_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or missing authorization token",
-            )
-        return True
 
     @app.get("/health")
     async def health_check():

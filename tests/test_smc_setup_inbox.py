@@ -56,7 +56,7 @@ class TestSetupInbox(unittest.TestCase):
             parent_file.write_text("occupied")
             broker = Mock()
             broker.initialize.return_value = True
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 with self.assertRaises(OSError):
                     SMCExecutionAdapter(
                         dry_run=False,
@@ -66,7 +66,7 @@ class TestSetupInbox(unittest.TestCase):
     def test_live_mode_rejects_memory_only_journal(self):
         broker = Mock()
         broker.initialize.return_value = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             with self.assertRaises(OSError):
                 SMCExecutionAdapter(dry_run=False, db_path=":memory:")
 
@@ -103,7 +103,7 @@ class TestSetupInbox(unittest.TestCase):
             db_path = str(Path(directory) / "trades.db")
             broker = Mock()
             broker.initialize.return_value = True
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 adapter = SMCExecutionAdapter(dry_run=False, db_path=db_path)
                 try:
                     adapter.claim_setup({"order_id": "UNCERTAIN_1"})

@@ -139,7 +139,8 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/account_mode.py",
-            "scripts/smc/mt5_adapter.py",
+            "scripts/smc/mt5_adapter/models.py",
+            "scripts/smc/mt5_adapter/execution.py",
             "tests/test_smc_account_mode.py",
             "tests/test_smc_ownership.py",
         ],
@@ -149,7 +150,8 @@ SCENARIOS: list[dict] = [
         "title": "Accept/reject/UNKNOWN / duplicate / restart claim races",
         "status": "software_covered",
         "evidence": [
-            "scripts/smc/mt5_adapter.py",
+            "scripts/smc/mt5_adapter/journal.py",
+            "scripts/smc/mt5_adapter/adapter.py",
             "tests/test_smc_mt5_adapter.py",
             "tests/test_webhook_bridge.py",
         ],

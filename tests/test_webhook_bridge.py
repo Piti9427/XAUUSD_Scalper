@@ -1910,7 +1910,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             )
             # Force live reconcile path while keeping dry_run adapter DB.
             adapter.connected = True
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 res = client.post(
                     "/internal/clock",
                     headers={"Authorization": f"Bearer {self.secret}"},

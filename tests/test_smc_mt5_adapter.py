@@ -70,7 +70,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.orders_get.return_value = [SimpleNamespace(ticket=42, comment="SMC_owned-1")]
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-1"
             ))
@@ -93,7 +93,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.0, ask=4050.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-2"
             ))
@@ -113,7 +113,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         ]
         broker.order_send.return_value = SimpleNamespace(retcode=10009, comment="done")
         self.adapter.dry_run = False
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-3"
             ))
@@ -139,7 +139,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.MOVE_SL_TO_BE,
                 order_id="owned-4", sl_price=4050.0,
@@ -168,7 +168,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.2, ask=4050.4)
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.MOVE_SL_TO_BE,
                 order_id="owned-freeze", sl_price=4050.0,
@@ -191,7 +191,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4055.0, ask=4055.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.PARTIAL_CLOSE,
                 order_id="owned-5", lot_size=0.02,
@@ -204,7 +204,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
 
     def test_live_mode_without_mt5_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
-            with patch("scripts.smc.mt5_adapter.mt5", None):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", None):
                 with self.assertRaises(RuntimeError):
                     SMCExecutionAdapter(
                         dry_run=False, db_path=str(Path(directory) / "trades.db")
@@ -219,8 +219,8 @@ class TestSMCMT5Adapter(unittest.TestCase):
                     ok=True, path_used="C:\\MT5\\terminal64.exe", last_error=None, detail="initialized"
                 )
             )
-            with patch("scripts.smc.mt5_adapter.mt5", Mock()):
-                with patch("scripts.smc.mt5_adapter.initialize_mt5", fake_init):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", Mock()):
+                with patch("scripts.smc.mt5_adapter.adapter.mt5_init.initialize_mt5", fake_init):
                     adapter = SMCExecutionAdapter(
                         dry_run=False,
                         db_path=str(Path(directory) / "trades.db"),
@@ -264,7 +264,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.order_send.return_value = SimpleNamespace(retcode=10009, order=999, comment="done")
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.PLACE_LIMIT,
                 direction=Direction.BUY,
@@ -298,7 +298,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.order_send.return_value = SimpleNamespace(retcode=10009, comment="done")
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             result = self.adapter.execute_intent(OrderIntent(
                 intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-6",
             ))
@@ -319,7 +319,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         )
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             snapshot = self.adapter.get_risk_snapshot()
         self.assertEqual(snapshot["balance"], 10000.0)
         self.assertEqual(snapshot["equity"], 6000.0)
@@ -342,7 +342,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         )
         self.adapter.dry_run = False
         self.adapter.connected = True
-        with patch("scripts.smc.mt5_adapter.mt5", broker):
+        with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             snapshot = self.adapter.get_risk_snapshot()
         self.assertIsNone(snapshot)
 

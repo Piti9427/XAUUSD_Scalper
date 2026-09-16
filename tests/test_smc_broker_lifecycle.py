@@ -71,7 +71,7 @@ class BrokerLifecycleTests(unittest.TestCase):
                     )
                 ],
             )
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 fill_res = reconcile_broker_lifecycle(
                     adapter,
                     now=datetime.now(timezone.utc),
@@ -83,7 +83,7 @@ class BrokerLifecycleTests(unittest.TestCase):
             self.assertTrue(adapter.has_lifecycle_event("LIFE_1", "ORDER_FILLED"))
 
             broker.positions_get = lambda symbol: []
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 close_res = reconcile_broker_lifecycle(
                     adapter,
                     now=datetime.now(timezone.utc),
@@ -124,7 +124,7 @@ class BrokerLifecycleTests(unittest.TestCase):
                 ],
                 history_deals_get=lambda a, b: [],
             )
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 result = reconcile_broker_lifecycle(
                     adapter,
                     now=datetime.now(timezone.utc),
@@ -166,7 +166,7 @@ class BrokerLifecycleTests(unittest.TestCase):
                 orders_get=lambda symbol: [],
                 history_deals_get=lambda a, b: [],
             )
-            with patch("scripts.smc.mt5_adapter.mt5", broker):
+            with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
                 result = reconcile_broker_lifecycle(
                     adapter,
                     now=datetime.now(timezone.utc),
