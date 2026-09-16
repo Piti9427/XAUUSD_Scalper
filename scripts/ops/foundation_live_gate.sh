@@ -17,6 +17,8 @@ if [[ -n "${1:-}" ]]; then
 fi
 
 echo "==> Broker identity + hedging mode smoke (no orders)"
+echo "    Optional env: XAUUSD_MT5_LOGIN / XAUUSD_MT5_PASSWORD / XAUUSD_MT5_SERVER"
+echo "    (or MT5_LOGIN / MT5_PASSWORD / MT5_SERVER). Incomplete sets are ignored."
 set +e
 python3 scripts/smoke_broker_identity.py "${SMOKE_ARGS[@]}"
 SMOKE_RC=$?

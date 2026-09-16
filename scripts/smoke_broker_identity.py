@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.smc.broker_identity import verify_broker_identity
 from scripts.smc.infra_verdict import classify_infra_evidence
-from scripts.smc.mt5_init import initialize_mt5
+from scripts.smc.mt5_init import initialize_mt5, resolve_mt5_account_kwargs
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,18 +77,25 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    init = initialize_mt5(mt5, path=args.path)
+    account_kwargs = resolve_mt5_account_kwargs()
+    credentials_provided = bool(account_kwargs)
+    # Never print password/server secrets — only presence flags.
+    init = initialize_mt5(mt5, path=args.path, **account_kwargs)
     if not init.ok:
         infra = classify_infra_evidence(
             mt5_available=False,
             identity_ok=False,
             soak_completed=False,
         )
+        reasons = ["mt5_initialize_failed", init.detail]
+        if not credentials_provided:
+            reasons.append("mt5_account_env_incomplete")
         _emit(
             {
                 "ok": False,
-                "reasons": ["mt5_initialize_failed", init.detail],
+                "reasons": reasons,
                 "mt5_path_used": init.path_used,
+                "mt5_credentials_provided": credentials_provided,
                 "mt5_last_error": list(init.last_error) if init.last_error else None,
                 "infra_verdict": infra.verdict,
                 "infra_detail": init.detail or infra.detail,
@@ -121,6 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         "margin_mode": report.margin_mode,
         "symbol": report.symbol,
         "reasons": list(report.reasons),
+        "mt5_credentials_provided": credentials_provided,
         "infra_verdict": infra.verdict,
         "infra_detail": infra.detail,
     }

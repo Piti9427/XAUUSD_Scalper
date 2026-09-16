@@ -34,7 +34,13 @@ class MT5Connector:
             logger.error("MetaTrader5 package is not installed. Run pip install -r requirements.txt.")
             return False
 
-        init = initialize_mt5(mt5, path=self.terminal_path)
+        init = initialize_mt5(
+            mt5,
+            path=self.terminal_path,
+            login=self.login,
+            password=self.password,
+            server=self.server,
+        )
         if not init.ok:
             logger.error(
                 "MT5 initialize failed (%s), error code: %s",
@@ -43,9 +49,11 @@ class MT5Connector:
             )
             return False
 
-        # Already logged in via initialize(login=...) when credentials passed there;
-        # otherwise explicit login for account switch (Exness Demo).
-        if self.login:
+        # initialize() already attempted account attach when credentials were complete.
+        # Explicit login covers switch-account when IPC attached to a different session.
+        info = mt5.account_info()
+        attached_login = getattr(info, "login", None) if info is not None else None
+        if self.login and attached_login != self.login:
             authorized = mt5.login(self.login, password=self.password, server=self.server)
             if not authorized:
                 logger.error(

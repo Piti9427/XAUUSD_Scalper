@@ -56,6 +56,43 @@ class MT5InitTests(unittest.TestCase):
         self.assertEqual(result.detail, "initialized")
         self.assertEqual(mt5.kwargs["timeout"], 10000)
 
+    def test_resolve_account_kwargs_from_xauusd_env(self):
+        from scripts.smc.mt5_init import resolve_mt5_account_kwargs
+
+        kwargs = resolve_mt5_account_kwargs(
+            env={
+                "XAUUSD_MT5_LOGIN": "12345678",
+                "XAUUSD_MT5_PASSWORD": "secret",
+                "XAUUSD_MT5_SERVER": "Exness-MT5Trial",
+            }
+        )
+        self.assertEqual(
+            kwargs,
+            {"login": 12345678, "password": "secret", "server": "Exness-MT5Trial"},
+        )
+
+    def test_resolve_account_kwargs_incomplete_returns_empty(self):
+        from scripts.smc.mt5_init import resolve_mt5_account_kwargs
+
+        self.assertEqual(
+            resolve_mt5_account_kwargs(env={"XAUUSD_MT5_LOGIN": "1"}),
+            {},
+        )
+
+    def test_initialize_forwards_account_kwargs(self):
+        mt5 = FakeMT5(True, (1, "Success"))
+        result = initialize_mt5(
+            mt5,
+            path="C:\\MT5\\terminal64.exe",
+            login=99,
+            password="pw",
+            server="Exness-MT5Trial",
+        )
+        self.assertTrue(result.ok)
+        self.assertEqual(mt5.kwargs["login"], 99)
+        self.assertEqual(mt5.kwargs["password"], "pw")
+        self.assertEqual(mt5.kwargs["server"], "Exness-MT5Trial")
+
 
 if __name__ == "__main__":
     unittest.main()
