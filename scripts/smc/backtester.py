@@ -60,7 +60,7 @@ class SMCBacktester:
         initial_balance: float = 10000.0,
         risk_pct: float = 0.005,
         spread_buffer: float = 0.30,
-        max_sl_cap: float = 6.00,
+        max_sl_cap: float = 25.00,
         contract_size: float = 100.0,
         partial_tp_enabled: bool = False,
         partial_tp_r: float = 1.2,
@@ -68,12 +68,12 @@ class SMCBacktester:
         be_trigger_r: float = 1.0,
         extended_killzones: bool = True,
         tp_r: float = 2.0,
-        min_body_ratio: float = 0.50,
-        max_sweep_pierce: float = 5.0,
-        sweep_lookback: int = 20,
-        max_sweep_to_mss_bars: int = 6,
-        max_mss_to_fvg_bars: int = 3,
-        require_choch: bool = False,
+        min_body_ratio: float = 0.45,
+        max_sweep_pierce: float = 8.0,
+        sweep_lookback: int = 25,
+        max_sweep_to_mss_bars: int = 8,
+        max_mss_to_fvg_bars: int = 4,
+        require_choch: bool = True,
     ):
         self.initial_balance = initial_balance
         self.risk_pct = risk_pct

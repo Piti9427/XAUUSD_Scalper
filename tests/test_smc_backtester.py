@@ -96,7 +96,7 @@ class TestSMCBacktester(unittest.TestCase):
         self.df_h1 = pd.DataFrame(h1_records)
 
     def test_backtest_execution_and_summary(self):
-        backtester = SMCBacktester(initial_balance=10000.0)
+        backtester = SMCBacktester(initial_balance=10000.0, require_choch=False)
         summary = backtester.run(self.df_m5, self.df_h1)
         
         self.assertIsInstance(summary, BacktestSummary)
@@ -107,7 +107,7 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(summary.win_rate, 100.0)
 
     def test_cash_uses_filled_volume(self):
-        trade = SMCBacktester().run(self.df_m5, self.df_h1).trades_df.iloc[0]
+        trade = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1).trades_df.iloc[0]
         expected = (trade.exit_price - trade.entry_price) * trade.lot_size * 100
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
 
@@ -115,7 +115,7 @@ class TestSMCBacktester(unittest.TestCase):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 15)
         bars.loc[mask, "low"] = 2000.0
-        result = SMCBacktester().run(bars, self.df_h1)
+        result = SMCBacktester(require_choch=False).run(bars, self.df_h1)
         trade = result.trades_df.iloc[0]
         self.assertEqual(trade.exit_reason, "AMBIGUOUS")
         self.assertTrue(trade.sl_touched)
@@ -137,7 +137,7 @@ class TestSMCBacktester(unittest.TestCase):
                 {"time": "2026-03-02T08:15:20Z", "bid": 2000.0, "ask": 2000.2},
             ]
         )
-        result = SMCBacktester().run(bars, self.df_h1, df_ticks=ticks)
+        result = SMCBacktester(require_choch=False).run(bars, self.df_h1, df_ticks=ticks)
         trade = result.trades_df.iloc[0]
         self.assertEqual(trade.exit_reason, "TP")
         self.assertTrue(trade.sl_touched)
@@ -150,7 +150,7 @@ class TestSMCBacktester(unittest.TestCase):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 10)
         bars.loc[mask, "low"] = 2000.0
-        result = SMCBacktester().run(bars, self.df_h1)
+        result = SMCBacktester(require_choch=False).run(bars, self.df_h1)
         self.assertEqual(result.total_trades, 1)
         self.assertLess(result.final_balance, result.initial_balance)
         trade = result.trades_df.iloc[0]
@@ -169,11 +169,11 @@ class TestSMCBacktester(unittest.TestCase):
             return None
 
         with patch("scripts.smc.backtester.detect_smc_setup", side_effect=inspect):
-            SMCBacktester().run(self.df_m5, self.df_h1)
+            SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
         self.assertTrue(calls)
 
     def test_partial_and_tp_cash_conserve_filled_volume(self):
-        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(self.df_m5, self.df_h1)
         trade = result.trades_df.iloc[0]
         partial_lots = round(trade.lot_size * 0.5, 2)
         expected = (partial_lots * trade.initial_sl_dist +

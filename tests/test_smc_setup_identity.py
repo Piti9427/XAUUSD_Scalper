@@ -74,8 +74,8 @@ class SetupIdentityTests(unittest.TestCase):
         self.assertEqual(intents[0].intent_type, OrderIntentType.PLACE_LIMIT)
         self.assertEqual(intents[0].order_id, setup_id)
 
-        # TTL expire over 3 bars without fill
-        for i, minute in enumerate((5, 10, 15), start=1):
+        # TTL expire over 4 bars without fill (foundation pending TTL)
+        for i, minute in enumerate((5, 10, 15, 20), start=1):
             bar = {
                 "time": datetime(2026, 3, 2, 8, minute, tzinfo=timezone.utc),
                 "open": 2015,
@@ -84,7 +84,7 @@ class SetupIdentityTests(unittest.TestCase):
                 "close": 2015,
             }
             intents = orch.on_bar(bar, account, None)
-            if i < 3:
+            if i < 4:
                 self.assertEqual(intents, [])
             else:
                 self.assertEqual(intents[0].intent_type, OrderIntentType.CANCEL_LIMIT)

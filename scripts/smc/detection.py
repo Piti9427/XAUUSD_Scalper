@@ -52,35 +52,36 @@ def detect_smc_setup(
     liquidity: Optional[LiquidityLevels],
     current_time: datetime,
     spread_buffer: float = 0.30,
-    max_sl_cap: float = 6.00,
-    max_sweep_to_mss_bars: int = 6,
-    max_mss_to_fvg_bars: int = 3,
+    max_sl_cap: float = 25.00,
+    max_sweep_to_mss_bars: int = 8,
+    max_mss_to_fvg_bars: int = 4,
     current_spread: Optional[float] = None,
     max_spread: float = 0.35,
     precomputed_swings: Optional[Tuple[List[bool], List[bool]]] = None,
-    min_body_ratio: float = 0.50,
+    min_body_ratio: float = 0.45,
     atr_sl_multiplier: Optional[float] = None,
     min_fvg_gap: float = 0.30,
     tp_r: float = 2.0,
-    max_sweep_pierce: float = 5.0,
-    sweep_lookback: int = 20,
+    max_sweep_pierce: float = 8.0,
+    sweep_lookback: int = 25,
     extended_killzones: bool = True,
     max_breakout_pierce: float = 8.0,
-    require_choch: bool = False,
+    require_choch: bool = True,
     min_target_r: float = 1.5,
 ) -> Optional[SetupSignal]:
     """
     Pure Functional Seam: Evaluates market conditions for a deterministic SMC setup.
     Stateless, reproducible, and decoupled from brokers or execution platforms.
 
-    Key parameters tuned for XAUUSD (Gold):
-      max_sl_cap: Hard dollar cap on SL distance (default $20 for gold $4000+)
-      atr_sl_multiplier: Dynamic SL cap = ATR(14) × multiplier (default 2.0)
-      min_body_ratio: Minimum displacement body ratio (default 50%)
+    Key parameters tuned for XAUUSD (Gold) BaselinePlay / Issue #1:
+      max_sl_cap: Hard dollar cap on SL distance (default $25)
+      atr_sl_multiplier: Dynamic SL cap = ATR(14) × multiplier when set
+      min_body_ratio: Minimum displacement body ratio (default 45%)
       min_fvg_gap: Minimum FVG size in dollars (default $0.30)
-      tp_r: Risk-reward ratio for TP (default 2.5R)
       max_sweep_pierce: Max wick distance beyond liquidity level (default $8)
-      sweep_lookback: Bars to search backwards for sweep (default 30)
+      sweep_lookback: Bars to search backwards for sweep (default 25)
+      max_sweep_to_mss_bars / max_mss_to_fvg_bars: 8 / 4
+      require_choch: Foundation requires protected-swing CHoCH (default True)
       extended_killzones: True for London 07:00-10:30, NY 12:30-16:30
     """
     # 0. Live Spread Guard

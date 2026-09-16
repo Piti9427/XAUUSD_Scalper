@@ -56,7 +56,7 @@ class OrderIntent:
     tp_price: Optional[float] = None
     lot_size: Optional[float] = None
     reason: str = ""
-    expire_bars: int = 3
+    expire_bars: int = 4
     order_id: Optional[str] = None
     ticket: Optional[int] = None
 

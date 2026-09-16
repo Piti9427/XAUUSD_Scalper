@@ -11,7 +11,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Requirement | Evidence |
 | --- | --- |
 | Protected-swing CHoCH ≠ latest-fractal MSS | `scripts/smc/structure.py`, `tests/test_smc_structure_choch.py`, ADR-0027 |
-| Demo detection requires CHoCH | `detect_smc_setup(..., require_choch=True)` default in `smc_main.py`; rejection/accept tests in `tests/test_smc_detection.py` |
+| Demo detection requires CHoCH | `detect_smc_setup(..., require_choch=True)` **default True**; rejection/accept tests in `tests/test_smc_detection.py` |
+| Foundation detection/TTL defaults | Defaults: sweep→MSS 8, MSS→FVG 4, body 0.45, SL cap $25, pierce $8, lookback 25, pending TTL 4; `test_foundation_detection_signature_defaults`; webhook `risk_pct` 0.005 in `config/settings.yaml` |
 | Baseline no partial/BE default in Demo loop | `smc_main.py` `partial_tp_enabled` default False |
 | Nearest opposing pool TP + min 1.5R | `scripts/smc/liquidity.py`, `tests/test_smc_pool_tp.py` |
 | Fib/OTE research log without filter | `scripts/smc/fibonacci.py`, `tests/test_smc_fibonacci.py` |

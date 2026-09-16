@@ -144,7 +144,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         return self.df_h1, df_m5, self.liquidity, eval_time
 
     def test_valid_bullish_setup_during_london(self):
-        signal = detect_smc_setup(*self.valid_setup_inputs())
+        signal = detect_smc_setup(*self.valid_setup_inputs(), require_choch=False)
         self.assertIsNotNone(signal)
         self.assertEqual(signal.direction, Direction.BUY)
         self.assertEqual(signal.entry_price, 2014.0) # 50% of [2013.0, 2015.0]
@@ -156,11 +156,11 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         for direction in Direction:
             with self.subTest(direction=direction):
                 h1, m5, liquidity, now = self.valid_setup_inputs(direction)
-                baseline = detect_smc_setup(h1, m5, liquidity, now)
+                baseline = detect_smc_setup(h1, m5, liquidity, now, require_choch=False)
                 self.assertIsNotNone(baseline)
                 liquidity = (replace(liquidity, pdl=2020.0) if direction == Direction.BUY
                              else replace(liquidity, pdh=1980.0))
-                signal = detect_smc_setup(h1, m5, liquidity, now)
+                signal = detect_smc_setup(h1, m5, liquidity, now, require_choch=False)
                 self.assertEqual(signal, baseline)
 
     def test_breakout_branches_and_boundary(self):
@@ -178,7 +178,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
                     if kind in ("body", "older"):
                         m5.loc[index, "close"] = level + sign * 0.2
                     signal = detect_smc_setup(h1, m5, liquidity, now, max_sl_cap=25.0,
-                                              max_sweep_pierce=8.0)
+                                              max_sweep_pierce=8.0, require_choch=False)
                     if kind in ("body", "wick"):
                         self.assertIsNone(signal)
                     else:
@@ -217,25 +217,25 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         m5_records.append({"time": start_time + timedelta(minutes=90), "open": 2016.0, "high": 2018.0, "low": 2015.0, "close": 2017.5, "tick_volume": 200})
         df_m5 = pd.DataFrame(m5_records)
 
-        signal = detect_smc_setup(h1_bearish, df_m5, self.liquidity, start_time + timedelta(minutes=90))
+        signal = detect_smc_setup(h1_bearish, df_m5, self.liquidity, start_time + timedelta(minutes=90), require_choch=False)
         # Since H1 is bearish, BUY setup is rejected!
         self.assertIsNone(signal)
 
-    def test_sweep_pierce_greater_than_5_returns_none(self):
+    def test_sweep_pierce_greater_than_8_returns_none(self):
         start_time = datetime(2026, 3, 2, 7, 0, tzinfo=timezone.utc)
         m5_records = []
         for i in range(15):
             h = 2014.0 if i == 5 else 2012.0
             # Low is above Asian Low (2010.0) so these don't sweep
             m5_records.append({"time": start_time + timedelta(minutes=i*5), "open": 2012.0, "high": h, "low": 2011.0, "close": 2011.5, "tick_volume": 100})
-        # Low pierces to 2004.0 (Asian low 2010.0 - 2004.0 = 6.00 > 5.00 max pierce!)
-        m5_records.append({"time": start_time + timedelta(minutes=75), "open": 2011.5, "high": 2011.8, "low": 2004.0, "close": 2011.0, "tick_volume": 150})
+        # Low pierces to 2001.0 (Asian low 2010.0 - 2001.0 = 9.00 > 8.00 max pierce!)
+        m5_records.append({"time": start_time + timedelta(minutes=75), "open": 2011.5, "high": 2011.8, "low": 2001.0, "close": 2011.0, "tick_volume": 150})
         m5_records.append({"time": start_time + timedelta(minutes=80), "open": 2011.0, "high": 2013.0, "low": 2010.8, "close": 2012.8, "tick_volume": 120})
         m5_records.append({"time": start_time + timedelta(minutes=85), "open": 2012.8, "high": 2016.2, "low": 2012.7, "close": 2016.0, "tick_volume": 300})
         m5_records.append({"time": start_time + timedelta(minutes=90), "open": 2016.0, "high": 2018.0, "low": 2015.0, "close": 2017.5, "tick_volume": 200})
         df_m5 = pd.DataFrame(m5_records)
 
-        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, start_time + timedelta(minutes=90))
+        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, start_time + timedelta(minutes=90), require_choch=False)
         self.assertIsNone(signal)
 
     def test_expansion_breakout_invalidates_stale_sweep(self):
@@ -303,7 +303,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         df_m5 = pd.DataFrame(m5_records)
         eval_time = start_time + timedelta(minutes=20 * 5)
 
-        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, eval_time, max_sl_cap=25.0)
+        signal = detect_smc_setup(self.df_h1, df_m5, self.liquidity, eval_time, max_sl_cap=25.0, require_choch=False)
         self.assertIsNone(
             signal,
             "Expansion breakout must invalidate the stale pre-breakout sweep; "
@@ -312,7 +312,7 @@ class TestSMCDetectionIntegration(unittest.TestCase):
 
     def test_require_choch_rejects_mss_only_legacy_setup(self):
         h1, m5, liquidity, now = self.valid_setup_inputs()
-        legacy = detect_smc_setup(h1, m5, liquidity, now)
+        legacy = detect_smc_setup(h1, m5, liquidity, now, require_choch=False)
         self.assertIsNotNone(legacy, "legacy MSS path must still find the fixture")
         foundation = detect_smc_setup(h1, m5, liquidity, now, require_choch=True)
         self.assertIsNone(
@@ -372,6 +372,20 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         self.assertEqual(signal.direction, Direction.BUY)
         self.assertIn("CHOCH", signal.reason)
         self.assertIn("pool=", signal.reason)
+
+    def test_foundation_detection_signature_defaults(self):
+        """Issue #1 confirmed BaselinePlay defaults must live on the pure seam."""
+        import inspect
+
+        params = inspect.signature(detect_smc_setup).parameters
+        self.assertEqual(params["max_sweep_to_mss_bars"].default, 8)
+        self.assertEqual(params["max_mss_to_fvg_bars"].default, 4)
+        self.assertEqual(params["min_body_ratio"].default, 0.45)
+        self.assertEqual(params["max_sl_cap"].default, 25.0)
+        self.assertEqual(params["max_sweep_pierce"].default, 8.0)
+        self.assertEqual(params["sweep_lookback"].default, 25)
+        self.assertEqual(params["min_fvg_gap"].default, 0.30)
+        self.assertEqual(params["require_choch"].default, True)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ class StrategyOrchestrator:
         self,
         max_daily_losses: int = 2,
         cooldown_minutes: int = 30,
-        ttl_expire_bars: int = 3,
+        ttl_expire_bars: int = 4,
         rollover_hour_utc: int = 20,
         rollover_minute_utc: int = 55,
         max_sl_cap: float = 25.00,
