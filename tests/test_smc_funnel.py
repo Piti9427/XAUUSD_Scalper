@@ -17,6 +17,11 @@ class SetupFunnelTests(unittest.TestCase):
         self.assertEqual(data["counts"]["closed"], 1)
         self.assertEqual(data["reject_reasons"]["nearest_r_below_1_5"], 2)
 
+    def test_no_fill_ttl_reject_reason(self):
+        funnel = SetupFunnel()
+        funnel.reject("NO_FILL_TTL")
+        self.assertEqual(funnel.as_dict()["reject_reasons"]["NO_FILL_TTL"], 1)
+
     def test_unknown_stage_raises(self):
         funnel = SetupFunnel()
         with self.assertRaises(ValueError):

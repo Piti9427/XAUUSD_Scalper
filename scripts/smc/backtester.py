@@ -260,6 +260,13 @@ class SMCBacktester:
                     funnel.bump("risk_admitted")
                     funnel.bump("submitted")
                     funnel.bump("broker_accepted")
+                elif intent.intent_type == OrderIntentType.CANCEL_LIMIT:
+                    # Expired/canceled without fill stay in funnel; never enter win-rate.
+                    reason = intent.reason or "canceled"
+                    if "ttl" in reason.lower() or "expire" in reason.lower():
+                        funnel.reject("NO_FILL_TTL")
+                    else:
+                        funnel.reject(reason)
             before = orchestrator.evaluated_before
             after = orchestrator.evaluated_after
             if before is None:

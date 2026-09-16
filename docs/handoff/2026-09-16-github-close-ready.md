@@ -1,6 +1,8 @@
 # GitHub close-ready notes (blocked by auth)
 
-`gh` keyring invalid + API rate/403. Paste when write auth restored.
+`gh` keyring invalid + MCP `issue_write` 403 (PAT lacks issues write). Paste when write auth restored.
+
+Retried 2026-09-16: still blocked.
 
 ## Issue #3 — S1–S4 mechanical tables
 
