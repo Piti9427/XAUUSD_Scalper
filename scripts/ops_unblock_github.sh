@@ -5,6 +5,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+if ! gh auth status -h github.com >/dev/null 2>&1; then
+  echo "==> gh token invalid — run interactive login first:"
+  echo "    gh auth login -h github.com"
+  exit 1
+fi
+
 echo "==> Unlock login keychain (prompt)"
 security unlock-keychain ~/Library/Keychains/login.keychain-db
 
