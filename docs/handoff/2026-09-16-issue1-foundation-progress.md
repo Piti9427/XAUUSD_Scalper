@@ -11,7 +11,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Requirement | Evidence |
 | --- | --- |
 | Protected-swing CHoCH ≠ latest-fractal MSS | `scripts/smc/structure.py`, `tests/test_smc_structure_choch.py`, ADR-0027 |
-| Demo detection requires CHoCH | `detect_smc_setup(..., require_choch=True)` **default True**; rejection/accept tests in `tests/test_smc_detection.py` |
+| Demo detection requires CHoCH | `detect_smc_setup(..., require_choch=True)` **default True**; `evaluate_smc_setup` → `SetupDecision` with reject reasons; rejection/accept tests in `tests/test_smc_detection.py` |
 | Foundation detection/TTL defaults | Defaults: sweep→MSS 8, MSS→FVG 4, body 0.45, SL cap $25, pierce $8, lookback 25, pending TTL 4; `test_foundation_detection_signature_defaults`; webhook create_app default `risk_pct=0.005` |
 | Baseline no partial/BE default in Demo loop | `be_enabled` default False; `partial_tp_enabled` default False; `smc_main` + orchestrator; `test_foundation_baseline_does_not_move_be` |
 | Risk uses min(balance, equity) | `calculate_lot_size(..., equity=)`; orchestrator passes `account.equity`; `apply_broker_capital` syncs live snapshots in `smc_main`; `test_lot_size_uses_min_balance_equity`, `tests/test_smc_account_sync.py` |

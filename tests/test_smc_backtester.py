@@ -160,15 +160,16 @@ class TestSMCBacktester(unittest.TestCase):
     def test_detector_only_sees_closed_h1_and_confirmed_fractals(self):
         from unittest.mock import patch
         from scripts.smc.structure import find_fractals_5bar
+        from scripts.smc.types import SetupDecision
         calls = []
 
         def inspect(h1, m5, liquidity, now, **kwargs):
             self.assertTrue((h1.time + pd.Timedelta(hours=1) <= now).all())
             self.assertEqual(kwargs["precomputed_swings"], find_fractals_5bar(m5))
             calls.append(now)
-            return None
+            return SetupDecision(None, "mocked_reject")
 
-        with patch("scripts.smc.backtester.detect_smc_setup", side_effect=inspect):
+        with patch("scripts.smc.backtester.evaluate_smc_setup", side_effect=inspect):
             SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
         self.assertTrue(calls)
 

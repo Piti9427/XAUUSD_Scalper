@@ -213,6 +213,20 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         )
         self.assertIsNone(signal)
 
+    def test_evaluate_exposes_out_of_session_reject_reason(self):
+        from scripts.smc.detection import evaluate_smc_setup
+        df_m5 = pd.DataFrame([{
+            "time": datetime(2026, 3, 2, 11, 0, tzinfo=timezone.utc),
+            "open": 2010.0, "high": 2015.0, "low": 2005.0, "close": 2012.0, "tick_volume": 100
+        }])
+        decision = evaluate_smc_setup(
+            self.df_h1, df_m5, self.liquidity,
+            datetime(2026, 3, 2, 11, 0, tzinfo=timezone.utc),
+        )
+        self.assertFalse(decision.accepted)
+        self.assertIsNone(decision.signal)
+        self.assertEqual(decision.reject_reason, "out_of_session")
+
     def test_counter_trend_h1_returns_none(self):
         # Make recent H1 closes drop sharply below EMA 200
         h1_bearish = self.df_h1.copy()

@@ -11,7 +11,7 @@ from scripts.smc.types import (
     LiquidityLevels,
 )
 from scripts.smc.liquidity import compute_liquidity_levels
-from scripts.smc.detection import detect_smc_setup
+from scripts.smc.detection import evaluate_smc_setup, is_in_session
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
@@ -229,7 +229,7 @@ class SMCBacktester:
                 if is_in_session(bar_time, extended=self.extended_killzones):
                     sub_h1 = h1.iloc[:h1_idx]
                     sub_m5 = m5.iloc[: i + 1]
-                    setup_signal = detect_smc_setup(
+                    decision = evaluate_smc_setup(
                         sub_h1,
                         sub_m5,
                         current_liquidity,
@@ -247,11 +247,13 @@ class SMCBacktester:
                         max_mss_to_fvg_bars=self.max_mss_to_fvg_bars,
                         require_choch=self.require_choch,
                     )
+                    setup_signal = decision.signal
                     if setup_signal is not None:
                         funnel.bump("detected")
                         funnel.bump("structure_qualified")
                         funnel.bump("target_qualified")
-
+                    elif decision.reject_reason:
+                        funnel.reject(decision.reject_reason)
             # Observe the same lifecycle used by the orchestrator; do not infer fills
             # solely from the position remaining open at the end of a candle.
             orchestrator.evaluated_before = None

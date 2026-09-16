@@ -52,6 +52,18 @@ class SetupSignal:
 
 
 @dataclass(frozen=True)
+class SetupDecision:
+    """Pure detection outcome: accepted signal or explicit reject reason (no silent None)."""
+
+    signal: Optional[SetupSignal]
+    reject_reason: Optional[str] = None
+
+    @property
+    def accepted(self) -> bool:
+        return self.signal is not None
+
+
+@dataclass(frozen=True)
 class OrderIntent:
     intent_type: OrderIntentType
     direction: Optional[Direction] = None

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Tuple
 import pandas as pd
 import numpy as np
-from scripts.smc.types import Direction, SetupSignal, LiquidityLevels
+from scripts.smc.types import Direction, SetupSignal, SetupDecision, LiquidityLevels
 from scripts.smc.liquidity import select_nearest_opposing_pool_tp
 from scripts.smc.setup_identity import make_setup_id
 from scripts.smc.fibonacci import compute_fibonacci_features
@@ -47,7 +47,7 @@ def calculate_ema(series: pd.Series, length: int) -> pd.Series:
     return series.ewm(span=length, adjust=False).mean()
 
 
-def detect_smc_setup(
+def evaluate_smc_setup(
     h1_candles: pd.DataFrame,
     m5_candles: pd.DataFrame,
     liquidity: Optional[LiquidityLevels],
@@ -69,9 +69,9 @@ def detect_smc_setup(
     max_breakout_pierce: float = 8.0,
     require_choch: bool = True,
     min_target_r: float = 1.5,
-) -> Optional[SetupSignal]:
+) -> SetupDecision:
     """
-    Pure Functional Seam: Evaluates market conditions for a deterministic SMC setup.
+    Pure Functional Seam: Evaluates market conditions and returns SetupDecision (signal or reject_reason).
     Stateless, reproducible, and decoupled from brokers or execution platforms.
 
     Key parameters tuned for XAUUSD (Gold) BaselinePlay / Issue #1:
@@ -87,19 +87,19 @@ def detect_smc_setup(
     """
     # 0. Live Spread Guard
     if current_spread is not None and current_spread > max_spread:
-        return None
+        return SetupDecision(None, "spread_guard")
 
     if liquidity is None:
-        return None
+        return SetupDecision(None, "liquidity_unavailable")
 
     if not is_in_session(current_time, extended=extended_killzones):
-        return None
+        return SetupDecision(None, "out_of_session")
 
     if h1_candles is None or len(h1_candles) < 200:
-        return None
+        return SetupDecision(None, "h1_warmup_insufficient")
 
     if m5_candles is None or len(m5_candles) < 15:
-        return None
+        return SetupDecision(None, "m5_warmup_insufficient")
 
     # Compute optional ATR(14) on recent bars for dynamic SL cap
     if atr_sl_multiplier is not None:
@@ -123,7 +123,7 @@ def detect_smc_setup(
     elif latest_h1_close < latest_h1_ema:
         bias = Direction.SELL
     else:
-        return None
+        return SetupDecision(None, "h1_bias_flat")
 
     # 2. Slice M5 data up to current_time (avoid redundant full copy if already aligned)
     if current_time.tzinfo is None:
@@ -146,7 +146,7 @@ def detect_smc_setup(
 
     n_m5 = len(df_m5)
     if n_m5 < 15:
-        return None
+        return SetupDecision(None, "m5_slice_insufficient")
 
     # Compute 5-bar fractals (O(1) with precomputed or recent lookback slice)
     if precomputed_swings is not None:
@@ -175,7 +175,7 @@ def detect_smc_setup(
         if current_time.hour >= 12 and liquidity.london_high is not None:
             levels_to_check.append(liquidity.london_high)
     if not levels_to_check:
-        return None
+        return SetupDecision(None, "no_liquidity_levels")
     is_high_level = (bias == Direction.SELL)
 
     # Search backwards for a valid sweep bar within the last sweep_lookback bars
@@ -208,7 +208,7 @@ def detect_smc_setup(
             break
 
     if sweep_idx is None:
-        return None
+        return SetupDecision(None, "no_sweep")
 
     # 3. MSS and Displacement (ADR-003, ADR-004, ADR-014)
     # MSS must occur within max_sweep_to_mss_bars (6 bars) after sweep
@@ -252,7 +252,7 @@ def detect_smc_setup(
                     break
 
     if mss_idx is None:
-        return None
+        return SetupDecision(None, "no_mss_displacement")
 
     if require_choch:
         highs = [float(x) for x in df_m5["high"].tolist()]
@@ -275,7 +275,7 @@ def detect_smc_setup(
                 None,
             )
             if broken_idx is None:
-                return None
+                return SetupDecision(None, "choch_broken_swing_unresolved")
             opposite = [
                 (idx, price) for idx, price in opposite if broken_idx < idx < mss_idx
             ]
@@ -286,7 +286,7 @@ def detect_smc_setup(
                 None,
             )
             if broken_idx is None:
-                return None
+                return SetupDecision(None, "choch_broken_swing_unresolved")
             opposite = [
                 (idx, price)
                 for idx, price in available_confirmed_pivots(swing_highs, highs, mss_idx)
@@ -300,7 +300,7 @@ def detect_smc_setup(
             opposite_pivots_between=opposite,
         )
         if event.kind != StructureEventKind.CHOCH:
-            return None
+            return SetupDecision(None, "choch_required_not_met")
 
     # 4. FVG Detection (ADR-004)
     # FVG formed on MSS bar or up to max_mss_to_fvg_bars after
@@ -325,7 +325,7 @@ def detect_smc_setup(
             break
 
     if not fvg_found:
-        return None
+        return SetupDecision(None, "no_fvg")
 
     # 5. Risk, SL, TP (ADR-018, ADR-019 / foundation pool TP when require_choch)
     if bias == Direction.BUY:
@@ -339,7 +339,7 @@ def detect_smc_setup(
 
     # SL Cap Check (max_sl_cap or ATR dynamic)
     if total_sl_dist > effective_sl_cap:
-        return None
+        return SetupDecision(None, "sl_cap_exceeded")
 
     pool_tp_name = None
     if require_choch:
@@ -351,7 +351,7 @@ def detect_smc_setup(
             min_r=min_target_r,
         )
         if tp_price is None:
-            return None
+            return SetupDecision(None, "no_eligible_pool_tp")
         risk_r = abs(float(tp_price) - float(entry_limit_price)) / float(total_sl_dist)
     else:
         if bias == Direction.BUY:
@@ -393,25 +393,77 @@ def detect_smc_setup(
         if fib.available and fib.retracement is not None
         else f" fib={fib.reason}"
     )
-    return SetupSignal(
-        direction=bias,
-        sweep_price=float(swept_level),
-        sweep_wick=float(true_sweep_wick),
-        mss_price=float(mss_swing_price),
-        entry_price=float(entry_limit_price),
-        sl_price=float(sl_price),
-        tp_price=float(tp_price),
-        sl_distance=float(total_sl_dist),
-        risk_r=float(risk_r),
-        fvg_high=float(fvg_high_val),
-        fvg_low=float(fvg_low_val),
-        reason=(
-            f"{bias.value} SMC Setup: Swept {swept_level} -> {structure_label} "
-            f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}{ote_note}"
+    return SetupDecision(
+        SetupSignal(
+            direction=bias,
+            sweep_price=float(swept_level),
+            sweep_wick=float(true_sweep_wick),
+            mss_price=float(mss_swing_price),
+            entry_price=float(entry_limit_price),
+            sl_price=float(sl_price),
+            tp_price=float(tp_price),
+            sl_distance=float(total_sl_dist),
+            risk_r=float(risk_r),
+            fvg_high=float(fvg_high_val),
+            fvg_low=float(fvg_low_val),
+            reason=(
+                f"{bias.value} SMC Setup: Swept {swept_level} -> {structure_label} "
+                f"{mss_swing_price} -> FVG [{fvg_low_val}, {fvg_high_val}]{target_note}{ote_note}"
+            ),
+            timestamp=current_time,
+            setup_id=setup_id,
+            fib_retracement=fib.retracement,
+            fib_in_ote=bool(fib.in_ote),
+            fib_reason=fib.reason,
         ),
-        timestamp=current_time,
-        setup_id=setup_id,
-        fib_retracement=fib.retracement,
-        fib_in_ote=bool(fib.in_ote),
-        fib_reason=fib.reason,
+        None,
     )
+
+
+def detect_smc_setup(
+    h1_candles: pd.DataFrame,
+    m5_candles: pd.DataFrame,
+    liquidity: Optional[LiquidityLevels],
+    current_time: datetime,
+    spread_buffer: float = 0.30,
+    max_sl_cap: float = 25.00,
+    max_sweep_to_mss_bars: int = 8,
+    max_mss_to_fvg_bars: int = 4,
+    current_spread: Optional[float] = None,
+    max_spread: float = 0.35,
+    precomputed_swings: Optional[Tuple[List[bool], List[bool]]] = None,
+    min_body_ratio: float = 0.45,
+    atr_sl_multiplier: Optional[float] = None,
+    min_fvg_gap: float = 0.30,
+    tp_r: float = 2.0,
+    max_sweep_pierce: float = 8.0,
+    sweep_lookback: int = 25,
+    extended_killzones: bool = True,
+    max_breakout_pierce: float = 8.0,
+    require_choch: bool = True,
+    min_target_r: float = 1.5,
+) -> Optional[SetupSignal]:
+    """Backward-compatible wrapper — prefer evaluate_smc_setup for reject reasons. """
+    return evaluate_smc_setup(
+        h1_candles,
+        m5_candles,
+        liquidity,
+        current_time,
+        spread_buffer=spread_buffer,
+        max_sl_cap=max_sl_cap,
+        max_sweep_to_mss_bars=max_sweep_to_mss_bars,
+        max_mss_to_fvg_bars=max_mss_to_fvg_bars,
+        current_spread=current_spread,
+        max_spread=max_spread,
+        precomputed_swings=precomputed_swings,
+        min_body_ratio=min_body_ratio,
+        atr_sl_multiplier=atr_sl_multiplier,
+        min_fvg_gap=min_fvg_gap,
+        tp_r=tp_r,
+        max_sweep_pierce=max_sweep_pierce,
+        sweep_lookback=sweep_lookback,
+        extended_killzones=extended_killzones,
+        max_breakout_pierce=max_breakout_pierce,
+        require_choch=require_choch,
+        min_target_r=min_target_r,
+    ).signal
