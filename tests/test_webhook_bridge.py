@@ -70,6 +70,8 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_setup_pending_valid_buy_limit(self):
+        from datetime import datetime, timezone
+
         payload = {
             "event": "SETUP_PENDING",
             "order_id": "XAUUSD_101",
@@ -81,7 +83,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             "tp1": 4055.00,
             "tp2": 4062.50,
             "ttl": 4,
-            "time": "2026-09-14 10:00:00",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
         response = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(response.status_code, 200)
@@ -979,6 +981,8 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
             self.app.state.adapter.close()
 
     def test_telegram_background_task_dispatched(self):
+        from datetime import datetime, timezone
+
         payload = {
             "event": "SETUP_PENDING",
             "order_id": "XAUUSD_ASYNC_01",
@@ -989,7 +993,7 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
             "sl": 4045.00,
             "tp1": 4055.00,
             "tp2": 4062.50,
-            "time": "2026-09-14 10:00:00",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
         res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res.status_code, 200)
@@ -1001,6 +1005,8 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
         self.assertNotIn("ORDER FILLED", card_content)
 
     def test_two_tier_idempotency_fast_path(self):
+        from datetime import datetime, timezone
+
         payload = {
             "event": "SETUP_PENDING",
             "order_id": "XAUUSD_ASYNC_02",
@@ -1011,7 +1017,7 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
             "sl": 4045.00,
             "tp1": 4055.00,
             "tp2": 4062.50,
-            "time": "2026-09-14 10:00:00",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
         res1 = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res1.status_code, 200)
@@ -1422,6 +1428,50 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.assertEqual(restored.high_water_equity, 520.0)
         self.assertEqual(restored.net_losing_trades_today, 1)
         self.assertFalse(restored.history_ready)
+
+    def test_stale_event_time_blocks_setup_pending(self):
+        from scripts.smc.broker_identity import BrokerIdentityReport
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
+        from scripts.webhook_bridge import create_app
+        from pathlib import Path
+
+        ok_identity = BrokerIdentityReport(
+            ok=True,
+            broker_server="Exness-MT5Trial",
+            account_login=1,
+            currency="USD",
+            trade_mode=0,
+            symbol="XAUUSD",
+            reasons=(),
+        )
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=500.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: ok_identity,
+            max_daily_losses=99,
+        )
+        self.client = TestClient(self.app)
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_STALE_BAR",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-09-14 14:00:00",
+        }
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("stale_market_bar", data["reason"])
 
 
 class TestWebhookFoundationRiskDefault(unittest.TestCase):

@@ -8,6 +8,7 @@ from scripts.smc.types import AccountState, OrderIntent, OrderIntentType, Direct
 from scripts.smc.liquidity import compute_liquidity_levels
 from scripts.smc.detection import evaluate_smc_setup
 from scripts.smc.real_money_approval import require_real_money_approval
+from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
@@ -177,12 +178,29 @@ async def run_smc_live_copilot():
                     target_date = bar_time.date() if hasattr(bar_time, "date") else now_utc.date()
                     liquidity = compute_liquidity_levels(df_m5, target_date)
 
-                    # Pure Detection Seam (skip if blackout / incomplete H1 warmup)
+                    # Pure Detection Seam (skip if blackout / incomplete H1 warmup / stale data)
                     setup = None
+                    equity_probe = adapter.get_account_equity()
+                    admission = evaluate_new_risk_admission(
+                        last_bar_time=bar_time if isinstance(bar_time, datetime) else None,
+                        now=now_utc,
+                        history_ready=(
+                            dry_run
+                            or (
+                                equity_probe is not None
+                                and bool(getattr(risk_halt, "history_ready", True))
+                            )
+                        ),
+                        equity_known=dry_run or equity_probe is not None,
+                        news_allowed=allowed_news,
+                        news_reason=news_reason,
+                    )
+                    if not admission.allowed:
+                        logger.warning("Admission blocked new risk: %s", admission.reason)
                     if (
-                        account.open_position is None
+                        admission.allowed
+                        and account.open_position is None
                         and account.pending_order is None
-                        and not is_blackout
                         and h1_ready
                     ):
                         decision = evaluate_smc_setup(

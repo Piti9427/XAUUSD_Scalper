@@ -73,6 +73,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Nearest pool TP min-R / consumed (scenario 7) | **Done:** `tests/test_smc_liquidity_tp.py` covers nearest-not-farther, R&lt;1.5 reject, consumed skip |
 | Live-gate readiness snapshot (no invent PASS) | **Done:** `scripts/ops/issue1_live_gate_readiness.py` → `docs/ops/2026-09-16-issue1-live-gate-readiness.json` (`issue1_closable:false` until real artifacts) |
 | Partial fill / fill-during-cancel in lifecycle (story 34) | **Done:** `reconcile_pending_exposure` wired into `reconcile_broker_lifecycle`; residual TTL cancel; `tests/test_smc_broker_lifecycle.py` |
+| Stale/unknown market+account+news admission (story 32) | **Done:** `scripts/smc/data_freshness.py`; wired in `smc_main` + webhook SETUP; `tests/test_smc_data_freshness.py`, `test_stale_event_time_blocks_setup_pending` |
 
 ## Still open for issue #1
 

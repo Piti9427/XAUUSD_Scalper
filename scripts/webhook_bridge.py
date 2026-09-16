@@ -21,6 +21,7 @@ from scripts.smc.risk_halt import (
 )
 from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
 from scripts.smc.halt_actions import bot_owned_order_ids, plan_halt_flatten_intents
+from scripts.smc.data_freshness import evaluate_new_risk_admission
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -735,6 +736,31 @@ def create_app(
                     "event": event,
                     "reason": reason,
                 }
+
+            # 1e2. Story 32: unknown/stale market or incomplete account blocks new risk.
+            wall_now = datetime.now(timezone.utc)
+            history_ready = True
+            if risk_halt is not None:
+                history_ready = bool(getattr(risk_halt, "history_ready", True))
+            admission = evaluate_new_risk_admission(
+                last_bar_time=event_dt,
+                now=wall_now,
+                history_ready=history_ready if not adapter.dry_run else True,
+                equity_known=adapter.dry_run or broker_risk is not None,
+                news_allowed=True,  # news already gated above
+            )
+            if not admission.allowed:
+                reason = f"Admission gate blocked new risk: {admission.reason}"
+                logger.warning(reason)
+                if order_id:
+                    await asyncio.to_thread(mark_processed, order_id, event, "rejected_stale_data")
+                return {
+                    "status": "rejected",
+                    "order_id": order_id,
+                    "event": event,
+                    "reason": reason,
+                }
+
             effective_balance = broker_risk["balance"] if broker_risk else account_balance
             effective_equity = broker_risk["equity"] if broker_risk else account_balance
             if not adapter.dry_run:
