@@ -125,6 +125,27 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(result.winning_trades, 0)
         self.assertEqual(result.net_profit, 0.0)
 
+    def test_dual_touch_with_tick_feed_takes_tp_first(self):
+        bars = self.df_m5.copy()
+        mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 15)
+        bars.loc[mask, "low"] = 2000.0
+        # Ordered ticks: TP before SL on the dual-touch bar.
+        ticks = pd.DataFrame(
+            [
+                {"time": "2026-03-02T08:15:05Z", "bid": 2015.0, "ask": 2015.2},
+                {"time": "2026-03-02T08:15:10Z", "bid": 2026.0, "ask": 2026.2},
+                {"time": "2026-03-02T08:15:20Z", "bid": 2000.0, "ask": 2000.2},
+            ]
+        )
+        result = SMCBacktester().run(bars, self.df_h1, df_ticks=ticks)
+        trade = result.trades_df.iloc[0]
+        self.assertEqual(trade.exit_reason, "TP")
+        self.assertTrue(trade.sl_touched)
+        self.assertTrue(trade.tp_touched)
+        self.assertGreater(trade.pnl_dollar, 0)
+        self.assertEqual(result.winning_trades, 1)
+        self.assertEqual(result.losing_trades, 0)
+
     def test_fill_and_stop_in_same_bar_is_recorded(self):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 10)

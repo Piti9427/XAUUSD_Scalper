@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from scripts.smc.types import (
@@ -13,6 +13,8 @@ from scripts.smc.types import (
 from scripts.smc.liquidity import compute_liquidity_levels
 from scripts.smc.detection import detect_smc_setup
 from scripts.smc.orchestrator import StrategyOrchestrator
+from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
+from scripts.smc.quotes import first_exit_from_ticks
 
 
 @dataclass
@@ -89,7 +91,12 @@ class SMCBacktester:
         self.max_mss_to_fvg_bars = max_mss_to_fvg_bars
         self.require_choch = require_choch
 
-    def run(self, df_m5: pd.DataFrame, df_h1: pd.DataFrame) -> BacktestSummary:
+    def run(
+        self,
+        df_m5: pd.DataFrame,
+        df_h1: pd.DataFrame,
+        df_ticks: Optional[pd.DataFrame] = None,
+    ) -> BacktestSummary:
         m5 = df_m5.copy()
         if not pd.api.types.is_datetime64_any_dtype(m5["time"]):
             m5["time"] = pd.to_datetime(m5["time"], utc=True)
@@ -109,6 +116,21 @@ class SMCBacktester:
             h1["time"] = h1["time"].dt.tz_convert("UTC")
 
         h1 = h1.sort_values("time").reset_index(drop=True)
+
+        tick_df: Optional[pd.DataFrame] = None
+        if df_ticks is not None:
+            tick_df = df_ticks.copy()
+            if not pd.api.types.is_datetime64_any_dtype(tick_df["time"]):
+                tick_df["time"] = pd.to_datetime(tick_df["time"], utc=True)
+            elif tick_df["time"].dt.tz is None:
+                tick_df["time"] = tick_df["time"].dt.tz_localize("UTC")
+            else:
+                tick_df["time"] = tick_df["time"].dt.tz_convert("UTC")
+            if "bid" not in tick_df.columns and "mid" in tick_df.columns:
+                tick_df["bid"] = tick_df["mid"]
+            if "ask" not in tick_df.columns and "mid" in tick_df.columns:
+                tick_df["ask"] = tick_df["mid"]
+            tick_df = tick_df.sort_values("time").reset_index(drop=True)
 
         # Performance Optimization: Precompute H1 EMA 200 once (O(N))
         h1["ema200"] = h1["close"].ewm(span=200, adjust=False).mean()
@@ -157,6 +179,32 @@ class SMCBacktester:
                 "low": m5_lows[i],
                 "close": m5_closes[i],
             }
+            if tick_df is not None:
+                bar_end = (
+                    m5_times[i + 1]
+                    if i + 1 < len(m5_times)
+                    else bar_time + timedelta(minutes=5)
+                )
+                pos = account.open_position
+                pending = account.pending_order
+                direction = None
+                sl_price = None
+                tp_price = None
+                if pos is not None:
+                    direction = pos.direction.value
+                    sl_price = pos.sl_price
+                    tp_price = pos.tp_price
+                elif pending is not None:
+                    direction = pending.direction.value if pending.direction else None
+                    sl_price = pending.sl_price
+                    tp_price = pending.tp_price
+                current_bar = annotate_bar_with_ticks(
+                    current_bar,
+                    ticks_for_bar(tick_df, bar_open=bar_time, bar_close=bar_end),
+                    direction=direction,
+                    sl_price=sl_price,
+                    tp_price=tp_price,
+                )
             bar_date = bar_time.date()
             bar_date_str = bar_date.isoformat()
 
@@ -235,37 +283,45 @@ class SMCBacktester:
                 )
                 stop_hit = (float(current_bar["low"]) <= before.sl_price
                             if sign == 1 else float(current_bar["high"]) >= before.sl_price)
+                tick_exit = current_bar.get("tick_first_exit")
+                if tick_exit not in ("SL", "TP") and current_bar.get("has_tick_order") and current_bar.get("ticks"):
+                    tick_exit = first_exit_from_ticks(
+                        direction=before.direction.value,
+                        sl_price=before.sl_price,
+                        tp_price=before.tp_price,
+                        ticks=current_bar["ticks"],
+                    )
+
+                def _book(exit_price: float, exit_reason: str):
+                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                    account.balance += remaining_cash
+                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
+                    initial_risk = (active_trade_log["initial_sl_dist"]
+                                    * active_trade_log["lot_size"] * self.contract_size)
+                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
+                    return exit_price, exit_reason, total_cash, pnl_r
+
                 if ambiguous:
                     # Do not invent SL or TP cash path; keep both touches visible.
                     exit_price, exit_reason = None, "AMBIGUOUS"
-                    remaining_cash = 0.0
                     total_cash = None
                     pnl_r = None
                 elif rollover:
-                    exit_price, exit_reason = float(current_bar["close"]), "ROLLOVER_FLAT"
-                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
-                    account.balance += remaining_cash
-                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
-                    initial_risk = (active_trade_log["initial_sl_dist"]
-                                    * active_trade_log["lot_size"] * self.contract_size)
-                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
+                    exit_price, exit_reason, total_cash, pnl_r = _book(
+                        float(current_bar["close"]), "ROLLOVER_FLAT"
+                    )
+                elif tick_exit == "TP":
+                    exit_price, exit_reason, total_cash, pnl_r = _book(before.tp_price, "TP")
+                elif tick_exit == "SL":
+                    exit_price, exit_reason, total_cash, pnl_r = _book(
+                        before.sl_price, "BE" if before.be_moved else "SL"
+                    )
                 elif stop_hit:
-                    exit_price = before.sl_price
-                    exit_reason = "BE" if before.be_moved else "SL"
-                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
-                    account.balance += remaining_cash
-                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
-                    initial_risk = (active_trade_log["initial_sl_dist"]
-                                    * active_trade_log["lot_size"] * self.contract_size)
-                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
+                    exit_price, exit_reason, total_cash, pnl_r = _book(
+                        before.sl_price, "BE" if before.be_moved else "SL"
+                    )
                 else:
-                    exit_price, exit_reason = before.tp_price, "TP"
-                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
-                    account.balance += remaining_cash
-                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
-                    initial_risk = (active_trade_log["initial_sl_dist"]
-                                    * active_trade_log["lot_size"] * self.contract_size)
-                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
+                    exit_price, exit_reason, total_cash, pnl_r = _book(before.tp_price, "TP")
                 active_trade_log.update({
                     "exit_time": bar_time,
                     "exit_price": exit_price,

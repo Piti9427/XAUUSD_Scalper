@@ -1062,5 +1062,98 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
             app.state.adapter.close()
 
 
+class TestWebhookFoundationGates(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        import os
+        from scripts.webhook_bridge import create_app
+        from scripts.smc.broker_identity import BrokerIdentityReport
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
+
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = os.path.join(self.temp_dir.name, "test_trades.db")
+        self.halt_path = os.path.join(self.temp_dir.name, "risk_halt.json")
+        halted = new_risk_halt_state(500.0)
+        halted.drawdown_halt = True
+        save_risk_halt_state(__import__("pathlib").Path(self.halt_path), halted)
+        self.secret_token = "TEST_SECRET_FOUNDATION"
+        self.failing_identity = BrokerIdentityReport(
+            ok=False,
+            broker_server=None,
+            account_login=None,
+            currency=None,
+            trade_mode=None,
+            symbol=None,
+            reasons=("demo_required",),
+        )
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=500.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: self.failing_identity,
+        )
+        self.client = TestClient(self.app)
+        self.headers = {"Authorization": f"Bearer {self.secret_token}"}
+
+    def tearDown(self):
+        if hasattr(self.app.state, "adapter") and self.app.state.adapter:
+            self.app.state.adapter.close()
+        self.temp_dir.cleanup()
+
+    def test_risk_halt_blocks_setup_pending(self):
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_HALT_1",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-09-14 14:00:00",
+        }
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("risk halt", data["reason"].lower())
+
+    def test_identity_gate_blocks_when_halt_cleared(self):
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
+        from pathlib import Path
+
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        # Recreate app so loaded halt is clear; keep failing identity.
+        from scripts.webhook_bridge import create_app
+        self.app.state.adapter.close()
+        self.app = create_app(
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path,
+            account_balance=500.0,
+            risk_halt_path=self.halt_path,
+            identity_gate=lambda: self.failing_identity,
+        )
+        self.client = TestClient(self.app)
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_ID_1",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-09-14 14:00:00",
+        }
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("identity", data["reason"].lower())
+
+
 if __name__ == "__main__":
     unittest.main()

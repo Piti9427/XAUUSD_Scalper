@@ -27,8 +27,9 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | risk_halt file load/save in SMC loop | `smc_main.py` + `observe_equity` before admission |
 | Gate A research defaults | ADR-0028 |
 | Bid/ask executable side + OHLC AMBIGUOUS | `scripts/smc/quotes.py`; orchestrator + backtester honor dual-touch `AMBIGUOUS` (no invented SL/TP PnL); tick-first exit via `first_exit_from_ticks` / `bar.ticks`; `tests/test_smc_quotes.py`, `tests/test_smc_orchestrator.py`, `tests/test_smc_backtester.py` |
-| Tick CSV bar annotation helper | `scripts/smc/tick_feed.py`; `tests/test_smc_tick_feed.py` |
+| Tick CSV bar annotation + backtester feed | `scripts/smc/tick_feed.py`; `SMCBacktester.run(..., df_ticks=)`; `tests/test_smc_tick_feed.py`, `test_dual_touch_with_tick_feed_takes_tp_first` |
 | Broker identity smoke CLI (no orders) | `scripts/smoke_broker_identity.py` |
+| Webhook Demo admission: risk_halt + identity + news unknown | `scripts/webhook_bridge.py` (`risk_halt_path`, `identity_gate` / live identity); `tests/test_webhook_bridge.py::TestWebhookFoundationGates` |
 | Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 
 ## Still open for issue #1
@@ -36,7 +37,6 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Gap | Notes |
 | --- | --- |
 | Live Exness connect smoke with real credentials | Run `python3 scripts/smoke_broker_identity.py` with MT5 session; needs broker evidence |
-| Full backtester tick CSV walk-through | Helper ready; `SMCBacktester.run` still OHLC-only unless caller annotates bars |
 | Oracle ARM64 runtime soak | Checklist ready; needs executed soak evidence |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
 | Close/comment issues on GitHub | Local work committed; `gh` keyring invalid + API rate limit / issues write 403 |

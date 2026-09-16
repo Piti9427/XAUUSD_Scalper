@@ -2,14 +2,22 @@ import asyncio
 from datetime import datetime, timezone
 import math
 import time
-from typing import Optional, Dict, Any, Set, Tuple
+from typing import Optional, Dict, Any, Set, Tuple, Callable
 import logging
+from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Header, Request, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.risk import calculate_lot_size
+from scripts.smc.risk_halt import (
+    load_risk_halt_state,
+    new_risk_halt_state,
+    observe_equity,
+    save_risk_halt_state,
+)
+from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -29,6 +37,9 @@ def create_app(
     slippage_allowance: Optional[float] = None,
     tp_r: float = 2.5,
     partial_tp_r: float = 1.0,
+    risk_halt_path: Optional[str] = None,
+    require_broker_identity: Optional[bool] = None,
+    identity_gate: Optional[Callable[[], BrokerIdentityReport]] = None,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -42,6 +53,17 @@ def create_app(
     start_time = time.time()
     adapter = SMCExecutionAdapter(symbol="XAUUSD", dry_run=dry_run, db_path=db_path)
     app.state.adapter = adapter
+
+    enforce_identity = (
+        require_broker_identity
+        if require_broker_identity is not None
+        else (not dry_run or identity_gate is not None)
+    )
+    halt_path = Path(risk_halt_path) if risk_halt_path else None
+    risk_halt = None
+    if halt_path is not None:
+        risk_halt = load_risk_halt_state(halt_path) or new_risk_halt_state(account_balance)
+        app.state.risk_halt = risk_halt
 
     # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
     memory_idempotency_cache: Set[Tuple[str, str]] = set()
@@ -147,6 +169,64 @@ def create_app(
 
         # 1. SETUP_PENDING: Place Pending Limit with Dynamic Risk Sizing
         if event == "SETUP_PENDING":
+            # 1a0. Persistent foundation risk halt (5% DD / daily gates)
+            if risk_halt is not None and halt_path is not None:
+                equity_now = (
+                    await asyncio.to_thread(adapter.get_account_equity)
+                ) or account_balance
+                observe_equity(risk_halt, equity_now, now=datetime.now(timezone.utc))
+                await asyncio.to_thread(save_risk_halt_state, halt_path, risk_halt)
+                if risk_halt.halted:
+                    reason = (
+                        "Foundation risk halt active: "
+                        f"dd={risk_halt.drawdown_halt} daily={risk_halt.daily_equity_halt} "
+                        f"losses_today={risk_halt.net_losing_trades_today}"
+                    )
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(mark_processed, order_id, event, "rejected_risk_halt")
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
+
+            # 1a1. Broker/Demo identity gate before new risk
+            if enforce_identity:
+                if identity_gate is not None:
+                    identity = await asyncio.to_thread(identity_gate)
+                else:
+                    def _default_identity() -> BrokerIdentityReport:
+                        try:
+                            import MetaTrader5 as mt5
+                        except ImportError:
+                            return verify_broker_identity(
+                                account_info=None, symbol_info=None
+                            )
+                        return verify_broker_identity(
+                            account_info=mt5.account_info() if not adapter.dry_run else None,
+                            symbol_info=mt5.symbol_info(adapter.symbol) if not adapter.dry_run else None,
+                        )
+
+                    identity = await asyncio.to_thread(_default_identity)
+                if not identity.ok:
+                    reason = (
+                        "Broker identity gate failed: "
+                        + ",".join(identity.reasons)
+                    )
+                    logger.warning(reason)
+                    if order_id:
+                        await asyncio.to_thread(
+                            mark_processed, order_id, event, "rejected_identity"
+                        )
+                    return {
+                        "status": "rejected",
+                        "order_id": order_id,
+                        "event": event,
+                        "reason": reason,
+                    }
+
             # 1a. Daily Circuit Breaker Guard (ADR-011)
             losses_today = await asyncio.to_thread(adapter.get_daily_realized_losses)
             if losses_today >= max_daily_losses:
@@ -217,22 +297,43 @@ def create_app(
                         "reason": reason,
                     }
 
-            # 1d. High-Impact USD News Blackout Window (ADR-010)
+            # 1d. High-Impact USD News Blackout / unknown schedule (ADR-010 + foundation)
             if news_manager is not None:
-                is_blackout, news_name = await asyncio.to_thread(
-                    news_manager.is_in_blackout, event_dt, getattr(news_manager, "events", [])
-                )
-                if is_blackout:
-                    reason = f"News Blackout (ADR-010): High-impact news '{news_name}' within 30m window."
-                    logger.warning(reason)
-                    if order_id:
-                        await asyncio.to_thread(mark_processed, order_id, event, "rejected_news")
-                    return {
-                        "status": "rejected",
-                        "order_id": order_id,
-                        "event": event,
-                        "reason": reason,
-                    }
+                if hasattr(news_manager, "new_risk_allowed"):
+                    events = getattr(news_manager, "events", None)
+                    schedule_known = bool(getattr(news_manager, "schedule_known", events is not None))
+                    allowed_news, news_reason = await asyncio.to_thread(
+                        news_manager.new_risk_allowed,
+                        event_dt,
+                        events,
+                        schedule_known=schedule_known,
+                    )
+                    if not allowed_news:
+                        reason = f"News gate blocked new risk: {news_reason}"
+                        logger.warning(reason)
+                        if order_id:
+                            await asyncio.to_thread(mark_processed, order_id, event, "rejected_news")
+                        return {
+                            "status": "rejected",
+                            "order_id": order_id,
+                            "event": event,
+                            "reason": reason,
+                        }
+                else:
+                    is_blackout, news_name = await asyncio.to_thread(
+                        news_manager.is_in_blackout, event_dt, getattr(news_manager, "events", [])
+                    )
+                    if is_blackout:
+                        reason = f"News Blackout (ADR-010): High-impact news '{news_name}' within 30m window."
+                        logger.warning(reason)
+                        if order_id:
+                            await asyncio.to_thread(mark_processed, order_id, event, "rejected_news")
+                        return {
+                            "status": "rejected",
+                            "order_id": order_id,
+                            "event": event,
+                            "reason": reason,
+                        }
 
             # 1e. Dynamic Account Equity Sizing (ADR-020)
             broker_risk = None
