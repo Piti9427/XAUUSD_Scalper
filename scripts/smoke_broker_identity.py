@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.smc.broker_identity import verify_broker_identity
+from scripts.smc.infra_verdict import classify_infra_evidence
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,11 +26,41 @@ def main(argv: list[str] | None = None) -> int:
     try:
         import MetaTrader5 as mt5
     except ImportError:
-        print(json.dumps({"ok": False, "reasons": ["mt5_import_missing"]}, indent=2))
+        infra = classify_infra_evidence(
+            mt5_available=False,
+            identity_ok=False,
+            soak_completed=False,
+        )
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "reasons": ["mt5_import_missing"],
+                    "infra_verdict": infra.verdict,
+                    "infra_detail": infra.detail,
+                },
+                indent=2,
+            )
+        )
         return 2
 
     if not mt5.initialize():
-        print(json.dumps({"ok": False, "reasons": ["mt5_initialize_failed"]}, indent=2))
+        infra = classify_infra_evidence(
+            mt5_available=False,
+            identity_ok=False,
+            soak_completed=False,
+        )
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "reasons": ["mt5_initialize_failed"],
+                    "infra_verdict": infra.verdict,
+                    "infra_detail": infra.detail,
+                },
+                indent=2,
+            )
+        )
         return 2
     try:
         report = verify_broker_identity(
@@ -42,6 +73,12 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         mt5.shutdown()
 
+    infra = classify_infra_evidence(
+        mt5_available=True,
+        identity_ok=report.ok,
+        soak_completed=False,
+    )
+
     payload = {
         "ok": report.ok,
         "broker_server": report.broker_server,
@@ -50,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
         "trade_mode": report.trade_mode,
         "symbol": report.symbol,
         "reasons": list(report.reasons),
+        "infra_verdict": infra.verdict,
+        "infra_detail": infra.detail,
     }
     print(json.dumps(payload, indent=2))
     return 0 if report.ok else 1

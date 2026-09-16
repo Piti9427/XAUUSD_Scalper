@@ -37,3 +37,16 @@ def classify_exec_outcome(*, success: bool, status: Optional[str] = None) -> str
     if not success or normalized == "REJECTED":
         return "rejected"
     return "uncertain"
+
+
+def may_notify_close(
+    *,
+    broker_close_success: bool,
+    already_flat_on_broker: bool = False,
+) -> bool:
+    """
+    Scenario 19: never announce TRADE CLOSED without broker evidence.
+
+    already_flat_on_broker covers 'position not found' after a successful broker flat.
+    """
+    return bool(broker_close_success or already_flat_on_broker)

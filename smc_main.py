@@ -271,6 +271,24 @@ async def run_smc_live_copilot():
                             schedule_known=schedule_known,
                             window_mins=30,
                         )
+                    # Wall-clock TIME_EXIT when M5 feed stalls (scenario 19).
+                    # Emit CLOSE_MARKET only; clear local position after adapter evidence.
+                    clock_intents = orchestrator.on_clock(account, now_utc)
+                    for intent in clock_intents:
+                        logger.info(
+                            "Executing clock OrderIntent: %s (%s)",
+                            intent.intent_type.value,
+                            intent.reason,
+                        )
+                        res = adapter.execute_intent(intent)
+                        logger.info("Clock execution result: %s", res.message)
+                        if (
+                            res.success
+                            and intent.intent_type == OrderIntentType.CLOSE_MARKET
+                            and account.open_position is not None
+                        ):
+                            account.open_position = None
+
                     intents = orchestrator.on_bar(
                         bar=last_closed_bar,
                         account=account,
@@ -282,6 +300,9 @@ async def run_smc_live_copilot():
                         news_cancel_reason=news_cancel_reason,
                     )
 
+                    from scripts.smc.notification_policy import may_notify_close, may_notify_execution
+
+                    last_close_broker_ok = False
                     for intent in intents:
                         logger.info("Executing OrderIntent: %s (%s)", intent.intent_type.value, intent.reason)
                         res = adapter.execute_intent(intent)
@@ -293,8 +314,13 @@ async def run_smc_live_copilot():
                                 account.pending_bars_held = 0
                             continue
 
+                        if intent.intent_type == OrderIntentType.CLOSE_MARKET:
+                            last_close_broker_ok = True
+
                         # Notify only after the execution adapter accepts placement.
                         if intent.intent_type == OrderIntentType.PLACE_LIMIT and setup is not None:
+                            if not may_notify_execution(success=True, status=getattr(res, "status", "OK")):
+                                continue
                             logger.info("Orchestrator approved SMC Setup: %s at %s (Lot: %s)", setup.direction.value, setup.entry_price, intent.lot_size)
                             chart_path = await asyncio.to_thread(generate_setup_chart, df_m5, setup)
                             risk_usd = round(intent.lot_size * abs(intent.limit_price - intent.sl_price) * 100.0, 2)
@@ -306,57 +332,64 @@ async def run_smc_live_copilot():
                             )
 
                     # Check Milestone Notifications: Trade Closed
+                    # Dry-run OHLC exits clear position inside on_bar; treat that as broker evidence in dry_run.
                     if pos_before is not None and account.open_position is None:
-                        if pos_before.direction == Direction.BUY:
-                            if float(last_closed_bar["low"]) <= pos_before.sl_price:
-                                exit_price = pos_before.sl_price
-                                if pos_before.be_moved:
-                                    exit_reason = "Hit Breakeven Stop Loss"
-                                    pnl_r = 0.0
+                        if not may_notify_close(
+                            broker_close_success=last_close_broker_ok or dry_run,
+                            already_flat_on_broker=False,
+                        ):
+                            logger.warning("TRADE CLOSED notify suppressed — no broker close evidence")
+                        else:
+                            if pos_before.direction == Direction.BUY:
+                                if float(last_closed_bar["low"]) <= pos_before.sl_price:
+                                    exit_price = pos_before.sl_price
+                                    if pos_before.be_moved:
+                                        exit_reason = "Hit Breakeven Stop Loss"
+                                        pnl_r = 0.0
+                                    else:
+                                        exit_reason = "Hit Stop Loss"
+                                        pnl_r = -1.0
+                                elif float(last_closed_bar["high"]) >= pos_before.tp_price:
+                                    exit_price = pos_before.tp_price
+                                    exit_reason = "Hit Take Profit Target"
+                                    pnl_r = strat_cfg.get("tp_r", 2.5)
                                 else:
-                                    exit_reason = "Hit Stop Loss"
-                                    pnl_r = -1.0
-                            elif float(last_closed_bar["high"]) >= pos_before.tp_price:
-                                exit_price = pos_before.tp_price
-                                exit_reason = "Hit Take Profit Target"
-                                pnl_r = strat_cfg.get("tp_r", 2.5)
-                            else:
-                                exit_price = float(last_closed_bar["close"])
-                                exit_reason = "Market / Rollover Closure"
-                                pnl_r = round((exit_price - pos_before.entry_price) / pos_before.initial_sl_distance, 2)
-                            pnl_dollars = round((exit_price - pos_before.entry_price) * pos_before.lot_size * 100.0, 2)
-                        else:  # SELL
-                            if float(last_closed_bar["high"]) >= pos_before.sl_price:
-                                exit_price = pos_before.sl_price
-                                if pos_before.be_moved:
-                                    exit_reason = "Hit Breakeven Stop Loss"
-                                    pnl_r = 0.0
+                                    exit_price = float(last_closed_bar["close"])
+                                    exit_reason = "Market / Rollover Closure"
+                                    pnl_r = round((exit_price - pos_before.entry_price) / pos_before.initial_sl_distance, 2)
+                                pnl_dollars = round((exit_price - pos_before.entry_price) * pos_before.lot_size * 100.0, 2)
+                            else:  # SELL
+                                if float(last_closed_bar["high"]) >= pos_before.sl_price:
+                                    exit_price = pos_before.sl_price
+                                    if pos_before.be_moved:
+                                        exit_reason = "Hit Breakeven Stop Loss"
+                                        pnl_r = 0.0
+                                    else:
+                                        exit_reason = "Hit Stop Loss"
+                                        pnl_r = -1.0
+                                elif float(last_closed_bar["low"]) <= pos_before.tp_price:
+                                    exit_price = pos_before.tp_price
+                                    exit_reason = "Hit Take Profit Target"
+                                    pnl_r = strat_cfg.get("tp_r", 2.5)
                                 else:
-                                    exit_reason = "Hit Stop Loss"
-                                    pnl_r = -1.0
-                            elif float(last_closed_bar["low"]) <= pos_before.tp_price:
-                                exit_price = pos_before.tp_price
-                                exit_reason = "Hit Take Profit Target"
-                                pnl_r = strat_cfg.get("tp_r", 2.5)
-                            else:
-                                exit_price = float(last_closed_bar["close"])
-                                exit_reason = "Market / Rollover Closure"
-                                pnl_r = round((pos_before.entry_price - exit_price) / pos_before.initial_sl_distance, 2)
-                            pnl_dollars = round((pos_before.entry_price - exit_price) * pos_before.lot_size * 100.0, 2)
+                                    exit_price = float(last_closed_bar["close"])
+                                    exit_reason = "Market / Rollover Closure"
+                                    pnl_r = round((pos_before.entry_price - exit_price) / pos_before.initial_sl_distance, 2)
+                                pnl_dollars = round((pos_before.entry_price - exit_price) * pos_before.lot_size * 100.0, 2)
 
-                        await notifier.send_message(
-                            format_trade_closed_card(
-                                direction=pos_before.direction,
-                                exit_price=exit_price,
-                                pnl_dollars=pnl_dollars,
-                                pnl_r=pnl_r,
-                                reason=exit_reason,
-                                symbol=symbol,
+                            await notifier.send_message(
+                                format_trade_closed_card(
+                                    direction=pos_before.direction,
+                                    exit_price=exit_price,
+                                    pnl_dollars=pnl_dollars,
+                                    pnl_r=pnl_r,
+                                    reason=exit_reason,
+                                    symbol=symbol,
+                                )
                             )
-                        )
-                        if pnl_r < 0 or pnl_dollars < 0:
-                            record_net_losing_trade(risk_halt)
-                            save_risk_halt_state(risk_halt_path, risk_halt)
+                            if pnl_r < 0 or pnl_dollars < 0:
+                                record_net_losing_trade(risk_halt)
+                                save_risk_halt_state(risk_halt_path, risk_halt)
 
                     # Check Milestone Notifications
                     if account.open_position is not None:

@@ -756,9 +756,12 @@ def create_app(
                 reason=reason,
             )
             exec_close = await asyncio.to_thread(adapter.execute_intent, intent_close)
+            already_closed_by_broker = (
+                not exec_close.success
+                and "not found" in (exec_close.message or "").lower()
+            )
 
             if not exec_close.success:
-                already_closed_by_broker = "not found" in (exec_close.message or "").lower()
                 if not already_closed_by_broker:
                     return {
                         "status": "rejected",
@@ -799,15 +802,27 @@ def create_app(
             if notifier and getattr(notifier, "enabled", False):
                 try:
                     from scripts.smc.notifier import format_trade_closed_card
-                    tc_dir = Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
-                    card = format_trade_closed_card(
-                        direction=tc_dir,
-                        exit_price=float(payload.get("exit_price") or 0.0),
-                        pnl_dollars=pnl_dollar or 0.0,
-                        pnl_r=pnl_r or 0.0,
-                        reason=reason,
-                    )
-                    background_tasks.add_task(_dispatch_tg_safe, card)
+                    from scripts.smc.notification_policy import may_notify_close
+                    if may_notify_close(
+                        broker_close_success=bool(exec_close.success),
+                        already_flat_on_broker=already_closed_by_broker,
+                    ):
+                        tc_dir = Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
+                        card = format_trade_closed_card(
+                            direction=tc_dir,
+                            exit_price=float(payload.get("exit_price") or 0.0),
+                            pnl_dollars=pnl_dollar or 0.0,
+                            pnl_r=pnl_r or 0.0,
+                            reason=reason,
+                        )
+                        background_tasks.add_task(_dispatch_tg_safe, card)
+                    else:
+                        logger.warning(
+                            "TRADE_CLOSED notify suppressed — no broker close evidence "
+                            "(order_id=%s success=%s)",
+                            order_id,
+                            exec_close.success,
+                        )
                 except Exception as exc:
                     logger.warning(f"Failed to schedule Telegram notification: {exc}")
 

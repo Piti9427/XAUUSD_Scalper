@@ -1,7 +1,12 @@
 import unittest
 from datetime import datetime, timezone
 
-from scripts.smc.notification_policy import classify_exec_outcome, may_notify_execution
+from scripts.smc.infra_verdict import classify_infra_evidence
+from scripts.smc.notification_policy import (
+    classify_exec_outcome,
+    may_notify_close,
+    may_notify_execution,
+)
 from scripts.smc.notifier import format_order_accepted_card, format_order_filled_card
 from scripts.smc.types import Direction, Position
 
@@ -29,6 +34,42 @@ class NotificationPolicyTests(unittest.TestCase):
             classify_exec_outcome(success=True, status="OK"),
             "success",
         )
+
+    def test_close_notify_requires_broker_evidence(self):
+        self.assertFalse(may_notify_close(broker_close_success=False))
+        self.assertTrue(may_notify_close(broker_close_success=True))
+        self.assertTrue(
+            may_notify_close(
+                broker_close_success=False,
+                already_flat_on_broker=True,
+            )
+        )
+
+
+class InfraVerdictTests(unittest.TestCase):
+    def test_mac_off_mt5_is_inconclusive_not_strategy_fail(self):
+        report = classify_infra_evidence(
+            mt5_available=False,
+            identity_ok=False,
+        )
+        self.assertEqual(report.verdict, "INCONCLUSIVE_INFRA")
+        self.assertEqual(report.detail, "mt5_unavailable_on_host")
+
+    def test_identity_fail_is_fail_infra(self):
+        report = classify_infra_evidence(
+            mt5_available=True,
+            identity_ok=False,
+        )
+        self.assertEqual(report.verdict, "FAIL_INFRA")
+
+    def test_soak_pass_is_pass_infra(self):
+        report = classify_infra_evidence(
+            mt5_available=True,
+            identity_ok=True,
+            soak_completed=True,
+            soak_pass=True,
+        )
+        self.assertEqual(report.verdict, "PASS_INFRA")
 
 
 class AcceptedVsFillCardTests(unittest.TestCase):
