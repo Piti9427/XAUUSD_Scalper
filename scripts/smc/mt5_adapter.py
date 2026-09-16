@@ -808,6 +808,31 @@ class SMCExecutionAdapter:
                 if intent.order_id
                 else f"SMC_v1_{intent.reason[:20]}"
             )
+            # Defense in depth: stops_level geometry even if caller skipped webhook gate.
+            from scripts.smc.stops_geometry import pending_stops_geometry_allows
+
+            snap = self.get_risk_snapshot()
+            if snap is None:
+                return ExecutionResult(
+                    success=False,
+                    order_id=None,
+                    message="PLACE_LIMIT rejected: broker risk snapshot unavailable",
+                    status="REJECTED",
+                )
+            geom_ok, geom_reason = pending_stops_geometry_allows(
+                entry_price=float(intent.limit_price),
+                sl_price=float(intent.sl_price),
+                tp_price=float(intent.tp_price) if intent.tp_price else None,
+                point=float(snap["point"]),
+                stops_level=float(snap["stops_level"]),
+            )
+            if not geom_ok:
+                return ExecutionResult(
+                    success=False,
+                    order_id=None,
+                    message=f"PLACE_LIMIT rejected: {geom_reason}",
+                    status="REJECTED",
+                )
             self.log_lifecycle_event(
                 event_type="INTENT_SUBMITTED",
                 direction=intent.direction.value if intent.direction else None,

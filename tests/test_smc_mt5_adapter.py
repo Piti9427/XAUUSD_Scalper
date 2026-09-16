@@ -184,7 +184,19 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.ORDER_FILLING_IOC = 1
         broker.ORDER_FILLING_FOK = 0
         broker.ORDER_FILLING_RETURN = 2
-        broker.symbol_info.return_value = SimpleNamespace(filling_mode=broker.SYMBOL_FILLING_IOC)
+        broker.account_info.return_value = SimpleNamespace(
+            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+        )
+        broker.symbol_info.return_value = SimpleNamespace(
+            filling_mode=broker.SYMBOL_FILLING_IOC,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
+            trade_contract_size=100.0,
+            point=0.01,
+            trade_stops_level=0,
+            trade_freeze_level=0,
+        )
         broker.order_send.return_value = SimpleNamespace(retcode=10009, order=999, comment="done")
         self.adapter.dry_run = False
         self.adapter.connected = True
@@ -199,7 +211,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
                 order_id="fill-mode-1",
                 reason="test",
             ))
-        self.assertTrue(result.success)
+        self.assertTrue(result.success, result.message)
         sent = broker.order_send.call_args[0][0]
         self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_RETURN)
 
