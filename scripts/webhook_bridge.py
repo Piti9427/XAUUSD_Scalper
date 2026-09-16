@@ -154,6 +154,7 @@ def create_app(
         now_utc = datetime.now(timezone.utc)
         cancel_results = []
         exit_results = []
+        uncertain_results = []
         lifecycle = await asyncio.to_thread(
             reconcile_broker_lifecycle,
             adapter,
@@ -161,6 +162,13 @@ def create_app(
             order_ttl_bars=order_ttl_bars,
             bar_minutes=bar_minutes,
         )
+
+        # Story 35: reconcile uncertain intents before admitting new risk / more submits.
+        uncertain_ids = await asyncio.to_thread(adapter.list_uncertain_order_ids)
+        for oid in uncertain_ids:
+            outcome = await asyncio.to_thread(adapter.reconcile_uncertain, oid)
+            uncertain_results.append({"order_id": oid, "outcome": outcome})
+            logger.info("Clock reconcile_uncertain %s -> %s", oid, outcome)
 
         if risk_halt is not None and halt_path is not None:
             equity_raw = await asyncio.to_thread(adapter.get_account_equity)
@@ -435,6 +443,7 @@ def create_app(
         has_work = bool(
             cancel_results
             or exit_results
+            or uncertain_results
             or lifecycle.get("ttl_cancels")
             or lifecycle.get("broker_fills")
             or lifecycle.get("broker_closes")
@@ -451,6 +460,7 @@ def create_app(
             "checked": len(fills),
             "cancels": cancel_results,
             "exits": exit_results,
+            "uncertain": uncertain_results,
             "lifecycle": lifecycle,
             "reason": reason_out,
             "max_hold_bars": max_hold_bars,

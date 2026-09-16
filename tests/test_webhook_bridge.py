@@ -1484,6 +1484,47 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         self.assertEqual(res2.json()["checked"], 0)
         self.assertEqual(res2.json()["exits"], [])
 
+    def test_clock_reconciles_uncertain_setup_against_broker(self):
+        """Story 35: clock must reconcile uncertain intents — never leave them forever."""
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        client = TestClient(app)
+        try:
+            adapter = app.state.adapter
+            adapter.claim_setup({"order_id": "UNCERTAIN_CLOCK_1"})
+            adapter.update_setup_status("UNCERTAIN_CLOCK_1", "uncertain")
+            broker = SimpleNamespace(
+                orders_get=lambda symbol=None: [
+                    SimpleNamespace(ticket=777, comment="SMC_UNCERTAIN_CLOCK_1")
+                ],
+                positions_get=lambda symbol=None: [],
+                history_orders_get=lambda *a, **k: [],
+            )
+            # Force live reconcile path while keeping dry_run adapter DB.
+            adapter.connected = True
+            with patch("scripts.smc.mt5_adapter.mt5", broker):
+                res = client.post(
+                    "/internal/clock",
+                    headers={"Authorization": f"Bearer {self.secret}"},
+                )
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(len(data["uncertain"]), 1)
+            self.assertEqual(data["uncertain"][0]["order_id"], "UNCERTAIN_CLOCK_1")
+            self.assertEqual(data["uncertain"][0]["outcome"], "accepted")
+            info = adapter.get_setup_status("UNCERTAIN_CLOCK_1")
+            self.assertEqual(info["status"], "accepted")
+            self.assertEqual(info["ticket"], 777)
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
     def test_clock_idle_without_max_hold_still_runs_lifecycle(self):
         from scripts.webhook_bridge import create_app
         import tempfile

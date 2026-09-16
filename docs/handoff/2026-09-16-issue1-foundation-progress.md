@@ -72,6 +72,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
 | Bugbot High (software) | **Done @ `00b2e11`:** TP1/BE foundation gate, live invent-PnL reject, CLOSE_MARKET comment, partial min-lot residual skip |
 | Webhook wall-clock 20:55 rollover flatten | **Done:** `plan_clock_rollover_exits` + `/internal/clock` (ADR-007) even when `max_hold_bars` unset |
+| Clock reconciles uncertain intents (story 35) | **Done:** `list_uncertain_order_ids` + `reconcile_uncertain` on `/internal/clock`; `test_clock_reconciles_uncertain_setup_against_broker` |
 
 ## Sibling issues #2–#4
 

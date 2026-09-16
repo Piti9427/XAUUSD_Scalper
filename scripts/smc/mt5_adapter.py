@@ -438,6 +438,18 @@ class SMCExecutionAdapter:
         """
         return [row["order_id"] for row in self.list_unfilled_pending_setups()]
 
+    def list_uncertain_order_ids(self) -> List[str]:
+        """Active uncertain claims awaiting broker reconciliation (story 35)."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT order_id FROM setup_inbox
+            WHERE status = 'uncertain'
+            ORDER BY created_at ASC
+            """
+        )
+        return [str(row[0]) for row in cursor.fetchall() if row and row[0]]
+
     def list_unfilled_pending_setups(self) -> List[Dict[str, Any]]:
         """Pending setups with parsed UTC created_at for TTL reconciliation."""
         cursor = self.conn.cursor()
