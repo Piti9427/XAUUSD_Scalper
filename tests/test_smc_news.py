@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone, timedelta
-from scripts.smc.types import Direction, Position, OrderIntentType
+from scripts.smc.types import Direction, Position
 from scripts.smc.news import NewsEvent, NewsManager
 
 
@@ -69,53 +69,45 @@ class TestSMCNewsManager(unittest.TestCase):
         self.assertFalse(keep)
         self.assertEqual(reason, "ok")
 
-    def test_pre_news_position_handling_lock_be(self):
-        # Position open, currently at +1.2R profit, 14 min before NFP
-        # Must return MOVE_SL_TO_BE
-        pos = Position(
-            direction=Direction.BUY,
-            entry_price=2000.0,
-            sl_price=1995.0, # initial_sl = 5.0
-            tp_price=2010.0,
-            lot_size=0.10,
-            open_time=self.nfp_time - timedelta(hours=1),
-            initial_sl_distance=5.0
-        )
-        current_time = self.nfp_time - timedelta(minutes=14)
-        current_price = 2006.0 # +6.0 profit / 5.0 initial_sl = +1.2R
-        
-        action = self.manager.evaluate_pre_news_position(
-            current_time=current_time,
-            events=self.events,
-            position=pos,
-            current_price=current_price,
-            pre_window_mins=15
-        )
-        self.assertEqual(action, OrderIntentType.MOVE_SL_TO_BE)
-
-    def test_pre_news_position_handling_close_market(self):
-        # Position open, currently at +0.4R profit (< 1.0R), 10 min before NFP
-        # Must return CLOSE_MARKET
-        pos = Position(
+    def test_foundation_pre_news_holds_sl_tp_no_be_or_force_close(self):
+        # Issue #1 / scenario 18: open positions keep SL/TP through news.
+        # No pre-news BE and no forced exit (supersedes ADR-010 for BaselinePlay).
+        profitable = Position(
             direction=Direction.BUY,
             entry_price=2000.0,
             sl_price=1995.0,
             tp_price=2010.0,
             lot_size=0.10,
             open_time=self.nfp_time - timedelta(hours=1),
-            initial_sl_distance=5.0
+            initial_sl_distance=5.0,
         )
-        current_time = self.nfp_time - timedelta(minutes=10)
-        current_price = 2002.0 # +0.4R
-        
-        action = self.manager.evaluate_pre_news_position(
-            current_time=current_time,
-            events=self.events,
-            position=pos,
-            current_price=current_price,
-            pre_window_mins=15
+        underwater = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.10,
+            open_time=self.nfp_time - timedelta(hours=1),
+            initial_sl_distance=5.0,
         )
-        self.assertEqual(action, OrderIntentType.CLOSE_MARKET)
+        self.assertIsNone(
+            self.manager.evaluate_pre_news_position(
+                current_time=self.nfp_time - timedelta(minutes=14),
+                events=self.events,
+                position=profitable,
+                current_price=2006.0,
+                pre_window_mins=15,
+            )
+        )
+        self.assertIsNone(
+            self.manager.evaluate_pre_news_position(
+                current_time=self.nfp_time - timedelta(minutes=10),
+                events=self.events,
+                position=underwater,
+                current_price=2002.0,
+                pre_window_mins=15,
+            )
+        )
 
 
     def test_parse_forexfactory_json(self):
