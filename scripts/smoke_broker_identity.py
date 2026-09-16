@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         "account_login": report.account_login,
         "currency": report.currency,
         "trade_mode": report.trade_mode,
+        "margin_mode": report.margin_mode,
         "symbol": report.symbol,
         "reasons": list(report.reasons),
         "infra_verdict": infra.verdict,
