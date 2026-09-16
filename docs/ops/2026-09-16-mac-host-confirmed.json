@@ -6,5 +6,10 @@
     "mt5_import_missing"
   ],
   "infra_verdict": "INCONCLUSIVE_INFRA",
-  "infra_detail": "mt5_unavailable_on_host"
+  "infra_detail": "mt5_unavailable_on_host",
+  "confirmed_at": "2026-09-16T15:22+07",
+  "operator_host": "macOS",
+  "user_confirmed_mac": true,
+  "native_mt5": "ModuleNotFoundError",
+  "live_gates": "blocked"
 }
