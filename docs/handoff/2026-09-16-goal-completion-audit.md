@@ -1,15 +1,15 @@
 # Goal completion audit — fix all open GitHub issues
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
-**Branch:** `feature/smc-v2-hardening` @ `7f7b94f`  
-**Last verified:** 2026-09-16 ~16:13 ICT
+**Branch:** `feature/smc-v2-hardening` @ `bc6b1b4`  
+**Last verified:** 2026-09-16 ~16:18 ICT
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
 | **#3** Mechanical S1–S4 spec | Docs + contract tests | specs + contracts | ✅ closed (local close evidence; re-verify after `gh auth refresh`) | **Done** |
 | **#4** Research handoff | Docs + Gate B/C blockers | specs + contracts | ✅ closed (same) | **Done** |
 | **#2** Parent tracker | Close after #3/#4 | Parent closed | ✅ closed (same) | **Done** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | 348 tests; freeze/H1/fill-terminal; Mac `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | 351 tests; scenarios 1–23 software matrix OK; Mac `INCONCLUSIVE_INFRA` | ❌ open | **Live gates still required** |
 
 ## Issue #1 live gates (do not close without)
 
