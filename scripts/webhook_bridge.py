@@ -245,6 +245,17 @@ def create_app(
                 )
                 if broker_pnl is not None:
                     pnl_dollar = broker_pnl
+                    fill = await asyncio.to_thread(adapter.get_fill_geometry, plan.order_id)
+                    if fill and fill.get("entry_price") and fill.get("sl_price") and fill.get("lot_size"):
+                        from scripts.smc.risk import frozen_initial_r
+
+                        pnl_r = frozen_initial_r(
+                            pnl_dollars=float(pnl_dollar),
+                            initial_sl_distance=abs(
+                                float(fill["entry_price"]) - float(fill["sl_price"])
+                            ),
+                            filled_lot=float(fill["lot_size"]),
+                        )
 
             await asyncio.to_thread(
                 adapter.log_lifecycle_event,
@@ -750,6 +761,11 @@ def create_app(
                 entry_price=entry,
                 sl_price=sl,
                 tp_price=tp2 if tp2 > 0 else tp1,
+                lot_size=(
+                    float(pos.volume)
+                    if not adapter.dry_run and "pos" in locals() and pos is not None
+                    else float(payload.get("lot_size") or 0.0) or None
+                ),
                 order_id=order_id,
                 ticket=ticket,
                 reason=reason,
@@ -964,17 +980,14 @@ def create_app(
                     if broker_pnl is not None:
                         pnl_dollar = broker_pnl
 
-            # Scenario 21: freeze R from entry→initial SL; never from later BE.
+            # Scenario 21: dollars only from payload/broker; R from frozen geometry.
+            # Never invent cash from entry/exit/lot without broker/payload dollars.
             entry = float(payload.get("entry") or 0.0)
             sl = float(payload.get("sl") or 0.0)
             lot = float(payload.get("lot_size") or 0.0)
             exit_px = float(payload.get("exit_price") or 0.0)
             direction = str(payload.get("dir", "BUY")).upper()
             initial_dist = abs(entry - sl) if entry and sl else 0.0
-
-            if pnl_dollar is None and entry and exit_px and lot > 0:
-                signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
-                pnl_dollar = round(signed * lot * 100.0, 2)
 
             if pnl_r is None and pnl_dollar is not None and initial_dist > 0 and lot > 0:
                 from scripts.smc.risk import frozen_initial_r
@@ -985,7 +998,7 @@ def create_app(
                     filled_lot=lot,
                 )
             elif pnl_r is None and initial_dist > 0 and entry and exit_px:
-                # Lot unknown: geometric R from price path only (not dollar invent).
+                # Lot/cash unknown: geometric R only (not dollar invent).
                 signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
                 pnl_r = round(signed / initial_dist, 4)
 
@@ -1070,13 +1083,19 @@ if __name__ == "__main__":
     import uvicorn
     import os
 
+    from scripts.smc.news import NewsManager
+
     secret = os.environ.get("WEBHOOK_SECRET", "DEV_SECRET_123")
     hold_raw = os.environ.get("SMC_MAX_HOLD_BARS")
     max_hold_bars = int(hold_raw) if hold_raw not in (None, "") else None
     bar_minutes = int(os.environ.get("SMC_BAR_MINUTES", "5"))
+    news_mgr = NewsManager()
+    news_mgr.events = None
+    news_mgr.schedule_known = False
     app = create_app(
         auth_token=secret,
         dry_run=True,
+        news_manager=news_mgr,
         max_hold_bars=max_hold_bars,
         bar_minutes=bar_minutes,
     )

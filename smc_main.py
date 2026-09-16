@@ -147,47 +147,15 @@ async def run_smc_live_copilot():
                             H1_WARMUP_BARS,
                         )
 
+                    # Foundation BaselinePlay: hold open positions through news.
+                    # Do NOT pre-news BE / force-close (Legacy ADR-010 path stays in NewsManager
+                    # for explicit Legacy runners only). Pending cancel is handled below via
+                    # news_mgr.should_cancel_pending → orchestrator.
+
                     # Reset circuit breaker alert on new UTC day
                     bar_date_str = bar_time.date().isoformat() if hasattr(bar_time, "date") else now_utc.date().isoformat()
                     if account.current_utc_date != bar_date_str:
                         circuit_breaker_alerted = False
-
-                    # Pre-News Safeguard Evaluation (ADR-010: 15 min before red news)
-                    if account.open_position is not None and cached_news_events:
-                        pre_action = news_mgr.evaluate_pre_news_position(
-                            current_time=now_utc,
-                            events=cached_news_events,
-                            position=account.open_position,
-                            current_price=last_closed_bar["close"],
-                            pre_window_mins=15
-                        )
-                        if pre_action == OrderIntentType.MOVE_SL_TO_BE and not account.open_position.be_moved:
-                            account.open_position.be_moved = True
-                            account.open_position.sl_price = account.open_position.entry_price
-                            adapter.execute_intent(OrderIntent(
-                                intent_type=OrderIntentType.MOVE_SL_TO_BE,
-                                direction=account.open_position.direction,
-                                sl_price=account.open_position.entry_price,
-                                reason="Pre-News Safeguard: Locked BE",
-                            ))
-                            if not account.open_position.be_alerted:
-                                await notifier.send_message(format_be_moved_card(account.open_position, symbol))
-                                account.open_position.be_alerted = True
-                        elif pre_action == OrderIntentType.CLOSE_MARKET:
-                            adapter.execute_intent(OrderIntent(
-                                intent_type=OrderIntentType.CLOSE_MARKET,
-                                direction=account.open_position.direction,
-                                reason="Pre-News Safeguard: Closed (< 1.0R profit)",
-                            ))
-                            await notifier.send_message(format_trade_closed_card(
-                                direction=account.open_position.direction,
-                                exit_price=last_closed_bar["close"],
-                                pnl_dollars=0.0,
-                                pnl_r=0.0,
-                                reason="Pre-News Safeguard Closure (< 1.0R profit)",
-                                symbol=symbol,
-                            ))
-                            account.open_position = None
 
                     # Liquidity levels
                     target_date = bar_time.date() if hasattr(bar_time, "date") else now_utc.date()
@@ -341,42 +309,53 @@ async def run_smc_live_copilot():
                         ):
                             logger.warning("TRADE CLOSED notify suppressed — no broker close evidence")
                         else:
+                            from scripts.smc.risk import frozen_initial_r
+
                             if pos_before.direction == Direction.BUY:
                                 if float(last_closed_bar["low"]) <= pos_before.sl_price:
                                     exit_price = pos_before.sl_price
-                                    if pos_before.be_moved:
-                                        exit_reason = "Hit Breakeven Stop Loss"
-                                        pnl_r = 0.0
-                                    else:
-                                        exit_reason = "Hit Stop Loss"
-                                        pnl_r = -1.0
+                                    exit_reason = (
+                                        "Hit Breakeven Stop Loss"
+                                        if pos_before.be_moved
+                                        else "Hit Stop Loss"
+                                    )
                                 elif float(last_closed_bar["high"]) >= pos_before.tp_price:
                                     exit_price = pos_before.tp_price
                                     exit_reason = "Hit Take Profit Target"
-                                    pnl_r = strat_cfg.get("tp_r", 2.5)
                                 else:
                                     exit_price = float(last_closed_bar["close"])
                                     exit_reason = "Market / Rollover Closure"
-                                    pnl_r = round((exit_price - pos_before.entry_price) / pos_before.initial_sl_distance, 2)
-                                pnl_dollars = round((exit_price - pos_before.entry_price) * pos_before.lot_size * 100.0, 2)
+                                pnl_dollars = round(
+                                    (exit_price - pos_before.entry_price)
+                                    * pos_before.lot_size
+                                    * 100.0,
+                                    2,
+                                )
                             else:  # SELL
                                 if float(last_closed_bar["high"]) >= pos_before.sl_price:
                                     exit_price = pos_before.sl_price
-                                    if pos_before.be_moved:
-                                        exit_reason = "Hit Breakeven Stop Loss"
-                                        pnl_r = 0.0
-                                    else:
-                                        exit_reason = "Hit Stop Loss"
-                                        pnl_r = -1.0
+                                    exit_reason = (
+                                        "Hit Breakeven Stop Loss"
+                                        if pos_before.be_moved
+                                        else "Hit Stop Loss"
+                                    )
                                 elif float(last_closed_bar["low"]) <= pos_before.tp_price:
                                     exit_price = pos_before.tp_price
                                     exit_reason = "Hit Take Profit Target"
-                                    pnl_r = strat_cfg.get("tp_r", 2.5)
                                 else:
                                     exit_price = float(last_closed_bar["close"])
                                     exit_reason = "Market / Rollover Closure"
-                                    pnl_r = round((pos_before.entry_price - exit_price) / pos_before.initial_sl_distance, 2)
-                                pnl_dollars = round((pos_before.entry_price - exit_price) * pos_before.lot_size * 100.0, 2)
+                                pnl_dollars = round(
+                                    (pos_before.entry_price - exit_price)
+                                    * pos_before.lot_size
+                                    * 100.0,
+                                    2,
+                                )
+                            pnl_r = frozen_initial_r(
+                                pnl_dollars=pnl_dollars,
+                                initial_sl_distance=pos_before.initial_sl_distance,
+                                filled_lot=pos_before.lot_size,
+                            )
 
                             await notifier.send_message(
                                 format_trade_closed_card(

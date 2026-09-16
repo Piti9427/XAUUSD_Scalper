@@ -454,11 +454,12 @@ class SMCExecutionAdapter:
         if date_utc_str is None:
             date_utc_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         cursor = self.conn.cursor()
+        # Only count explicit negative PnL — never invent losses from reason text.
         cursor.execute(
             """
             SELECT COUNT(*) FROM trade_lifecycle
             WHERE event_type = 'TRADE_CLOSED'
-              AND (pnl_dollar < 0 OR pnl_r < 0 OR reason LIKE '%SL%' OR reason LIKE '%STOP LOSS%')
+              AND (pnl_dollar < 0 OR pnl_r < 0)
               AND timestamp LIKE ?
             """,
             (f"{date_utc_str}%",),
@@ -473,7 +474,7 @@ class SMCExecutionAdapter:
             """
             SELECT timestamp FROM trade_lifecycle
             WHERE event_type = 'TRADE_CLOSED'
-              AND (pnl_dollar < 0 OR pnl_r < 0 OR reason LIKE '%SL%' OR reason LIKE '%STOP LOSS%')
+              AND (pnl_dollar < 0 OR pnl_r < 0)
             ORDER BY id DESC LIMIT 1
             """
         )
@@ -483,6 +484,28 @@ class SMCExecutionAdapter:
             dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00").replace(" ", "T"))
             return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
         return None
+
+    def get_fill_geometry(self, order_id: str) -> Optional[Dict[str, Any]]:
+        """Latest ORDER_FILLED entry/sl/lot for frozen-R recovery."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT entry_price, sl_price, lot_size, direction
+            FROM trade_lifecycle
+            WHERE event_type = 'ORDER_FILLED' AND order_id = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (order_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "entry_price": row[0],
+            "sl_price": row[1],
+            "lot_size": row[2],
+            "direction": row[3],
+        }
 
     def get_account_equity(self) -> Optional[float]:
         """Fetches real-time equity from MT5 terminal or None if offline/dry-run."""

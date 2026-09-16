@@ -246,6 +246,7 @@ beBuffer  = input.float(0.10, "Breakeven Buffer ($)", step=0.05, group=G_RISK)
 spreadPts = input.float(0.30, "Broker Spread ($) [ADR-024]", step=0.05, group=G_RISK, tooltip="Ask-Bid spread for Long limit fills and Short TP exits")
 tp1R      = input.float(1.0, "TP1 Target (R) [Close 50% & Move BE]", step=0.1, group=G_RISK)
 tp2R      = input.float(2.5, "TP2 Runner Target (R)", step=0.5, group=G_RISK)
+modelLot  = input.float(0.01, "Model Lot Size (JSON alerts)", step=0.01, group=G_RISK, tooltip="Informational lot stamped into Bot JSON for frozen-R accounting; broker still sizes live orders")
 
 // =============================================================================
 // 9. TRADE STATE MACHINE & EXECUTION COUPLING (ADR-023)
@@ -588,7 +589,7 @@ if eventOrderExpired and alertOutput != "Off"
     alert(alertOutput == "Bot JSON" ? cancelJson : cancelCard, alert.freq_once_per_bar)
 
 if eventTradeClosed and alertOutput != "Off"
-    closedJson = '{"event":"TRADE_CLOSED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (tradeDir == 1 ? "BUY" : "SELL") + '","entry":' + str.tostring(tradeEntry, "#.##") + ',"sl":' + str.tostring(tradeInitialSl, "#.##") + ',"exit_price":' + str.tostring(tradeExitPrice, "#.##") + ',"reason":"' + closeReason + '","time":"' + utcTimeStr + '"}'
+    closedJson = '{"event":"TRADE_CLOSED","order_id":"' + tradeOrderId + '","symbol":"' + syminfo.ticker + '","dir":"' + (tradeDir == 1 ? "BUY" : "SELL") + '","entry":' + str.tostring(tradeEntry, "#.##") + ',"sl":' + str.tostring(tradeInitialSl, "#.##") + ',"exit_price":' + str.tostring(tradeExitPrice, "#.##") + ',"lot_size":' + str.tostring(modelLot, "#.##") + ',"reason":"' + closeReason + '","time":"' + utcTimeStr + '"}'
     closedCard = str.format("🏁 [XAUUSD Master Pro] MODEL CLOSED\n📌 Reason: {0}\n💰 Entry: {1,number,#.##} → Exit: {2,number,#.##}\n🛑 Initial SL: {3,number,#.##}\n⏰ Time: {4} UTC", closeReason, tradeEntry, tradeExitPrice, tradeInitialSl, utcTimeStr)
     alert(alertOutput == "Bot JSON" ? closedJson : closedCard, alert.freq_once_per_bar)
 

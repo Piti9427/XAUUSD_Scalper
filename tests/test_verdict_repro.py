@@ -34,8 +34,8 @@ class TestVerdictRepro(unittest.TestCase):
 
     def test_repro_trade_closed_webhook_does_not_trip_circuit_breaker(self):
         """
-        Fail Path 1: Sending 2 TRADE_CLOSED webhooks with 'STOP LOSS HIT'
-        currently leaves pnl as NULL, so get_daily_realized_losses() stays 0.
+        Reason-only STOP LOSS must NOT invent circuit-breaker losses.
+        Explicit negative pnl_r/pnl_dollar is required.
         """
         for i in [1, 2]:
             payload = {
@@ -51,7 +51,31 @@ class TestVerdictRepro(unittest.TestCase):
         adapter = SMCExecutionAdapter(dry_run=True, db_path=self.db_path)
         try:
             loss_count = adapter.get_daily_realized_losses("2026-09-14")
-            self.assertEqual(loss_count, 2, f"Expected 2 losses for circuit breaker, got {loss_count}")
+            self.assertEqual(
+                loss_count,
+                0,
+                "Reason-only closes must not invent circuit-breaker losses",
+            )
+        finally:
+            adapter.close()
+
+        for i in [3, 4]:
+            payload = {
+                "event": "TRADE_CLOSED",
+                "order_id": f"ORDER_{i}",
+                "symbol": "XAUUSD",
+                "reason": "STOP LOSS HIT 🛑",
+                "pnl_r": -1.0,
+                "pnl_dollar": -50.0,
+                "time": "2026-09-14 11:00:00",
+            }
+            res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+            self.assertEqual(res.status_code, 200)
+
+        adapter = SMCExecutionAdapter(dry_run=True, db_path=self.db_path)
+        try:
+            loss_count = adapter.get_daily_realized_losses("2026-09-14")
+            self.assertEqual(loss_count, 2)
         finally:
             adapter.close()
 
