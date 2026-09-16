@@ -21,6 +21,8 @@ documentation deliverables satisfy acceptance; it is **not** a GitHub close.
 
 Contract: `tests/test_s1_s4_mechanical_spec_contract.py` → **6/6 OK** (ran 2026-09-16).
 
+Contract: `tests/test_s1_s4_research_handoff_contract.py` → **6/6 OK** (issue #4 doc gates).
+
 ## Issue #4 — Research handoff
 
 | Acceptance theme | Local evidence |
