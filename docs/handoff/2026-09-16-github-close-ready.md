@@ -23,8 +23,9 @@ Also ensure the GitHub App / PAT used by Cursor MCP has **Issues: Write** and **
 
 Retried 2026-09-16 repeatedly: still 403 / invalid keyring / push fail.
 
-Branch evidence: `feature/smc-v2-hardening` (local commits incl. webhook `/internal/clock`, news cancel, 0.5% default risk).
-Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (248+ after type_filling).
+Branch evidence: `feature/smc-v2-hardening` (**ahead 16** of origin — push blocked).
+Unit suite: `.venv/bin/python -m unittest discover -s tests` → OK (254).
+Live gate helper: `scripts/ops/foundation_live_gate.sh` (MT5 host required).
 
 ---
 

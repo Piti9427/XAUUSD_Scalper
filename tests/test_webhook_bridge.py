@@ -1402,6 +1402,44 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             self.assertEqual(data["status"], "disabled")
             self.assertEqual(data["exits"], [])
             self.assertEqual(data["cancels"], [])
+            self.assertIn("lifecycle", data)
+            self.assertEqual(data["lifecycle"]["ttl_cancels"], [])
+        finally:
+            app.state.adapter.conn.close()
+            self.Path(db.name).unlink(missing_ok=True)
+
+    def test_clock_runs_ttl_lifecycle_reconciliation(self):
+        from datetime import datetime, timezone, timedelta
+        from scripts.webhook_bridge import create_app
+        import tempfile
+
+        db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        db.close()
+        app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=db.name,
+            max_hold_bars=2,
+            bar_minutes=5,
+            order_ttl_bars=4,
+        )
+        client = TestClient(app)
+        try:
+            adapter = app.state.adapter
+            adapter.claim_setup({"order_id": "TTL_CLOCK_1", "limit": 4050.0})
+            adapter.update_setup_status("TTL_CLOCK_1", "accepted", ticket=1)
+            old = datetime.now(timezone.utc) - timedelta(minutes=30)
+            with adapter._claim_lock:
+                adapter.conn.execute(
+                    "UPDATE setup_inbox SET created_at = ? WHERE order_id = ?",
+                    (old.isoformat(), "TTL_CLOCK_1"),
+                )
+                adapter.conn.commit()
+            res = client.post("/internal/clock", headers=self.headers)
+            self.assertEqual(res.status_code, 200)
+            lifecycle = res.json()["lifecycle"]
+            self.assertEqual(len(lifecycle["ttl_cancels"]), 1)
+            self.assertEqual(lifecycle["ttl_cancels"][0]["order_id"], "TTL_CLOCK_1")
         finally:
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)
