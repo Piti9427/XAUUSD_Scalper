@@ -225,27 +225,62 @@ class SMCBacktester:
                     active_trade_log["partial_pnl"] += partial_cash
 
             if account.open_position is None:
-                rollover = any(x.intent_type == OrderIntentType.CLOSE_MARKET for x in intents)
+                ambiguous = any(
+                    x.intent_type == OrderIntentType.CLOSE_MARKET and "AMBIGUOUS" in x.reason
+                    for x in intents
+                )
+                rollover = any(
+                    x.intent_type == OrderIntentType.CLOSE_MARKET and "AMBIGUOUS" not in x.reason
+                    for x in intents
+                )
                 stop_hit = (float(current_bar["low"]) <= before.sl_price
                             if sign == 1 else float(current_bar["high"]) >= before.sl_price)
-                if rollover:
+                if ambiguous:
+                    # Do not invent SL or TP cash path; keep both touches visible.
+                    exit_price, exit_reason = None, "AMBIGUOUS"
+                    remaining_cash = 0.0
+                    total_cash = None
+                    pnl_r = None
+                elif rollover:
                     exit_price, exit_reason = float(current_bar["close"]), "ROLLOVER_FLAT"
+                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                    account.balance += remaining_cash
+                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
+                    initial_risk = (active_trade_log["initial_sl_dist"]
+                                    * active_trade_log["lot_size"] * self.contract_size)
+                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
                 elif stop_hit:
                     exit_price = before.sl_price
                     exit_reason = "BE" if before.be_moved else "SL"
+                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                    account.balance += remaining_cash
+                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
+                    initial_risk = (active_trade_log["initial_sl_dist"]
+                                    * active_trade_log["lot_size"] * self.contract_size)
+                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
                 else:
                     exit_price, exit_reason = before.tp_price, "TP"
-                remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
-                account.balance += remaining_cash
-                total_cash = remaining_cash + active_trade_log["partial_pnl"]
-                initial_risk = (active_trade_log["initial_sl_dist"]
-                                * active_trade_log["lot_size"] * self.contract_size)
+                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                    account.balance += remaining_cash
+                    total_cash = remaining_cash + active_trade_log["partial_pnl"]
+                    initial_risk = (active_trade_log["initial_sl_dist"]
+                                    * active_trade_log["lot_size"] * self.contract_size)
+                    pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
                 active_trade_log.update({
                     "exit_time": bar_time,
                     "exit_price": exit_price,
                     "exit_reason": exit_reason,
-                    "pnl_dollar": round(total_cash, 2),
-                    "pnl_r": round(total_cash / initial_risk, 4),
+                    "sl_touched": (
+                        float(current_bar["low"]) <= before.sl_price
+                        if sign == 1 else float(current_bar["high"]) >= before.sl_price
+                    ),
+                    "tp_touched": (
+                        float(current_bar["high"]) >= before.tp_price
+                        if sign == 1
+                        else (float(current_bar["low"]) + self.spread_buffer) <= before.tp_price
+                    ),
+                    "pnl_dollar": None if total_cash is None else round(total_cash, 2),
+                    "pnl_r": pnl_r,
                     "balance": round(account.balance, 2),
                 })
                 trades.append(active_trade_log)
@@ -255,18 +290,20 @@ class SMCBacktester:
             peak_equity = max(peak_equity, account.balance)
             max_drawdown = max(max_drawdown, (peak_equity - account.balance) / peak_equity * 100.0)
 
-        # Build Summary
+        # Build Summary — AMBIGUOUS exits stay in the ledger but are excluded from expectancy.
         trades_df = pd.DataFrame(trades)
         total_trades = len(trades)
-        winning_trades = len([t for t in trades if t.get("pnl_r", 0) > 0])
-        losing_trades = len([t for t in trades if t.get("pnl_r", 0) < 0])
-        be_trades = len([t for t in trades if t.get("pnl_r", 0) == 0])
+        scored = [t for t in trades if t.get("exit_reason") != "AMBIGUOUS" and t.get("pnl_r") is not None]
+        winning_trades = len([t for t in scored if t["pnl_r"] > 0])
+        losing_trades = len([t for t in scored if t["pnl_r"] < 0])
+        be_trades = len([t for t in scored if t["pnl_r"] == 0])
 
-        win_rate = (winning_trades / total_trades * 100.0) if total_trades > 0 else 0.0
-        gross_profit = sum(t["pnl_dollar"] for t in trades if t["pnl_dollar"] > 0)
-        gross_loss = abs(sum(t["pnl_dollar"] for t in trades if t["pnl_dollar"] < 0))
+        scored_n = len(scored)
+        win_rate = (winning_trades / scored_n * 100.0) if scored_n > 0 else 0.0
+        gross_profit = sum(t["pnl_dollar"] for t in scored if t["pnl_dollar"] is not None and t["pnl_dollar"] > 0)
+        gross_loss = abs(sum(t["pnl_dollar"] for t in scored if t["pnl_dollar"] is not None and t["pnl_dollar"] < 0))
         profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (999.0 if gross_profit > 0 else 1.0)
-        avg_r = (sum(t["pnl_r"] for t in trades) / total_trades) if total_trades > 0 else 0.0
+        avg_r = (sum(t["pnl_r"] for t in scored) / scored_n) if scored_n > 0 else 0.0
 
         return BacktestSummary(
             initial_balance=self.initial_balance,

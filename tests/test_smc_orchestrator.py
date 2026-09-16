@@ -242,6 +242,58 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertEqual(account.daily_loss_count, 1)
         self.assertIsNotNone(account.last_loss_time)
 
+    def test_ohlc_dual_touch_without_ticks_is_ambiguous(self):
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.10,
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=5.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2000.0,
+            "high": 2011.0,
+            "low": 1994.0,
+            "close": 2002.0,
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertIsNone(account.open_position)
+        self.assertEqual(account.daily_loss_count, 0)
+        self.assertIsNone(account.last_loss_time)
+        self.assertEqual(len(intents), 1)
+        self.assertEqual(intents[0].intent_type, OrderIntentType.CLOSE_MARKET)
+        self.assertIn("AMBIGUOUS", intents[0].reason)
+        self.assertIn("SL", intents[0].reason)
+        self.assertIn("TP", intents[0].reason)
+
+    def test_dual_touch_with_tick_order_keeps_sl_path(self):
+        pos = Position(
+            direction=Direction.BUY,
+            entry_price=2000.0,
+            sl_price=1995.0,
+            tp_price=2010.0,
+            lot_size=0.10,
+            open_time=datetime(2026, 3, 2, 8, 0, tzinfo=timezone.utc),
+            initial_sl_distance=5.0,
+        )
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2000.0,
+            "high": 2011.0,
+            "low": 1994.0,
+            "close": 2002.0,
+            "has_tick_order": True,
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertIsNone(account.open_position)
+        self.assertEqual(account.daily_loss_count, 1)
+        self.assertEqual(intents, [])
+
 
 if __name__ == "__main__":
     unittest.main()

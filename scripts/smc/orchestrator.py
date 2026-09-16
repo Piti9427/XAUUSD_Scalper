@@ -10,6 +10,7 @@ from scripts.smc.types import (
 )
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import RiskHaltState
+from scripts.smc.quotes import ohlc_dual_touch_flag
 
 
 class StrategyOrchestrator:
@@ -72,16 +73,36 @@ class StrategyOrchestrator:
             account.open_position = None
             return intents
 
-        # Check Stop Loss first (Conservative Financial Safety: SL takes priority over TP/BE if both hit)
-        sl_hit = False
+        # SL / TP touch detection. Dual OHLC touch without tick order is AMBIGUOUS
+        # (U9 / B17) — never invent a favorable SL-or-TP path.
         if pos.direction == Direction.BUY:
-            if float(bar["low"]) <= pos.sl_price:
-                sl_hit = True
+            sl_hit = float(bar["low"]) <= pos.sl_price
+            tp_hit = float(bar["high"]) >= pos.tp_price
         else:  # SELL
-            if float(bar["high"]) >= pos.sl_price:
-                sl_hit = True
+            sl_hit = float(bar["high"]) >= pos.sl_price
+            tp_hit = (float(bar["low"]) + self.spread_buffer) <= pos.tp_price
 
-        if sl_hit:
+        has_tick_order = bool(bar.get("has_tick_order", False))
+        exit_flag = ohlc_dual_touch_flag(
+            sl_touched=sl_hit,
+            tp_touched=tp_hit,
+            has_tick_order=has_tick_order,
+        )
+        if exit_flag == "AMBIGUOUS":
+            intents.append(
+                OrderIntent(
+                    intent_type=OrderIntentType.CLOSE_MARKET,
+                    direction=pos.direction,
+                    reason=(
+                        "AMBIGUOUS OHLC dual touch: SL and TP both touched "
+                        "without tick-order evidence"
+                    ),
+                )
+            )
+            account.open_position = None
+            return intents
+
+        if exit_flag == "SL":
             if not pos.be_moved:
                 account.daily_loss_count += 1
                 account.last_loss_time = bar_time
@@ -157,13 +178,9 @@ class StrategyOrchestrator:
                         )
                     )
 
-        # Check Full TP hits (Ask-calibrated on SELL)
-        if pos.direction == Direction.BUY:
-            if float(bar["high"]) >= pos.tp_price:
-                account.open_position = None
-        else:  # SELL
-            if (float(bar["low"]) + self.spread_buffer) <= pos.tp_price:
-                account.open_position = None
+        # Check Full TP hits (Ask-calibrated on SELL); dual-touch already handled above
+        if exit_flag == "TP":
+            account.open_position = None
 
         return intents
 

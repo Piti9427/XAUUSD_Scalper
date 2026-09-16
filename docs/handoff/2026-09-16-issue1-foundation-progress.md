@@ -26,17 +26,18 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Fill-during-cancel / partial residual reconcile | `scripts/smc/reconcile.py`; `tests/test_smc_reconcile.py` |
 | risk_halt file load/save in SMC loop | `smc_main.py` + `observe_equity` before admission |
 | Gate A research defaults | ADR-0028 |
-| Bid/ask executable side + OHLC AMBIGUOUS | `scripts/smc/quotes.py`; `tests/test_smc_quotes.py` |
+| Bid/ask executable side + OHLC AMBIGUOUS | `scripts/smc/quotes.py`; orchestrator + backtester honor dual-touch `AMBIGUOUS` (no invented SL/TP PnL); `tests/test_smc_quotes.py`, `tests/test_smc_orchestrator.py`, `tests/test_smc_backtester.py` |
+| Demo 12w protocol + Oracle ARM64 checklist (docs) | `docs/ops/2026-09-16-foundation-demo-12w-protocol.md`, `docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md` |
 
 ## Still open for issue #1
 
 | Gap | Notes |
 | --- | --- |
 | Live Exness connect smoke with real credentials | Identity helper ready; needs broker session evidence |
-| Full tick-history replay feed integration | Quote helpers ready; backtester still mostly OHLC |
-| Oracle ARM64 runtime soak | Infra gate, not strategy code |
-| Forward Demo 12-week protocol execution | Prospective ops after Gates B/C |
-| Close/comment issues on GitHub | Local work committed; tracker write 403 (PAT lacks issues write); `gh` keyring invalid |
+| Full tick-history replay feed integration | OHLC dual-touch now AMBIGUOUS; tick-order path via `bar.has_tick_order` only — no tick CSV/feed yet |
+| Oracle ARM64 runtime soak | Checklist ready; needs executed soak evidence |
+| Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
+| Close/comment issues on GitHub | Local work committed; `gh` keyring invalid + API rate limit / issues write 403 |
 
 ## Sibling issues #2–#4
 

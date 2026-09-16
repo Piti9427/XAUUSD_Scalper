@@ -111,13 +111,19 @@ class TestSMCBacktester(unittest.TestCase):
         expected = (trade.exit_price - trade.entry_price) * trade.lot_size * 100
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
 
-    def test_stop_wins_when_both_levels_hit(self):
+    def test_dual_touch_without_ticks_is_ambiguous(self):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 15)
         bars.loc[mask, "low"] = 2000.0
-        trade = SMCBacktester().run(bars, self.df_h1).trades_df.iloc[0]
-        self.assertEqual(trade.exit_reason, "SL")
-        self.assertLess(trade.pnl_dollar, 0)
+        result = SMCBacktester().run(bars, self.df_h1)
+        trade = result.trades_df.iloc[0]
+        self.assertEqual(trade.exit_reason, "AMBIGUOUS")
+        self.assertTrue(trade.sl_touched)
+        self.assertTrue(trade.tp_touched)
+        self.assertTrue(pd.isna(trade.pnl_dollar) or trade.pnl_dollar is None)
+        self.assertEqual(result.losing_trades, 0)
+        self.assertEqual(result.winning_trades, 0)
+        self.assertEqual(result.net_profit, 0.0)
 
     def test_fill_and_stop_in_same_bar_is_recorded(self):
         bars = self.df_m5.copy()
