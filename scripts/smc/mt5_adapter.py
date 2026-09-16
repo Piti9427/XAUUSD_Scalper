@@ -9,6 +9,7 @@ import threading
 from uuid import uuid4
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
 from scripts.smc.mt5_filling import resolve_type_filling
+from scripts.smc.mt5_init import initialize_mt5
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +51,21 @@ class SMCExecutionAdapter:
         symbol: str = "XAUUSD",
         dry_run: bool = False,
         db_path: str = "data/smc_trades.db",
+        terminal_path: Optional[str] = None,
     ):
         self.symbol = symbol
         self.dry_run = dry_run
+        self.terminal_path = terminal_path
         if not dry_run and db_path == ":memory:":
             raise OSError("Live execution requires persistent SQLite journal")
-        if not dry_run and (mt5 is None or not mt5.initialize()):
-            raise RuntimeError("MT5 live mode requested but terminal connection is unavailable")
+        if not dry_run:
+            if mt5 is None:
+                raise RuntimeError("MT5 live mode requested but MetaTrader5 package missing")
+            init = initialize_mt5(mt5, path=terminal_path)
+            if not init.ok:
+                raise RuntimeError(
+                    f"MT5 live mode unavailable ({init.detail}): {init.last_error}"
+                )
         self.connected = not dry_run
         self.db_path = db_path
         self._claim_lock = threading.Lock()

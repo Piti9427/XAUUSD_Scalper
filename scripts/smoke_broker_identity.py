@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.smc.broker_identity import verify_broker_identity
 from scripts.smc.infra_verdict import classify_infra_evidence
+from scripts.smc.mt5_init import initialize_mt5
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -23,6 +24,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbol", default="XAUUSD")
     parser.add_argument("--server-substring", default="Exness")
     parser.add_argument("--allow-live", action="store_true", help="Permit non-demo trade_mode")
+    parser.add_argument(
+        "--path",
+        default=None,
+        help="MT5 terminal64.exe path (or set MT5_TERMINAL_PATH). Needed on some Wine hosts.",
+    )
     parser.add_argument(
         "--out",
         type=Path,
@@ -71,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    if not mt5.initialize():
+    init = initialize_mt5(mt5, path=args.path)
+    if not init.ok:
         infra = classify_infra_evidence(
             mt5_available=False,
             identity_ok=False,
@@ -80,9 +87,11 @@ def main(argv: list[str] | None = None) -> int:
         _emit(
             {
                 "ok": False,
-                "reasons": ["mt5_initialize_failed"],
+                "reasons": ["mt5_initialize_failed", init.detail],
+                "mt5_path_used": init.path_used,
+                "mt5_last_error": list(init.last_error) if init.last_error else None,
                 "infra_verdict": infra.verdict,
-                "infra_detail": infra.detail,
+                "infra_detail": init.detail or infra.detail,
             }
         )
         return 2

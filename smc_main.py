@@ -50,10 +50,12 @@ async def run_smc_live_copilot():
     logger.info("Initializing SMC v1 Live Engine for %s (Max Spread: $%.2f)", symbol, max_spread)
 
     # 2. Connectors and Adapters
+    terminal_path = config.get("mt5", {}).get("terminal_path")
     connector = MT5Connector(
         login=config["mt5"]["login"],
         password=config["mt5"]["password"],
         server=config["mt5"]["server"],
+        terminal_path=terminal_path,
     )
     is_connected = connector.connect()
     if is_connected:
@@ -73,7 +75,9 @@ async def run_smc_live_copilot():
     )
 
     strat_cfg = config.get("strategy", {})
-    adapter = SMCExecutionAdapter(symbol=symbol, dry_run=dry_run)
+    adapter = SMCExecutionAdapter(
+        symbol=symbol, dry_run=dry_run, terminal_path=terminal_path
+    )
     orchestrator = StrategyOrchestrator(
         max_daily_losses=strat_cfg.get("max_daily_losses", 2),
         cooldown_minutes=strat_cfg.get("cooldown_mins", 30),

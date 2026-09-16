@@ -49,6 +49,7 @@ def create_app(
     partial_tp_enabled: bool = False,
     be_enabled: bool = False,
     be_buffer: float = 0.10,
+    terminal_path: Optional[str] = None,
 ) -> FastAPI:
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
@@ -60,7 +61,12 @@ def create_app(
     )
 
     start_time = time.time()
-    adapter = SMCExecutionAdapter(symbol="XAUUSD", dry_run=dry_run, db_path=db_path)
+    adapter = SMCExecutionAdapter(
+        symbol="XAUUSD",
+        dry_run=dry_run,
+        db_path=db_path,
+        terminal_path=terminal_path,
+    )
     app.state.adapter = adapter
 
     enforce_identity = (

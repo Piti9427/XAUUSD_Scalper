@@ -101,6 +101,11 @@ def main():
     partial_tp_enabled = bool(strategy_cfg.get("partial_tp_enabled", False))
     be_enabled = bool(strategy_cfg.get("be_enabled", False))
     be_buffer = float(strategy_cfg.get("be_buffer", 0.10))
+    terminal_path = (
+        wh_cfg.get("terminal_path")
+        or cfg.get("mt5", {}).get("terminal_path")
+        or os.environ.get("MT5_TERMINAL_PATH")
+    )
 
     news_mgr = NewsManager()
     # Unknown schedule blocks new risk / cancels pendings until operator loads events.
@@ -153,6 +158,7 @@ def main():
         partial_tp_enabled=partial_tp_enabled,
         be_enabled=be_enabled,
         be_buffer=be_buffer,
+        terminal_path=terminal_path,
     )
 
     uvicorn.run(app, host=host, port=port, log_level="info")

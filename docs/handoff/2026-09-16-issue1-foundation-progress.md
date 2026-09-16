@@ -66,12 +66,13 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Real-money approval boundary (story 49) | **Done:** `scripts/smc/real_money_approval.py`; dual env+config; Demo path unchanged (`810d17c`) |
 | Shared behavioral lifecycle boundary (story 47) | **Done:** `tests/test_foundation_behavioral_lifecycle.py` |
 | Open material decisions registry (story 48) | **Done:** `docs/handoff/2026-09-16-open-material-decisions.md` |
+| MT5 initialize path helper (Wine/Mac IPC) | **Done:** `scripts/smc/mt5_init.py`; smoke `--path` / `MT5_TERMINAL_PATH`; connector+adapter wired |
 
 ## Still open for issue #1
 
 | Gap | Notes |
 | --- | --- |
-| Live Exness connect smoke with real credentials | **Blocked on Mac:** native `MetaTrader5` missing; Wine IPC `(-10003)` / auth `(-6)`. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-ipc-reprobe.json`, `docs/ops/2026-09-16-mac-host-confirmed.json`. Needs Windows/Oracle host + Exness Demo session. |
+| Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine `path=` → `-6` auth fail; terminal is **MetaQuotes-Demo** not Exness. Evidence: `docs/ops/2026-09-16-mac-live-gate-blocker.md`, `docs/ops/2026-09-16-mac-wine-initialize-path.json`. Needs Exness Demo session on host with working MT5 Python IPC. |
 | Oracle ARM64 runtime soak | Checklist ready; SSH hunt to known hosts → publickey denied / timeout (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
 

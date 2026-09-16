@@ -25,7 +25,14 @@ Installed embeddable CPython 3.12 + `MetaTrader5==5.0.6180` inside the MetaQuote
 | `mt5.initialize()` | `False` `(-10003, 'IPC initialize failed, MetaTrader 5 x64 not found')` |
 | `mt5.initialize(path=terminal64.exe)` | `False` `(-6, 'Terminal: Authorization failed')` |
 
-Interpretation: Mac Wine terminal UI may run, but Python IPC to terminal does **not** satisfy Exness Demo identity smoke. Do not treat this path as Gate C PASS.
+Interpretation:
+- Explicit `path=` moves Mac Wine from IPC-not-found to auth failure (progress, not PASS).
+- Wine terminal `common.ini` shows **MetaQuotes-Demo** (not Exness). No Exness MT5 install found on this Mac.
+- Smoke CLI now accepts `--path` / `MT5_TERMINAL_PATH` (`scripts/smc/mt5_init.py`).
+
+Do **not** treat MetaQuotes Wine as Gate C PASS.
+
+Artifacts: `docs/ops/2026-09-16-mac-wine-initialize-path.json`, `docs/ops/2026-09-16-mac-wine-auth-retry.json`
 
 ## Still required for #1 close (not possible as pure Mac-dev work)
 
