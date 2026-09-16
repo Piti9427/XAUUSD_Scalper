@@ -20,6 +20,7 @@ from scripts.smc.risk_halt import (
 )
 from scripts.smc.halt_actions import plan_halt_flatten_intents
 from scripts.smc.warmup import H1_WARMUP_BARS, h1_warmup_ok
+from scripts.smc.account_sync import apply_broker_capital
 from pathlib import Path
 from scripts.smc.notifier import (
     SMCTelegramNotifier,
@@ -197,6 +198,16 @@ async def run_smc_live_copilot():
                     equity_raw = adapter.get_account_equity()
                     history_ready = dry_run or equity_raw is not None
                     equity_now = float(equity_raw) if equity_raw is not None else account.equity
+                    snap = adapter.get_risk_snapshot()
+                    if snap is not None:
+                        apply_broker_capital(
+                            account,
+                            balance=snap.get("balance"),
+                            equity=snap.get("equity"),
+                        )
+                        equity_now = float(account.equity)
+                    elif equity_raw is not None:
+                        apply_broker_capital(account, equity=equity_now)
                     observe_equity(
                         risk_halt,
                         equity_now,
