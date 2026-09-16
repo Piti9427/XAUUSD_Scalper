@@ -18,7 +18,7 @@
 | Push 27 commits | `gh` token **invalid**; HTTPS keychain `-25293`; SSH `Permission denied (publickey)` |
 | Close #3→#4→#2 | MCP `issue_write` **403** Resource not accessible by personal access token |
 | MCP read | `issue_read` works (issues still `open`) |
-| Offline push handoff | `/tmp/smc-v2-hardening-ahead.bundle` (requires base `b1548cc`) |
+| MCP close attempt | Operator **rejected** MCP `issue_write` close for #3 (2026-09-16); use local `./scripts/ops_unblock_github.sh` instead |
 
 ## Issue #1 live gates (do not close #1 without)
 

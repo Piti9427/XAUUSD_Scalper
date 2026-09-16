@@ -1591,6 +1591,38 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         )
         self.assertEqual(dup.json()["status"], "ignored_duplicate")
 
+    def test_order_filled_webhook_skipped_when_lifecycle_event_exists(self):
+        adapter = self.app.state.adapter
+        adapter.log_lifecycle_event(
+            event_type="ORDER_FILLED",
+            order_id="LC_FILL_LEDGER_1",
+            direction="BUY",
+            entry_price=4050.0,
+            sl_price=4045.0,
+            lot_size=0.01,
+        )
+        res = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "ORDER_FILLED",
+                "order_id": "LC_FILL_LEDGER_1",
+                "dir": "BUY",
+                "entry": 4050.0,
+                "sl": 4045.0,
+                "lot_size": 0.01,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["status"], "ignored_duplicate")
+        filled = [
+            row
+            for row in adapter.get_lifecycle_logs()
+            if row.get("event_type") == "ORDER_FILLED"
+            and row.get("order_id") == "LC_FILL_LEDGER_1"
+        ]
+        self.assertEqual(len(filled), 1)
+
     def test_trade_closed_uses_frozen_initial_r_from_fill_geometry(self):
         """Dollar PnL + entry/SL/lot → R uses frozen initial denominator."""
         res = self.client.post(

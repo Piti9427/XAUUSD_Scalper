@@ -842,6 +842,17 @@ def create_app(
 
         # 2. ORDER_FILLED: Record Active Trade Correlation
         elif event == "ORDER_FILLED":
+            if order_id and await asyncio.to_thread(
+                adapter.has_lifecycle_event, order_id, "ORDER_FILLED"
+            ):
+                await asyncio.to_thread(mark_processed, order_id, event, "success")
+                return {
+                    "status": "ignored_duplicate",
+                    "order_id": order_id,
+                    "event": event,
+                    "message": "ORDER_FILLED already recorded (broker lifecycle or prior webhook)",
+                }
+
             entry = float(payload.get("entry") or 0.0)
             sl = float(payload.get("sl") or 0.0)
             tp1 = float(payload.get("tp1") or 0.0)
