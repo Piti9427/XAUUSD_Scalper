@@ -21,6 +21,7 @@ from scripts.smc.setup_identity import pending_h1_bias_allows
 from scripts.smc.detection import is_in_session
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
+from scripts.webhook.setup_time import parse_setup_event_time
 
 logger = logging.getLogger("webhook_bridge")
 
@@ -156,26 +157,7 @@ async def handle_setup_pending(
         }
 
     # 1b. Rollover Flat Guard (ADR-007)
-    event_time_raw = payload.get("time")
-    if event_time_raw is not None:
-        try:
-            if isinstance(event_time_raw, (int, float)):
-                if event_time_raw > 1e11:
-                    event_dt = datetime.fromtimestamp(event_time_raw / 1000.0, tz=timezone.utc)
-                else:
-                    event_dt = datetime.fromtimestamp(float(event_time_raw), tz=timezone.utc)
-            else:
-                _raw = str(event_time_raw).replace(" ", "T")
-                _parsed = datetime.fromisoformat(_raw)
-                event_dt = (
-                    _parsed.replace(tzinfo=timezone.utc)
-                    if _parsed.tzinfo is None
-                    else _parsed.astimezone(timezone.utc)
-                )
-        except Exception:
-            event_dt = datetime.now(timezone.utc)
-    else:
-        event_dt = datetime.now(timezone.utc)
+    event_dt = parse_setup_event_time(payload.get("time"))
 
     # S1–S4 / foundation: new entry only inside fixed UTC admission windows.
     if not is_in_session(event_dt, extended=True):
