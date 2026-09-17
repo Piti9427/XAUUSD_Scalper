@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 # Wall-clock may be outside London/NY admission windows; bypass for fixture SETUP
 # paths. Dedicated test_out_of_session_rejects_setup_pending restores real gate.
 _SESSION_PATCHER = patch(
-    "scripts.webhook.setup_pending.is_in_session", return_value=True
+    "scripts.webhook.setup_time_gates.is_in_session", return_value=True
 )
 _SESSION_PATCHER.start()
 
@@ -1015,7 +1015,7 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
             "tp2": 4062.50,
             "time": "2026-09-14 21:15:00",
         }
-        with patch("scripts.webhook.setup_pending.is_in_session", return_value=True):
+        with patch("scripts.webhook.setup_time_gates.is_in_session", return_value=True):
             res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res.status_code, 200)
         data = res.json()
