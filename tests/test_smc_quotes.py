@@ -93,6 +93,24 @@ class QuoteSideTests(unittest.TestCase):
         self.assertEqual(rows[0]["reason"], "missing_quote")
         self.assertEqual(rows[0]["context"], "sl_before_fill_check")
 
+    def test_disclose_missing_quote_at_exit_deadline(self):
+        from scripts.smc.quotes import disclose_missing_quote_at_exit_deadline
+
+        self.assertEqual(
+            disclose_missing_quote_at_exit_deadline(
+                open_order_ids=["X"],
+                have_live_quotes=True,
+            ),
+            [],
+        )
+        rows = disclose_missing_quote_at_exit_deadline(
+            open_order_ids=["X", ""],
+            have_live_quotes=False,
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["context"], "session_flat_exit")
+        self.assertEqual(rows[0]["reason"], "missing_quote")
+
     def test_dual_touch_without_ticks_is_ambiguous(self):
         self.assertEqual(
             ohlc_dual_touch_flag(sl_touched=True, tp_touched=True, has_tick_order=False),

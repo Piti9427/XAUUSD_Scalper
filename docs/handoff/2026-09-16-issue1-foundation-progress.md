@@ -88,6 +88,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Invalidation before submission (scenario 8) | **Done:** orchestrator blocks PLACE when known H1 bias conflicts; marks terminal; `test_h1_bias_blocks_submission_before_place` |
 | SL before fill cancels pending (S1–S4 B15) | **Done:** `pending_sl_touched_before_fill` in `quotes.py`; orchestrator + webhook clock CANCEL_LIMIT + terminal `sl_before_fill`; `get_pending_geometry`; backtest does not invent fill-then-SL trade; `test_sl_before_fill_*`, `test_clock_cancels_pending_on_sl_before_fill_ohlc` |
 | Missing quote at SL-before-fill check (B15) | **Done:** `disclose_missing_quote_for_pending_sl`; clock returns `missing_quote_disclosures` + `MISSING_QUOTE` lifecycle when pendings exist without OHLC/live quotes; never invents high/low; `test_disclose_missing_quote_for_pending_sl`, `test_clock_discloses_missing_quote_for_pending_sl_check` |
+| Missing quote at session-flat / TIME_EXIT | **Done:** `disclose_missing_quote_at_exit_deadline`; clock discloses on rollover/TIME_EXIT plans without live quotes; PnL stays broker-only; `test_disclose_missing_quote_at_exit_deadline`, `test_clock_rollover_closes_open_fill_at_cutoff` |
+| Journal mixin split (maintainability) | **Done:** `journal_inbox.py` + `journal_lifecycle.py`; `JournalMixin` facade; public adapter API unchanged |
 | Admission windows on webhook SETUP (S1–S4) | **Done:** `is_in_session` gate in `setup_pending` (London 07:00–10:30 / NY 12:30–16:30 UTC); `test_out_of_session_rejects_setup_pending`, `test_is_in_session_extended_window_boundaries` |
 
 ## Still open for issue #1

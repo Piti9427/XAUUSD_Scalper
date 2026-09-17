@@ -17,6 +17,7 @@ from scripts.smc.risk_halt import (
 )
 from scripts.smc.setup_identity import pending_h1_bias_allows
 from scripts.smc.quotes import (
+    disclose_missing_quote_at_exit_deadline,
     disclose_missing_quote_for_pending_sl,
     pending_sl_touched_before_fill,
 )
@@ -376,6 +377,21 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 # Prefer existing ROLLOVER reason if both fire.
                 plans_by_id.setdefault(plan.order_id, plan)
         plans = list(plans_by_id.values())
+
+        # Session flat / TIME_EXIT with no live quote: disclose; never invent exit px.
+        if plans and (bar_high is None or bar_low is None):
+            exit_quote_rows = disclose_missing_quote_at_exit_deadline(
+                open_order_ids=[p.order_id for p in plans],
+                have_live_quotes=False,
+            )
+            for row in exit_quote_rows:
+                missing_quote_disclosures.append(row)
+                await asyncio.to_thread(
+                    rt.adapter.log_lifecycle_event,
+                    event_type="MISSING_QUOTE",
+                    order_id=row["order_id"],
+                    reason="missing_quote:session_flat_exit",
+                )
 
         for plan in plans:
             intent = OrderIntent(

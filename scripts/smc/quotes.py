@@ -84,6 +84,34 @@ def disclose_missing_quote_for_pending_sl(
     return rows
 
 
+def disclose_missing_quote_at_exit_deadline(
+    *,
+    open_order_ids: Sequence[str],
+    have_live_quotes: bool,
+) -> List[Dict[str, Any]]:
+    """
+    S1–S4 / experiment: session flat or TIME_EXIT with missing quote → disclose.
+
+    Does not invent an executable exit price. Callers still may request broker
+    CLOSE_MARKET; PnL must wait for broker deal evidence.
+    """
+    if have_live_quotes:
+        return []
+    rows: List[Dict[str, Any]] = []
+    for oid in open_order_ids:
+        if not oid:
+            continue
+        rows.append(
+            {
+                "order_id": str(oid),
+                "status": "disclosed",
+                "reason": "missing_quote",
+                "context": "session_flat_exit",
+            }
+        )
+    return rows
+
+
 def ohlc_dual_touch_flag(
     *,
     sl_touched: bool,

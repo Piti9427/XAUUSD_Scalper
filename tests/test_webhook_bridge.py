@@ -2046,6 +2046,18 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             self.assertEqual(len(data["exits"]), 1)
             self.assertEqual(data["exits"][0]["order_id"], "ROLL_FILL_1")
             self.assertIn("ROLLOVER", data["exits"][0]["reason"].upper())
+            # Dry-run has no live quotes → disclose; do not invent exit price.
+            disclosures = data.get("missing_quote_disclosures") or []
+            self.assertTrue(
+                any(
+                    d.get("order_id") == "ROLL_FILL_1"
+                    and d.get("context") == "session_flat_exit"
+                    for d in disclosures
+                ),
+                msg=data,
+            )
+            # PnL must stay unset without broker deal evidence.
+            self.assertIsNone(data["exits"][0].get("pnl_dollar"))
         finally:
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)
