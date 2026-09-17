@@ -181,6 +181,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     )
 
         # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
+        # Fetch pendings once; mutate local list after cancels (perf).
+        pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
         if rt.news_manager is not None and hasattr(rt.news_manager, "should_cancel_pending"):
             events = getattr(rt.news_manager, "events", None)
             schedule_known = bool(
@@ -194,7 +196,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 window_mins=30,
             )
             if cancel_pending:
-                pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+                still_pending = []
                 for oid in pending_ids:
                     intent = OrderIntent(
                         intent_type=OrderIntentType.CANCEL_LIMIT,
@@ -217,6 +219,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                         # Fill-during-cancel: release inbox so clock does not re-spam.
                         rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
                         await asyncio.to_thread(rt.adapter.finish_setup, oid)
+                    else:
+                        still_pending.append(oid)
                     cancel_results.append(
                         {
                             "order_id": oid,
@@ -225,6 +229,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                             "message": exec_cancel.message,
                         }
                     )
+                pending_ids = still_pending
 
         # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
         # Prefer explicit clock JSON; else live MT5 resolve (Gate C cron empty body).
@@ -234,10 +239,11 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             rt.adapter.resolve_live_h1_bias,
         )
         if h1_bias_known:
-            pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+            still_pending = []
             for oid in pending_ids:
                 pending_dir = await asyncio.to_thread(rt.adapter.get_pending_direction, oid)
                 if not pending_dir:
+                    still_pending.append(oid)
                     continue
                 bias_ok, bias_reason = pending_h1_bias_allows(
                     pending_direction=pending_dir,
@@ -245,6 +251,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     bias_known=True,
                 )
                 if bias_ok:
+                    still_pending.append(oid)
                     continue
                 intent = OrderIntent(
                     intent_type=OrderIntentType.CANCEL_LIMIT,
@@ -264,6 +271,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 elif "not found" in (exec_cancel.message or "").lower():
                     rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
                     await asyncio.to_thread(rt.adapter.finish_setup, oid)
+                else:
+                    still_pending.append(oid)
                 h1_bias_cancels.append(
                     {
                         "order_id": oid,
@@ -272,6 +281,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                         "message": exec_cancel.message,
                     }
                 )
+            pending_ids = still_pending
 
         # B15 / S1–S4: SL before fill using clock OHLC or live bid/ask snapshot.
         # Missing both → disclose; never invent a synthetic high/low.
@@ -288,7 +298,6 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             if quotes and quotes.get("ask") is not None and quotes.get("bid") is not None:
                 bar_high = float(quotes["ask"])
                 bar_low = float(quotes["bid"])
-        pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
         if bar_high is None or bar_low is None:
             missing_quote_disclosures = disclose_missing_quote_for_pending_sl(
                 pending_order_ids=pending_ids,
@@ -307,9 +316,11 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     row["order_id"],
                 )
         else:
+            still_pending = []
             for oid in pending_ids:
                 geom = await asyncio.to_thread(rt.adapter.get_pending_geometry, oid)
                 if not geom or geom.get("sl_price") is None or not geom.get("direction"):
+                    still_pending.append(oid)
                     continue
                 limit_price = geom.get("limit_price")
                 if limit_price is None:
@@ -321,6 +332,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     bar_high=bar_high,
                     bar_low=bar_low,
                 ):
+                    still_pending.append(oid)
                     continue
                 intent = OrderIntent(
                     intent_type=OrderIntentType.CANCEL_LIMIT,
@@ -340,6 +352,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 elif "not found" in (exec_cancel.message or "").lower():
                     rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
                     await asyncio.to_thread(rt.adapter.finish_setup, oid)
+                else:
+                    still_pending.append(oid)
                 sl_before_fill_cancels.append(
                     {
                         "order_id": oid,
@@ -348,6 +362,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                         "message": exec_cancel.message,
                     }
                 )
+            pending_ids = still_pending
 
         open_rows = await asyncio.to_thread(rt.adapter.list_open_fills)
         fills = [

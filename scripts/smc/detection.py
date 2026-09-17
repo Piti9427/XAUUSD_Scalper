@@ -16,6 +16,7 @@ from scripts.smc.structure import (
     replay_structure_until,
     classify_candidate_break,
     available_confirmed_pivots,
+    pivot_confirmation_time,
 )
 
 
@@ -265,6 +266,11 @@ def evaluate_smc_setup(
     if mss_idx is None:
         return SetupDecision(None, "no_mss_displacement")
 
+    broken_swing_index: Optional[int] = None
+    protected_swing_index: Optional[int] = None
+    broken_swing_confirmed_at: Optional[str] = None
+    protected_swing_confirmed_at: Optional[str] = None
+
     if require_choch:
         highs = [float(x) for x in df_m5["high"].tolist()]
         lows = [float(x) for x in df_m5["low"].tolist()]
@@ -312,6 +318,25 @@ def evaluate_smc_setup(
         )
         if event.kind != StructureEventKind.CHOCH:
             return SetupDecision(None, "choch_required_not_met")
+
+        # Story 17: record confirmation times (second right-hand bar close).
+        broken_swing_index = int(broken_idx)
+        bar_times = (
+            df_m5["time"].tolist() if "time" in df_m5.columns else None
+        )
+        if bar_times is not None:
+            bt = pivot_confirmation_time(broken_swing_index, bar_times)
+            if bt is not None:
+                broken_swing_confirmed_at = bt.isoformat()
+        if event.protected_price is not None:
+            for idx, price in opposite:
+                if float(price) == float(event.protected_price):
+                    protected_swing_index = int(idx)
+                    if bar_times is not None:
+                        pt = pivot_confirmation_time(protected_swing_index, bar_times)
+                        if pt is not None:
+                            protected_swing_confirmed_at = pt.isoformat()
+                    break
 
     # 4. FVG Detection (ADR-004)
     # FVG formed on MSS bar or up to max_mss_to_fvg_bars after
@@ -426,6 +451,10 @@ def evaluate_smc_setup(
             fib_retracement=fib.retracement,
             fib_in_ote=bool(fib.in_ote),
             fib_reason=fib.reason,
+            broken_swing_index=broken_swing_index,
+            protected_swing_index=protected_swing_index,
+            broken_swing_confirmed_at=broken_swing_confirmed_at,
+            protected_swing_confirmed_at=protected_swing_confirmed_at,
         ),
         None,
     )

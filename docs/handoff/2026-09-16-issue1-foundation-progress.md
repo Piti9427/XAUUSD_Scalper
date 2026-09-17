@@ -92,6 +92,8 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Journal mixin split (maintainability) | **Done:** `journal_inbox.py` + `journal_lifecycle.py`; `JournalMixin` facade; public adapter API unchanged |
 | Admission windows on webhook SETUP (S1–S4) | **Done:** `is_in_session` gate in `setup_pending` (London 07:00–10:30 / NY 12:30–16:30 UTC); `test_out_of_session_rejects_setup_pending`, `test_is_in_session_extended_window_boundaries` |
 | SETUP event-time UTC parse extract | **Done:** `scripts/webhook/setup_time.py` `parse_setup_event_time`; `tests/test_webhook_setup_time.py` |
+| Swing confirmation times (story 17) | **Done:** `ConfirmedPivot` / `pivot_confirmation_time` / `record_confirmed_pivots`; detection stamps `broken_swing_confirmed_at` + `protected_swing_confirmed_at` on SetupSignal; `tests/test_smc_swing_confirmation.py` |
+| Clock pending list reuse | **Done:** single `list_unfilled_pendings` per clock tick; local list mutated after news/H1/SL-before-fill cancels |
 
 ## Still open for issue #1
 

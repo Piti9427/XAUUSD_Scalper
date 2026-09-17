@@ -49,6 +49,11 @@ class SetupSignal:
     fib_retracement: Optional[float] = None
     fib_in_ote: bool = False
     fib_reason: str = "not_computed"
+    # Story 17: swing confirmation times (UTC ISO) — audit only, not filters.
+    broken_swing_confirmed_at: Optional[str] = None
+    protected_swing_confirmed_at: Optional[str] = None
+    broken_swing_index: Optional[int] = None
+    protected_swing_index: Optional[int] = None
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Sequence
 import pandas as pd
 import numpy as np
 from scripts.smc.types import Direction
@@ -38,6 +39,75 @@ class StructureState:
     @classmethod
     def initial(cls) -> "StructureState":
         return cls(bias=StructureBias.UNKNOWN)
+
+
+@dataclass(frozen=True)
+class ConfirmedPivot:
+    """Fractal pivot with confirmation bar index/time (story 17)."""
+
+    index: int
+    price: float
+    confirmed_at_index: int
+    confirmed_at: Optional[datetime] = None
+
+
+def _as_utc_bar_time(raw: Any) -> Optional[datetime]:
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        if raw.tzinfo is None:
+            return raw.replace(tzinfo=timezone.utc)
+        return raw.astimezone(timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(str(raw).replace("Z", "+00:00").replace(" ", "T"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def pivot_confirmation_time(
+    pivot_index: int,
+    bar_times: Sequence[Any],
+) -> Optional[datetime]:
+    """
+    Story 17: a 5-bar fractal is confirmed when its second right-hand bar closes.
+
+    confirmed_at = timestamp of bar at pivot_index + 2.
+    """
+    conf_i = int(pivot_index) + 2
+    if conf_i < 0 or conf_i >= len(bar_times):
+        return None
+    return _as_utc_bar_time(bar_times[conf_i])
+
+
+def record_confirmed_pivots(
+    flags: List[bool],
+    prices: List[float],
+    asof_index: int,
+    bar_times: Optional[Sequence[Any]] = None,
+) -> List[ConfirmedPivot]:
+    """Pivots confirmed by two right bars before asof_index, with confirmation times."""
+    out: List[ConfirmedPivot] = []
+    for idx, is_pivot in enumerate(flags):
+        if not is_pivot:
+            continue
+        conf_i = idx + 2
+        if conf_i >= asof_index:
+            continue
+        confirmed_at = None
+        if bar_times is not None:
+            confirmed_at = pivot_confirmation_time(idx, bar_times)
+        out.append(
+            ConfirmedPivot(
+                index=idx,
+                price=float(prices[idx]),
+                confirmed_at_index=conf_i,
+                confirmed_at=confirmed_at,
+            )
+        )
+    return out
 
 
 def _latest_opposite_pivot(
@@ -150,14 +220,10 @@ def available_confirmed_pivots(
     asof_index: int,
 ) -> List[Tuple[int, float]]:
     """Pivots confirmed by two right bars before asof_index (exclusive)."""
-    out: List[Tuple[int, float]] = []
-    for idx, is_pivot in enumerate(flags):
-        if not is_pivot:
-            continue
-        if idx + 2 >= asof_index:
-            continue
-        out.append((idx, float(prices[idx])))
-    return out
+    return [
+        (p.index, p.price)
+        for p in record_confirmed_pivots(flags, prices, asof_index, bar_times=None)
+    ]
 
 
 def _available_pivots(
