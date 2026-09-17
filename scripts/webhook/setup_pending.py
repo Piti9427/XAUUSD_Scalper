@@ -11,7 +11,6 @@ from fastapi import BackgroundTasks
 
 from scripts.smc.types import Direction, OrderIntent, OrderIntentType
 from scripts.smc.risk import calculate_lot_size
-from scripts.smc.broker_identity import verify_broker_identity, BrokerIdentityReport
 from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows
@@ -19,6 +18,7 @@ from scripts.smc.setup_identity import pending_h1_bias_allows
 from scripts.smc.detection import is_in_session
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
+from scripts.webhook.setup_identity_gate import evaluate_identity_gate
 from scripts.webhook.setup_risk_halt import evaluate_risk_halt_gate
 from scripts.webhook.setup_time import parse_setup_event_time
 
@@ -55,39 +55,9 @@ async def handle_setup_pending(
         return halt_reject
 
     # 1a1. Broker/Demo identity gate before new risk
-    if rt.enforce_identity:
-        if rt.identity_gate is not None:
-            identity = await asyncio.to_thread(rt.identity_gate)
-        else:
-            def _default_identity() -> BrokerIdentityReport:
-                try:
-                    import MetaTrader5 as mt5
-                except ImportError:
-                    return verify_broker_identity(
-                        account_info=None, symbol_info=None
-                    )
-                return verify_broker_identity(
-                    account_info=mt5.account_info() if not rt.adapter.dry_run else None,
-                    symbol_info=mt5.symbol_info(rt.adapter.symbol) if not rt.adapter.dry_run else None,
-                )
-
-            identity = await asyncio.to_thread(_default_identity)
-        if not identity.ok:
-            reason = (
-                "Broker identity gate failed: "
-                + ",".join(identity.reasons)
-            )
-            logger.warning(reason)
-            if order_id:
-                await asyncio.to_thread(
-                    rt.mark_processed, order_id, event, "rejected_identity"
-                )
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "event": event,
-                "reason": reason,
-            }
+    identity_reject = await evaluate_identity_gate(rt, order_id=order_id, event=event)
+    if identity_reject is not None:
+        return identity_reject
 
     # 1a. Daily Circuit Breaker Guard (ADR-011)
     losses_today = await asyncio.to_thread(rt.adapter.get_daily_realized_losses)
