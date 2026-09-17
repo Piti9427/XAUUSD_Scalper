@@ -10,11 +10,11 @@ from fastapi import FastAPI
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.broker_identity import BrokerIdentityReport
 from scripts.smc.risk_halt import load_risk_halt_state, new_risk_halt_state
-from scripts.smc.setup_identity import SetupRegistry, load_setup_registry
 from scripts.webhook.auth import make_verify_auth
 from scripts.webhook.clock_routes import register_clock_route
 from scripts.webhook.idempotency import make_idempotency_helpers
 from scripts.webhook.runtime import WebhookRuntime
+from scripts.webhook.setup_registry_resolve import resolve_setup_registry
 from scripts.webhook.tradingview_routes import register_tradingview_route
 
 logger = logging.getLogger("webhook_bridge")
@@ -83,10 +83,7 @@ def create_app(
         app.state.risk_halt = risk_halt
 
     # Scenario 8: terminal SETUP_IDs survive restart (shared path with smc_main).
-    if setup_registry_path:
-        setup_registry = load_setup_registry(Path(setup_registry_path))
-    else:
-        setup_registry = SetupRegistry()
+    setup_registry = resolve_setup_registry(setup_registry_path, dry_run=dry_run)
     app.state.setup_registry = setup_registry
 
     # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
