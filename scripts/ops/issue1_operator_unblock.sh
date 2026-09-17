@@ -29,6 +29,9 @@ echo "    - Quick Mac probe (expect ok:false here): python3 scripts/ops/issue1_m
 echo ""
 
 echo "==> 2) Or: authorize this Mac SSH key on that host, then re-run from here"
+echo "    Note: Cursor agent sandbox often cannot open outbound :22 (see"
+echo "    docs/ops/2026-09-17-host-ssh-agent-sandbox-denied.json). Run SSH from"
+echo "    your own terminal after authorized_keys is updated."
 PUB="${HOME}/.ssh/id_ed25519.pub"
 if [[ -f "$PUB" ]]; then
   echo "    Pubkey file: $PUB"

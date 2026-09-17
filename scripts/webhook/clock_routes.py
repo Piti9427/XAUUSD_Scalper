@@ -142,6 +142,17 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     "Lifecycle fill notify failed for %s: %s", order_id, exc
                 )
 
+        # Scenario 8: TTL cancel must terminalize identity (no revive after inbox release).
+        for ttl_row in lifecycle.get("ttl_cancels", []):
+            order_id = ttl_row.get("order_id")
+            if not order_id or ttl_row.get("status") != "success":
+                continue
+            reason = str(ttl_row.get("reason") or "ttl_expired")
+            rt.setup_registry.mark_terminal(order_id, reason)
+            await asyncio.to_thread(
+                rt.mark_processed, order_id, "ORDER_CANCELED", "success"
+            )
+
         for close in lifecycle.get("broker_closes", []):
             order_id = close.get("order_id")
             pnl_dollar = close.get("pnl_dollar")

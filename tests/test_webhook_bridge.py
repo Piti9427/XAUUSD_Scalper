@@ -2094,6 +2094,11 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             lifecycle = res.json()["lifecycle"]
             self.assertEqual(len(lifecycle["ttl_cancels"]), 1)
             self.assertEqual(lifecycle["ttl_cancels"][0]["order_id"], "TTL_CLOCK_1")
+            # Scenario 8: TTL must block revive of the same setup identity.
+            self.assertTrue(app.state.setup_registry.is_blocked("TTL_CLOCK_1"))
+            ok, reason = app.state.setup_registry.admit("TTL_CLOCK_1")
+            self.assertFalse(ok)
+            self.assertIn("ttl", reason.lower())
         finally:
             app.state.adapter.conn.close()
             self.Path(db.name).unlink(missing_ok=True)
