@@ -4,19 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import BackgroundTasks
 
 from scripts.smc.types import Direction, OrderIntent, OrderIntentType
 from scripts.smc.risk import calculate_lot_size
-from scripts.smc.data_freshness import evaluate_new_risk_admission
-from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows
 from scripts.smc.setup_identity import pending_h1_bias_allows
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
+from scripts.webhook.setup_broker_gates import evaluate_setup_broker_gates
 from scripts.webhook.setup_identity_gate import evaluate_identity_gate
 from scripts.webhook.setup_risk_halt import evaluate_risk_halt_gate
 from scripts.webhook.setup_time_gates import evaluate_setup_time_gates
@@ -69,71 +67,18 @@ async def handle_setup_pending(
     if time_reject is not None:
         return time_reject
 
-    # 1e. Dynamic Account Equity Sizing (ADR-020)
-    broker_risk = None
-    if not rt.adapter.dry_run:
-        broker_risk = await asyncio.to_thread(rt.adapter.get_risk_snapshot)
-    if not rt.adapter.dry_run and broker_risk is None:
-        reason = "Execution Gated: MT5 account or symbol risk data unavailable."
-        logger.error(reason)
-        return {
-            "status": "rejected",
-            "order_id": order_id,
-            "event": event,
-            "reason": reason,
-        }
-
-    if not rt.adapter.dry_run:
-        meta_ok, meta_reason = broker_metadata_allows_new_risk(broker_risk)
-        if not meta_ok:
-            reason = f"Broker metadata gate blocked new risk: {meta_reason}"
-            logger.warning(reason)
-            if order_id:
-                await asyncio.to_thread(
-                    rt.mark_processed, order_id, event, "rejected_broker_metadata"
-                )
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "event": event,
-                "reason": reason,
-            }
-
-    # 1e2. Story 32: unknown/stale market or incomplete account blocks new risk.
-    wall_now = datetime.now(timezone.utc)
-    history_ready = True
-    if rt.risk_halt is not None:
-        history_ready = bool(getattr(rt.risk_halt, "history_ready", True))
-    admission = evaluate_new_risk_admission(
-        last_bar_time=event_dt,
-        now=wall_now,
-        history_ready=history_ready if not rt.adapter.dry_run else True,
-        equity_known=rt.adapter.dry_run or broker_risk is not None,
-        news_allowed=True,  # news already gated above
+    # 1e–1e2. Broker snapshot / metadata / stale / flat exposure
+    broker_risk, broker_reject = await evaluate_setup_broker_gates(
+        rt,
+        event_dt=event_dt,
+        order_id=order_id,
+        event=event,
     )
-    if not admission.allowed:
-        reason = f"Admission gate blocked new risk: {admission.reason}"
-        logger.warning(reason)
-        if order_id:
-            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_stale_data")
-        return {
-            "status": "rejected",
-            "order_id": order_id,
-            "event": event,
-            "reason": reason,
-        }
+    if broker_reject is not None:
+        return broker_reject
 
     effective_balance = broker_risk["balance"] if broker_risk else rt.account_balance
     effective_equity = broker_risk["equity"] if broker_risk else rt.account_balance
-    if not rt.adapter.dry_run:
-        exposure = await asyncio.to_thread(rt.adapter.get_open_exposure)
-        if exposure is None or exposure:
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "event": event,
-                "reason": "Broker exposure is present or unknown; new setup blocked",
-            }
 
     entry = float(payload["limit"])
     sl = float(payload["sl"])
