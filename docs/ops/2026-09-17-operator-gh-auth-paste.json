@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-09-17T04:45:00+00:00",
+  "captured_at_utc": "2026-09-17T04:58:00+00:00",
   "operator_terminal_gh_auth": {
     "host": "github.com",
     "account": "Piti9427",
@@ -7,17 +7,17 @@
     "active_account": true,
     "git_protocol": "https",
     "token_scopes": ["gist", "read:org", "repo", "workflow"],
-    "source": "operator pasted `gh auth status` into agent chat"
+    "source": "operator pasted `gh auth status` into agent chat (second paste)"
   },
   "agent_runtime": {
-    "gh_cli": "invalid_token_or_blocked",
-    "github_mcp": "rate_limit_exceeded",
-    "outbound_https": "CONNECT_tunnel_403_in_agent_sandbox",
-    "note": "Do not invent issue close or PASS from this file. Operator terminal auth OK; agent cannot call GitHub API right now."
+    "gh_cli": "invalid_token",
+    "gh_cli_detail": "Agent host still reports token in hosts.yml invalid / API Forbidden even with all permissions",
+    "github_mcp": "attempting_reprobe",
+    "note": "Do not invent issue close or PASS. Operator terminal auth OK; agent gh cannot call API until token shared with agent runtime."
   },
   "issue1_closable": false,
   "blockers": [
     "Gate C/D live Exness/Oracle/Demo artifacts",
-    "agent cannot refresh gh issue state until network/rate-limit clears"
+    "agent gh token invalid vs operator paste — need gh auth refresh on agent-visible hosts.yml or operator-run issue refresh"
   ]
 }

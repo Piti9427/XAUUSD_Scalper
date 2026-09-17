@@ -11,10 +11,9 @@ from fastapi import BackgroundTasks
 from scripts.smc.types import Direction, OrderIntent, OrderIntentType
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.stops_geometry import pending_stops_geometry_allows
-from scripts.smc.setup_identity import pending_h1_bias_allows
-from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 from scripts.webhook.setup_broker_gates import evaluate_setup_broker_gates
+from scripts.webhook.setup_h1_gate import evaluate_setup_h1_gate
 from scripts.webhook.setup_identity_gate import evaluate_identity_gate
 from scripts.webhook.setup_risk_halt import evaluate_risk_halt_gate
 from scripts.webhook.setup_time_gates import evaluate_setup_time_gates
@@ -89,32 +88,15 @@ async def handle_setup_pending(
     )
 
     # Scenario 8: invalidation before submission on known opposing H1 bias.
-    # Prefer TV payload fields; else live MT5 resolve (Gate C when TV omits bias).
-    h1_bias, h1_bias_known = await asyncio.to_thread(
-        resolve_h1_bias_lazy,
-        payload,
-        rt.adapter.resolve_live_h1_bias,
+    _, _, h1_reject = await evaluate_setup_h1_gate(
+        rt,
+        payload=payload,
+        direction=direction,
+        order_id=order_id,
+        event=event,
     )
-    if h1_bias_known:
-        bias_ok, bias_reason = pending_h1_bias_allows(
-            pending_direction=direction,
-            h1_bias=h1_bias,
-            bias_known=True,
-        )
-        if not bias_ok:
-            reason = f"H1 bias gate blocked new risk: {bias_reason}"
-            logger.warning(reason)
-            if order_id:
-                rt.setup_registry.mark_terminal(order_id, bias_reason)
-                await asyncio.to_thread(
-                    rt.mark_processed, order_id, event, "rejected_h1_bias"
-                )
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "event": event,
-                "reason": reason,
-            }
+    if h1_reject is not None:
+        return h1_reject
 
     # Sizing with zero spread double-buffer invariant
     lot_result = calculate_lot_size(
