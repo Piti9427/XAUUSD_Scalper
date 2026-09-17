@@ -56,6 +56,43 @@ class QuoteSideTests(unittest.TestCase):
             )
         )
 
+    def test_disclose_missing_quote_for_pending_sl(self):
+        from scripts.smc.quotes import disclose_missing_quote_for_pending_sl
+
+        self.assertEqual(
+            disclose_missing_quote_for_pending_sl(
+                pending_order_ids=["A"],
+                have_ohlc=True,
+                have_live_quotes=False,
+            ),
+            [],
+        )
+        self.assertEqual(
+            disclose_missing_quote_for_pending_sl(
+                pending_order_ids=["A"],
+                have_ohlc=False,
+                have_live_quotes=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            disclose_missing_quote_for_pending_sl(
+                pending_order_ids=[],
+                have_ohlc=False,
+                have_live_quotes=False,
+            ),
+            [],
+        )
+        rows = disclose_missing_quote_for_pending_sl(
+            pending_order_ids=["P1", ""],
+            have_ohlc=False,
+            have_live_quotes=False,
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["order_id"], "P1")
+        self.assertEqual(rows[0]["reason"], "missing_quote")
+        self.assertEqual(rows[0]["context"], "sl_before_fill_check")
+
     def test_dual_touch_without_ticks_is_ambiguous(self):
         self.assertEqual(
             ohlc_dual_touch_flag(sl_touched=True, tp_touched=True, has_tick_order=False),

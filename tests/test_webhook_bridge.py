@@ -2515,6 +2515,37 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.assertTrue(self.app.state.setup_registry.is_blocked("SLBF_CLK_1"))
         self.assertNotIn("SLBF_CLK_1", adapter.list_unfilled_pendings())
 
+    def test_clock_discloses_missing_quote_for_pending_sl_check(self):
+        """B15: no OHLC/live quotes → disclose; do not invent bar or cancel."""
+        from unittest.mock import patch
+
+        adapter = self.app.state.adapter
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                "order_id": "MISS_Q_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
+        )
+        self.assertEqual(place.json()["status"], "success")
+        with patch.object(adapter, "get_market_quotes", return_value=None):
+            res = self.client.post("/internal/clock", headers=self.headers, json={})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        disclosures = data.get("missing_quote_disclosures") or []
+        self.assertTrue(disclosures, msg=data)
+        self.assertEqual(disclosures[0]["order_id"], "MISS_Q_1")
+        self.assertEqual(disclosures[0]["reason"], "missing_quote")
+        self.assertEqual(data.get("sl_before_fill_cancels") or [], [])
+        self.assertIn("MISS_Q_1", adapter.list_unfilled_pendings())
+        self.assertFalse(self.app.state.setup_registry.is_blocked("MISS_Q_1"))
+
     def test_clock_uses_live_h1_bias_when_body_omits_bias(self):
         """Live Gate C cron (empty body) must still cancel on broker H1 bias."""
         from unittest.mock import patch

@@ -16,7 +16,10 @@ from scripts.smc.risk_halt import (
     save_risk_halt_state,
 )
 from scripts.smc.setup_identity import pending_h1_bias_allows
-from scripts.smc.quotes import pending_sl_touched_before_fill
+from scripts.smc.quotes import (
+    disclose_missing_quote_for_pending_sl,
+    pending_sl_touched_before_fill,
+)
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 
@@ -58,6 +61,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         cancel_results = []
         h1_bias_cancels = []
         sl_before_fill_cancels = []
+        missing_quote_disclosures = []
         exit_results = []
         uncertain_results = []
         lifecycle = await asyncio.to_thread(
@@ -269,11 +273,13 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 )
 
         # B15 / S1–S4: SL before fill using clock OHLC or live bid/ask snapshot.
+        # Missing both → disclose; never invent a synthetic high/low.
         bar_high = None
         bar_low = None
-        if isinstance(clock_payload.get("high"), (int, float)) and isinstance(
+        have_ohlc = isinstance(clock_payload.get("high"), (int, float)) and isinstance(
             clock_payload.get("low"), (int, float)
-        ):
+        )
+        if have_ohlc:
             bar_high = float(clock_payload["high"])
             bar_low = float(clock_payload["low"])
         else:
@@ -281,8 +287,25 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             if quotes and quotes.get("ask") is not None and quotes.get("bid") is not None:
                 bar_high = float(quotes["ask"])
                 bar_low = float(quotes["bid"])
-        if bar_high is not None and bar_low is not None:
-            pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+        pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+        if bar_high is None or bar_low is None:
+            missing_quote_disclosures = disclose_missing_quote_for_pending_sl(
+                pending_order_ids=pending_ids,
+                have_ohlc=False,
+                have_live_quotes=False,
+            )
+            for row in missing_quote_disclosures:
+                await asyncio.to_thread(
+                    rt.adapter.log_lifecycle_event,
+                    event_type="MISSING_QUOTE",
+                    order_id=row["order_id"],
+                    reason="missing_quote:sl_before_fill_check",
+                )
+                logger.info(
+                    "Clock missing quote disclosure for pending %s (no invent OHLC)",
+                    row["order_id"],
+                )
+        else:
             for oid in pending_ids:
                 geom = await asyncio.to_thread(rt.adapter.get_pending_geometry, oid)
                 if not geom or geom.get("sl_price") is None or not geom.get("direction"):
@@ -461,6 +484,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             cancel_results
             or h1_bias_cancels
             or sl_before_fill_cancels
+            or missing_quote_disclosures
             or exit_results
             or uncertain_results
             or account_pnl_rows
@@ -481,6 +505,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             "cancels": cancel_results,
             "h1_bias_cancels": h1_bias_cancels,
             "sl_before_fill_cancels": sl_before_fill_cancels,
+            "missing_quote_disclosures": missing_quote_disclosures,
             "exits": exit_results,
             "uncertain": uncertain_results,
             "account_pnl": account_pnl_rows,

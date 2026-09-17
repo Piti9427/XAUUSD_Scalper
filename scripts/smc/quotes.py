@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 
 def executable_price(
@@ -52,6 +52,36 @@ def pending_sl_touched_before_fill(
     if d == "SELL":
         return float(bar_high) >= float(sl_price)
     return False
+
+
+def disclose_missing_quote_for_pending_sl(
+    *,
+    pending_order_ids: Sequence[str],
+    have_ohlc: bool,
+    have_live_quotes: bool,
+) -> List[Dict[str, Any]]:
+    """
+    B15 / S1–S4: missing quote at SL-before-fill check → disclose, never invent OHLC.
+
+    When unfilled pendings exist and neither clock OHLC nor live bid/ask is
+    available, return one disclosure row per order_id. Empty when quotes exist
+    or there is nothing pending to evaluate.
+    """
+    if have_ohlc or have_live_quotes:
+        return []
+    rows: List[Dict[str, Any]] = []
+    for oid in pending_order_ids:
+        if not oid:
+            continue
+        rows.append(
+            {
+                "order_id": str(oid),
+                "status": "disclosed",
+                "reason": "missing_quote",
+                "context": "sl_before_fill_check",
+            }
+        )
+    return rows
 
 
 def ohlc_dual_touch_flag(
