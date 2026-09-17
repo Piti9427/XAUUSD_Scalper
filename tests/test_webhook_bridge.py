@@ -2640,5 +2640,75 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.assertEqual(res.json().get("h1_bias_cancels") or [], [])
         self.assertIn("H1_UNKNOWN_1", adapter.list_unfilled_pendings())
 
+
+class TestWebhookClockRiskHaltFlatten(unittest.TestCase):
+    """Story 10: clock must cancel unfilled pendings when risk halt is active."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from scripts.webhook_bridge import create_app
+        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
+
+        self.Path = Path
+        self.secret = "RISK_HALT_CLOCK_SECRET"
+        self.db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db.close()
+        self.halt_path = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+        self.halt_path.close()
+        # Start NOT halted so SETUP can place.
+        save_risk_halt_state(Path(self.halt_path.name), new_risk_halt_state(10000.0))
+        self.app = create_app(
+            auth_token=self.secret,
+            dry_run=True,
+            db_path=self.db.name,
+            account_balance=10000.0,
+            risk_halt_path=self.halt_path.name,
+            commission_per_lot=0.0,
+            slippage_allowance=0.0,
+            max_daily_losses=99,
+        )
+        self.client = TestClient(self.app)
+        self.headers = {"Authorization": f"Bearer {self.secret}"}
+
+    def tearDown(self):
+        self.app.state.adapter.conn.close()
+        self.Path(self.db.name).unlink(missing_ok=True)
+        self.Path(self.halt_path.name).unlink(missing_ok=True)
+
+    def test_clock_cancels_pending_when_risk_halt_trips(self):
+        adapter = self.app.state.adapter
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                "order_id": "HALT_CLK_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
+        )
+        self.assertEqual(place.status_code, 200)
+        self.assertEqual(place.json()["status"], "success")
+        self.assertIn("HALT_CLK_1", adapter.list_unfilled_pendings())
+
+        # Trip halt after pending exists (clock path, not SETUP reject path).
+        self.app.state.risk_halt.drawdown_halt = True
+
+        res = self.client.post("/internal/clock", headers=self.headers, json={})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        cancels = data.get("risk_halt_cancels") or []
+        self.assertTrue(cancels, msg=data)
+        self.assertEqual(cancels[0]["order_id"], "HALT_CLK_1")
+        self.assertEqual(cancels[0]["status"], "success")
+        self.assertEqual(cancels[0]["reason"], "foundation_risk_halt")
+        self.assertTrue(self.app.state.setup_registry.is_blocked("HALT_CLK_1"))
+        self.assertNotIn("HALT_CLK_1", adapter.list_unfilled_pendings())
+
+
 if __name__ == "__main__":
     unittest.main()

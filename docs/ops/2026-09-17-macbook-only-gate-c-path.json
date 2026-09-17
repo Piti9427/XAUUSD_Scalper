@@ -1,0 +1,31 @@
+{
+  "captured_at_utc": "2026-09-17T05:09:00+00:00",
+  "host": "macbook_only_no_windows_pc",
+  "operator_constraint": "MacBook only; no physical Windows machine",
+  "utm": {
+    "app_present": true,
+    "path": "/Applications/UTM.app",
+    "vms_found": 0,
+    "documents_glob": "~/Library/Containers/com.utmapp.UTM/Data/Documents/*.utm"
+  },
+  "wine_mt5": {
+    "prefix_present": true,
+    "common_ini_login": 107209149,
+    "common_ini_server": "MetaQuotes-Demo",
+    "exness_logged_in": false,
+    "prior_initialize": [-6, "Terminal: Authorization failed"],
+    "verdict": "INCONCLUSIVE_INFRA — not Gate C PASS"
+  },
+  "web_terminal": {
+    "usable_for_gate_c": false,
+    "reason": "smoke_broker_identity requires MetaTrader5 Python IPC to terminal64"
+  },
+  "recommended_macbook_only_path": [
+    "Create Windows 11 ARM/x64 VM in UTM on this MacBook",
+    "Install Exness MT5 + Python 3.12 + pip install MetaTrader5",
+    "Clone/copy repo into VM; set XAUUSD_MT5_* env; run ./scripts/ops/foundation_live_gate.sh",
+    "Copy docs/ops/<date>-exness-smoke.json with ok:true back to Mac repo"
+  ],
+  "issue1_closable": false,
+  "note": "Do not invent PASS. Mac-native Wine MetaQuotes Demo cannot close Gate C."
+}

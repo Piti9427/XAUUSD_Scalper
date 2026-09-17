@@ -9,11 +9,6 @@ from typing import Any, Dict
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Request
 
-from scripts.smc.risk_halt import (
-    apply_broker_lifecycle_losses,
-    observe_equity,
-    save_risk_halt_state,
-)
 from scripts.webhook.clock_lifecycle_apply import (
     apply_lifecycle_closes,
     apply_lifecycle_fills,
@@ -23,6 +18,10 @@ from scripts.webhook.clock_pending_gates import (
     cancel_pendings_for_h1_bias,
     cancel_pendings_for_news,
     cancel_pendings_sl_before_fill,
+)
+from scripts.webhook.clock_risk_halt import (
+    flatten_on_risk_halt,
+    observe_and_persist_risk_halt,
 )
 from scripts.webhook.clock_time_exits import run_clock_time_exits
 from scripts.webhook.runtime import WebhookRuntime
@@ -74,24 +73,11 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         # Stories 5–7: disclose bot vs manual vs cash_flow deal cash separately.
         account_pnl_rows = await asyncio.to_thread(rt.adapter.sync_classified_account_pnl)
 
-        if rt.risk_halt is not None and rt.halt_path is not None:
-            equity_raw = await asyncio.to_thread(rt.adapter.get_account_equity)
-            history_ready = rt.adapter.dry_run or equity_raw is not None
-            equity_now = (
-                float(equity_raw)
-                if equity_raw is not None
-                else float(rt.account_balance)
-            )
-            observe_equity(
-                rt.risk_halt,
-                equity_now,
-                now=now_utc,
-                history_ready=history_ready,
-            )
-            apply_broker_lifecycle_losses(
-                rt.risk_halt, lifecycle.get("broker_closes", [])
-            )
-            await asyncio.to_thread(save_risk_halt_state, rt.halt_path, rt.risk_halt)
+        await observe_and_persist_risk_halt(
+            rt,
+            now_utc=now_utc,
+            broker_closes=lifecycle.get("broker_closes", []),
+        )
 
         await apply_lifecycle_fills(
             rt,
@@ -108,8 +94,11 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             background_tasks=background_tasks,
         )
 
-        # Scenario 18 / 8 / B15: news, H1 bias, SL-before-fill pending cancels
+        # Scenario 18 / 8 / B15 / story 10: news, H1, SL-before-fill, risk-halt
         pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+        pending_ids, risk_halt_cancels, risk_halt_closes = await flatten_on_risk_halt(
+            rt, pending_ids=pending_ids
+        )
         pending_ids, cancel_results = await cancel_pendings_for_news(
             rt, pending_ids=pending_ids, now_utc=now_utc
         )
@@ -137,6 +126,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
 
         has_work = bool(
             cancel_results
+            or risk_halt_cancels
+            or risk_halt_closes
             or h1_bias_cancels
             or sl_before_fill_cancels
             or missing_quote_disclosures
@@ -158,6 +149,8 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             "action": "CLOCK_TICK",
             "checked": len(fills),
             "cancels": cancel_results,
+            "risk_halt_cancels": risk_halt_cancels,
+            "risk_halt_closes": risk_halt_closes,
             "h1_bias_cancels": h1_bias_cancels,
             "sl_before_fill_cancels": sl_before_fill_cancels,
             "missing_quote_disclosures": missing_quote_disclosures,

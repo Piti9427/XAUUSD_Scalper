@@ -28,6 +28,18 @@ echo "    - Logging into Exness in the GUI does not clear Gate C until smoke ok:
 echo "    - Quick Mac probe (expect ok:false here): python3 scripts/ops/issue1_mac_gate_c_probe.py"
 echo ""
 
+echo "==> 1c) MacBook-only (no Windows PC): use UTM Windows VM on this Mac"
+echo "    UTM.app is present but zero .utm VMs found on this host."
+echo "    Steps:"
+echo "      1. UTM → New → Windows 11 (ARM if Apple Silicon)"
+echo "      2. Inside VM: install Exness MT5 + Python + pip install MetaTrader5"
+echo "      3. Copy/clone this repo into the VM"
+echo "      4. export XAUUSD_MT5_LOGIN / PASSWORD / SERVER=Exness-MT5Trial"
+echo "      5. ./scripts/ops/foundation_live_gate.sh  → expect ok:true smoke JSON"
+echo "    Evidence note: docs/ops/2026-09-17-macbook-only-gate-c-path.json"
+echo "    Wine MetaQuotes on Mac is NOT a substitute (server=MetaQuotes-Demo, IPC -6)."
+echo ""
+
 echo "==> 2) Or: authorize this Mac SSH key on that host, then re-run from here"
 echo "    Note: Cursor agent sandbox often cannot open outbound :22 (see"
 echo "    docs/ops/2026-09-17-host-ssh-agent-sandbox-denied.json). Run SSH from"
