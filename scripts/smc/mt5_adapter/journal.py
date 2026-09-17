@@ -401,6 +401,13 @@ class JournalMixin:
 
     def get_pending_direction(self, order_id: str) -> Optional[str]:
         """Direction for an unfilled pending from inbox payload or PLACE_LIMIT log."""
+        geom = self.get_pending_geometry(order_id)
+        if geom and geom.get("direction"):
+            return str(geom["direction"]).strip().upper()
+        return None
+
+    def get_pending_geometry(self, order_id: str) -> Optional[Dict[str, Any]]:
+        """Limit/SL/direction for an unfilled pending (inbox payload or PLACE_LIMIT log)."""
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT payload_json FROM setup_inbox WHERE order_id = ?",
@@ -413,21 +420,38 @@ class JournalMixin:
             except (TypeError, json.JSONDecodeError):
                 payload = None
             if isinstance(payload, dict):
-                raw = payload.get("dir") or payload.get("direction")
-                if raw:
-                    return str(raw).strip().upper()
+                direction = payload.get("dir") or payload.get("direction")
+                limit_raw = payload.get("entry") or payload.get("limit") or payload.get("limit_price")
+                sl_raw = payload.get("sl") or payload.get("sl_price")
+                try:
+                    limit_price = float(limit_raw) if limit_raw is not None else None
+                    sl_price = float(sl_raw) if sl_raw is not None else None
+                except (TypeError, ValueError):
+                    limit_price = None
+                    sl_price = None
+                if direction or limit_price is not None or sl_price is not None:
+                    return {
+                        "direction": str(direction).strip().upper() if direction else None,
+                        "limit_price": limit_price,
+                        "sl_price": sl_price,
+                    }
         cursor.execute(
             """
-            SELECT direction FROM trade_lifecycle
-            WHERE order_id = ? AND event_type = 'PLACE_LIMIT' AND direction IS NOT NULL
+            SELECT direction, entry_price, sl_price FROM trade_lifecycle
+            WHERE order_id = ? AND event_type = 'PLACE_LIMIT'
             ORDER BY id DESC LIMIT 1
             """,
             (str(order_id),),
         )
         row = cursor.fetchone()
-        if row and row[0]:
-            return str(row[0]).strip().upper()
-        return None
+        if not row:
+            return None
+        direction, entry_price, sl_price = row
+        return {
+            "direction": str(direction).strip().upper() if direction else None,
+            "limit_price": float(entry_price) if entry_price is not None else None,
+            "sl_price": float(sl_price) if sl_price is not None else None,
+        }
 
     def list_uncertain_order_ids(self) -> List[str]:
         """Active uncertain claims awaiting broker reconciliation (story 35)."""

@@ -16,6 +16,7 @@ from scripts.smc.risk_halt import (
     save_risk_halt_state,
 )
 from scripts.smc.setup_identity import pending_h1_bias_allows
+from scripts.smc.quotes import pending_sl_touched_before_fill
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 
@@ -56,6 +57,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         now_utc = datetime.now(timezone.utc)
         cancel_results = []
         h1_bias_cancels = []
+        sl_before_fill_cancels = []
         exit_results = []
         uncertain_results = []
         lifecycle = await asyncio.to_thread(
@@ -266,6 +268,63 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                     }
                 )
 
+        # B15 / S1–S4: SL before fill using clock OHLC or live bid/ask snapshot.
+        bar_high = None
+        bar_low = None
+        if isinstance(clock_payload.get("high"), (int, float)) and isinstance(
+            clock_payload.get("low"), (int, float)
+        ):
+            bar_high = float(clock_payload["high"])
+            bar_low = float(clock_payload["low"])
+        else:
+            quotes = await asyncio.to_thread(rt.adapter.get_market_quotes)
+            if quotes and quotes.get("ask") is not None and quotes.get("bid") is not None:
+                bar_high = float(quotes["ask"])
+                bar_low = float(quotes["bid"])
+        if bar_high is not None and bar_low is not None:
+            pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
+            for oid in pending_ids:
+                geom = await asyncio.to_thread(rt.adapter.get_pending_geometry, oid)
+                if not geom or geom.get("sl_price") is None or not geom.get("direction"):
+                    continue
+                limit_price = geom.get("limit_price")
+                if limit_price is None:
+                    limit_price = geom["sl_price"]
+                if not pending_sl_touched_before_fill(
+                    direction=str(geom["direction"]),
+                    limit_price=float(limit_price),
+                    sl_price=float(geom["sl_price"]),
+                    bar_high=bar_high,
+                    bar_low=bar_low,
+                ):
+                    continue
+                intent = OrderIntent(
+                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                    order_id=oid,
+                    reason="SL before fill: planned stop reached while pending",
+                )
+                exec_cancel = await asyncio.to_thread(rt.adapter.execute_intent, intent)
+                if exec_cancel.success:
+                    await asyncio.to_thread(
+                        rt.adapter.log_lifecycle_event,
+                        event_type="ORDER_CANCELED",
+                        order_id=oid,
+                        reason="sl_before_fill",
+                    )
+                    rt.setup_registry.mark_terminal(oid, "sl_before_fill")
+                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
+                elif "not found" in (exec_cancel.message or "").lower():
+                    rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
+                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
+                sl_before_fill_cancels.append(
+                    {
+                        "order_id": oid,
+                        "status": "success" if exec_cancel.success else "rejected",
+                        "reason": "sl_before_fill",
+                        "message": exec_cancel.message,
+                    }
+                )
+
         open_rows = await asyncio.to_thread(rt.adapter.list_open_fills)
         fills = [
             OpenFill(
@@ -401,6 +460,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         has_work = bool(
             cancel_results
             or h1_bias_cancels
+            or sl_before_fill_cancels
             or exit_results
             or uncertain_results
             or account_pnl_rows
@@ -420,11 +480,12 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             "checked": len(fills),
             "cancels": cancel_results,
             "h1_bias_cancels": h1_bias_cancels,
+            "sl_before_fill_cancels": sl_before_fill_cancels,
             "exits": exit_results,
             "uncertain": uncertain_results,
             "account_pnl": account_pnl_rows,
             "lifecycle": lifecycle,
             "reason": reason_out,
-            "rt.max_hold_bars": rt.max_hold_bars,
+            "max_hold_bars": rt.max_hold_bars,
             "timestamp": now_utc.isoformat(),
         }

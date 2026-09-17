@@ -2422,6 +2422,38 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.assertTrue(self.app.state.setup_registry.is_blocked("H1_FLIP_1"))
         self.assertNotIn("H1_FLIP_1", adapter.list_unfilled_pendings())
 
+    def test_clock_cancels_pending_on_sl_before_fill_ohlc(self):
+        adapter = self.app.state.adapter
+        place = self.client.post(
+            "/webhook/tradingview",
+            headers=self.headers,
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "SLBF_CLK_1",
+                "dir": "BUY",
+                "limit": 2400.0,
+                "sl": 2390.0,
+                "tp1": 2420.0,
+            },
+        )
+        self.assertEqual(place.status_code, 200)
+        self.assertEqual(place.json()["status"], "success")
+        self.assertIn("SLBF_CLK_1", adapter.list_unfilled_pendings())
+
+        res = self.client.post(
+            "/internal/clock",
+            headers=self.headers,
+            json={"high": 2395.0, "low": 2388.0},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        cancels = data.get("sl_before_fill_cancels") or []
+        self.assertTrue(cancels, msg=data)
+        self.assertEqual(cancels[0]["order_id"], "SLBF_CLK_1")
+        self.assertEqual(cancels[0]["status"], "success")
+        self.assertEqual(cancels[0]["reason"], "sl_before_fill")
+        self.assertTrue(self.app.state.setup_registry.is_blocked("SLBF_CLK_1"))
+        self.assertNotIn("SLBF_CLK_1", adapter.list_unfilled_pendings())
 
     def test_clock_uses_live_h1_bias_when_body_omits_bias(self):
         """Live Gate C cron (empty body) must still cancel on broker H1 bias."""
