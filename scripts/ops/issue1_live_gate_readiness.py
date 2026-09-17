@@ -206,6 +206,11 @@ def main() -> int:
         },
         "operator_blockers": {
             "gh_auth_ok": _gh_auth_ok(),
+            "operator_gh_auth_paste": (
+                "docs/ops/2026-09-17-operator-gh-auth-paste.json"
+                if _exists("docs/ops/2026-09-17-operator-gh-auth-paste.json")
+                else None
+            ),
             "host_reachability_artifact": host_hunt if _exists(host_hunt) else None,
             "utm_app_present": _utm_app_present(),
             "utm_app_present_no_vms": _utm_app_present(),
