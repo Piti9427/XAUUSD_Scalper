@@ -23,6 +23,7 @@ from scripts.smc.quotes import (
 )
 from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
+from scripts.webhook.pending_cancel import cancel_unfilled_pending
 from scripts.webhook.runtime import WebhookRuntime
 
 logger = logging.getLogger("webhook_bridge")
@@ -199,37 +200,17 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             if cancel_pending:
                 still_pending = []
                 for oid in pending_ids:
-                    intent = OrderIntent(
-                        intent_type=OrderIntentType.CANCEL_LIMIT,
+                    kept, row = await cancel_unfilled_pending(
+                        rt,
                         order_id=oid,
-                        reason=f"news_pending_cancel:{cancel_reason}",
+                        intent_reason=f"news_pending_cancel:{cancel_reason}",
+                        lifecycle_reason=f"news_pending_cancel:{cancel_reason}",
+                        terminal_reason=f"news_pending_cancel:{cancel_reason}",
+                        result_reason=cancel_reason,
                     )
-                    exec_cancel = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-                    if exec_cancel.success:
-                        await asyncio.to_thread(
-                            rt.adapter.log_lifecycle_event,
-                            event_type="ORDER_CANCELED",
-                            order_id=oid,
-                            reason=f"news_pending_cancel:{cancel_reason}",
-                        )
-                        rt.setup_registry.mark_terminal(
-                            oid, f"news_pending_cancel:{cancel_reason}"
-                        )
-                        await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                    elif "not found" in (exec_cancel.message or "").lower():
-                        # Fill-during-cancel: release inbox so clock does not re-spam.
-                        rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
-                        await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                    else:
+                    if kept:
                         still_pending.append(oid)
-                    cancel_results.append(
-                        {
-                            "order_id": oid,
-                            "status": "success" if exec_cancel.success else "rejected",
-                            "reason": cancel_reason,
-                            "message": exec_cancel.message,
-                        }
-                    )
+                    cancel_results.append(row)
                 pending_ids = still_pending
 
         # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
@@ -254,34 +235,18 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 if bias_ok:
                     still_pending.append(oid)
                     continue
-                intent = OrderIntent(
-                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                intent_reason = f"H1 bias invalidation: {bias_reason}"
+                kept, row = await cancel_unfilled_pending(
+                    rt,
                     order_id=oid,
-                    reason=f"H1 bias invalidation: {bias_reason}",
+                    intent_reason=intent_reason,
+                    lifecycle_reason=f"h1_bias_invalidated:{bias_reason}",
+                    terminal_reason=bias_reason,
+                    result_reason=bias_reason,
                 )
-                exec_cancel = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-                if exec_cancel.success:
-                    await asyncio.to_thread(
-                        rt.adapter.log_lifecycle_event,
-                        event_type="ORDER_CANCELED",
-                        order_id=oid,
-                        reason=f"h1_bias_invalidated:{bias_reason}",
-                    )
-                    rt.setup_registry.mark_terminal(oid, bias_reason)
-                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                elif "not found" in (exec_cancel.message or "").lower():
-                    rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
-                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                else:
+                if kept:
                     still_pending.append(oid)
-                h1_bias_cancels.append(
-                    {
-                        "order_id": oid,
-                        "status": "success" if exec_cancel.success else "rejected",
-                        "reason": bias_reason,
-                        "message": exec_cancel.message,
-                    }
-                )
+                h1_bias_cancels.append(row)
             pending_ids = still_pending
 
         # B15 / S1–S4: SL before fill using clock OHLC or live bid/ask snapshot.
@@ -335,34 +300,17 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 ):
                     still_pending.append(oid)
                     continue
-                intent = OrderIntent(
-                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                kept, row = await cancel_unfilled_pending(
+                    rt,
                     order_id=oid,
-                    reason="SL before fill: planned stop reached while pending",
+                    intent_reason="SL before fill: planned stop reached while pending",
+                    lifecycle_reason="sl_before_fill",
+                    terminal_reason="sl_before_fill",
+                    result_reason="sl_before_fill",
                 )
-                exec_cancel = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-                if exec_cancel.success:
-                    await asyncio.to_thread(
-                        rt.adapter.log_lifecycle_event,
-                        event_type="ORDER_CANCELED",
-                        order_id=oid,
-                        reason="sl_before_fill",
-                    )
-                    rt.setup_registry.mark_terminal(oid, "sl_before_fill")
-                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                elif "not found" in (exec_cancel.message or "").lower():
-                    rt.setup_registry.mark_terminal(oid, "filled_during_cancel")
-                    await asyncio.to_thread(rt.adapter.finish_setup, oid)
-                else:
+                if kept:
                     still_pending.append(oid)
-                sl_before_fill_cancels.append(
-                    {
-                        "order_id": oid,
-                        "status": "success" if exec_cancel.success else "rejected",
-                        "reason": "sl_before_fill",
-                        "message": exec_cancel.message,
-                    }
-                )
+                sl_before_fill_cancels.append(row)
             pending_ids = still_pending
 
         open_rows = await asyncio.to_thread(rt.adapter.list_open_fills)
