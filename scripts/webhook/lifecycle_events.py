@@ -15,6 +15,7 @@ from scripts.smc.risk_halt import (
     save_risk_halt_state,
 )
 from scripts.smc.stops_geometry import sl_modify_freeze_allows
+from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
 from scripts.webhook.runtime import WebhookRuntime
 
 logger = logging.getLogger("webhook_bridge")
@@ -49,6 +50,7 @@ async def handle_lifecycle_event(
             Direction.BUY if payload.get("dir") == "BUY" else Direction.SELL
         )
         ticket = None
+        pos = None
         reason = "TradingView Alert Fill Confirmation"
         if not rt.adapter.dry_run:
             pos = await asyncio.to_thread(rt.adapter.get_matching_position, order_id)
@@ -72,7 +74,7 @@ async def handle_lifecycle_event(
             tp_price=tp2 if tp2 > 0 else tp1,
             lot_size=(
                 float(pos.volume)
-                if not rt.adapter.dry_run and "pos" in locals() and pos is not None
+                if pos is not None
                 else float(payload.get("lot_size") or 0.0) or None
             ),
             order_id=order_id,
@@ -92,7 +94,11 @@ async def handle_lifecycle_event(
                 from scripts.smc.notification_policy import may_notify_execution
                 if not may_notify_execution(success=True, status="FILLED"):
                     raise RuntimeError("notification policy blocked fill card")
-                fill_lot = float(pos.volume) if not rt.adapter.dry_run and 'pos' in locals() and pos else float(payload.get("lot_size") or 0.01)
+                fill_lot = (
+                    float(pos.volume)
+                    if pos is not None
+                    else float(payload.get("lot_size") or 0.01)
+                )
                 pos_card = Position(
                     direction=direction,
                     entry_price=entry,
@@ -320,21 +326,6 @@ async def handle_lifecycle_event(
             }
 
         reason = payload.get("reason", "POSITION_CLOSED")
-        # Never invent R/$ from reason text — only explicit payload, broker cashflow,
-        # or frozen_initial_r from fill geometry (entry/sl/lot).
-        pnl_r = payload.get("pnl_r")
-        pnl_dollar = payload.get("pnl_dollar")
-        if pnl_r is not None:
-            try:
-                pnl_r = float(pnl_r)
-            except (TypeError, ValueError):
-                pnl_r = None
-        if pnl_dollar is not None:
-            try:
-                pnl_dollar = float(pnl_dollar)
-            except (TypeError, ValueError):
-                pnl_dollar = None
-
         # Execute close market on broker if position is active or rollover flat
         intent_close = OrderIntent(
             intent_type=OrderIntentType.CLOSE_MARKET,
@@ -365,59 +356,46 @@ async def handle_lifecycle_event(
                     exposure_after_close = await asyncio.to_thread(rt.adapter.get_open_exposure)
                     if exposure_after_close == []:
                         await asyncio.to_thread(rt.adapter.finish_setup, order_id)
-                broker_pnl = await asyncio.to_thread(
-                    rt.adapter.get_realized_pnl_for_order, order_id
-                )
-                if broker_pnl is not None:
-                    pnl_dollar = broker_pnl
-                else:
-                    # Live: never halt/notify on TradingView invent cash.
-                    pnl_dollar = None
-                    pnl_r = None
-                    if order_id:
-                        await asyncio.to_thread(
-                            rt.mark_processed, order_id, event, "reconcile_required"
-                        )
-                    return {
-                        "status": "reconcile_required",
-                        "order_id": order_id,
-                        "event": event,
-                        "reason": "broker deal cashflow missing for live TRADE_CLOSED",
-                        "pnl_r": None,
-                        "pnl_dollar": None,
-                        "execution": {
-                            "success": exec_close.success,
-                            "message": exec_close.message,
-                        },
-                    }
 
-        # Scenario 21: dollars only from payload/broker; R from frozen geometry.
-        # Never invent cash from entry/exit/lot without broker/payload dollars.
+        broker_pnl = None
+        if not rt.adapter.dry_run and (already_closed_by_broker or exec_close.success):
+            broker_pnl = await asyncio.to_thread(
+                rt.adapter.get_realized_pnl_for_order, order_id
+            )
+
         entry = float(payload.get("entry") or 0.0)
         sl = float(payload.get("sl") or 0.0)
         lot = float(payload.get("lot_size") or 0.0)
         exit_px = float(payload.get("exit_price") or 0.0)
         direction = str(payload.get("dir", "BUY")).upper()
-        initial_dist = abs(entry - sl) if entry and sl else 0.0
-
-        if pnl_r is None and pnl_dollar is not None and initial_dist > 0 and lot > 0:
-            from scripts.smc.risk import frozen_initial_r
-
-            pnl_r = frozen_initial_r(
-                pnl_dollars=float(pnl_dollar),
-                initial_sl_distance=initial_dist,
-                filled_lot=lot,
-            )
-        elif (
-            rt.adapter.dry_run
-            and pnl_r is None
-            and initial_dist > 0
-            and entry
-            and exit_px
-        ):
-            # Dry-run only: geometric R from TV exit (not live invent cash).
-            signed = (exit_px - entry) if direction == "BUY" else (entry - exit_px)
-            pnl_r = round(signed / initial_dist, 4)
+        pnl_r, pnl_dollar, pnl_status = resolve_trade_closed_pnl(
+            dry_run=bool(rt.adapter.dry_run),
+            payload_pnl_r=payload.get("pnl_r"),
+            payload_pnl_dollar=payload.get("pnl_dollar"),
+            broker_pnl=broker_pnl,
+            entry=entry,
+            sl=sl,
+            lot=lot,
+            exit_price=exit_px,
+            direction=direction,
+        )
+        if pnl_status == "live_broker_pnl_missing":
+            if order_id:
+                await asyncio.to_thread(
+                    rt.mark_processed, order_id, event, "reconcile_required"
+                )
+            return {
+                "status": "reconcile_required",
+                "order_id": order_id,
+                "event": event,
+                "reason": "broker deal cashflow missing for live TRADE_CLOSED",
+                "pnl_r": None,
+                "pnl_dollar": None,
+                "execution": {
+                    "success": exec_close.success,
+                    "message": exec_close.message,
+                },
+            }
 
         await asyncio.to_thread(
             rt.adapter.log_lifecycle_event,
