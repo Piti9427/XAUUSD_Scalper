@@ -9,13 +9,16 @@ from typing import Any, Dict
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Request
 
-from scripts.smc.types import Direction
 from scripts.smc.risk_halt import (
     apply_broker_lifecycle_losses,
     observe_equity,
     save_risk_halt_state,
 )
-from scripts.smc.notification_policy import may_notify_close, may_notify_execution
+from scripts.webhook.clock_lifecycle_apply import (
+    apply_lifecycle_closes,
+    apply_lifecycle_fills,
+    apply_lifecycle_ttl_cancels,
+)
 from scripts.webhook.clock_pending_gates import (
     cancel_pendings_for_h1_bias,
     cancel_pendings_for_news,
@@ -42,7 +45,6 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         Optional JSON body may carry h1_bias / h1_bias_known (scenario 8).
         """
         from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
-        from scripts.smc.types import Position as PosCard
 
         clock_payload: Dict[str, Any] = {}
         try:
@@ -53,7 +55,6 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             clock_payload = {}
 
         now_utc = datetime.now(timezone.utc)
-        exit_results = []
         uncertain_results = []
         lifecycle = await asyncio.to_thread(
             reconcile_broker_lifecycle,
@@ -92,94 +93,20 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             )
             await asyncio.to_thread(save_risk_halt_state, rt.halt_path, rt.risk_halt)
 
-        for fill_row in lifecycle.get("broker_fills", []):
-            order_id = fill_row.get("order_id")
-            if not order_id:
-                continue
-            rt.setup_registry.mark_terminal(order_id, "filled")
-            await asyncio.to_thread(rt.mark_processed, order_id, "ORDER_FILLED", "success")
-            if not (rt.notifier and getattr(rt.notifier, "enabled", False)):
-                continue
-            if not may_notify_execution(success=True, status="FILLED"):
-                continue
-            try:
-                from scripts.smc.notifier import format_order_filled_card
-
-                geom = await asyncio.to_thread(rt.adapter.get_fill_geometry, order_id)
-                if not geom or not geom.get("entry_price") or not geom.get("sl_price"):
-                    continue
-                entry = float(geom["entry_price"])
-                sl = float(geom["sl_price"])
-                lot = float(geom.get("lot_size") or 0.0) or 0.01
-                dir_raw = str(geom.get("direction") or "BUY").upper()
-                fill_dir = Direction.BUY if dir_raw == "BUY" else Direction.SELL
-                pos_card = PosCard(
-                    direction=fill_dir,
-                    entry_price=entry,
-                    sl_price=sl,
-                    tp_price=0.0,
-                    lot_size=lot,
-                    open_time=now_utc,
-                    initial_sl_distance=abs(entry - sl),
-                )
-                background_tasks.add_task(
-                    rt.dispatch_tg_safe, format_order_filled_card(pos_card)
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Lifecycle fill notify failed for %s: %s", order_id, exc
-                )
-
-        # Scenario 8: TTL cancel must terminalize identity (no revive after inbox release).
-        for ttl_row in lifecycle.get("ttl_cancels", []):
-            order_id = ttl_row.get("order_id")
-            if not order_id or ttl_row.get("status") != "success":
-                continue
-            reason = str(ttl_row.get("reason") or "ttl_expired")
-            rt.setup_registry.mark_terminal(order_id, reason)
-            await asyncio.to_thread(
-                rt.mark_processed, order_id, "ORDER_CANCELED", "success"
-            )
-
-        for close in lifecycle.get("broker_closes", []):
-            order_id = close.get("order_id")
-            pnl_dollar = close.get("pnl_dollar")
-            pnl_r = close.get("pnl_r")
-            if order_id:
-                await asyncio.to_thread(rt.mark_processed, order_id, "TRADE_CLOSED", "success")
-            if (
-                rt.notifier
-                and getattr(rt.notifier, "enabled", False)
-                and order_id
-                and pnl_dollar is not None
-                and pnl_r is not None
-                and may_notify_close(
-                    broker_close_success=False,
-                    already_flat_on_broker=True,
-                )
-            ):
-                try:
-                    from scripts.smc.notifier import format_trade_closed_card
-
-                    fill = await asyncio.to_thread(rt.adapter.get_fill_geometry, order_id)
-                    dir_raw = (fill or {}).get("direction", "BUY")
-                    tc_dir = (
-                        Direction.BUY
-                        if str(dir_raw).upper() == "BUY"
-                        else Direction.SELL
-                    )
-                    card = format_trade_closed_card(
-                        direction=tc_dir,
-                        exit_price=0.0,
-                        pnl_dollars=float(pnl_dollar),
-                        pnl_r=float(pnl_r),
-                        reason="broker_lifecycle_close_detected",
-                    )
-                    background_tasks.add_task(rt.dispatch_tg_safe, card)
-                except Exception as exc:
-                    logger.warning(
-                        "Lifecycle close notify failed for %s: %s", order_id, exc
-                    )
+        await apply_lifecycle_fills(
+            rt,
+            fill_rows=lifecycle.get("broker_fills", []),
+            now_utc=now_utc,
+            background_tasks=background_tasks,
+        )
+        await apply_lifecycle_ttl_cancels(
+            rt, ttl_rows=lifecycle.get("ttl_cancels", [])
+        )
+        await apply_lifecycle_closes(
+            rt,
+            close_rows=lifecycle.get("broker_closes", []),
+            background_tasks=background_tasks,
+        )
 
         # Scenario 18 / 8 / B15: news, H1 bias, SL-before-fill pending cancels
         pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
