@@ -184,6 +184,7 @@ def main() -> int:
                 "docs/ops/2026-09-16-mac-wine-reprobe-running.json",
                 "docs/ops/2026-09-16-exness-smoke-mac-post-split.json",
                 "docs/ops/2026-09-16-host-ssh-reprobe.json",
+                "docs/ops/2026-09-17-host-ssh-agent-sandbox-denied.json",
                 host_hunt,
             ],
         },

@@ -2,14 +2,14 @@
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
 **Branch:** `feature/smc-v2-hardening`  
-**Last verified:** 2026-09-17 ~11:35 ICT
+**Last verified:** 2026-09-17 ~11:48 ICT
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
 | **#3** Mechanical S1–S4 spec | Docs + contract tests | specs + contracts | ✅ CLOSED (prior) | **Done** |
 | **#4** Research handoff | Docs + Gate B/C blockers | specs + contracts | ✅ CLOSED (prior) | **Done** |
 | **#2** Parent tracker | Close after #3/#4 | Parent closed | ✅ CLOSED (prior) | **Done** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | Gate B software_evidence_complete; Mac Gate C fail-closed | ❌ OPEN (`gh` token invalid) | **Live gates still required** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | Gate B software_evidence_complete; Mac Gate C fail-closed | ❌ OPEN (agent GitHub API rate-limited; operator `gh auth` paste OK) | **Live gates still required** |
 
 ## Issue #1 gate audit (authoritative)
 
@@ -29,6 +29,11 @@
 - Story 17 swing confirmation times on SetupSignal
 - Clock pending list fetched once per tick
 - Story 21 FVG right-hand availability stamp + truncate-frame reject test
+- Pure `resolve_trade_closed_pnl` wired into webhook / clock / broker lifecycle
+- Shared `cancel_unfilled_pending` for news/H1/SL clock cancels
+- Lazy `scripts.webhook` package init (no FastAPI for pure helpers)
+- Extract `TP1_HIT_MOVE_BE` into `lifecycle_tp1_be.py`
+- Operator gh-auth paste artifact + readiness `operator_gh_auth_paste` pointer
 
 ## Operator unblock
 
@@ -45,6 +50,6 @@ gh auth refresh -h github.com
 
 - [x] #2/#3/#4 closed with evidence  
 - [x] Foundation software + Gate B coverage on branch  
-- [ ] `gh` can re-verify issue states (token invalid now)  
+- [ ] `gh` / GitHub MCP can re-verify issue states (agent rate-limited / sandbox)  
 - [ ] #1 live artifacts (not Mac fail-closed only)  
 - [ ] #1 closed after live gates  
