@@ -2,14 +2,14 @@
 
 **Objective:** Implement, verify, and close every open issue on `Piti9427/XAUUSD_Scalper`.  
 **Branch:** `feature/smc-v2-hardening`  
-**Last verified:** 2026-09-16 ~17:21 ICT
+**Last verified:** 2026-09-17 ~11:35 ICT
 
 | Issue | Requirement | In-repo evidence | GitHub closed | Verdict |
 | --- | --- | --- | --- | --- |
 | **#3** Mechanical S1–S4 spec | Docs + contract tests | specs + contracts | ✅ CLOSED (prior) | **Done** |
 | **#4** Research handoff | Docs + Gate B/C blockers | specs + contracts | ✅ CLOSED (prior) | **Done** |
 | **#2** Parent tracker | Close after #3/#4 | Parent closed | ✅ CLOSED (prior) | **Done** |
-| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | 383 tests; scenarios 1–23 software OK; Mac Gate C fail-closed | ❌ OPEN (`gh` token invalid) | **Live gates still required** |
+| **#1** Gold Playbook Foundation | Software + **live** Exness/Oracle/Demo | Gate B software_evidence_complete; Mac Gate C fail-closed | ❌ OPEN (`gh` token invalid) | **Live gates still required** |
 
 ## Issue #1 gate audit (authoritative)
 
@@ -22,14 +22,13 @@
 | D — Demo 12w start | `docs/ops/*-demo-12w-start*.json` | Templates + strict scanner (need `started:true` + identity) | **BLOCKED** |
 | Closable? | smoke + soak + Demo start | `issue1_closable: false` | **Not closable** |
 
-## Mac software since prior audit
+## Mac software since 2026-09-17
 
-- H1 lazy resolve: skip live MT5 when payload bias known (`resolve_h1_bias_lazy`)
-- Readiness: soak/demo scanners reject templates/placeholders
-- Webhook package split (async I/O stays on `asyncio.to_thread`):
-  - `webhook_bridge.create_app` (~178 LOC factory)
-  - `webhook/runtime.py`, `clock_routes.py`, `tradingview_routes.py`
-  - `setup_pending.py`, `lifecycle_events.py`, auth/idempotency/h1_bias
+- B15 missing-quote disclose (pending SL-before-fill + session-flat exit)
+- Journal inbox/lifecycle split; SETUP UTC time parse
+- Story 17 swing confirmation times on SetupSignal
+- Clock pending list fetched once per tick
+- Story 21 FVG right-hand availability stamp + truncate-frame reject test
 
 ## Operator unblock
 

@@ -94,6 +94,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | SETUP event-time UTC parse extract | **Done:** `scripts/webhook/setup_time.py` `parse_setup_event_time`; `tests/test_webhook_setup_time.py` |
 | Swing confirmation times (story 17) | **Done:** `ConfirmedPivot` / `pivot_confirmation_time` / `record_confirmed_pivots`; detection stamps `broken_swing_confirmed_at` + `protected_swing_confirmed_at` on SetupSignal; `tests/test_smc_swing_confirmation.py` |
 | Clock pending list reuse | **Done:** single `list_unfilled_pendings` per clock tick; local list mutated after news/H1/SL-before-fill cancels |
+| FVG right-hand closed before order (story 21) | **Done:** detection requires third candle in closed M5 frame; stamps `fvg_right_hand_index` / `fvg_available_at`; `test_fvg_requires_right_hand_candle_in_closed_frame` |
 
 ## Still open for issue #1
 

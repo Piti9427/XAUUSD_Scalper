@@ -51,7 +51,8 @@ class ConfirmedPivot:
     confirmed_at: Optional[datetime] = None
 
 
-def _as_utc_bar_time(raw: Any) -> Optional[datetime]:
+def bar_time_as_utc(raw: Any) -> Optional[datetime]:
+    """Normalize a bar timestamp to timezone-aware UTC."""
     if raw is None:
         return None
     if isinstance(raw, datetime):
@@ -65,6 +66,10 @@ def _as_utc_bar_time(raw: Any) -> Optional[datetime]:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _as_utc_bar_time(raw: Any) -> Optional[datetime]:
+    return bar_time_as_utc(raw)
 
 
 def pivot_confirmation_time(

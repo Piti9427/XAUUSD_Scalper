@@ -54,6 +54,9 @@ class SetupSignal:
     protected_swing_confirmed_at: Optional[str] = None
     broken_swing_index: Optional[int] = None
     protected_swing_index: Optional[int] = None
+    # Story 21: FVG knowable only after right-hand candle is in the closed frame.
+    fvg_right_hand_index: Optional[int] = None
+    fvg_available_at: Optional[str] = None
 
 
 @dataclass(frozen=True)

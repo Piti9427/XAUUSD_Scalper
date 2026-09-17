@@ -17,6 +17,7 @@ from scripts.smc.structure import (
     classify_candidate_break,
     available_confirmed_pivots,
     pivot_confirmation_time,
+    bar_time_as_utc,
 )
 
 
@@ -340,10 +341,13 @@ def evaluate_smc_setup(
 
     # 4. FVG Detection (ADR-004)
     # FVG formed on MSS bar or up to max_mss_to_fvg_bars after
+    # Story 21: right-hand (third) candle must exist in closed M5 frame before order.
     fvg_found = False
     fvg_high_val = 0.0
     fvg_low_val = 0.0
     entry_limit_price = 0.0
+    fvg_right_hand_index: Optional[int] = None
+    fvg_available_at: Optional[str] = None
 
     for disp_i in range(mss_idx, min(n_m5 - 1, mss_idx + max_mss_to_fvg_bars + 1)):
         if disp_i < 1 or disp_i + 1 >= n_m5:
@@ -358,6 +362,11 @@ def evaluate_smc_setup(
             fvg_high_val = g_high
             fvg_low_val = g_low
             entry_limit_price = ce_50
+            fvg_right_hand_index = int(disp_i + 1)
+            if "time" in df_m5.columns:
+                rh_t = bar_time_as_utc(df_m5.iloc[fvg_right_hand_index]["time"])
+                if rh_t is not None:
+                    fvg_available_at = rh_t.isoformat()
             break
 
     if not fvg_found:
@@ -455,6 +464,8 @@ def evaluate_smc_setup(
             protected_swing_index=protected_swing_index,
             broken_swing_confirmed_at=broken_swing_confirmed_at,
             protected_swing_confirmed_at=protected_swing_confirmed_at,
+            fvg_right_hand_index=fvg_right_hand_index,
+            fvg_available_at=fvg_available_at,
         ),
         None,
     )

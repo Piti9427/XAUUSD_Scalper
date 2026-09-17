@@ -151,6 +151,17 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         self.assertEqual(signal.sl_price, 2008.20) # 2008.5 - 0.30 buffer
         self.assertAlmostEqual(signal.sl_distance, 5.80, places=2)
         self.assertAlmostEqual(signal.tp_price, 2014.0 + (5.80 * 2.0), places=2) # 2R TP
+        # Story 21: right-hand FVG candle stamped when setup becomes knowable.
+        self.assertIsNotNone(signal.fvg_right_hand_index)
+        self.assertIsNotNone(signal.fvg_available_at)
+
+    def test_fvg_requires_right_hand_candle_in_closed_frame(self):
+        """Story 21: no order path before FVG third candle exists in M5 frame."""
+        h1, m5, liq, _ = self.valid_setup_inputs()
+        m5_no_rh = m5.iloc[:-1].copy()
+        eval_early = m5_no_rh["time"].iloc[-1]
+        signal = detect_smc_setup(h1, m5_no_rh, liq, eval_early, require_choch=False)
+        self.assertIsNone(signal)
 
     def test_detection_logs_fib_ote_without_filtering_admission(self):
         """ADR-0028 / issue #1: Fib/OTE recorded at decision time; never blocks setup."""
