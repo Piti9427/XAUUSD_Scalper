@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from scripts.smc.reconcile import PendingExposure, reconcile_pending_exposure
+from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
 from scripts.smc.types import OrderIntent, OrderIntentType
 
 if TYPE_CHECKING:
@@ -229,21 +230,27 @@ def reconcile_broker_lifecycle(
             continue
         if adapter.get_matching_pending_order(order_id) is not None:
             continue
-        pnl_dollar = adapter.get_realized_pnl_for_order(order_id)
-        if pnl_dollar is None:
+        pnl_raw = adapter.get_realized_pnl_for_order(order_id)
+        fill = adapter.get_fill_geometry(order_id) or {}
+        pnl_r, pnl_dollar, pnl_status = resolve_trade_closed_pnl(
+            dry_run=bool(getattr(adapter, "dry_run", False)),
+            broker_pnl=pnl_raw,
+            entry=float(fill.get("entry_price") or 0.0),
+            sl=float(fill.get("sl_price") or 0.0),
+            lot=float(fill.get("lot_size") or 0.0),
+            direction=str(row.get("direction") or "BUY"),
+        )
+        if pnl_status == "live_broker_pnl_missing" or pnl_dollar is None:
+            if pnl_status == "live_broker_pnl_missing" and not adapter.has_lifecycle_event(
+                order_id, "RECONCILE_REQUIRED"
+            ):
+                adapter.log_lifecycle_event(
+                    event_type="RECONCILE_REQUIRED",
+                    order_id=order_id,
+                    direction=row.get("direction"),
+                    reason="broker deal cashflow missing for lifecycle close detect",
+                )
             continue
-        pnl_r = None
-        fill = adapter.get_fill_geometry(order_id)
-        if fill and fill.get("entry_price") and fill.get("sl_price") and fill.get("lot_size"):
-            from scripts.smc.risk import frozen_initial_r
-
-            pnl_r = frozen_initial_r(
-                pnl_dollars=float(pnl_dollar),
-                initial_sl_distance=abs(
-                    float(fill["entry_price"]) - float(fill["sl_price"])
-                ),
-                filled_lot=float(fill["lot_size"]),
-            )
         adapter.log_lifecycle_event(
             event_type="TRADE_CLOSED",
             order_id=order_id,

@@ -245,7 +245,9 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/cost_accounting.py",
+            "scripts/smc/trade_closed_pnl.py",
             "tests/test_smc_cost_accounting.py",
+            "tests/test_smc_trade_closed_pnl.py",
             "tests/test_smc_backtester.py",
         ],
     },
