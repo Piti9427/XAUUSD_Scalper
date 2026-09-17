@@ -14,6 +14,11 @@ class BrokerLifecycleTests(unittest.TestCase):
         self.assertTrue(pending_ttl_elapsed(created, now, ttl_bars=4, bar_minutes=5))
         self.assertFalse(pending_ttl_elapsed(created, now, ttl_bars=5, bar_minutes=5))
 
+    def test_pending_ttl_elapsed_treats_naive_as_utc(self):
+        created = datetime(2026, 9, 16, 12, 0)  # naive
+        now = datetime(2026, 9, 16, 12, 20, tzinfo=timezone.utc)
+        self.assertTrue(pending_ttl_elapsed(created, now, ttl_bars=4, bar_minutes=5))
+
     def test_ttl_cancel_releases_inbox_in_dry_run(self):
         adapter = SMCExecutionAdapter(symbol="XAUUSD", dry_run=True, db_path=":memory:")
         try:
