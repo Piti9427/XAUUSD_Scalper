@@ -9,19 +9,19 @@ from typing import Any, Dict
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Request
 
-from scripts.smc.types import Direction, OrderIntent, OrderIntentType
+from scripts.smc.types import Direction
 from scripts.smc.risk_halt import (
     apply_broker_lifecycle_losses,
     observe_equity,
     save_risk_halt_state,
 )
-from scripts.smc.quotes import disclose_missing_quote_at_exit_deadline
-from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
+from scripts.smc.notification_policy import may_notify_close, may_notify_execution
 from scripts.webhook.clock_pending_gates import (
     cancel_pendings_for_h1_bias,
     cancel_pendings_for_news,
     cancel_pendings_sl_before_fill,
 )
+from scripts.webhook.clock_time_exits import run_clock_time_exits
 from scripts.webhook.runtime import WebhookRuntime
 
 logger = logging.getLogger("webhook_bridge")
@@ -42,12 +42,6 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
         Optional JSON body may carry h1_bias / h1_bias_known (scenario 8).
         """
         from scripts.smc.broker_lifecycle import reconcile_broker_lifecycle
-        from scripts.smc.clock_exit import (
-            OpenFill,
-            plan_clock_time_exits,
-            plan_clock_rollover_exits,
-        )
-        from scripts.smc.notification_policy import may_notify_close, may_notify_execution
         from scripts.smc.types import Position as PosCard
 
         clock_payload: Dict[str, Any] = {}
@@ -59,10 +53,6 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             clock_payload = {}
 
         now_utc = datetime.now(timezone.utc)
-        cancel_results = []
-        h1_bias_cancels = []
-        sl_before_fill_cancels = []
-        missing_quote_disclosures = []
         exit_results = []
         uncertain_results = []
         lifecycle = await asyncio.to_thread(
@@ -209,184 +199,14 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             rt, pending_ids=pending_ids, clock_payload=clock_payload
         )
 
-        open_rows = await asyncio.to_thread(rt.adapter.list_open_fills)
-        fills = [
-            OpenFill(
-                order_id=row["order_id"],
-                open_time=row["open_time"],
-                direction=row.get("direction"),
-            )
-            for row in open_rows
-        ]
-        # ADR-007 rollover always; TIME_EXIT only when max_hold configured.
-        plans_by_id = {}
-        for plan in plan_clock_rollover_exits(
-            fills,
-            now=now_utc,
-            rollover_hour_utc=rt.rollover_hour_utc,
-            rollover_minute_utc=rt.rollover_minute_utc,
-        ):
-            plans_by_id[plan.order_id] = plan
-        if rt.max_hold_bars is not None:
-            for plan in plan_clock_time_exits(
-                fills,
-                now=now_utc,
-                max_hold_bars=rt.max_hold_bars,
-                bar_minutes=rt.bar_minutes,
-            ):
-                # Prefer existing ROLLOVER reason if both fire.
-                plans_by_id.setdefault(plan.order_id, plan)
-        plans = list(plans_by_id.values())
-
-        # Session flat / TIME_EXIT with no live quote: disclose; never invent exit px.
-        if plans and (bar_high is None or bar_low is None):
-            exit_quote_rows = disclose_missing_quote_at_exit_deadline(
-                open_order_ids=[p.order_id for p in plans],
-                have_live_quotes=False,
-            )
-            for row in exit_quote_rows:
-                missing_quote_disclosures.append(row)
-                await asyncio.to_thread(
-                    rt.adapter.log_lifecycle_event,
-                    event_type="MISSING_QUOTE",
-                    order_id=row["order_id"],
-                    reason="missing_quote:session_flat_exit",
-                )
-
-        for plan in plans:
-            intent = OrderIntent(
-                intent_type=OrderIntentType.CLOSE_MARKET,
-                order_id=plan.order_id,
-                reason=plan.reason,
-            )
-            exec_close = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-            already_flat = (
-                not exec_close.success
-                and "not found" in (exec_close.message or "").lower()
-            )
-            if not exec_close.success and not already_flat:
-                exit_results.append(
-                    {
-                        "order_id": plan.order_id,
-                        "status": "rejected",
-                        "message": exec_close.message,
-                    }
-                )
-                continue
-
-            if not rt.adapter.dry_run:
-                exposure_after = await asyncio.to_thread(rt.adapter.get_open_exposure)
-                if exposure_after == []:
-                    await asyncio.to_thread(rt.adapter.finish_setup, plan.order_id)
-
-            broker_pnl = None
-            fill = None
-            if not rt.adapter.dry_run:
-                broker_pnl = await asyncio.to_thread(
-                    rt.adapter.get_realized_pnl_for_order, plan.order_id
-                )
-                fill = await asyncio.to_thread(rt.adapter.get_fill_geometry, plan.order_id)
-
-            entry = float((fill or {}).get("entry_price") or 0.0)
-            sl = float((fill or {}).get("sl_price") or 0.0)
-            lot = float((fill or {}).get("lot_size") or 0.0)
-            pnl_r, pnl_dollar, pnl_status = resolve_trade_closed_pnl(
-                dry_run=bool(rt.adapter.dry_run),
-                broker_pnl=broker_pnl,
-                entry=entry,
-                sl=sl,
-                lot=lot,
-                exit_price=0.0,
-                direction=str(plan.direction or "BUY"),
-            )
-            if pnl_status == "live_broker_pnl_missing":
-                # Close already requested; keep fill open until broker cash appears.
-                # Stamp RECONCILE once — no invent dollars, no TRADE_CLOSED yet.
-                already_flagged = await asyncio.to_thread(
-                    rt.adapter.has_lifecycle_event, plan.order_id, "RECONCILE_REQUIRED"
-                )
-                if not already_flagged:
-                    await asyncio.to_thread(
-                        rt.adapter.log_lifecycle_event,
-                        event_type="RECONCILE_REQUIRED",
-                        order_id=plan.order_id,
-                        direction=plan.direction,
-                        reason="broker deal cashflow missing for live clock exit",
-                    )
-                await asyncio.to_thread(
-                    rt.mark_processed, plan.order_id, "TRADE_CLOSED", "reconcile_required"
-                )
-                exit_results.append(
-                    {
-                        "order_id": plan.order_id,
-                        "status": "reconcile_required",
-                        "reason": "broker deal cashflow missing for live clock exit",
-                        "pnl_dollar": None,
-                        "pnl_r": None,
-                        "execution": {
-                            "success": exec_close.success,
-                            "message": exec_close.message,
-                        },
-                    }
-                )
-                continue
-
-            await asyncio.to_thread(
-                rt.adapter.log_lifecycle_event,
-                event_type="TRADE_CLOSED",
-                order_id=plan.order_id,
-                direction=plan.direction,
-                reason=plan.reason,
-                pnl_dollar=pnl_dollar,
-                pnl_r=pnl_r,
-            )
-            if rt.notifier and getattr(rt.notifier, "enabled", False):
-                # No phantom WIN card: require broker evidence AND known PnL.
-                if may_notify_close(
-                    broker_close_success=bool(exec_close.success),
-                    already_flat_on_broker=already_flat,
-                ) and pnl_dollar is not None and pnl_r is not None:
-                    try:
-                        from scripts.smc.notifier import format_trade_closed_card
-                        from scripts.smc.types import Direction as Dir
-
-                        tc_dir = (
-                            Dir.BUY
-                            if str(plan.direction or "BUY").upper() == "BUY"
-                            else Dir.SELL
-                        )
-                        card = format_trade_closed_card(
-                            direction=tc_dir,
-                            exit_price=0.0,
-                            pnl_dollars=float(pnl_dollar),
-                            pnl_r=float(pnl_r),
-                            reason=plan.reason,
-                        )
-                        background_tasks.add_task(rt.dispatch_tg_safe, card)
-                    except Exception as exc:
-                        logger.warning("Clock TIME_EXIT notify failed: %s", exc)
-                else:
-                    logger.warning(
-                        "Clock TIME_EXIT notify suppressed — need broker evidence "
-                        "and known PnL (%s success=%s pnl=%s/%s)",
-                        plan.order_id,
-                        exec_close.success,
-                        pnl_dollar,
-                        pnl_r,
-                    )
-            exit_results.append(
-                {
-                    "order_id": plan.order_id,
-                    "status": "success",
-                    "reason": plan.reason,
-                    "pnl_dollar": pnl_dollar,
-                    "pnl_r": pnl_r,
-                    "execution": {
-                        "success": exec_close.success,
-                        "message": exec_close.message,
-                    },
-                }
-            )
+        fills, plans, exit_results, exit_missing = await run_clock_time_exits(
+            rt,
+            now_utc=now_utc,
+            bar_high=bar_high,
+            bar_low=bar_low,
+            background_tasks=background_tasks,
+        )
+        missing_quote_disclosures.extend(exit_missing)
 
         has_work = bool(
             cancel_results
