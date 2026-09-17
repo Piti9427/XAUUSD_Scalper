@@ -8,7 +8,7 @@ from scripts.smc.setup_identity import make_setup_id
 from scripts.smc.fibonacci import compute_fibonacci_features
 from scripts.smc.structure import (
     find_fractals_5bar,
-    check_displacement,
+    measure_displacement,
     detect_fvg,
     check_sweep,
     is_expansion_breakout,
@@ -18,6 +18,7 @@ from scripts.smc.structure import (
     available_confirmed_pivots,
     pivot_confirmation_time,
     bar_time_as_utc,
+    RULE_VERSION_DISPLACEMENT,
 )
 
 
@@ -223,11 +224,12 @@ def evaluate_smc_setup(
     if sweep_idx is None:
         return SetupDecision(None, "no_sweep")
 
-    # 3. MSS and Displacement (ADR-003, ADR-004, ADR-014)
-    # MSS must occur within max_sweep_to_mss_bars (6 bars) after sweep
+    # 3. MSS and Displacement (ADR-003, ADR-004, ADR-014 / story 19)
+    # MSS must occur within max_sweep_to_mss_bars after sweep
     mss_idx = None
     mss_swing_price = None
     true_sweep_wick = float(sweep_wick)
+    displacement_body_ratio: Optional[float] = None
 
     if bias == Direction.BUY:
         # Find the latest confirmed swing high prior to candidate MSS bar
@@ -240,10 +242,13 @@ def evaluate_smc_setup(
             bar_i = df_m5.iloc[i]
             # Body close must exceed swing high AND be a green candle
             if bar_i["close"] > recent_swing_high and bar_i["close"] > bar_i["open"]:
-                # Must be displacement candle
-                if check_displacement(bar_i["open"], bar_i["high"], bar_i["low"], bar_i["close"], min_body_ratio):
+                ok_disp, ratio, _reason = measure_displacement(
+                    bar_i["open"], bar_i["high"], bar_i["low"], bar_i["close"], min_body_ratio
+                )
+                if ok_disp:
                     mss_idx = i
                     mss_swing_price = recent_swing_high
+                    displacement_body_ratio = float(ratio)
                     # True Swing Extremum: lowest low among all candles from sweep up to MSS
                     true_sweep_wick = min(float(df_m5.iloc[k]["low"]) for k in range(sweep_idx, mss_idx + 1))
                     break
@@ -257,9 +262,13 @@ def evaluate_smc_setup(
             bar_i = df_m5.iloc[i]
             # Body close must drop below swing low AND be a red candle
             if bar_i["close"] < recent_swing_low and bar_i["close"] < bar_i["open"]:
-                if check_displacement(bar_i["open"], bar_i["high"], bar_i["low"], bar_i["close"], min_body_ratio):
+                ok_disp, ratio, _reason = measure_displacement(
+                    bar_i["open"], bar_i["high"], bar_i["low"], bar_i["close"], min_body_ratio
+                )
+                if ok_disp:
                     mss_idx = i
                     mss_swing_price = recent_swing_low
+                    displacement_body_ratio = float(ratio)
                     # True Swing Extremum: highest high among all candles from sweep up to MSS
                     true_sweep_wick = max(float(df_m5.iloc[k]["high"]) for k in range(sweep_idx, mss_idx + 1))
                     break
@@ -466,6 +475,10 @@ def evaluate_smc_setup(
             protected_swing_confirmed_at=protected_swing_confirmed_at,
             fvg_right_hand_index=fvg_right_hand_index,
             fvg_available_at=fvg_available_at,
+            displacement_body_ratio=displacement_body_ratio,
+            displacement_rule_version=(
+                RULE_VERSION_DISPLACEMENT if displacement_body_ratio is not None else None
+            ),
         ),
         None,
     )

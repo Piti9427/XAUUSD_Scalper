@@ -57,6 +57,9 @@ class SetupSignal:
     # Story 21: FVG knowable only after right-hand candle is in the closed frame.
     fvg_right_hand_index: Optional[int] = None
     fvg_available_at: Optional[str] = None
+    # Story 19: displacement body/range audit (versioned; not a silent 0.60 override).
+    displacement_body_ratio: Optional[float] = None
+    displacement_rule_version: Optional[str] = None
 
 
 @dataclass(frozen=True)

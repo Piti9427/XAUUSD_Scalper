@@ -95,6 +95,7 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Swing confirmation times (story 17) | **Done:** `ConfirmedPivot` / `pivot_confirmation_time` / `record_confirmed_pivots`; detection stamps `broken_swing_confirmed_at` + `protected_swing_confirmed_at` on SetupSignal; `tests/test_smc_swing_confirmation.py` |
 | Clock pending list reuse | **Done:** single `list_unfilled_pendings` per clock tick; local list mutated after news/H1/SL-before-fill cancels |
 | FVG right-hand closed before order (story 21) | **Done:** detection requires third candle in closed M5 frame; stamps `fvg_right_hand_index` / `fvg_available_at`; `test_fvg_requires_right_hand_candle_in_closed_frame` |
+| Displacement measurable + versioned (story 19) | **Done:** `measure_displacement` / `FOUNDATION_MIN_BODY_RATIO=0.45` / `RULE_VERSION_DISPLACEMENT`; stamps `displacement_body_ratio` + `displacement_rule_version` on SetupSignal; default no longer silent 0.60 |
 
 ## Still open for issue #1
 

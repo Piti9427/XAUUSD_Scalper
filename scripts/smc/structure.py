@@ -7,6 +7,9 @@ import numpy as np
 from scripts.smc.types import Direction
 
 RULE_VERSION_STRUCTURE = "s1-s4-mechanical-v1"
+# Story 19 / mechanical P7: measurable body/range; foundation default 0.45 (not 0.60).
+RULE_VERSION_DISPLACEMENT = "s1-s4-mechanical-v1"
+FOUNDATION_MIN_BODY_RATIO = 0.45
 
 
 class StructureBias(Enum):
@@ -366,22 +369,45 @@ def find_fractals_5bar(df: pd.DataFrame) -> Tuple[List[bool], List[bool]]:
     return swing_highs, swing_lows
 
 
+def measure_displacement(
+    open_val: float,
+    high_val: float,
+    low_val: float,
+    close_val: float,
+    min_body_ratio: float = FOUNDATION_MIN_BODY_RATIO,
+) -> Tuple[bool, float, str]:
+    """
+    Story 19: measurable, versioned displacement qualification.
+
+    Returns (ok, body_ratio, reason). Zero/negative range never qualifies.
+    Body/range is reported even on fail so callers can audit thresholds.
+    """
+    total_range = float(high_val) - float(low_val)
+    if total_range <= 0:
+        return False, 0.0, "zero_range"
+    body_size = abs(float(close_val) - float(open_val))
+    ratio = body_size / total_range
+    if ratio + 1e-12 < float(min_body_ratio):
+        return False, float(ratio), f"body_ratio_below_min:{ratio:.4f}<{float(min_body_ratio):.4f}"
+    return True, float(ratio), "ok"
+
+
 def check_displacement(
     open_val: float,
     high_val: float,
     low_val: float,
     close_val: float,
-    min_body_ratio: float = 0.60
+    min_body_ratio: float = FOUNDATION_MIN_BODY_RATIO,
 ) -> bool:
     """
-    Verifies that the candle body comprises at least min_body_ratio (default 60%)
-    of the total candle range.
+    Verifies candle body/range >= min_body_ratio (foundation default 0.45).
+
+    Prefer measure_displacement when callers need the numeric ratio / reason.
     """
-    total_range = high_val - low_val
-    if total_range <= 0:
-        return False
-    body_size = abs(close_val - open_val)
-    return (body_size / total_range) >= min_body_ratio
+    ok, _ratio, _reason = measure_displacement(
+        open_val, high_val, low_val, close_val, min_body_ratio
+    )
+    return ok
 
 
 def detect_fvg(

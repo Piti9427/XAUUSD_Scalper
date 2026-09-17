@@ -1,0 +1,9 @@
+{
+  "captured_at_utc": "2026-09-17T04:37:18Z",
+  "git_head": "71f47950b13eedf16428edeb7100d414bc7ff855",
+  "host": "158.178.243.98",
+  "tcp22": "open",
+  "ssh_batchmode_nopparuj": "nopparuj@158.178.243.98: Permission denied (publickey).\n ",
+  "ok": false,
+  "note": "Expect publickey denial until operator authorizes Mac id_ed25519.pub. Does not invent Gate C PASS."
+}

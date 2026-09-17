@@ -3,7 +3,15 @@ from dataclasses import replace
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import numpy as np
-from scripts.smc.structure import find_fractals_5bar, check_displacement, detect_fvg, check_sweep
+from scripts.smc.structure import (
+    find_fractals_5bar,
+    check_displacement,
+    measure_displacement,
+    detect_fvg,
+    check_sweep,
+    FOUNDATION_MIN_BODY_RATIO,
+    RULE_VERSION_DISPLACEMENT,
+)
 from scripts.smc.detection import detect_smc_setup
 from scripts.smc.types import Direction, SetupSignal, LiquidityLevels
 
@@ -20,10 +28,26 @@ class TestSMCStructure(unittest.TestCase):
         self.assertFalse(swing_highs[3])
 
     def test_displacement_ratio(self):
-        # Range = 10, Body = 7 (70% >= 60%) -> True
-        self.assertTrue(check_displacement(open_val=100.0, high_val=110.0, low_val=100.0, close_val=107.0))
-        # Range = 10, Body = 5 (50% < 60%) -> False
-        self.assertFalse(check_displacement(open_val=100.0, high_val=110.0, low_val=100.0, close_val=105.0))
+        # Story 19 / foundation: default min body/range is 0.45 (not silent 0.60).
+        self.assertEqual(FOUNDATION_MIN_BODY_RATIO, 0.45)
+        # Range = 10, Body = 5 (50% >= 45%) -> True
+        self.assertTrue(
+            check_displacement(open_val=100.0, high_val=110.0, low_val=100.0, close_val=105.0)
+        )
+        # Range = 10, Body = 4 (40% < 45%) -> False
+        self.assertFalse(
+            check_displacement(open_val=100.0, high_val=110.0, low_val=100.0, close_val=104.0)
+        )
+        ok, ratio, reason = measure_displacement(
+            100.0, 110.0, 100.0, 104.5, min_body_ratio=0.45
+        )
+        self.assertTrue(ok)
+        self.assertAlmostEqual(ratio, 0.45, places=4)
+        self.assertEqual(reason, "ok")
+        ok2, _r2, reason2 = measure_displacement(100.0, 100.0, 100.0, 100.0)
+        self.assertFalse(ok2)
+        self.assertEqual(reason2, "zero_range")
+        self.assertEqual(RULE_VERSION_DISPLACEMENT, "s1-s4-mechanical-v1")
 
     def test_fvg_detection(self):
         # Bullish FVG: candle 1 high = 100, candle 2 (disp) 99 to 110, candle 3 low = 101.5
@@ -154,6 +178,10 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         # Story 21: right-hand FVG candle stamped when setup becomes knowable.
         self.assertIsNotNone(signal.fvg_right_hand_index)
         self.assertIsNotNone(signal.fvg_available_at)
+        # Story 19: displacement ratio + rule version stamped for audit.
+        self.assertIsNotNone(signal.displacement_body_ratio)
+        self.assertGreaterEqual(signal.displacement_body_ratio, 0.45)
+        self.assertEqual(signal.displacement_rule_version, "s1-s4-mechanical-v1")
 
     def test_fvg_requires_right_hand_candle_in_closed_frame(self):
         """Story 21: no order path before FVG third candle exists in M5 frame."""
