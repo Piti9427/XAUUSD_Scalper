@@ -15,15 +15,13 @@ from scripts.smc.risk_halt import (
     observe_equity,
     save_risk_halt_state,
 )
-from scripts.smc.setup_identity import pending_h1_bias_allows
-from scripts.smc.quotes import (
-    disclose_missing_quote_at_exit_deadline,
-    disclose_missing_quote_for_pending_sl,
-    pending_sl_touched_before_fill,
-)
+from scripts.smc.quotes import disclose_missing_quote_at_exit_deadline
 from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
-from scripts.webhook.h1_bias import resolve_h1_bias_lazy
-from scripts.webhook.pending_cancel import cancel_unfilled_pending
+from scripts.webhook.clock_pending_gates import (
+    cancel_pendings_for_h1_bias,
+    cancel_pendings_for_news,
+    cancel_pendings_sl_before_fill,
+)
 from scripts.webhook.runtime import WebhookRuntime
 
 logger = logging.getLogger("webhook_bridge")
@@ -193,136 +191,23 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                         "Lifecycle close notify failed for %s: %s", order_id, exc
                     )
 
-        # Scenario 18: cancel unfilled pendings when news gate blocks new risk.
-        # Fetch pendings once; mutate local list after cancels (perf).
+        # Scenario 18 / 8 / B15: news, H1 bias, SL-before-fill pending cancels
         pending_ids = await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
-        if rt.news_manager is not None and hasattr(rt.news_manager, "should_cancel_pending"):
-            events = getattr(rt.news_manager, "events", None)
-            schedule_known = bool(
-                getattr(rt.news_manager, "schedule_known", events is not None)
-            )
-            cancel_pending, cancel_reason = await asyncio.to_thread(
-                rt.news_manager.should_cancel_pending,
-                now_utc,
-                events,
-                schedule_known=schedule_known,
-                window_mins=30,
-            )
-            if cancel_pending:
-                still_pending = []
-                for oid in pending_ids:
-                    kept, row = await cancel_unfilled_pending(
-                        rt,
-                        order_id=oid,
-                        intent_reason=f"news_pending_cancel:{cancel_reason}",
-                        lifecycle_reason=f"news_pending_cancel:{cancel_reason}",
-                        terminal_reason=f"news_pending_cancel:{cancel_reason}",
-                        result_reason=cancel_reason,
-                    )
-                    if kept:
-                        still_pending.append(oid)
-                    cancel_results.append(row)
-                pending_ids = still_pending
-
-        # Scenario 8: known H1 bias flip cancels opposing unfilled pendings (webhook path).
-        # Prefer explicit clock JSON; else live MT5 resolve (Gate C cron empty body).
-        h1_bias, h1_bias_known = await asyncio.to_thread(
-            resolve_h1_bias_lazy,
-            clock_payload,
-            rt.adapter.resolve_live_h1_bias,
+        pending_ids, cancel_results = await cancel_pendings_for_news(
+            rt, pending_ids=pending_ids, now_utc=now_utc
         )
-        if h1_bias_known:
-            still_pending = []
-            for oid in pending_ids:
-                pending_dir = await asyncio.to_thread(rt.adapter.get_pending_direction, oid)
-                if not pending_dir:
-                    still_pending.append(oid)
-                    continue
-                bias_ok, bias_reason = pending_h1_bias_allows(
-                    pending_direction=pending_dir,
-                    h1_bias=h1_bias,
-                    bias_known=True,
-                )
-                if bias_ok:
-                    still_pending.append(oid)
-                    continue
-                intent_reason = f"H1 bias invalidation: {bias_reason}"
-                kept, row = await cancel_unfilled_pending(
-                    rt,
-                    order_id=oid,
-                    intent_reason=intent_reason,
-                    lifecycle_reason=f"h1_bias_invalidated:{bias_reason}",
-                    terminal_reason=bias_reason,
-                    result_reason=bias_reason,
-                )
-                if kept:
-                    still_pending.append(oid)
-                h1_bias_cancels.append(row)
-            pending_ids = still_pending
-
-        # B15 / S1–S4: SL before fill using clock OHLC or live bid/ask snapshot.
-        # Missing both → disclose; never invent a synthetic high/low.
-        bar_high = None
-        bar_low = None
-        have_ohlc = isinstance(clock_payload.get("high"), (int, float)) and isinstance(
-            clock_payload.get("low"), (int, float)
+        pending_ids, h1_bias_cancels = await cancel_pendings_for_h1_bias(
+            rt, pending_ids=pending_ids, clock_payload=clock_payload
         )
-        if have_ohlc:
-            bar_high = float(clock_payload["high"])
-            bar_low = float(clock_payload["low"])
-        else:
-            quotes = await asyncio.to_thread(rt.adapter.get_market_quotes)
-            if quotes and quotes.get("ask") is not None and quotes.get("bid") is not None:
-                bar_high = float(quotes["ask"])
-                bar_low = float(quotes["bid"])
-        if bar_high is None or bar_low is None:
-            missing_quote_disclosures = disclose_missing_quote_for_pending_sl(
-                pending_order_ids=pending_ids,
-                have_ohlc=False,
-                have_live_quotes=False,
-            )
-            for row in missing_quote_disclosures:
-                await asyncio.to_thread(
-                    rt.adapter.log_lifecycle_event,
-                    event_type="MISSING_QUOTE",
-                    order_id=row["order_id"],
-                    reason="missing_quote:sl_before_fill_check",
-                )
-                logger.info(
-                    "Clock missing quote disclosure for pending %s (no invent OHLC)",
-                    row["order_id"],
-                )
-        else:
-            still_pending = []
-            for oid in pending_ids:
-                geom = await asyncio.to_thread(rt.adapter.get_pending_geometry, oid)
-                if not geom or geom.get("sl_price") is None or not geom.get("direction"):
-                    still_pending.append(oid)
-                    continue
-                limit_price = geom.get("limit_price")
-                if limit_price is None:
-                    limit_price = geom["sl_price"]
-                if not pending_sl_touched_before_fill(
-                    direction=str(geom["direction"]),
-                    limit_price=float(limit_price),
-                    sl_price=float(geom["sl_price"]),
-                    bar_high=bar_high,
-                    bar_low=bar_low,
-                ):
-                    still_pending.append(oid)
-                    continue
-                kept, row = await cancel_unfilled_pending(
-                    rt,
-                    order_id=oid,
-                    intent_reason="SL before fill: planned stop reached while pending",
-                    lifecycle_reason="sl_before_fill",
-                    terminal_reason="sl_before_fill",
-                    result_reason="sl_before_fill",
-                )
-                if kept:
-                    still_pending.append(oid)
-                sl_before_fill_cancels.append(row)
-            pending_ids = still_pending
+        (
+            pending_ids,
+            sl_before_fill_cancels,
+            missing_quote_disclosures,
+            bar_high,
+            bar_low,
+        ) = await cancel_pendings_sl_before_fill(
+            rt, pending_ids=pending_ids, clock_payload=clock_payload
+        )
 
         open_rows = await asyncio.to_thread(rt.adapter.list_open_fills)
         fills = [
