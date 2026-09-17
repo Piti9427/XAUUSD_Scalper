@@ -1,6 +1,11 @@
 import unittest
 
-from scripts.smc.quotes import executable_price, first_exit_from_ticks, ohlc_dual_touch_flag
+from scripts.smc.quotes import (
+    executable_price,
+    first_exit_from_ticks,
+    ohlc_dual_touch_flag,
+    pending_sl_touched_before_fill,
+)
 
 
 class QuoteSideTests(unittest.TestCase):
@@ -12,6 +17,44 @@ class QuoteSideTests(unittest.TestCase):
         px, side = executable_price(direction="BUY", bid=10.0, ask=None)
         self.assertIsNone(px)
         self.assertEqual(side, "missing_ask")
+
+    def test_pending_sl_touched_before_fill_buy_and_sell(self):
+        self.assertTrue(
+            pending_sl_touched_before_fill(
+                direction="BUY",
+                limit_price=2010.0,
+                sl_price=2005.0,
+                bar_high=2012.0,
+                bar_low=2004.0,
+            )
+        )
+        self.assertFalse(
+            pending_sl_touched_before_fill(
+                direction="BUY",
+                limit_price=2010.0,
+                sl_price=2005.0,
+                bar_high=2012.0,
+                bar_low=2009.5,
+            )
+        )
+        self.assertTrue(
+            pending_sl_touched_before_fill(
+                direction="SELL",
+                limit_price=2010.0,
+                sl_price=2015.0,
+                bar_high=2016.0,
+                bar_low=2008.0,
+            )
+        )
+        self.assertFalse(
+            pending_sl_touched_before_fill(
+                direction="SELL",
+                limit_price=2010.0,
+                sl_price=2015.0,
+                bar_high=2011.0,
+                bar_low=2008.0,
+            )
+        )
 
     def test_dual_touch_without_ticks_is_ambiguous(self):
         self.assertEqual(

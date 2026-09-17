@@ -86,15 +86,16 @@ This map is evidence of work-in-progress, **not** a claim that issue #1 is compl
 | Required-scenario coverage matrix (1–24) | **Done:** `scripts/ops/issue1_scenario_coverage.py` → `docs/ops/2026-09-16-issue1-scenario-coverage.json`; scenarios 1–23 software_evidence_complete; 24 live_ops_required; readiness embeds Gate B summary |
 | Setup registry survives process restart (scenario 8) | **Done:** `load_setup_registry` / `save_setup_registry`; `smc_main` loads `data/setup_registry.json`; `test_registry_survives_restart_after_ttl` |
 | Invalidation before submission (scenario 8) | **Done:** orchestrator blocks PLACE when known H1 bias conflicts; marks terminal; `test_h1_bias_blocks_submission_before_place` |
+| SL before fill cancels pending (S1–S4 B15) | **Done:** `pending_sl_touched_before_fill` in `quotes.py`; orchestrator CANCEL_LIMIT + terminal `sl_before_fill`; backtest does not invent fill-then-SL trade; `test_sl_before_fill_cancels_buy_pending_without_opening_position` |
 
 ## Still open for issue #1
 
 | Gap | Notes |
 | --- | --- |
-| Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine `path=` → `-6` auth fail; no Exness session. Fresh evidence: `docs/ops/2026-09-16-mac-wine-reprobe-running.json`, `docs/ops/2026-09-16-exness-smoke-mac-retry.json`. Operator: `./scripts/ops/issue1_operator_unblock.sh` |
-| Oracle ARM64 runtime soak | Checklist ready; SSH hunt → publickey denied (`docs/ops/2026-09-16-host-reachability-hunt.json`) |
+| Live Exness connect smoke with real credentials | **Blocked on Mac:** native import missing; Wine IPC fail; no Exness session. Operator: `./scripts/ops/issue1_operator_unblock.sh` |
+| Oracle ARM64 runtime soak | Checklist ready; SSH publickey denied |
 | Forward Demo 12-week protocol execution | Protocol registered; prospective after Gates B/C |
-| GitHub API write for issue close comments | **Unblocked:** `gh` auth OK (Piti9427). #1 still open until live artifacts; do not invent PASS |
+| GitHub API write for issue close comments | **Blocked:** `gh` token invalid — run `gh auth refresh -h github.com`. #1 still open until live artifacts; do not invent PASS |
 
 ## Sibling issues #2–#4
 

@@ -11,7 +11,11 @@ from scripts.smc.types import (
 )
 from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import RiskHaltState
-from scripts.smc.quotes import ohlc_dual_touch_flag, first_exit_from_ticks
+from scripts.smc.quotes import (
+    ohlc_dual_touch_flag,
+    first_exit_from_ticks,
+    pending_sl_touched_before_fill,
+)
 from scripts.smc.setup_identity import SetupRegistry, make_setup_id, pending_h1_bias_allows
 
 
@@ -313,6 +317,27 @@ class StrategyOrchestrator:
         # 3. Check Pending Order Lifecycle
         if account.pending_order is not None:
             order = account.pending_order
+
+            # B15 / S1–S4: SL before fill ends pending; setup identity retained.
+            if order.sl_price is not None and pending_sl_touched_before_fill(
+                direction=order.direction.value,
+                limit_price=float(order.limit_price),
+                sl_price=float(order.sl_price),
+                bar_high=float(bar["high"]),
+                bar_low=float(bar["low"]),
+            ):
+                cancel_intent = OrderIntent(
+                    intent_type=OrderIntentType.CANCEL_LIMIT,
+                    direction=order.direction,
+                    reason="SL before fill: planned stop reached while pending",
+                    order_id=order.order_id,
+                )
+                self.setup_registry.mark_terminal(order.order_id, "sl_before_fill")
+                account.pending_order = None
+                account.pending_bars_held = 0
+                intents.append(cancel_intent)
+                return intents
+
             is_filled = False
 
             if order.direction == Direction.BUY:

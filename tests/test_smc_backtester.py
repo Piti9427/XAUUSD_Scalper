@@ -146,16 +146,15 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(result.winning_trades, 1)
         self.assertEqual(result.losing_trades, 0)
 
-    def test_fill_and_stop_in_same_bar_is_recorded(self):
+    def test_pending_sl_before_fill_same_bar_is_not_a_trade(self):
+        # S1–S4 B15: plunge through planned SL while pending → cancel, no ledger trade.
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 10)
         bars.loc[mask, "low"] = 2000.0
         result = SMCBacktester(require_choch=False).run(bars, self.df_h1)
-        self.assertEqual(result.total_trades, 1)
-        self.assertLess(result.final_balance, result.initial_balance)
-        trade = result.trades_df.iloc[0]
-        self.assertEqual(trade.entry_time, trade.exit_time)
-        self.assertEqual(trade.exit_reason, "SL")
+        self.assertEqual(result.total_trades, 0)
+        self.assertEqual(result.final_balance, result.initial_balance)
+        self.assertTrue(result.trades_df.empty)
 
     def test_detector_only_sees_closed_h1_and_confirmed_fractals(self):
         from unittest.mock import patch

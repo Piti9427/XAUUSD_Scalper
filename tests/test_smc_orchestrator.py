@@ -315,8 +315,8 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertFalse(pos.partial_closed)
         self.assertAlmostEqual(pos.lot_size, 0.01)
 
-    def test_fill_bar_immediate_stop_out(self):
-        # Pending BUY limit at 2010.0, SL at 2005.0, TP at 2020.0
+    def test_fill_bar_that_pierces_sl_cancels_pending_sl_before_fill(self):
+        # S1–S4 B15: plunge through SL while pending → CANCEL, not fill-then-stop loss.
         limit_order = OrderIntent(
             intent_type=OrderIntentType.PLACE_LIMIT,
             direction=Direction.BUY,
@@ -325,6 +325,7 @@ class TestSMCOrchestrator(unittest.TestCase):
             tp_price=2020.0,
             lot_size=0.10,
             expire_bars=3,
+            order_id="FILL_SL_BAR",
         )
         account = AccountState(
             balance=10000.0,
@@ -332,7 +333,6 @@ class TestSMCOrchestrator(unittest.TestCase):
             pending_order=limit_order,
             pending_bars_held=0,
         )
-        # Bar opens at 2012.0, plunges to 2003.0 (fills at 2010.0 and breaches SL at 2005.0!)
         bar = {
             "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
             "open": 2012.0,
@@ -341,10 +341,15 @@ class TestSMCOrchestrator(unittest.TestCase):
             "close": 2004.0,
         }
         intents = self.orchestrator.on_bar(bar, account)
+        self.assertEqual(len(intents), 1)
+        self.assertEqual(intents[0].intent_type, OrderIntentType.CANCEL_LIMIT)
+        self.assertIn("SL before fill", intents[0].reason)
         self.assertIsNone(account.pending_order)
         self.assertIsNone(account.open_position)
-        self.assertEqual(account.daily_loss_count, 1)
-        self.assertIsNotNone(account.last_loss_time)
+        self.assertEqual(account.daily_loss_count, 0)
+        allowed, reason = self.orchestrator.setup_registry.admit("FILL_SL_BAR")
+        self.assertFalse(allowed)
+        self.assertIn("sl_before_fill", reason)
 
     def test_ohlc_dual_touch_without_ticks_is_ambiguous(self):
         pos = Position(
@@ -485,6 +490,64 @@ class TestSMCOrchestrator(unittest.TestCase):
         self.assertIn("TIME_EXIT", late[0].reason)
         # Local state stays open until broker evidence arrives.
         self.assertIsNotNone(account.open_position)
+
+    def test_sl_before_fill_cancels_buy_pending_without_opening_position(self):
+        # S1–S4 B15: bar pierces planned SL while pending → CANCEL, no fill.
+        pending = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=4,
+            order_id="SLBF1",
+        )
+        account = AccountState(
+            balance=10000.0, equity=10000.0, pending_order=pending, pending_bars_held=0
+        )
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2004.0,  # through SL 2005 (and limit 2010)
+            "close": 2006,
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertEqual(len(intents), 1)
+        self.assertEqual(intents[0].intent_type, OrderIntentType.CANCEL_LIMIT)
+        self.assertIn("SL before fill", intents[0].reason)
+        self.assertIsNone(account.pending_order)
+        self.assertIsNone(account.open_position)
+        allowed, reason = self.orchestrator.setup_registry.admit("SLBF1")
+        self.assertFalse(allowed)
+        self.assertIn("sl_before_fill", reason)
+
+    def test_limit_fill_still_wins_when_bar_misses_sl(self):
+        pending = OrderIntent(
+            intent_type=OrderIntentType.PLACE_LIMIT,
+            direction=Direction.BUY,
+            limit_price=2010.0,
+            sl_price=2005.0,
+            tp_price=2020.0,
+            lot_size=0.10,
+            expire_bars=4,
+            order_id="FILL_OK",
+        )
+        account = AccountState(
+            balance=10000.0, equity=10000.0, pending_order=pending, pending_bars_held=0
+        )
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2009.5,  # touches limit, misses SL
+            "close": 2011,
+        }
+        intents = self.orchestrator.on_bar(bar, account)
+        self.assertIsNone(account.pending_order)
+        self.assertIsNotNone(account.open_position)
+        self.assertEqual(account.open_position.entry_price, 2010.0)
 
     def test_news_blackout_cancels_pending_but_fill_wins_same_bar(self):
         pending = OrderIntent(

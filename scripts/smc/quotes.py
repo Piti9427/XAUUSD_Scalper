@@ -31,6 +31,29 @@ def executable_price(
     return None, "unknown_direction"
 
 
+def pending_sl_touched_before_fill(
+    *,
+    direction: str,
+    limit_price: float,
+    sl_price: float,
+    bar_high: float,
+    bar_low: float,
+) -> bool:
+    """
+    S1–S4 / experiment: SL reached while pending → end pending (no fill).
+
+    OCO-style: a bar that pierces the planned SL cancels the limit instead of
+    inventing a fill-then-stop path. For valid BUY geometry (sl < limit),
+    touching SL implies the limit was also in range; cancel still wins.
+    """
+    d = direction.upper()
+    if d == "BUY":
+        return float(bar_low) <= float(sl_price)
+    if d == "SELL":
+        return float(bar_high) >= float(sl_price)
+    return False
+
+
 def ohlc_dual_touch_flag(
     *,
     sl_touched: bool,
