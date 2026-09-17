@@ -1,6 +1,18 @@
 import unittest
-from unittest.mock import Mock
+from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
+
+# Wall-clock may be outside London/NY admission windows; bypass for fixture SETUP
+# paths. Dedicated test_out_of_session_rejects_setup_pending restores real gate.
+_SESSION_PATCHER = patch(
+    "scripts.webhook.setup_pending.is_in_session", return_value=True
+)
+_SESSION_PATCHER.start()
+
+
+def tearDownModule():
+    _SESSION_PATCHER.stop()
 
 
 class TestWebhookBridgeAuth(unittest.TestCase):
@@ -98,6 +110,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         notifier = Mock(enabled=True)
         payload = {
             "event": "SETUP_PENDING", "order_id": "REJECTED_1",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
             "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0,
             "tp2": 4062.5,
@@ -132,6 +145,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         response = self.client.post(
             "/webhook/tradingview",
             json={"event": "SETUP_PENDING", "order_id": "COST_MISSING_1",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                   "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                   "limit": 4050.0, "sl": 4045.0,
                   "tp1": 4055.0, "tp2": 4062.5},
@@ -165,6 +179,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             response = TestClient(app).post(
                 "/webhook/tradingview",
                 json={"event": "SETUP_PENDING", "order_id": "LIVE_RISK_1",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                       "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                       "limit": 4050.0, "sl": 4045.0,
                       "tp1": 4055.0, "tp2": 4062.5},
@@ -200,6 +215,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             response = TestClient(app).post(
                 "/webhook/tradingview",
                 json={"event": "SETUP_PENDING", "order_id": "EXPOSURE_1",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                       "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                       "limit": 4050.0, "sl": 4045.0,
                       "tp1": 4055.0, "tp2": 4062.5},
@@ -236,6 +252,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         def payload(order_id):
             return {"event": "SETUP_PENDING", "order_id": order_id,
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                     "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                     "limit": 4050.0, "sl": 4045.0,
                     "tp1": 4055.0, "tp2": 4062.5}
@@ -297,6 +314,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             return client.post(
                 "/webhook/tradingview",
                 json={"event": "SETUP_PENDING", "order_id": oid,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                       "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                       "limit": 4050.0, "sl": 4045.0,
                       "tp1": 4055.0, "tp2": 4062.5},
@@ -500,6 +518,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         def payload(oid):
             return {
                 "event": "SETUP_PENDING", "order_id": oid,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                 "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0, "tp2": 4062.5
             }
@@ -536,6 +555,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         def payload(oid):
             return {
                 "event": "SETUP_PENDING", "order_id": oid,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
                 "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0, "tp2": 4062.5
             }
@@ -559,6 +579,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_setup_pending_idempotency_duplicate_ignored(self):
         payload = {
             "event": "SETUP_PENDING",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "order_id": "XAUUSD_102",
             "symbol": "XAUUSD",
             "dir": "BUY",
@@ -593,6 +614,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             small_client = TestClient(small_app)
             payload = {
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "XAUUSD_103",
                 "symbol": "XAUUSD",
                 "dir": "BUY",
@@ -696,6 +718,7 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         # 1. Place limit
         setup_payload = {
             "event": "SETUP_PENDING",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "order_id": "XAUUSD_201",
             "symbol": "XAUUSD",
             "dir": "BUY",
@@ -875,6 +898,7 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
         # 1. Setup pending limit
         setup_payload = {
             "event": "SETUP_PENDING",
+            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "order_id": "XAUUSD_301",
             "symbol": "XAUUSD",
             "dir": "BUY",
@@ -975,7 +999,10 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
         self.assertIn("Circuit Breaker", data["reason"])
 
     def test_rollover_flat_rejects_late_setups(self):
-        # Time at 21:15 UTC (after 20:55 rollover cutoff)
+        # Time at 21:15 UTC (after 20:55 rollover cutoff). Session gate would
+        # also reject; force session ok so ADR-007 rollover remains covered.
+        from unittest.mock import patch
+
         payload = {
             "event": "SETUP_PENDING",
             "order_id": "XAUUSD_402",
@@ -988,11 +1015,37 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
             "tp2": 4062.50,
             "time": "2026-09-14 21:15:00",
         }
-        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
+        with patch("scripts.webhook.setup_pending.is_in_session", return_value=True):
+            res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["status"], "rejected")
         self.assertIn("Rollover", data["reason"])
+
+    def test_out_of_session_rejects_setup_pending(self):
+        payload = {
+            "event": "SETUP_PENDING",
+            "order_id": "XAUUSD_OUT_SESSION",
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "type": "SMC_PRIME",
+            "limit": 4050.00,
+            "sl": 4045.00,
+            "tp1": 4055.00,
+            "tp2": 4062.50,
+            "time": "2026-03-02T11:00:00+00:00",  # between London and NY windows
+        }
+        _SESSION_PATCHER.stop()
+        try:
+            res = self.client.post(
+                "/webhook/tradingview", json=payload, headers=self.headers
+            )
+        finally:
+            _SESSION_PATCHER.start()
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "rejected")
+        self.assertIn("out_of_session", data["reason"])
 
 
 class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
@@ -2259,6 +2312,7 @@ class TestWebhookDryRunSetupInbox(unittest.TestCase):
                 headers=headers,
                 json={
                     "event": "SETUP_PENDING",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                     "order_id": "DRY_CLAIM_1",
                     "dir": "BUY",
                     "limit": 2400.0,
@@ -2281,6 +2335,7 @@ class TestWebhookDryRunSetupInbox(unittest.TestCase):
                 headers=headers,
                 json={
                     "event": "SETUP_PENDING",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                     "order_id": "DRY_CLAIM_2",
                     "dir": "SELL",
                     "limit": 2390.0,
@@ -2334,6 +2389,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
                 headers=self.headers,
                 json={
                     "event": "SETUP_PENDING",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                     "order_id": "H1_LIVE_SETUP_1",
                     "dir": "BUY",
                     "limit": 2400.0,
@@ -2359,6 +2415,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
                 headers=self.headers,
                 json={
                     "event": "SETUP_PENDING",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                     "order_id": "H1_LIVE_SETUP_OK",
                     "dir": "BUY",
                     "limit": 2400.0,
@@ -2374,6 +2431,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "H1_BLOCK_1",
                 "dir": "BUY",
                 "limit": 2400.0,
@@ -2396,6 +2454,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "H1_FLIP_1",
                 "dir": "BUY",
                 "limit": 2400.0,
@@ -2429,6 +2488,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "SLBF_CLK_1",
                 "dir": "BUY",
                 "limit": 2400.0,
@@ -2464,6 +2524,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "H1_LIVE_1",
                 "dir": "BUY",
                 "limit": 2400.0,
@@ -2492,6 +2553,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "H1_LIVE_UNK",
                 "dir": "BUY",
                 "limit": 2400.0,
@@ -2516,6 +2578,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
             headers=self.headers,
             json={
                 "event": "SETUP_PENDING",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "order_id": "H1_UNKNOWN_1",
                 "dir": "BUY",
                 "limit": 2400.0,

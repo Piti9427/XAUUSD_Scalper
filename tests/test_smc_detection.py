@@ -227,6 +227,18 @@ class TestSMCDetectionIntegration(unittest.TestCase):
         self.assertIsNone(decision.signal)
         self.assertEqual(decision.reject_reason, "out_of_session")
 
+    def test_is_in_session_extended_window_boundaries(self):
+        from scripts.smc.detection import is_in_session
+
+        # Inclusive start / exclusive end per foundation fixed UTC windows.
+        self.assertTrue(is_in_session(datetime(2026, 3, 2, 7, 0, tzinfo=timezone.utc)))
+        self.assertTrue(is_in_session(datetime(2026, 3, 2, 10, 29, tzinfo=timezone.utc)))
+        self.assertFalse(is_in_session(datetime(2026, 3, 2, 10, 30, tzinfo=timezone.utc)))
+        self.assertFalse(is_in_session(datetime(2026, 3, 2, 11, 0, tzinfo=timezone.utc)))
+        self.assertTrue(is_in_session(datetime(2026, 3, 2, 12, 30, tzinfo=timezone.utc)))
+        self.assertTrue(is_in_session(datetime(2026, 3, 2, 16, 29, tzinfo=timezone.utc)))
+        self.assertFalse(is_in_session(datetime(2026, 3, 2, 16, 30, tzinfo=timezone.utc)))
+
     def test_counter_trend_h1_returns_none(self):
         # Make recent H1 closes drop sharply below EMA 200
         h1_bearish = self.df_h1.copy()

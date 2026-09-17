@@ -18,6 +18,7 @@ from scripts.smc.data_freshness import evaluate_new_risk_admission
 from scripts.smc.broker_metadata import broker_metadata_allows_new_risk
 from scripts.smc.stops_geometry import pending_stops_geometry_allows
 from scripts.smc.setup_identity import pending_h1_bias_allows
+from scripts.smc.detection import is_in_session
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 
@@ -175,6 +176,22 @@ async def handle_setup_pending(
             event_dt = datetime.now(timezone.utc)
     else:
         event_dt = datetime.now(timezone.utc)
+
+    # S1–S4 / foundation: new entry only inside fixed UTC admission windows.
+    if not is_in_session(event_dt, extended=True):
+        reason = (
+            "Admission window blocked new risk: out_of_session "
+            "(London 07:00–10:30 / NY 12:30–16:30 UTC)"
+        )
+        logger.warning(reason)
+        if order_id:
+            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_out_of_session")
+        return {
+            "status": "rejected",
+            "order_id": order_id,
+            "event": event,
+            "reason": reason,
+        }
 
     if (event_dt.hour > rt.rollover_hour_utc) or (
         event_dt.hour == rt.rollover_hour_utc and event_dt.minute >= rt.rollover_minute_utc
