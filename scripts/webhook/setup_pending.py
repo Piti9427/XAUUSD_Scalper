@@ -8,13 +8,12 @@ from typing import Any, Dict, Optional
 
 from fastapi import BackgroundTasks
 
-from scripts.smc.types import Direction, OrderIntent, OrderIntentType
-from scripts.smc.risk import calculate_lot_size
-from scripts.smc.stops_geometry import pending_stops_geometry_allows
+from scripts.smc.types import Direction
 from scripts.webhook.runtime import WebhookRuntime
 from scripts.webhook.setup_broker_gates import evaluate_setup_broker_gates
 from scripts.webhook.setup_h1_gate import evaluate_setup_h1_gate
 from scripts.webhook.setup_identity_gate import evaluate_identity_gate
+from scripts.webhook.setup_place_limit import place_setup_limit
 from scripts.webhook.setup_risk_halt import evaluate_risk_halt_gate
 from scripts.webhook.setup_time_gates import evaluate_setup_time_gates
 
@@ -98,158 +97,18 @@ async def handle_setup_pending(
     if h1_reject is not None:
         return h1_reject
 
-    # Sizing with zero spread double-buffer invariant
-    lot_result = calculate_lot_size(
-        balance=effective_balance,
-        entry_price=entry,
-        sl_price=sl,
-        risk_pct=rt.risk_pct,
-        spread_buffer=0.0,
-        equity=effective_equity,
-        min_lot=broker_risk["min_lot"] if broker_risk else 0.01,
-        max_lot=broker_risk["max_lot"] if broker_risk else 10.0,
-        lot_step=broker_risk["lot_step"] if broker_risk else 0.01,
-        contract_size=broker_risk["contract_size"] if broker_risk else 100.0,
-        commission_per_lot=rt.commission_per_lot,
-        slippage_allowance=rt.slippage_allowance,
-        require_cost_model=not rt.adapter.dry_run,
-    )
-
-    if not lot_result.is_valid:
-        if order_id:
-            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected")
-        return {
-            "status": "rejected",
-            "order_id": order_id,
-            "event": event,
-            "reason": f"ADR-020 Small-Account Risk Gate: {lot_result.reason}",
-        }
-
-    # Scenario 10: broker stops_level / point conversion must allow SL/TP geometry.
-    if not rt.adapter.dry_run and broker_risk is not None:
-        tp_for_geom = tp2 if tp2 > 0 else (tp1 if tp1 > 0 else None)
-        geom_ok, geom_reason = pending_stops_geometry_allows(
-            entry_price=entry,
-            sl_price=sl,
-            tp_price=tp_for_geom,
-            point=float(broker_risk["point"]),
-            stops_level=float(broker_risk["stops_level"]),
-        )
-        if not geom_ok:
-            reason = f"Stops geometry gate blocked new risk: {geom_reason}"
-            logger.warning(reason)
-            if order_id:
-                await asyncio.to_thread(
-                    rt.mark_processed, order_id, event, "rejected_stops_geometry"
-                )
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "event": event,
-                "reason": reason,
-            }
-
-    claim: Optional[Dict[str, str]] = None
-    if order_id:
-        claim = await asyncio.to_thread(rt.adapter.claim_setup, payload)
-        if claim["status"] == "duplicate":
-            return {
-                "status": "ignored_duplicate",
-                "order_id": order_id,
-                "receipt_id": claim["receipt_id"],
-            }
-        if claim["status"] != "claimed":
-            return {
-                "status": "rejected",
-                "order_id": order_id,
-                "reason": f"Setup claim {claim['status']}; broker reconciliation required",
-            }
-
-    intent = OrderIntent(
-        intent_type=OrderIntentType.PLACE_LIMIT,
+    return await place_setup_limit(
+        rt,
+        payload=payload,
+        broker_risk=broker_risk,
+        effective_balance=effective_balance,
+        effective_equity=effective_equity,
+        entry=entry,
+        sl=sl,
+        tp1=tp1,
+        tp2=tp2,
         direction=direction,
-        limit_price=entry,
-        sl_price=sl,
-        tp_price=tp2 if tp2 > 0 else tp1,
-        lot_size=lot_result.lot_size,
         order_id=order_id,
-        reason=payload.get("type", "SMC_PRIME"),
+        event=event,
+        background_tasks=background_tasks,
     )
-    # Pattern A: Offload blocking MT5 broker call to thread pool
-    try:
-        exec_res = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-    except Exception as exc:
-        logger.error(f"Execution error or timeout for {order_id}: {exc}")
-        if order_id:
-            await asyncio.to_thread(rt.adapter.update_setup_status, order_id, "uncertain")
-        return {
-            "status": "uncertain",
-            "order_id": order_id,
-            "event": event,
-            "reason": f"Execution uncertain: {exc}. Broker reconciliation required.",
-        }
-    if not exec_res.success:
-        from scripts.smc.notification_policy import classify_exec_outcome
-        outcome = classify_exec_outcome(
-            success=exec_res.success,
-            status=getattr(exec_res, "status", None),
-        )
-        if outcome == "uncertain":
-            if order_id:
-                await asyncio.to_thread(rt.adapter.update_setup_status, order_id, "uncertain")
-            return {
-                "status": "uncertain",
-                "order_id": order_id,
-                "event": event,
-                "reason": exec_res.message,
-                "exec_status": getattr(exec_res, "status", "UNKNOWN"),
-            }
-        if order_id:
-            await asyncio.to_thread(rt.adapter.update_setup_status, order_id, "rejected")
-        return {
-            "status": "rejected",
-            "order_id": order_id,
-            "event": event,
-            "reason": exec_res.message,
-            "exec_status": getattr(exec_res, "status", "REJECTED"),
-        }
-    if order_id:
-        await asyncio.to_thread(rt.adapter.update_setup_status, order_id, "accepted", exec_res.order_id)
-    if order_id:
-        await asyncio.to_thread(rt.mark_processed, order_id, event, "success")
-
-    # Pattern B: accepted-pending card only (never a fill/phantom trade card).
-    from scripts.smc.notification_policy import may_notify_execution
-    if (
-        rt.notifier
-        and getattr(rt.notifier, "enabled", False)
-        and may_notify_execution(
-            success=exec_res.success,
-            status=getattr(exec_res, "status", "OK"),
-        )
-    ):
-        try:
-            from scripts.smc.notifier import format_order_accepted_card
-            card = format_order_accepted_card(
-                direction=direction,
-                limit_price=entry,
-                sl_price=sl,
-                tp_price=tp2 if tp2 > 0 else tp1,
-                lot_size=lot_result.lot_size,
-                order_id=order_id,
-                ticket=exec_res.order_id,
-            )
-            background_tasks.add_task(rt.dispatch_tg_safe, card)
-        except Exception as exc:
-            logger.warning(f"Failed to schedule Telegram notification: {exc}")
-
-    return {
-        "status": "success",
-        "action": "LIMIT_PLACED",
-        "order_id": order_id,
-        **({"receipt_id": claim["receipt_id"]} if claim else {}),
-        "lot_size": lot_result.lot_size,
-        "ticket": exec_res.order_id,
-        "message": exec_res.message,
-    }
-
