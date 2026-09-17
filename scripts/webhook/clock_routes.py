@@ -21,6 +21,7 @@ from scripts.smc.quotes import (
     disclose_missing_quote_for_pending_sl,
     pending_sl_touched_before_fill,
 )
+from scripts.smc.trade_closed_pnl import resolve_trade_closed_pnl
 from scripts.webhook.h1_bias import resolve_h1_bias_lazy
 from scripts.webhook.runtime import WebhookRuntime
 
@@ -434,25 +435,57 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
                 if exposure_after == []:
                     await asyncio.to_thread(rt.adapter.finish_setup, plan.order_id)
 
-            pnl_dollar = None
-            pnl_r = None
+            broker_pnl = None
+            fill = None
             if not rt.adapter.dry_run:
                 broker_pnl = await asyncio.to_thread(
                     rt.adapter.get_realized_pnl_for_order, plan.order_id
                 )
-                if broker_pnl is not None:
-                    pnl_dollar = broker_pnl
-                    fill = await asyncio.to_thread(rt.adapter.get_fill_geometry, plan.order_id)
-                    if fill and fill.get("entry_price") and fill.get("sl_price") and fill.get("lot_size"):
-                        from scripts.smc.risk import frozen_initial_r
+                fill = await asyncio.to_thread(rt.adapter.get_fill_geometry, plan.order_id)
 
-                        pnl_r = frozen_initial_r(
-                            pnl_dollars=float(pnl_dollar),
-                            initial_sl_distance=abs(
-                                float(fill["entry_price"]) - float(fill["sl_price"])
-                            ),
-                            filled_lot=float(fill["lot_size"]),
-                        )
+            entry = float((fill or {}).get("entry_price") or 0.0)
+            sl = float((fill or {}).get("sl_price") or 0.0)
+            lot = float((fill or {}).get("lot_size") or 0.0)
+            pnl_r, pnl_dollar, pnl_status = resolve_trade_closed_pnl(
+                dry_run=bool(rt.adapter.dry_run),
+                broker_pnl=broker_pnl,
+                entry=entry,
+                sl=sl,
+                lot=lot,
+                exit_price=0.0,
+                direction=str(plan.direction or "BUY"),
+            )
+            if pnl_status == "live_broker_pnl_missing":
+                # Close already requested; keep fill open until broker cash appears.
+                # Stamp RECONCILE once — no invent dollars, no TRADE_CLOSED yet.
+                already_flagged = await asyncio.to_thread(
+                    rt.adapter.has_lifecycle_event, plan.order_id, "RECONCILE_REQUIRED"
+                )
+                if not already_flagged:
+                    await asyncio.to_thread(
+                        rt.adapter.log_lifecycle_event,
+                        event_type="RECONCILE_REQUIRED",
+                        order_id=plan.order_id,
+                        direction=plan.direction,
+                        reason="broker deal cashflow missing for live clock exit",
+                    )
+                await asyncio.to_thread(
+                    rt.mark_processed, plan.order_id, "TRADE_CLOSED", "reconcile_required"
+                )
+                exit_results.append(
+                    {
+                        "order_id": plan.order_id,
+                        "status": "reconcile_required",
+                        "reason": "broker deal cashflow missing for live clock exit",
+                        "pnl_dollar": None,
+                        "pnl_r": None,
+                        "execution": {
+                            "success": exec_close.success,
+                            "message": exec_close.message,
+                        },
+                    }
+                )
+                continue
 
             await asyncio.to_thread(
                 rt.adapter.log_lifecycle_event,
