@@ -153,7 +153,9 @@ class BrokerMixin:
             return None
         now = datetime.now(timezone.utc)
         from_date = None
-        cursor = self.conn.execute("SELECT created_at FROM setup_inbox WHERE order_id = ?", (order_id,))
+        cursor = self.conn.execute(
+            "SELECT created_at FROM setup_inbox WHERE order_id = ?", (order_id,)
+        )
         row = cursor.fetchone()
         if row and row[0]:
             try:
@@ -174,9 +176,6 @@ class BrokerMixin:
         target_comment = f"SMC_{order_id}"
         partial_comment = f"SMC_Partial_{order_id}"
         matching = [
-            d
-            for d in deals
-            if getattr(d, "comment", "") in {target_comment, partial_comment}
+            d for d in deals if getattr(d, "comment", "") in {target_comment, partial_comment}
         ]
         return aggregate_deal_cashflows(matching)
-

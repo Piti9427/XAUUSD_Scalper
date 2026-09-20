@@ -31,7 +31,9 @@ class MT5Connector:
     def connect(self):
         """Initializes MT5 and logs into the account."""
         if mt5 is None:
-            logger.error("MetaTrader5 package is not installed. Run pip install -r requirements.txt.")
+            logger.error(
+                "MetaTrader5 package is not installed. Run pip install -r requirements.txt."
+            )
             return False
 
         init = initialize_mt5(
@@ -69,7 +71,9 @@ class MT5Connector:
     def get_candles(self, symbol, timeframe_str, count):
         """Fetches candle data for a given symbol and timeframe."""
         if timeframe_str not in TIMEFRAMES:
-            raise ValueError(f"Unsupported timeframe {timeframe_str!r}. Supported: {', '.join(TIMEFRAMES)}")
+            raise ValueError(
+                f"Unsupported timeframe {timeframe_str!r}. Supported: {', '.join(TIMEFRAMES)}"
+            )
 
         if mt5 is None:
             logger.warning("MetaTrader5 package is not installed; cannot fetch live candles.")
@@ -77,13 +81,15 @@ class MT5Connector:
 
         tf = TIMEFRAMES[timeframe_str]
         rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
-        
+
         if rates is None:
-            logger.warning("No rates found for %s %s, error code: %s", symbol, timeframe_str, mt5.last_error())
+            logger.warning(
+                "No rates found for %s %s, error code: %s", symbol, timeframe_str, mt5.last_error()
+            )
             return None
-            
+
         df = pd.DataFrame(rates)
-        df['time'] = pd.to_datetime(df['time'], unit='s', utc=True)
+        df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
         logger.debug("Fetched %s candles for %s %s", len(df), symbol, timeframe_str)
         return df
 

@@ -26,10 +26,10 @@ class TestSMCNotifier(unittest.TestCase):
             fvg_high=2015.0,
             fvg_low=2013.0,
             reason="BUY SMC Setup: Swept 2010.0 -> MSS 2014.0",
-            timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc)
+            timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
         )
         card = format_smc_trade_card(signal, lot_size=0.08, risk_amount=50.0)
-        
+
         self.assertIn("XAUUSD SMC SIGNAL: BUY", card)
         self.assertIn("2014.00", card)
         self.assertIn("2008.20", card)

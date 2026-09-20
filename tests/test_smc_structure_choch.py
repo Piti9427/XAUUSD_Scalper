@@ -6,7 +6,6 @@ from scripts.smc.structure import (
     StructureState,
     apply_close_break,
     replay_structure_until,
-    classify_candidate_break,
 )
 
 

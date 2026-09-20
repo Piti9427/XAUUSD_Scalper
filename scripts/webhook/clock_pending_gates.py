@@ -32,9 +32,7 @@ async def cancel_pendings_for_news(
         return ids, cancel_results
 
     events = getattr(rt.news_manager, "events", None)
-    schedule_known = bool(
-        getattr(rt.news_manager, "schedule_known", events is not None)
-    )
+    schedule_known = bool(getattr(rt.news_manager, "schedule_known", events is not None))
     cancel_pending, cancel_reason = await asyncio.to_thread(
         rt.news_manager.should_cancel_pending,
         now_utc,

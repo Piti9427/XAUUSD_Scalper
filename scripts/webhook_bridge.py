@@ -88,9 +88,7 @@ def create_app(
 
     # Pattern C: Two-Tier In-Memory Idempotency Cache (ADR-024)
     memory_idempotency_cache: set[tuple[str, str]] = set()
-    is_processed, mark_processed = make_idempotency_helpers(
-        adapter, memory_idempotency_cache
-    )
+    is_processed, mark_processed = make_idempotency_helpers(adapter, memory_idempotency_cache)
     verify_auth = make_verify_auth(auth_token)
 
     # Pattern B: Safe Non-Blocking Dispatcher for Side-Effects (Telegram Notifier)

@@ -102,9 +102,7 @@ def initialize_mt5(
     (explicit args and/or env).
     """
     resolved = resolve_mt5_terminal_path(path=path, env=env)
-    account = resolve_mt5_account_kwargs(
-        login=login, password=password, server=server, env=env
-    )
+    account = resolve_mt5_account_kwargs(login=login, password=password, server=server, env=env)
     kwargs: dict[str, Any] = {}
     if resolved:
         kwargs["path"] = resolved

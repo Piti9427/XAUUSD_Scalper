@@ -67,9 +67,12 @@ class TestStagingHarness(unittest.TestCase):
 
     def test_runner_passes_configured_cost_model_to_app(self):
         from scripts import run_staging_bridge
-        with patch("sys.argv", ["run_staging_bridge.py", "--config", self.config_path]), \
-             patch.object(run_staging_bridge, "create_app") as app_factory, \
-             patch.object(run_staging_bridge.uvicorn, "run"):
+
+        with (
+            patch("sys.argv", ["run_staging_bridge.py", "--config", self.config_path]),
+            patch.object(run_staging_bridge, "create_app") as app_factory,
+            patch.object(run_staging_bridge.uvicorn, "run"),
+        ):
             run_staging_bridge.main()
         self.assertEqual(app_factory.call_args.kwargs["commission_per_lot"], 10.0)
         self.assertEqual(app_factory.call_args.kwargs["slippage_allowance"], 0.5)

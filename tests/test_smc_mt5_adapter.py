@@ -3,7 +3,6 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
-from datetime import datetime, timezone
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
 from scripts.smc.mt5_adapter import SMCExecutionAdapter, ExecutionResult
 
@@ -24,7 +23,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
             sl_price=2008.2,
             tp_price=2025.6,
             lot_size=0.10,
-            reason="Test Limit Buy"
+            reason="Test Limit Buy",
         )
         res = self.adapter.execute_intent(intent)
         self.assertIsInstance(res, ExecutionResult)
@@ -37,14 +36,14 @@ class TestSMCMT5Adapter(unittest.TestCase):
             direction=Direction.BUY,
             limit_price=2014.0,
             sl_price=2014.0,
-            reason="Move to BE"
+            reason="Move to BE",
         )
         res = self.adapter.execute_intent(intent)
         self.assertTrue(res.success)
 
     def test_sqlite_journaling(self):
         # Log an event and verify it persists in SQLite
-        db_path = ":memory:" # in-memory SQLite for testing
+        db_path = ":memory:"  # in-memory SQLite for testing
         adapter = SMCExecutionAdapter(symbol="XAUUSD", dry_run=True, db_path=db_path)
         try:
             adapter.log_lifecycle_event(
@@ -54,7 +53,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
                 sl_price=2008.2,
                 tp_price=2025.6,
                 lot_size=0.10,
-                reason="Test Log"
+                reason="Test Log",
             )
             logs = adapter.get_lifecycle_logs()
             self.assertEqual(len(logs), 1)
@@ -71,14 +70,13 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-1"
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-1")
+            )
         self.assertFalse(result.success)
-        self.assertFalse(any(
-            row["event_type"] == "CANCEL_LIMIT"
-            for row in self.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(row["event_type"] == "CANCEL_LIMIT" for row in self.adapter.get_lifecycle_logs())
+        )
 
     def test_live_market_close_rejected_by_broker_is_not_recorded_as_success(self):
         broker = Mock()
@@ -86,22 +84,25 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.ORDER_TYPE_SELL = 1
         broker.TRADE_ACTION_DEAL = 1
         broker.TRADE_RETCODE_DONE = 10009
-        broker.positions_get.return_value = [SimpleNamespace(
-            ticket=42, comment="SMC_owned-2", type=broker.ORDER_TYPE_BUY,
-            volume=0.02,
-        )]
+        broker.positions_get.return_value = [
+            SimpleNamespace(
+                ticket=42,
+                comment="SMC_owned-2",
+                type=broker.ORDER_TYPE_BUY,
+                volume=0.02,
+            )
+        ]
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.0, ask=4050.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-2"
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-2")
+            )
         self.assertFalse(result.success)
-        self.assertFalse(any(
-            row["event_type"] == "CLOSE_MARKET"
-            for row in self.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(row["event_type"] == "CLOSE_MARKET" for row in self.adapter.get_lifecycle_logs())
+        )
 
     def test_live_cancel_matches_exact_owned_order_id(self):
         broker = Mock()
@@ -114,9 +115,9 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.order_send.return_value = SimpleNamespace(retcode=10009, comment="done")
         self.adapter.dry_run = False
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-3"
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(intent_type=OrderIntentType.CANCEL_LIMIT, order_id="owned-3")
+            )
         self.assertTrue(result.success)
         broker.order_send.assert_called_once_with({"action": 8, "order": 42})
 
@@ -124,15 +125,23 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker = Mock()
         broker.TRADE_ACTION_SLTP = 6
         broker.TRADE_RETCODE_DONE = 10009
-        broker.positions_get.return_value = [SimpleNamespace(
-            ticket=42, comment="SMC_owned-4", tp=4062.5,
-        )]
+        broker.positions_get.return_value = [
+            SimpleNamespace(
+                ticket=42,
+                comment="SMC_owned-4",
+                tp=4062.5,
+            )
+        ]
         broker.account_info.return_value = SimpleNamespace(
             balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
-            volume_min=0.01, volume_max=5.0, volume_step=0.01,
-            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
+            trade_contract_size=100.0,
+            point=0.01,
+            trade_stops_level=0,
             trade_freeze_level=0,
         )
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4055.0, ask=4055.3)
@@ -140,39 +149,52 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.adapter.dry_run = False
         self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.MOVE_SL_TO_BE,
-                order_id="owned-4", sl_price=4050.0,
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(
+                    intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                    order_id="owned-4",
+                    sl_price=4050.0,
+                )
+            )
         self.assertFalse(result.success)
-        self.assertFalse(any(
-            row["event_type"] == "MOVE_SL_TO_BE"
-            for row in self.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(row["event_type"] == "MOVE_SL_TO_BE" for row in self.adapter.get_lifecycle_logs())
+        )
 
     def test_live_be_rejected_inside_freeze_level(self):
         broker = Mock()
         broker.TRADE_ACTION_SLTP = 6
         broker.TRADE_RETCODE_DONE = 10009
-        broker.positions_get.return_value = [SimpleNamespace(
-            ticket=42, comment="SMC_owned-freeze", tp=4062.5,
-        )]
+        broker.positions_get.return_value = [
+            SimpleNamespace(
+                ticket=42,
+                comment="SMC_owned-freeze",
+                tp=4062.5,
+            )
+        ]
         broker.account_info.return_value = SimpleNamespace(
             balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
-            volume_min=0.01, volume_max=5.0, volume_step=0.01,
-            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
+            trade_contract_size=100.0,
+            point=0.01,
+            trade_stops_level=0,
             trade_freeze_level=50,  # 0.50 price units
         )
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.2, ask=4050.4)
         self.adapter.dry_run = False
         self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.MOVE_SL_TO_BE,
-                order_id="owned-freeze", sl_price=4050.0,
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(
+                    intent_type=OrderIntentType.MOVE_SL_TO_BE,
+                    order_id="owned-freeze",
+                    sl_price=4050.0,
+                )
+            )
         self.assertFalse(result.success)
         self.assertIn("sl_inside_freeze_level", result.message)
         broker.order_send.assert_not_called()
@@ -184,31 +206,35 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.TRADE_ACTION_DEAL = 1
         broker.TRADE_RETCODE_DONE = 10009
         broker.ORDER_TIME_GTC = 0
-        broker.positions_get.return_value = [SimpleNamespace(
-            ticket=42, comment="SMC_owned-5", type=broker.ORDER_TYPE_BUY,
-            volume=0.04,
-        )]
+        broker.positions_get.return_value = [
+            SimpleNamespace(
+                ticket=42,
+                comment="SMC_owned-5",
+                type=broker.ORDER_TYPE_BUY,
+                volume=0.04,
+            )
+        ]
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4055.0, ask=4055.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10019, comment="rejected")
         self.adapter.dry_run = False
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.PARTIAL_CLOSE,
-                order_id="owned-5", lot_size=0.02,
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(
+                    intent_type=OrderIntentType.PARTIAL_CLOSE,
+                    order_id="owned-5",
+                    lot_size=0.02,
+                )
+            )
         self.assertFalse(result.success)
-        self.assertFalse(any(
-            row["event_type"] == "PARTIAL_CLOSE"
-            for row in self.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(row["event_type"] == "PARTIAL_CLOSE" for row in self.adapter.get_lifecycle_logs())
+        )
 
     def test_live_mode_without_mt5_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch("scripts.smc.mt5_adapter.runtime.mt5", None):
                 with self.assertRaises(RuntimeError):
-                    SMCExecutionAdapter(
-                        dry_run=False, db_path=str(Path(directory) / "trades.db")
-                    )
+                    SMCExecutionAdapter(dry_run=False, db_path=str(Path(directory) / "trades.db"))
 
     def test_live_init_forwards_account_kwargs(self):
         from scripts.smc.mt5_init import MT5InitResult
@@ -216,7 +242,10 @@ class TestSMCMT5Adapter(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             fake_init = Mock(
                 return_value=MT5InitResult(
-                    ok=True, path_used="C:\\MT5\\terminal64.exe", last_error=None, detail="initialized"
+                    ok=True,
+                    path_used="C:\\MT5\\terminal64.exe",
+                    last_error=None,
+                    detail="initialized",
                 )
             )
             with patch("scripts.smc.mt5_adapter.runtime.mt5", Mock()):
@@ -265,16 +294,18 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.adapter.dry_run = False
         self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.PLACE_LIMIT,
-                direction=Direction.BUY,
-                limit_price=4050.0,
-                sl_price=4040.0,
-                tp_price=4070.0,
-                lot_size=0.01,
-                order_id="fill-mode-1",
-                reason="test",
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(
+                    intent_type=OrderIntentType.PLACE_LIMIT,
+                    direction=Direction.BUY,
+                    limit_price=4050.0,
+                    sl_price=4040.0,
+                    tp_price=4070.0,
+                    lot_size=0.01,
+                    order_id="fill-mode-1",
+                    reason="test",
+                )
+            )
         self.assertTrue(result.success, result.message)
         sent = broker.order_send.call_args[0][0]
         self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_RETURN)
@@ -290,18 +321,26 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.ORDER_FILLING_IOC = 1
         broker.ORDER_FILLING_FOK = 0
         broker.ORDER_FILLING_RETURN = 2
-        broker.positions_get.return_value = [SimpleNamespace(
-            ticket=42, comment="SMC_owned-6", type=broker.ORDER_TYPE_BUY, volume=0.02,
-        )]
+        broker.positions_get.return_value = [
+            SimpleNamespace(
+                ticket=42,
+                comment="SMC_owned-6",
+                type=broker.ORDER_TYPE_BUY,
+                volume=0.02,
+            )
+        ]
         broker.symbol_info.return_value = SimpleNamespace(filling_mode=broker.SYMBOL_FILLING_IOC)
         broker.symbol_info_tick.return_value = SimpleNamespace(bid=4050.0, ask=4050.3)
         broker.order_send.return_value = SimpleNamespace(retcode=10009, comment="done")
         self.adapter.dry_run = False
         self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
-            result = self.adapter.execute_intent(OrderIntent(
-                intent_type=OrderIntentType.CLOSE_MARKET, order_id="owned-6",
-            ))
+            result = self.adapter.execute_intent(
+                OrderIntent(
+                    intent_type=OrderIntentType.CLOSE_MARKET,
+                    order_id="owned-6",
+                )
+            )
         self.assertTrue(result.success)
         sent = broker.order_send.call_args[0][0]
         self.assertEqual(sent["type_filling"], broker.ORDER_FILLING_IOC)
@@ -313,8 +352,12 @@ class TestSMCMT5Adapter(unittest.TestCase):
             balance=10000.0, equity=6000.0, margin_free=5500.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
-            volume_min=0.01, volume_max=5.0, volume_step=0.01,
-            trade_contract_size=100.0, point=0.01, trade_stops_level=0,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
+            trade_contract_size=100.0,
+            point=0.01,
+            trade_stops_level=0,
             trade_freeze_level=0,
         )
         self.adapter.dry_run = False
@@ -337,7 +380,9 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker = Mock()
         broker.account_info.return_value = SimpleNamespace(balance=10000.0, equity=6000.0)
         broker.symbol_info.return_value = SimpleNamespace(
-            volume_min=0.01, volume_max=5.0, volume_step=0.01,
+            volume_min=0.01,
+            volume_max=5.0,
+            volume_step=0.01,
             trade_contract_size=100.0,
         )
         self.adapter.dry_run = False

@@ -4,7 +4,8 @@ import time
 from datetime import datetime, timezone
 from scripts.config_loader import load_config, setup_logging, ConfigError
 from scripts.mt5_connector import MT5Connector
-from scripts.smc.types import AccountState, OrderIntent, OrderIntentType, Direction
+from scripts.smc.chart import generate_setup_chart
+from scripts.smc.types import AccountState, OrderIntentType, Direction
 from scripts.smc.liquidity import compute_liquidity_levels
 from scripts.smc.detection import evaluate_smc_setup, resolve_h1_ema_bias
 from scripts.smc.real_money_approval import require_real_money_approval
@@ -14,7 +15,6 @@ from scripts.smc.setup_identity import load_setup_registry
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.news import NewsManager
-from scripts.smc.risk import calculate_lot_size
 from scripts.smc.risk_halt import (
     load_risk_halt_state,
     new_risk_halt_state,
@@ -66,7 +66,9 @@ async def run_smc_live_copilot():
         # sizes orders from a fixed account balance. Keep it offline-only until
         # broker reconciliation owns the full order lifecycle.
         connector.disconnect()
-        raise RuntimeError("SMC legacy loop live execution is disabled; use the broker-reconciled webhook bridge for demo validation")
+        raise RuntimeError(
+            "SMC legacy loop live execution is disabled; use the broker-reconciled webhook bridge for demo validation"
+        )
     dry_run = not is_connected
     # Story 49: Demo readiness ≠ real-money. Live non-demo needs dual approval.
     allow_demo_only = bool(config.get("mt5", {}).get("allow_demo_only", True))
@@ -87,9 +89,7 @@ async def run_smc_live_copilot():
         password=mt5_cfg.get("password"),
         server=mt5_cfg.get("server"),
     )
-    setup_registry_path = Path(
-        strat_cfg.get("setup_registry_path", "data/setup_registry.json")
-    )
+    setup_registry_path = Path(strat_cfg.get("setup_registry_path", "data/setup_registry.json"))
     setup_registry = load_setup_registry(setup_registry_path)
     orchestrator = StrategyOrchestrator(
         max_daily_losses=strat_cfg.get("max_daily_losses", 2),
@@ -110,8 +110,12 @@ async def run_smc_live_copilot():
     risk_halt_path = Path(strat_cfg.get("risk_halt_path", "data/risk_halt_state.json"))
     risk_halt = load_risk_halt_state(risk_halt_path) or new_risk_halt_state(account.equity)
     if risk_halt.halted:
-        logger.error("Persistent risk halt active on startup: drawdown=%s daily=%s losses=%s",
-                     risk_halt.drawdown_halt, risk_halt.daily_equity_halt, risk_halt.net_losing_trades_today)
+        logger.error(
+            "Persistent risk halt active on startup: drawdown=%s daily=%s losses=%s",
+            risk_halt.drawdown_halt,
+            risk_halt.daily_equity_halt,
+            risk_halt.net_losing_trades_today,
+        )
 
     last_processed_m5_time = None
     last_news_fetch_time = 0.0
@@ -127,9 +131,14 @@ async def run_smc_live_copilot():
             # 3. Auto-fetch ForexFactory Calendar (every 4 hours)
             if time.time() - last_news_fetch_time > 14400:
                 try:
-                    cached_news_events = await asyncio.to_thread(news_mgr.fetch_forexfactory_calendar)
+                    cached_news_events = await asyncio.to_thread(
+                        news_mgr.fetch_forexfactory_calendar
+                    )
                     last_news_fetch_time = time.time()
-                    logger.info("Refreshed economic news calendar: %d high-impact USD events", len(cached_news_events))
+                    logger.info(
+                        "Refreshed economic news calendar: %d high-impact USD events",
+                        len(cached_news_events),
+                    )
                 except Exception as exc:
                     logger.warning("Could not refresh economic calendar: %s", exc)
 
@@ -167,7 +176,11 @@ async def run_smc_live_copilot():
                     last_closed_bar = df_m5.iloc[-2].to_dict()
                     bar_time = last_closed_bar["time"]
 
-                    logger.info("Evaluating M5 Bar closed at %s (Spread: %s)", bar_time, f"${current_spread:.2f}" if current_spread else "N/A")
+                    logger.info(
+                        "Evaluating M5 Bar closed at %s (Spread: %s)",
+                        bar_time,
+                        f"${current_spread:.2f}" if current_spread else "N/A",
+                    )
 
                     h1_ready = df_h1 is not None and h1_warmup_ok(len(df_h1))
                     if not h1_ready:
@@ -183,7 +196,11 @@ async def run_smc_live_copilot():
                     # news_mgr.should_cancel_pending → orchestrator.
 
                     # Reset circuit breaker alert on new UTC day
-                    bar_date_str = bar_time.date().isoformat() if hasattr(bar_time, "date") else now_utc.date().isoformat()
+                    bar_date_str = (
+                        bar_time.date().isoformat()
+                        if hasattr(bar_time, "date")
+                        else now_utc.date().isoformat()
+                    )
                     if account.current_utc_date != bar_date_str:
                         circuit_breaker_alerted = False
 
@@ -221,9 +238,7 @@ async def run_smc_live_copilot():
                             adapter.get_risk_snapshot()
                         )
                         if not meta_ok:
-                            logger.warning(
-                                "Broker metadata blocked new risk: %s", meta_reason
-                            )
+                            logger.warning("Broker metadata blocked new risk: %s", meta_reason)
                     if (
                         admission.allowed
                         and meta_ok
@@ -284,7 +299,9 @@ async def run_smc_live_copilot():
                             pending_ids.append(account.pending_order.order_id)
                         # Local simulation has no broker ticket list; clear local bot state.
                         if account.open_position is not None:
-                            open_ids.append(getattr(account.open_position, "order_id", None) or "LOCAL_OPEN")
+                            open_ids.append(
+                                getattr(account.open_position, "order_id", None) or "LOCAL_OPEN"
+                            )
                         for flatten_intent in plan_halt_flatten_intents(
                             pending_order_ids=pending_ids,
                             open_position_ids=[i for i in open_ids if i != "LOCAL_OPEN"],
@@ -347,14 +364,21 @@ async def run_smc_live_copilot():
                         h1_bias_known=h1_bias_known,
                     )
 
-                    from scripts.smc.notification_policy import may_notify_close, may_notify_execution
+                    from scripts.smc.notification_policy import (
+                        may_notify_close,
+                        may_notify_execution,
+                    )
                     from scripts.smc.notification_policy import (
                         may_use_ohlc_invented_close_pnl,
                         require_broker_cash_for_live_close,
                     )
 
                     for intent in intents:
-                        logger.info("Executing OrderIntent: %s (%s)", intent.intent_type.value, intent.reason)
+                        logger.info(
+                            "Executing OrderIntent: %s (%s)",
+                            intent.intent_type.value,
+                            intent.reason,
+                        )
                         res = adapter.execute_intent(intent)
                         logger.info("Execution Result: %s", res.message)
 
@@ -369,11 +393,21 @@ async def run_smc_live_copilot():
 
                         # Notify only after the execution adapter accepts placement.
                         if intent.intent_type == OrderIntentType.PLACE_LIMIT and setup is not None:
-                            if not may_notify_execution(success=True, status=getattr(res, "status", "OK")):
+                            if not may_notify_execution(
+                                success=True, status=getattr(res, "status", "OK")
+                            ):
                                 continue
-                            logger.info("Orchestrator approved SMC Setup: %s at %s (Lot: %s)", setup.direction.value, setup.entry_price, intent.lot_size)
+                            logger.info(
+                                "Orchestrator approved SMC Setup: %s at %s (Lot: %s)",
+                                setup.direction.value,
+                                setup.entry_price,
+                                intent.lot_size,
+                            )
                             chart_path = await asyncio.to_thread(generate_setup_chart, df_m5, setup)
-                            risk_usd = round(intent.lot_size * abs(intent.limit_price - intent.sl_price) * 100.0, 2)
+                            risk_usd = round(
+                                intent.lot_size * abs(intent.limit_price - intent.sl_price) * 100.0,
+                                2,
+                            )
                             await notifier.send_alert(
                                 signal=setup,
                                 lot_size=intent.lot_size,
@@ -389,7 +423,9 @@ async def run_smc_live_copilot():
                             broker_close_success=last_close_broker_ok or dry_run,
                             already_flat_on_broker=False,
                         ):
-                            logger.warning("TRADE CLOSED notify suppressed — no broker close evidence")
+                            logger.warning(
+                                "TRADE CLOSED notify suppressed — no broker close evidence"
+                            )
                         else:
                             from scripts.smc.risk import frozen_initial_r
 
@@ -493,30 +529,44 @@ async def run_smc_live_copilot():
                     if account.open_position is not None:
                         # Order Filled Alert
                         if not account.open_position.fill_alerted:
-                            await notifier.send_message(format_order_filled_card(account.open_position, symbol))
+                            await notifier.send_message(
+                                format_order_filled_card(account.open_position, symbol)
+                            )
                             account.open_position.fill_alerted = True
 
                         # Partial Take Profit Alert
-                        if account.open_position.partial_closed and not account.open_position.partial_alerted:
-                            await notifier.send_message(format_partial_tp_card(
-                                direction=account.open_position.direction,
-                                closed_lot=round(account.open_position.lot_size, 2),
-                                remaining_lot=round(account.open_position.lot_size, 2),
-                                r_multiple=strat_cfg.get("partial_tp_r", 1.0),
-                                entry_price=account.open_position.entry_price,
-                                symbol=symbol,
-                            ))
+                        if (
+                            account.open_position.partial_closed
+                            and not account.open_position.partial_alerted
+                        ):
+                            await notifier.send_message(
+                                format_partial_tp_card(
+                                    direction=account.open_position.direction,
+                                    closed_lot=round(account.open_position.lot_size, 2),
+                                    remaining_lot=round(account.open_position.lot_size, 2),
+                                    r_multiple=strat_cfg.get("partial_tp_r", 1.0),
+                                    entry_price=account.open_position.entry_price,
+                                    symbol=symbol,
+                                )
+                            )
                             account.open_position.partial_alerted = True
 
                         # Breakeven Alert
                         if account.open_position.be_moved and not account.open_position.be_alerted:
-                            await notifier.send_message(format_be_moved_card(account.open_position, symbol))
+                            await notifier.send_message(
+                                format_be_moved_card(account.open_position, symbol)
+                            )
                             account.open_position.be_alerted = True
 
                     # Circuit Breaker Alert
-                    if account.daily_loss_count >= orchestrator.max_daily_losses and not circuit_breaker_alerted:
+                    if (
+                        account.daily_loss_count >= orchestrator.max_daily_losses
+                        and not circuit_breaker_alerted
+                    ):
                         await notifier.send_message(
-                            format_circuit_breaker_card(account.daily_loss_count, orchestrator.cooldown_minutes, symbol)
+                            format_circuit_breaker_card(
+                                account.daily_loss_count, orchestrator.cooldown_minutes, symbol
+                            )
                         )
                         circuit_breaker_alerted = True
 

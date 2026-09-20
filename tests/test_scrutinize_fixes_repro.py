@@ -131,7 +131,9 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
                     adapter.conn.commit()
 
                 pnl = adapter.get_realized_pnl_for_order("OVERNIGHT")
-                self.assertIsNotNone(pnl, "Cross-midnight deal must be found using lookback or created_at")
+                self.assertIsNotNone(
+                    pnl, "Cross-midnight deal must be found using lookback or created_at"
+                )
                 self.assertEqual(pnl, 145.5)
             finally:
                 adapter.close()
@@ -163,7 +165,9 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
 
                 outcome = adapter.reconcile_uncertain("FILLED_ORDER")
                 # Under the bug, outcome is 'rejected'. It should NOT be rejected when order was filled!
-                self.assertNotEqual(outcome, "rejected", "Filled order in history must not be marked rejected")
+                self.assertNotEqual(
+                    outcome, "rejected", "Filled order in history must not be marked rejected"
+                )
             finally:
                 adapter.close()
 
@@ -234,11 +238,15 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
 
             self.assertEqual(len(captured_cards), 3)
             # Under the bug, ORDER_FILLED reports 0.01 Lots instead of 0.50 Lots!
-            self.assertIn("0.50 Lot", captured_cards[0], "ORDER_FILLED must display actual lot size")
+            self.assertIn(
+                "0.50 Lot", captured_cards[0], "ORDER_FILLED must display actual lot size"
+            )
             # Under the bug, TP1 card reports BUY instead of SELL!
             self.assertIn("SELL", captured_cards[1], "TP1 card must reflect SELL direction")
             # Under the bug, TRADE_CLOSED reports BUY instead of SELL!
-            self.assertIn("SELL", captured_cards[2], "TRADE_CLOSED card must reflect SELL direction")
+            self.assertIn(
+                "SELL", captured_cards[2], "TRADE_CLOSED card must reflect SELL direction"
+            )
         finally:
             if hasattr(app.state, "adapter") and app.state.adapter:
                 app.state.adapter.close()

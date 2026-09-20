@@ -47,8 +47,7 @@ async def handle_trade_closed(
     )
     exec_close = await asyncio.to_thread(rt.adapter.execute_intent, intent_close)
     already_closed_by_broker = (
-        not exec_close.success
-        and "not found" in (exec_close.message or "").lower()
+        not exec_close.success and "not found" in (exec_close.message or "").lower()
     )
 
     if not exec_close.success:
@@ -72,9 +71,7 @@ async def handle_trade_closed(
 
     broker_pnl = None
     if not rt.adapter.dry_run and (already_closed_by_broker or exec_close.success):
-        broker_pnl = await asyncio.to_thread(
-            rt.adapter.get_realized_pnl_for_order, order_id
-        )
+        broker_pnl = await asyncio.to_thread(rt.adapter.get_realized_pnl_for_order, order_id)
 
     entry = float(payload.get("entry") or 0.0)
     sl = float(payload.get("sl") or 0.0)
@@ -94,9 +91,7 @@ async def handle_trade_closed(
     )
     if pnl_status == "live_broker_pnl_missing":
         if order_id:
-            await asyncio.to_thread(
-                rt.mark_processed, order_id, event, "reconcile_required"
-            )
+            await asyncio.to_thread(rt.mark_processed, order_id, event, "reconcile_required")
         return {
             "status": "reconcile_required",
             "order_id": order_id,
@@ -121,9 +116,8 @@ async def handle_trade_closed(
     )
     # Foundation risk halt: two net losing bot closes trip daily loss gate.
     if rt.risk_halt is not None and rt.halt_path is not None:
-        is_net_loss = (
-            (pnl_r is not None and float(pnl_r) < 0)
-            or (pnl_dollar is not None and float(pnl_dollar) < 0)
+        is_net_loss = (pnl_r is not None and float(pnl_r) < 0) or (
+            pnl_dollar is not None and float(pnl_dollar) < 0
         )
         if is_net_loss:
             record_net_losing_trade(rt.risk_halt)

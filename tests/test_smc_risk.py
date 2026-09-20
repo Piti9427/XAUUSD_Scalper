@@ -1,6 +1,6 @@
 import unittest
 from scripts.smc.risk import calculate_lot_size, LotResult, frozen_initial_r
-from scripts.smc.types import Direction, OrderIntentType, SetupSignal, OrderIntent, AccountState
+from scripts.smc.types import Direction, OrderIntentType
 
 
 class TestSMCRiskCalculator(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
             sl_price=1996.00,
             risk_pct=0.005,
             spread_buffer=0.30,
-            max_sl_cap=6.00
+            max_sl_cap=6.00,
         )
         self.assertIsInstance(result, LotResult)
         self.assertTrue(result.is_valid)
@@ -34,7 +34,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
             sl_price=1994.00,
             risk_pct=0.005,
             spread_buffer=0.30,
-            max_sl_cap=6.00
+            max_sl_cap=6.00,
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
@@ -51,7 +51,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
             sl_price=1995.30,
             risk_pct=0.005,
             spread_buffer=0.30,
-            min_lot=0.01
+            min_lot=0.01,
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
@@ -67,7 +67,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
             risk_pct=0.005,
             spread_buffer=0.30,
             min_lot=0.01,
-            max_risk_cap_pct=0.015
+            max_risk_cap_pct=0.015,
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
@@ -83,7 +83,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
             sl_price=1999.30,
             risk_pct=0.005,
             spread_buffer=0.30,
-            max_lot=10.0
+            max_lot=10.0,
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 10.0)
@@ -119,9 +119,12 @@ class TestSMCRiskCalculator(unittest.TestCase):
 
     def test_equity_below_balance_limits_risk_budget(self):
         result = calculate_lot_size(
-            balance=10000.0, equity=5000.0,
-            entry_price=2000.0, sl_price=1990.0,
-            risk_pct=0.01, spread_buffer=0.0,
+            balance=10000.0,
+            equity=5000.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 0.04)
@@ -129,9 +132,13 @@ class TestSMCRiskCalculator(unittest.TestCase):
 
     def test_commission_and_slippage_are_included_in_budget(self):
         result = calculate_lot_size(
-            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
-            risk_pct=0.01, spread_buffer=0.0,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            balance=5000.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 0.04)
@@ -139,46 +146,51 @@ class TestSMCRiskCalculator(unittest.TestCase):
 
     def test_strict_cost_model_rejects_missing_allowance(self):
         result = calculate_lot_size(
-            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
-            risk_pct=0.01, spread_buffer=0.0,
-            commission_per_lot=10.0, require_cost_model=True,
+            balance=5000.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            commission_per_lot=10.0,
+            require_cost_model=True,
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
 
     def test_negative_cost_allowance_is_rejected(self):
         result = calculate_lot_size(
-            balance=5000.0, entry_price=2000.0, sl_price=1990.0,
-            risk_pct=0.01, spread_buffer=0.0,
-            commission_per_lot=-10.0, slippage_allowance=0.0,
+            balance=5000.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            commission_per_lot=-10.0,
+            slippage_allowance=0.0,
             require_cost_model=True,
         )
         self.assertFalse(result.is_valid)
 
     def test_broker_millilot_step_is_preserved(self):
         result = calculate_lot_size(
-            balance=500.0, entry_price=2000.0, sl_price=1990.0,
-            risk_pct=0.01, spread_buffer=0.0,
-            min_lot=0.001, lot_step=0.001,
+            balance=500.0,
+            entry_price=2000.0,
+            sl_price=1990.0,
+            risk_pct=0.01,
+            spread_buffer=0.0,
+            min_lot=0.001,
+            lot_step=0.001,
         )
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 0.004)
 
     def test_zero_or_negative_balance(self):
-        result = calculate_lot_size(
-            balance=0.0,
-            entry_price=2000.00,
-            sl_price=1996.00
-        )
+        result = calculate_lot_size(balance=0.0, entry_price=2000.00, sl_price=1996.00)
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
 
     def test_zero_sl_distance(self):
         result = calculate_lot_size(
-            balance=10000.0,
-            entry_price=2000.00,
-            sl_price=2000.00,
-            spread_buffer=0.0
+            balance=10000.0, entry_price=2000.00, sl_price=2000.00, spread_buffer=0.0
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)

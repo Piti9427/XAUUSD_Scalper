@@ -31,9 +31,7 @@ async def observe_and_persist_risk_halt(
         return
     equity_raw = await asyncio.to_thread(rt.adapter.get_account_equity)
     history_ready = rt.adapter.dry_run or equity_raw is not None
-    equity_now = (
-        float(equity_raw) if equity_raw is not None else float(rt.account_balance)
-    )
+    equity_now = float(equity_raw) if equity_raw is not None else float(rt.account_balance)
     observe_equity(
         rt.risk_halt,
         equity_now,
@@ -66,9 +64,7 @@ async def flatten_on_risk_halt(
 
     if not rt.adapter.dry_run:
         exposure = await asyncio.to_thread(rt.adapter.get_open_exposure)
-        journal_pending = set(
-            await asyncio.to_thread(rt.adapter.list_unfilled_pendings)
-        )
+        journal_pending = set(await asyncio.to_thread(rt.adapter.list_unfilled_pendings))
         for oid in bot_owned_order_ids(exposure):
             if oid in journal_pending and oid not in ids:
                 ids.append(oid)

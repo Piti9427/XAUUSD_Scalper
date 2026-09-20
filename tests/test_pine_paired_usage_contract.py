@@ -28,17 +28,19 @@ class PinePairedUsageContractTests(unittest.TestCase):
         self.assertRegex(self.indicator, r'alertOutput\s*=\s*input\.string\("Manual Card"')
         self.assertIn('options=["Manual Card", "Bot JSON", "Off"]', self.indicator)
         self.assertIn('alert(alertOutput == "Bot JSON" ? pendingJson : pendingCard', self.indicator)
-        setup_alert_block = self.indicator.split("if eventSetupPending", 1)[1].split("if eventOrderFilled", 1)[0]
+        setup_alert_block = self.indicator.split("if eventSetupPending", 1)[1].split(
+            "if eventOrderFilled", 1
+        )[0]
         self.assertNotIn("+ pendingJson", setup_alert_block)
-        self.assertNotIn('--- JSON WEBHOOK ---', self.indicator)
+        self.assertNotIn("--- JSON WEBHOOK ---", self.indicator)
 
     def test_strategy_exposes_manual_operator_overlay(self):
         self.assertRegex(self.strategy, r'visualPreset\s*=\s*input\.string\("Balanced \(Clean\)"')
-        self.assertIn('var table operatorHud = table.new(', self.strategy)
-        self.assertIn('plot(activeEntry', self.strategy)
-        self.assertIn('plot(activeSl', self.strategy)
-        self.assertIn('plot(activeTp1', self.strategy)
-        self.assertIn('plot(activeTp2', self.strategy)
+        self.assertIn("var table operatorHud = table.new(", self.strategy)
+        self.assertIn("plot(activeEntry", self.strategy)
+        self.assertIn("plot(activeSl", self.strategy)
+        self.assertIn("plot(activeTp1", self.strategy)
+        self.assertIn("plot(activeTp2", self.strategy)
 
 
 if __name__ == "__main__":

@@ -53,9 +53,7 @@ class ClockRiskHaltHelperTests(unittest.TestCase):
         )
         rt = _rt(halted=False, adapter=adapter)
         try:
-            still, cancels, closes = asyncio.run(
-                flatten_on_risk_halt(rt, pending_ids=["P1"])
-            )
+            still, cancels, closes = asyncio.run(flatten_on_risk_halt(rt, pending_ids=["P1"]))
             self.assertEqual(still, ["P1"])
             self.assertEqual(cancels, [])
             self.assertEqual(closes, [])
@@ -68,17 +66,13 @@ class ClockRiskHaltHelperTests(unittest.TestCase):
             dry_run=True,
             list_open_fills=Mock(return_value=[]),
             list_unfilled_pendings=Mock(return_value=["P1"]),
-            execute_intent=Mock(
-                return_value=SimpleNamespace(success=True, message="ok")
-            ),
+            execute_intent=Mock(return_value=SimpleNamespace(success=True, message="ok")),
             log_lifecycle_event=Mock(),
             finish_setup=Mock(),
         )
         rt = _rt(halted=True, adapter=adapter)
         try:
-            still, cancels, closes = asyncio.run(
-                flatten_on_risk_halt(rt, pending_ids=["P1"])
-            )
+            still, cancels, closes = asyncio.run(flatten_on_risk_halt(rt, pending_ids=["P1"]))
             self.assertEqual(still, [])
             self.assertEqual(len(cancels), 1)
             self.assertEqual(cancels[0]["order_id"], "P1")

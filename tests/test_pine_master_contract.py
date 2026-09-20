@@ -7,7 +7,8 @@ SOURCE = Path("tradingview/xauusd_master_pro_strategy.pine")
 
 class PineMasterContractTests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls): cls.source = SOURCE.read_text()
+    def setUpClass(cls):
+        cls.source = SOURCE.read_text()
 
     def test_canonical_script_is_strategy_with_confirmed_htf_data(self):
         self.assertIn('strategy("XAUUSD Master Pro Strategy', self.source)
@@ -28,4 +29,5 @@ class PineMasterContractTests(unittest.TestCase):
         self.assertIn("rawSl = lastMssSweepExtremum + slBuffer", self.source)
 
 
-if __name__ == "__main__": unittest.main()
+if __name__ == "__main__":
+    unittest.main()

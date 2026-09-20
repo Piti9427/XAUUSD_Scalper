@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, List, Optional
 
-from scripts.smc.types import Direction, OrderIntent, OrderIntentType
+from scripts.smc.types import OrderIntent, OrderIntentType
 
 
 def plan_halt_flatten_intents(
@@ -42,7 +42,9 @@ def plan_halt_flatten_intents(
     return intents
 
 
-def bot_owned_order_ids(exposure: Optional[Iterable[Any]], *, comment_prefix: str = "SMC_") -> List[str]:
+def bot_owned_order_ids(
+    exposure: Optional[Iterable[Any]], *, comment_prefix: str = "SMC_"
+) -> List[str]:
     """Extract bot-owned order/position comment suffixes as order_ids."""
     if not exposure:
         return []

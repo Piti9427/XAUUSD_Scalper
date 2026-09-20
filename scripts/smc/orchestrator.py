@@ -78,8 +78,7 @@ class StrategyOrchestrator:
 
         # Rollover Flat Check (ADR-007: Flat before 21:00 UTC)
         if (bar_time.hour > self.rollover_hour_utc) or (
-            bar_time.hour == self.rollover_hour_utc
-            and bar_time.minute >= self.rollover_minute_utc
+            bar_time.hour == self.rollover_hour_utc and bar_time.minute >= self.rollover_minute_utc
         ):
             intents.append(
                 OrderIntent(
@@ -157,10 +156,14 @@ class StrategyOrchestrator:
         if self.partial_tp_enabled and not pos.partial_closed:
             partial_hit = False
             if pos.direction == Direction.BUY:
-                if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.partial_tp_r):
+                if float(bar["high"]) >= (
+                    pos.entry_price + pos.initial_sl_distance * self.partial_tp_r
+                ):
                     partial_hit = True
             else:  # SELL
-                if (float(bar["low"]) + self.spread_buffer) <= (pos.entry_price - pos.initial_sl_distance * self.partial_tp_r):
+                if (float(bar["low"]) + self.spread_buffer) <= (
+                    pos.entry_price - pos.initial_sl_distance * self.partial_tp_r
+                ):
                     partial_hit = True
 
             if partial_hit:
@@ -195,7 +198,11 @@ class StrategyOrchestrator:
                         pos.be_moved = True
                         be_price = round(
                             pos.entry_price
-                            + (self.be_buffer if pos.direction == Direction.BUY else -self.be_buffer),
+                            + (
+                                self.be_buffer
+                                if pos.direction == Direction.BUY
+                                else -self.be_buffer
+                            ),
                             2,
                         )
                         pos.sl_price = be_price
@@ -212,7 +219,9 @@ class StrategyOrchestrator:
         # Breakeven Relocation (optional — foundation BaselinePlay keeps be_enabled=False)
         if self.be_enabled and not pos.be_moved:
             if pos.direction == Direction.BUY:
-                if float(bar["high"]) >= (pos.entry_price + pos.initial_sl_distance * self.be_trigger_r):
+                if float(bar["high"]) >= (
+                    pos.entry_price + pos.initial_sl_distance * self.be_trigger_r
+                ):
                     pos.be_moved = True
                     be_price = round(pos.entry_price + self.be_buffer, 2)
                     pos.sl_price = be_price
@@ -226,7 +235,9 @@ class StrategyOrchestrator:
                         )
                     )
             else:  # SELL
-                if (float(bar["low"]) + self.spread_buffer) <= (pos.entry_price - pos.initial_sl_distance * self.be_trigger_r):
+                if (float(bar["low"]) + self.spread_buffer) <= (
+                    pos.entry_price - pos.initial_sl_distance * self.be_trigger_r
+                ):
                     pos.be_moved = True
                     be_price = round(pos.entry_price - self.be_buffer, 2)
                     pos.sl_price = be_price

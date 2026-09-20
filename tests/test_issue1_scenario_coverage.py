@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import unittest
-from pathlib import Path
 
 from scripts.ops.issue1_scenario_coverage import SCENARIOS, build_report
 

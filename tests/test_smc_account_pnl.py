@@ -34,16 +34,31 @@ class AccountPnlSeparationTests(unittest.TestCase):
 
     def test_classify_bot_manual_and_cash_flow_deals(self):
         bot = SimpleNamespace(
-            ticket=1, type=DEAL_TYPE_BUY, comment="SMC_ORDER_A",
-            profit=12.0, commission=-0.5, swap=0.0, fee=0.0,
+            ticket=1,
+            type=DEAL_TYPE_BUY,
+            comment="SMC_ORDER_A",
+            profit=12.0,
+            commission=-0.5,
+            swap=0.0,
+            fee=0.0,
         )
         manual = SimpleNamespace(
-            ticket=2, type=DEAL_TYPE_BUY, comment="manual scalp",
-            profit=-8.0, commission=0.0, swap=0.0, fee=0.0,
+            ticket=2,
+            type=DEAL_TYPE_BUY,
+            comment="manual scalp",
+            profit=-8.0,
+            commission=0.0,
+            swap=0.0,
+            fee=0.0,
         )
         deposit = SimpleNamespace(
-            ticket=3, type=DEAL_TYPE_BALANCE, comment="",
-            profit=200.0, commission=0.0, swap=0.0, fee=0.0,
+            ticket=3,
+            type=DEAL_TYPE_BALANCE,
+            comment="",
+            profit=200.0,
+            commission=0.0,
+            swap=0.0,
+            fee=0.0,
         )
         self.assertEqual(classify_deal_source(bot), "bot")
         self.assertEqual(classify_deal_source(manual), "manual")

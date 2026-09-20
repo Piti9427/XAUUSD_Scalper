@@ -17,7 +17,9 @@ class TelegramNotifier:
         self.chat_id = config.get("chat_id")
         token = config.get("token")
         if self.enabled and Bot is None:
-            raise RuntimeError("python-telegram-bot is not installed. Run pip install -r requirements.txt.")
+            raise RuntimeError(
+                "python-telegram-bot is not installed. Run pip install -r requirements.txt."
+            )
         self.bot = Bot(token=token) if self.enabled else None
         if not self.enabled:
             logger.info("Telegram notifier disabled")
@@ -30,7 +32,7 @@ class TelegramNotifier:
 
         try:
             async with self.bot:
-                await self.bot.send_message(chat_id=self.chat_id, text=text, parse_mode='Markdown')
+                await self.bot.send_message(chat_id=self.chat_id, text=text, parse_mode="Markdown")
         except Exception as e:
             logger.error("Error sending Telegram message: %s", e)
 
@@ -50,16 +52,16 @@ class TelegramNotifier:
         """Sends a compact, actionable trade insight."""
         await self.send_message(format_trade_for_telegram(trade_data))
 
+
 # Example usage for testing (standalone)
 if __name__ == "__main__":
-    import sys
     import yaml
-    
+
     async def test():
         with open("config/settings.yaml", "r") as f:
             config = yaml.safe_load(f)
-        
-        notifier = TelegramNotifier(config['telegram'])
+
+        notifier = TelegramNotifier(config["telegram"])
         print("Sending test message...")
         await notifier.send_signal_alert("BUY", 2400.50, 2410.50, 2395.50)
 

@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Tuple, List, Dict, Any, Optional, Sequence
 import pandas as pd
-import numpy as np
 from scripts.smc.types import Direction
 
 RULE_VERSION_STRUCTURE = "s1-s4-mechanical-v1"
@@ -147,7 +146,9 @@ def apply_close_break(
 
     if state.bias == StructureBias.UNKNOWN:
         if opposite is None:
-            return state, StructureEvent(kind=StructureEventKind.NONE, broken_price=broken_swing_price)
+            return state, StructureEvent(
+                kind=StructureEventKind.NONE, broken_price=broken_swing_price
+            )
         opp_index, opp_price = opposite
         new_bias = StructureBias.BULLISH if break_side == "above" else StructureBias.BEARISH
         nxt = StructureState(
@@ -162,9 +163,8 @@ def apply_close_break(
             protected_price=opp_price,
         )
 
-    is_continuation = (
-        (state.bias == StructureBias.BULLISH and break_side == "above")
-        or (state.bias == StructureBias.BEARISH and break_side == "below")
+    is_continuation = (state.bias == StructureBias.BULLISH and break_side == "above") or (
+        state.bias == StructureBias.BEARISH and break_side == "below"
     )
     is_protected_break = (
         state.protected_price is not None
@@ -186,7 +186,9 @@ def apply_close_break(
                 broken_price=broken_swing_price,
             )
         opp_index, opp_price = opposite
-        new_bias = StructureBias.BEARISH if state.bias == StructureBias.BULLISH else StructureBias.BULLISH
+        new_bias = (
+            StructureBias.BEARISH if state.bias == StructureBias.BULLISH else StructureBias.BULLISH
+        )
         nxt = StructureState(
             bias=new_bias,
             protected_price=opp_price,
@@ -201,7 +203,9 @@ def apply_close_break(
 
     if is_continuation:
         if opposite is None:
-            return state, StructureEvent(kind=StructureEventKind.NONE, broken_price=broken_swing_price)
+            return state, StructureEvent(
+                kind=StructureEventKind.NONE, broken_price=broken_swing_price
+            )
         opp_index, opp_price = opposite
         nxt = StructureState(
             bias=state.bias,
@@ -284,11 +288,7 @@ def replay_structure_until(
         prefer_above = close >= open_proxy
         if break_above is not None and (break_below is None or prefer_above):
             broken_idx, broken_price = break_above
-            opposite = [
-                (idx, price)
-                for idx, price in avail_lows
-                if broken_idx < idx < i
-            ]
+            opposite = [(idx, price) for idx, price in avail_lows if broken_idx < idx < i]
             state, _ = apply_close_break(
                 state,
                 break_side="above",
@@ -298,11 +298,7 @@ def replay_structure_until(
             )
         elif break_below is not None:
             broken_idx, broken_price = break_below
-            opposite = [
-                (idx, price)
-                for idx, price in avail_highs
-                if broken_idx < idx < i
-            ]
+            opposite = [(idx, price) for idx, price in avail_highs if broken_idx < idx < i]
             state, _ = apply_close_break(
                 state,
                 break_side="below",
@@ -415,13 +411,13 @@ def detect_fvg(
     candle_disp: Dict[str, Any],
     candle_next: Dict[str, Any],
     direction: Direction,
-    min_gap: float = 0.50
+    min_gap: float = 0.50,
 ) -> Tuple[bool, float, float, float]:
     """
     Detects 3-candle Fair Value Gap (FVG).
     Bullish: candle_next.low > candle_prev.high by at least min_gap ($0.50).
     Bearish: candle_prev.low > candle_next.high by at least min_gap ($0.50).
-    
+
     Returns: (is_fvg, gap_high, gap_low, ce_50)
     """
     if direction == Direction.BUY:
@@ -443,27 +439,23 @@ def detect_fvg(
 
 
 def check_sweep(
-    candle: Dict[str, Any],
-    level: float,
-    is_high_level: bool = True,
-    max_pierce: float = 5.0
+    candle: Dict[str, Any], level: float, is_high_level: bool = True, max_pierce: float = 5.0
 ) -> Tuple[bool, float]:
     """
     Verifies a strict Wick-Only Liquidity Sweep (ADR-002).
-    
+
     For High Level (Asian High or PDH):
         - high > level
         - close <= level (wick only, no body close above)
         - high - level <= max_pierce ($5.00)
-    
+
     For Low Level (Asian Low or PDL):
         - low < level
         - close >= level (wick only, no body close below)
         - level - low <= max_pierce ($5.00)
-        
+
     Returns: (is_sweep, sweep_wick_price)
     """
-    c_open = float(candle["open"])
     c_high = float(candle["high"])
     c_low = float(candle["low"])
     c_close = float(candle["close"])
@@ -486,7 +478,7 @@ def is_expansion_breakout(
     candle: Dict[str, Any],
     level: float,
     is_high_level: bool = True,
-    max_breakout_pierce: float = 8.0
+    max_breakout_pierce: float = 8.0,
 ) -> bool:
     """
     ADR-002 Expansion Breakout: a candle's body closes through the level,

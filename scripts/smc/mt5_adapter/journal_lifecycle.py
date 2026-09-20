@@ -31,7 +31,9 @@ class JournalLifecycleMixin:
             ts = timestamp
             # Normalize payload clock times into ISO so daily LIKE filters stay stable.
             try:
-                parsed = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00").replace(" ", "T"))
+                parsed = datetime.fromisoformat(
+                    str(timestamp).replace("Z", "+00:00").replace(" ", "T")
+                )
                 if parsed.tzinfo is None:
                     parsed = parsed.replace(tzinfo=timezone.utc)
                 else:
@@ -146,7 +148,9 @@ class JournalLifecycleMixin:
                 payload = None
             if isinstance(payload, dict):
                 direction = payload.get("dir") or payload.get("direction")
-                limit_raw = payload.get("entry") or payload.get("limit") or payload.get("limit_price")
+                limit_raw = (
+                    payload.get("entry") or payload.get("limit") or payload.get("limit_price")
+                )
                 sl_raw = payload.get("sl") or payload.get("sl_price")
                 try:
                     limit_price = float(limit_raw) if limit_raw is not None else None

@@ -17,15 +17,11 @@ class SetupRegistryResolveTests(unittest.TestCase):
     def test_live_defaults_to_persisted_path(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "setup_registry.json"
-            reg = resolve_setup_registry(
-                None, dry_run=False, default_live_path=str(path)
-            )
+            reg = resolve_setup_registry(None, dry_run=False, default_live_path=str(path))
             self.assertEqual(reg._persist_path, path)
             reg.mark_terminal("SMC_LIVE_1", "ttl_expired")
             self.assertTrue(path.is_file())
-            reloaded = resolve_setup_registry(
-                str(path), dry_run=True
-            )
+            reloaded = resolve_setup_registry(str(path), dry_run=True)
             self.assertTrue(reloaded.is_blocked("SMC_LIVE_1"))
 
     def test_explicit_path_wins(self):

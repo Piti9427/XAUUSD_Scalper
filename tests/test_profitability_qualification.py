@@ -13,13 +13,17 @@ class ProfitabilityQualificationTests(unittest.TestCase):
         start = datetime(2024, 1, 1, tzinfo=timezone.utc)
         trades = []
         for index in range(120):
-            trades.append({
-                "pnl_r": 1.0 if index % 3 else -1.0,
-                "direction": "long" if index % 2 else "short",
-                "session": "london" if index % 4 < 2 else "new_york",
-                "closed_at": start + timedelta(days=index),
-            })
-        result = qualify_candidate(trades, trades, QualificationPolicy(bootstrap_samples=500, seed=7))
+            trades.append(
+                {
+                    "pnl_r": 1.0 if index % 3 else -1.0,
+                    "direction": "long" if index % 2 else "short",
+                    "session": "london" if index % 4 < 2 else "new_york",
+                    "closed_at": start + timedelta(days=index),
+                }
+            )
+        result = qualify_candidate(
+            trades, trades, QualificationPolicy(bootstrap_samples=500, seed=7)
+        )
         self.assertEqual("HISTORICAL_QUALIFIED", result.status)
         self.assertGreaterEqual(result.base.profit_factor, 1.5)
         self.assertGreater(result.bootstrap_lower_95_expectancy_r, 0)
@@ -31,8 +35,14 @@ class ProfitabilityQualificationTests(unittest.TestCase):
 
     def test_capital_viability_never_rounds_up_to_split_minimum(self):
         result = assess_capital_viability(
-            balance=100, equity=100, risk_pct=0.005, entry=4300, stop=4290,
-            contract_size=100, min_lot=0.01, lot_step=0.01,
+            balance=100,
+            equity=100,
+            risk_pct=0.005,
+            entry=4300,
+            stop=4290,
+            contract_size=100,
+            min_lot=0.01,
+            lot_step=0.01,
         )
         self.assertFalse(result.viable)
         self.assertEqual(0.0, result.allowed_lot)

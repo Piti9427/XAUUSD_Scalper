@@ -99,6 +99,7 @@ class TestSetupInbox(unittest.TestCase):
 
     def test_uncertain_setup_blocks_and_reconciles_against_broker(self):
         from types import SimpleNamespace
+
         with tempfile.TemporaryDirectory() as directory:
             db_path = str(Path(directory) / "trades.db")
             broker = Mock()

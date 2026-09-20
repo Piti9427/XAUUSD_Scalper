@@ -78,7 +78,9 @@ def _bootstrap_lower(rows: list[Mapping], samples: int, seed: int) -> float:
 
 
 def qualify_candidate(
-    trades: Iterable[Mapping], stress_trades: Iterable[Mapping], policy: QualificationPolicy = QualificationPolicy()
+    trades: Iterable[Mapping],
+    stress_trades: Iterable[Mapping],
+    policy: QualificationPolicy = QualificationPolicy(),
 ) -> QualificationResult:
     if policy.bootstrap_samples <= 0 or not 0 < policy.risk_pct <= 1 or policy.min_trades <= 0:
         raise ValueError("qualification policy values must be positive")
@@ -88,7 +90,10 @@ def qualify_candidate(
     failures: list[str] = []
     if base.trade_count < policy.min_trades:
         failures.append(f"trade_count<{policy.min_trades}")
-    for dimension, values in (("direction", ("long", "short")), ("session", ("london", "new_york"))):
+    for dimension, values in (
+        ("direction", ("long", "short")),
+        ("session", ("london", "new_york")),
+    ):
         for value in values:
             subset = [row for row in base_rows if row.get(dimension) == value]
             if not subset:
@@ -105,13 +110,24 @@ def qualify_candidate(
         failures.append("cost_stress")
     if lower <= 0:
         failures.append("bootstrap_lower_95")
-    incomplete = base.trade_count < policy.min_trades or any(item.startswith("missing_") for item in failures)
+    incomplete = base.trade_count < policy.min_trades or any(
+        item.startswith("missing_") for item in failures
+    )
     status = "INCONCLUSIVE" if incomplete else ("REWORK" if failures else "HISTORICAL_QUALIFIED")
     return QualificationResult(status, base, stress, lower, tuple(failures))
 
 
-def assess_capital_viability(*, balance: float, equity: float, risk_pct: float, entry: float, stop: float,
-                             contract_size: float, min_lot: float, lot_step: float) -> CapitalViability:
+def assess_capital_viability(
+    *,
+    balance: float,
+    equity: float,
+    risk_pct: float,
+    entry: float,
+    stop: float,
+    contract_size: float,
+    min_lot: float,
+    lot_step: float,
+) -> CapitalViability:
     risk_budget = min(balance, equity) * risk_pct
     risk_per_lot = abs(entry - stop) * contract_size
     if risk_per_lot <= 0 or risk_pct <= 0:

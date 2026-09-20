@@ -1,6 +1,5 @@
 import unittest
-from datetime import datetime, timezone, timedelta, time
-import pandas as pd
+from datetime import datetime, timezone
 from scripts.smc.types import (
     Direction,
     OrderIntentType,
@@ -8,7 +7,6 @@ from scripts.smc.types import (
     Position,
     AccountState,
     SetupSignal,
-    LiquidityLevels
 )
 from scripts.smc.orchestrator import StrategyOrchestrator
 
@@ -27,29 +25,44 @@ class TestSMCOrchestrator(unittest.TestCase):
             sl_price=2005.0,
             tp_price=2020.0,
             lot_size=0.10,
-            expire_bars=3
+            expire_bars=3,
         )
         account = AccountState(
-            balance=10000.0,
-            equity=10000.0,
-            pending_order=initial_order,
-            pending_bars_held=0
+            balance=10000.0, equity=10000.0, pending_order=initial_order, pending_bars_held=0
         )
-        
+
         # Bar 1: Price stays above limit_price (high=2015, low=2012) -> pending_bars_held becomes 1
-        bar1 = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2014, "high": 2015, "low": 2012, "close": 2013}
+        bar1 = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2014,
+            "high": 2015,
+            "low": 2012,
+            "close": 2013,
+        }
         intents1 = self.orchestrator.on_bar(bar1, account)
         self.assertEqual(intents1, [])
         self.assertEqual(account.pending_bars_held, 1)
 
         # Bar 2: Price stays above (high=2014, low=2011) -> pending_bars_held becomes 2
-        bar2 = {"time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc), "open": 2013, "high": 2014, "low": 2011, "close": 2012}
+        bar2 = {
+            "time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc),
+            "open": 2013,
+            "high": 2014,
+            "low": 2011,
+            "close": 2012,
+        }
         intents2 = self.orchestrator.on_bar(bar2, account)
         self.assertEqual(intents2, [])
         self.assertEqual(account.pending_bars_held, 2)
 
         # Bar 3: Price still doesn't touch (high=2013, low=2010.5) -> TTL reached (3 bars)! CANCEL_LIMIT emitted
-        bar3 = {"time": datetime(2026, 3, 2, 8, 45, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2010.5, "close": 2011}
+        bar3 = {
+            "time": datetime(2026, 3, 2, 8, 45, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2010.5,
+            "close": 2011,
+        }
         intents3 = self.orchestrator.on_bar(bar3, account)
         self.assertEqual(len(intents3), 1)
         self.assertEqual(intents3[0].intent_type, OrderIntentType.CANCEL_LIMIT)
@@ -63,20 +76,23 @@ class TestSMCOrchestrator(unittest.TestCase):
             intent_type=OrderIntentType.PLACE_LIMIT,
             direction=Direction.BUY,
             limit_price=2010.0,
-            sl_price=2005.0, # SL distance = $5.00
-            tp_price=2020.0, # +2.0R
+            sl_price=2005.0,  # SL distance = $5.00
+            tp_price=2020.0,  # +2.0R
             lot_size=0.10,
-            expire_bars=3
+            expire_bars=3,
         )
         account = AccountState(
-            balance=10000.0,
-            equity=10000.0,
-            pending_order=limit_order,
-            pending_bars_held=0
+            balance=10000.0, equity=10000.0, pending_order=limit_order, pending_bars_held=0
         )
-        
+
         # Bar 1: Low dips to 2009.5 (touches 2010.0) -> Limit order fills! Position opened
-        bar1 = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
+        bar1 = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2009.5,
+            "close": 2011,
+        }
         intents1 = orch.on_bar(bar1, account)
         self.assertIsNotNone(account.open_position)
         self.assertIsNone(account.pending_order)
@@ -84,7 +100,13 @@ class TestSMCOrchestrator(unittest.TestCase):
 
         # Bar 2: Price reaches +1.0R (2010.0 + 5.00 = 2015.00) -> High touches 2015.5
         # Must emit MOVE_SL_TO_BE!
-        bar2 = {"time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc), "open": 2011, "high": 2015.5, "low": 2010.8, "close": 2015.0}
+        bar2 = {
+            "time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc),
+            "open": 2011,
+            "high": 2015.5,
+            "low": 2010.8,
+            "close": 2015.0,
+        }
         intents2 = orch.on_bar(bar2, account)
         self.assertEqual(len(intents2), 1)
         self.assertEqual(intents2[0].intent_type, OrderIntentType.MOVE_SL_TO_BE)
@@ -106,9 +128,21 @@ class TestSMCOrchestrator(unittest.TestCase):
             pending_order=limit_order,
             pending_bars_held=0,
         )
-        bar1 = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
+        bar1 = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2009.5,
+            "close": 2011,
+        }
         self.orchestrator.on_bar(bar1, account)
-        bar2 = {"time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc), "open": 2011, "high": 2015.5, "low": 2010.8, "close": 2015.0}
+        bar2 = {
+            "time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc),
+            "open": 2011,
+            "high": 2015.5,
+            "low": 2010.8,
+            "close": 2015.0,
+        }
         intents2 = self.orchestrator.on_bar(bar2, account)
         self.assertEqual(intents2, [])
         self.assertFalse(account.open_position.be_moved)
@@ -130,7 +164,13 @@ class TestSMCOrchestrator(unittest.TestCase):
             reason="BUY SMC Setup",
             timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
         )
-        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011.0, "close": 2012}
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2011.0,
+            "close": 2012,
+        }
         orch = StrategyOrchestrator(risk_pct=0.005)
         rich = AccountState(balance=10000.0, equity=10000.0)
         poor_equity = AccountState(balance=10000.0, equity=5000.0)
@@ -149,16 +189,18 @@ class TestSMCOrchestrator(unittest.TestCase):
             tp_price=2020.0,
             lot_size=0.10,
             open_time=datetime(2026, 3, 2, 14, 0, tzinfo=timezone.utc),
-            initial_sl_distance=5.0
+            initial_sl_distance=5.0,
         )
-        account = AccountState(
-            balance=10000.0,
-            equity=10000.0,
-            open_position=position
-        )
-        
+        account = AccountState(balance=10000.0, equity=10000.0, open_position=position)
+
         # Bar at 20:55 UTC
-        bar_rollover = {"time": datetime(2026, 3, 2, 20, 55, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011, "close": 2012}
+        bar_rollover = {
+            "time": datetime(2026, 3, 2, 20, 55, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2011,
+            "close": 2012,
+        }
         intents = self.orchestrator.on_bar(bar_rollover, account)
         self.assertEqual(len(intents), 1)
         self.assertEqual(intents[0].intent_type, OrderIntentType.CLOSE_MARKET)
@@ -167,12 +209,15 @@ class TestSMCOrchestrator(unittest.TestCase):
     def test_daily_circuit_breaker_halts_trading(self):
         # Scenario: Account already experienced 2 realized losses today.
         account = AccountState(
-            balance=9900.0,
-            equity=9900.0,
-            daily_loss_count=2,
-            current_utc_date="2026-03-02"
+            balance=9900.0, equity=9900.0, daily_loss_count=2, current_utc_date="2026-03-02"
         )
-        bar = {"time": datetime(2026, 3, 2, 13, 0, tzinfo=timezone.utc), "open": 2010, "high": 2012, "low": 2008, "close": 2011}
+        bar = {
+            "time": datetime(2026, 3, 2, 13, 0, tzinfo=timezone.utc),
+            "open": 2010,
+            "high": 2012,
+            "low": 2008,
+            "close": 2011,
+        }
         intents = self.orchestrator.on_bar(bar, account)
         self.assertEqual(intents, [])
 
@@ -184,9 +229,15 @@ class TestSMCOrchestrator(unittest.TestCase):
             equity=9950.0,
             daily_loss_count=1,
             last_loss_time=loss_time,
-            current_utc_date="2026-03-02"
+            current_utc_date="2026-03-02",
         )
-        bar = {"time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc), "open": 2010, "high": 2012, "low": 2008, "close": 2011}
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2010,
+            "high": 2012,
+            "low": 2008,
+            "close": 2011,
+        }
         # Under cooldown (15 < 30 min) -> No action
         intents = self.orchestrator.on_bar(bar, account)
         self.assertEqual(intents, [])
@@ -209,7 +260,13 @@ class TestSMCOrchestrator(unittest.TestCase):
             pending_bars_held=0,
         )
         # Price touches 2009.5 <= 2010.0 even with spread 0.50 > max 0.35
-        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2009.5, "close": 2011}
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2009.5,
+            "close": 2011,
+        }
         self.orchestrator.on_bar(bar, account, current_spread=0.50, max_spread=0.35)
         self.assertIsNotNone(account.open_position)
         self.assertIsNone(account.pending_order)
@@ -231,7 +288,13 @@ class TestSMCOrchestrator(unittest.TestCase):
             reason="BUY SMC Setup",
             timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
         )
-        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011.0, "close": 2012}
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2011.0,
+            "close": 2012,
+        }
         half = StrategyOrchestrator(risk_pct=0.005)
         full = StrategyOrchestrator(risk_pct=0.01)
         acct_half = AccountState(balance=10000.0, equity=10000.0)
@@ -259,8 +322,16 @@ class TestSMCOrchestrator(unittest.TestCase):
             reason="BUY SMC Setup",
             timestamp=datetime(2026, 3, 2, 8, 5, tzinfo=timezone.utc),
         )
-        bar = {"time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc), "open": 2012, "high": 2013, "low": 2011.0, "close": 2012}
-        intents = self.orchestrator.on_bar(bar, account, setup_signal=signal, current_spread=0.45, max_spread=0.35)
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
+            "open": 2012,
+            "high": 2013,
+            "low": 2011.0,
+            "close": 2012,
+        }
+        intents = self.orchestrator.on_bar(
+            bar, account, setup_signal=signal, current_spread=0.45, max_spread=0.35
+        )
         self.assertEqual(intents, [])
         self.assertIsNone(account.pending_order)
 
@@ -278,7 +349,13 @@ class TestSMCOrchestrator(unittest.TestCase):
         account = AccountState(balance=10000.0, equity=10000.0, open_position=pos)
 
         # Bar reaches 2005.0 (+1.0R): triggers Partial TP and BE move
-        bar = {"time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc), "open": 2002, "high": 2005.5, "low": 2001, "close": 2005}
+        bar = {
+            "time": datetime(2026, 3, 2, 8, 15, tzinfo=timezone.utc),
+            "open": 2002,
+            "high": 2005.5,
+            "low": 2001,
+            "close": 2005,
+        }
         intents = orch.on_bar(bar, account)
 
         intent_types = [i.intent_type for i in intents]
@@ -566,7 +643,10 @@ class TestSMCOrchestrator(unittest.TestCase):
         )
         bar = {
             "time": datetime(2026, 3, 2, 8, 35, tzinfo=timezone.utc),
-            "open": 2014, "high": 2015, "low": 2012, "close": 2013,
+            "open": 2014,
+            "high": 2015,
+            "low": 2012,
+            "close": 2013,
         }
         intents = self.orchestrator.on_bar(
             bar, account, news_cancel_pending=True, news_cancel_reason="news_blackout:NFP"
@@ -591,7 +671,10 @@ class TestSMCOrchestrator(unittest.TestCase):
         )
         fill_bar = {
             "time": datetime(2026, 3, 2, 8, 40, tzinfo=timezone.utc),
-            "open": 2012, "high": 2013, "low": 2009.5, "close": 2011,
+            "open": 2012,
+            "high": 2013,
+            "low": 2009.5,
+            "close": 2011,
         }
         self.orchestrator.on_bar(
             fill_bar, account2, news_cancel_pending=True, news_cancel_reason="news_blackout:NFP"

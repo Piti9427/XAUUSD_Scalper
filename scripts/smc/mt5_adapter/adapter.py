@@ -51,14 +51,11 @@ class SMCExecutionAdapter(JournalMixin, BrokerMixin, ExecutionMixin):
                 server=server,
             )
             if not init.ok:
-                raise RuntimeError(
-                    f"MT5 live mode unavailable ({init.detail}): {init.last_error}"
-                )
+                raise RuntimeError(f"MT5 live mode unavailable ({init.detail}): {init.last_error}")
         self.connected = not dry_run
         self.db_path = db_path
         self._claim_lock = threading.Lock()
         self._init_sqlite()
-
 
     def close(self):
         """Cleanly close SQLite connection and release file locks."""

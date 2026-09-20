@@ -86,11 +86,7 @@ def compute_liquidity_levels(
             pdh = float(prev_df["high"].max())
             pdl = float(prev_df["low"].min())
 
-    london_mask = (
-        target_mask
-        & (df["time"].dt.hour >= 7)
-        & (df["time"].dt.hour < 12)
-    )
+    london_mask = target_mask & (df["time"].dt.hour >= 7) & (df["time"].dt.hour < 12)
     london_df = df[london_mask]
     london_high = float(london_df["high"].max()) if not london_df.empty else None
     london_low = float(london_df["low"].min()) if not london_df.empty else None
