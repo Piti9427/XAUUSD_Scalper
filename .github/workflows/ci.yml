@@ -4,10 +4,14 @@ name: "CI Checks"
   push:
     branches:
       - "main"
+      - "develop"
       - "feature/**"
+      - "fix/**"
+      - "bugfix/**"
   pull_request:
     branches:
       - "main"
+      - "develop"
 
 jobs:
   checks:
@@ -33,7 +37,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: "[1/5] Syntax Compilation"
-        run: python -m compileall -q scripts tests main.py smc_main.py
+        run: python -m compileall -q scripts tests main.py smc_main.py test_mt5.py
 
       - name: "[2/5] Dependency Sanity Check"
         run: python -m pip check

@@ -24,7 +24,6 @@ exclude = [
     "docs",
     "data",
 ]
-cache-dir = "/tmp/.ruff_cache"
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]

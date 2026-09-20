@@ -14,11 +14,11 @@ else
 fi
 
 if [ -f "${ROOT_DIR}/.venv/bin/ruff" ]; then
-    RUFF="${ROOT_DIR}/.venv/bin/ruff"
+    RUFF_CMD=("${ROOT_DIR}/.venv/bin/ruff")
 elif command -v ruff >/dev/null 2>&1; then
-    RUFF="$(command -v ruff)"
+    RUFF_CMD=("$(command -v ruff)")
 else
-    RUFF="${PYTHON} -m ruff"
+    RUFF_CMD=("${PYTHON}" "-m" "ruff")
 fi
 
 # Visual styling
@@ -33,7 +33,7 @@ echo -e "${BLUE}==================================================${NC}"
 
 # Stage 1: Syntax compilation
 echo -e "\n${BLUE}[1/5] Syntax Compilation (compileall)...${NC}"
-"${PYTHON}" -m compileall -q scripts tests main.py smc_main.py
+"${PYTHON}" -m compileall -q scripts tests main.py smc_main.py test_mt5.py
 echo -e "${GREEN}✓ Syntax compilation passed.${NC}"
 
 # Stage 2: Dependency check
@@ -43,12 +43,12 @@ echo -e "${GREEN}✓ Dependency check passed.${NC}"
 
 # Stage 3: Ruff lint check
 echo -e "\n${BLUE}[3/5] Lint Check (ruff check)...${NC}"
-"${RUFF}" check --no-cache .
+"${RUFF_CMD[@]}" check --no-cache .
 echo -e "${GREEN}✓ Lint check passed.${NC}"
 
 # Stage 4: Ruff format check
 echo -e "\n${BLUE}[4/5] Format Check (ruff format --check)...${NC}"
-"${RUFF}" format --check --no-cache .
+"${RUFF_CMD[@]}" format --check --no-cache .
 echo -e "${GREEN}✓ Format check passed.${NC}"
 
 # Stage 5: Unit tests
