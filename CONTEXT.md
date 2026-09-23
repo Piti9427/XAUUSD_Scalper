@@ -2,7 +2,7 @@
 
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
-> **Last Updated:** 2026-09-06  
+> **Last Updated:** 2026-09-23
 > **Canonical Source:** Repository Root `CONTEXT.md`
 
 ---
@@ -38,6 +38,18 @@
 | **Execution-Notification Coupling** | การ์ดสัญญาณ Telegram และการสั่งออเดอร์ต้องผูกติดกับ OrderIntent ที่ผ่าน Orchestrator แล้วเท่านั้น ห้ามส่งสัญญาณ Phantom Signal เด็ดขาด |
 | **Turtle Soup Strategy (TSS)** | การแทงทะลุหลอกระดับ 20-bar Swing High/Low ด้วยไส้เทียน ($0.40–$5.00) แล้วเนื้อเทียนปิดกลับเข้ามาในกรอบเดิม (False Breakout / Liquidity Raid) เข้าสวนทันที |
 | **Golden Session Setup (GSS)** | การย่อตัวกลับเข้าสู่โซน Fibonacci 61.8%–78.6% (Optimal Trade Entry - OTE) ของคลื่นส่ง Displacement ในช่วง London/NY Killzone |
+| **Frozen Strategy Contract** | กฎของ strategy หนึ่งเวอร์ชันที่นิยามครบและเปลี่ยนไม่ได้ระหว่างการประเมินผล; reconstruction ที่ต่างจากกฎเก่าถือเป็น contract ใหม่ ไม่ใช่ผลทำซ้ำของกฎเดิม |
+| **Research Candidate** | Frozen Strategy Contract ที่อยู่ระหว่างการคัดจากผลย้อนหลังหรือข้อมูลวิจัย; ผลบวกย้อนหลังอย่างเดียวไม่ทำให้ผ่านเกตไปทดลอง Demo bot |
+| **Validation Challenger** | Research Candidate ที่เลือกและตรึงไว้เพื่อให้ข้อมูลใหม่ทดสอบหักล้าง ยังไม่ผ่านเกตหรือมีสิทธิ์เข้า Demo bot; คำนี้ไม่ใช่ WATCH Signal ซึ่งหมายถึงสัญญาณก่อนเข้าเทรด |
+| **Historically Qualified Candidate** | Research Candidate ที่ผ่านเกณฑ์ซึ่งกำหนดไว้ก่อนทดสอบบนข้อมูลอิสระหลังตรึงกฎ รวมต้นทุนและความเสี่ยงตามบัญชีเป้าหมาย; ยังไม่ใช่หลักฐานว่า Demo forward หรือเงินจริงจะทำกำไร |
+| **Demo Bot Candidate** | Historically Qualified Candidate ที่ถูกเลือกให้พัฒนาและตรวจพฤติกรรมบน Demo; ต่างจาก Demo Execution Path ซึ่งพิสูจน์เพียงเส้นทางส่งคำสั่ง |
+| **Target Demo Account** | บัญชี Exness Demo ที่ระบบยืนยันตัวตนจาก terminal ปัจจุบัน ใช้เป็นฐานเดียวกันสำหรับต้นทุน ขนาดสัญญา ความเสี่ยง และผล Demo ของ candidate |
+| **Target Broker Symbol** | สัญลักษณ์ทองที่ Target Demo Account คืนมา; ผลของสัญลักษณ์หรือชนิดบัญชีอื่นไม่ถือว่า qualify สัญลักษณ์นี้โดยอัตโนมัติ |
+| **Shadow Monitor** | โหมดเฝ้าดูตลาดและบันทึกสัญญาณ/ผลจำลองของ Validation Challenger โดยไม่ส่งคำสั่งไป broker; ผล Shadow เป็นหลักฐานทดสอบกฎ ไม่ใช่ fill จริงหรือ Demo Execution Path |
+
+---
+
+ตัวอย่างการใช้คำ: นักวิจัย: "GSS ที่ reconstruct เป็นกฎเดิมหรือไม่?" ผู้ดูแลระบบ: "ไม่ใช่ จดเป็น Frozen Strategy Contract ใหม่และเลือกเป็น Validation Challenger ก่อน; เมื่อผ่านเกตข้อมูลอิสระจึงเป็น Historically Qualified Candidate และค่อยพิจารณาเป็น Demo Bot Candidate"
 
 ---
 
