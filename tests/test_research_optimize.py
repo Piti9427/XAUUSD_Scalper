@@ -3,7 +3,7 @@
 import unittest
 
 from scripts.research.matrix import BASE_NAMES
-from scripts.research.optimize import build_walkforward
+from scripts.research.optimize import build_custom_walkforward, build_walkforward
 
 
 class WalkforwardTests(unittest.TestCase):
@@ -63,7 +63,11 @@ class WalkforwardTests(unittest.TestCase):
         self.assertEqual(len(summaries), 18)
         self.assertEqual(aliases, [])
         self.assertEqual(
-            next(row for row in candidates if row["strategy"] == "State20__body" and row["test_year"] == 2018)["test_net"],
+            next(
+                row
+                for row in candidates
+                if row["strategy"] == "State20__body" and row["test_year"] == 2018
+            )["test_net"],
             -50,
         )
         self.assertTrue(all(row["production_ready"] is False for row in summaries))
@@ -86,9 +90,41 @@ class WalkforwardTests(unittest.TestCase):
             build_walkforward(self.specs, self.annual, self.years, last_test_year=2026)
         with self.assertRaisesRegex(ValueError, "missing years"):
             build_walkforward(
-                self.specs, self.annual, self.years[:-2] + [2020],
-                first_test_year=2018, last_test_year=2020,
+                self.specs,
+                self.annual,
+                self.years[:-2] + [2020],
+                first_test_year=2018,
+                last_test_year=2020,
             )
+
+    def test_declared_parameter_walkforward_uses_prior_years_only(self):
+        first, second = "Donchian20", "Donchian20__rsi"
+        for year in range(2010, 2018):
+            self.set_net(first, year, 1)
+            self.set_net(second, year, 2)
+        self.set_net(first, 2018, 1000)
+        self.set_net(second, 2018, -10)
+        candidates, selected, summary = build_custom_walkforward(
+            [first, second],
+            self.annual,
+            self.years,
+            first_test_year=2018,
+            last_test_year=2018,
+        )
+        self.assertEqual(len(candidates), 2)
+        self.assertEqual(selected[0]["strategy"], second)
+        self.assertEqual(selected[0]["train_last_year"], 2017)
+        self.assertEqual(summary[0]["selected_test_net"], -10)
+        self.assertFalse(summary[0]["production_ready"])
+        self.set_net(first, 2018, -1000)
+        _, revised, _ = build_custom_walkforward(
+            [first, second],
+            self.annual,
+            self.years,
+            first_test_year=2018,
+            last_test_year=2018,
+        )
+        self.assertEqual(revised[0]["strategy"], second)
 
 
 if __name__ == "__main__":
