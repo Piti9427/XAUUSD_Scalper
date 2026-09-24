@@ -2,7 +2,7 @@
 
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
-> **Last Updated:** 2026-09-23
+> **Last Updated:** 2026-09-24
 > **Canonical Source:** Repository Root `CONTEXT.md`
 
 ---
@@ -29,7 +29,15 @@
 | **WATCH Signal** | สถานะเตรียมตัวเมื่อโครงสร้างของ Setup เริ่มก่อตัวแต่ยังไม่ผ่านเงื่อนไขยืนยันครบ จึงห้ามใช้เป็นคำสั่งเข้าเทรด |
 | **READY Signal** | Setup Signal ที่ผ่านเงื่อนไขยืนยันบนแท่งปิดแล้ว พร้อมระดับ Entry, SL, TP1 และ TP2 สำหรับให้ Trader พิจารณาก่อนส่งออเดอร์เอง |
 | **Manual Signal Owner** | แหล่งเดียวที่ประกาศ WATCH และ READY Signal สำหรับ Trader คือ Indicator; Automated Trading Strategy ไม่ประกาศ Manual Signal ซ้ำ |
-| **Automated Trading Strategy** | ระบบเทคนิคสำหรับให้ bot ประเมิน Setup และจัดการ Order ผ่าน risk controls กับ broker lifecycle โดยพัฒนาเป็นเฟสถัดจาก Manual Signal Mode |
+| **Automated Trading Strategy** | Operating mode ที่เลือกแล้ว: bot ประเมิน Setup แล้วส่ง **OrderIntent** ผ่าน Orchestrator / risk / broker lifecycle โดยไม่มี Trader คลิกส่งออเดอร์ **Setup Signal ยังไม่ใช่ Order** จนกว่า broker ยืนยัน _Avoid_: Manual Signal Mode, Computer Use, MQL5 `OnTick` ที่ทับ detection |
+| **Bot Trade** | คำพูดผู้ใช้สำหรับ **Automated Trading Strategy** ไม่ใช่ READY Signal ให้คนกด และไม่ใช่ Expert Advisor ที่เป็นกลยุทธ์ทั้งก้อน |
+| **OrderIntent** | คำสั่งที่ Orchestrator ยอมรับแล้ว ให้ไปวาง/แก้/ยกเลิกที่โบรกเกอร์ ยังไม่ใช่ **Setup Signal** และยังไม่ใช่ **Order** จนกว่า broker ยืนยัน |
+| **Demo Execution Path** | เป้าหมายแรกของ Automated Trading Strategy: **OrderIntent** ที่ผ่าน Orchestrator กลายเป็น **Order** ที่ broker ยืนยันบน Demo ไม่ใช่การ qualify กลยุทธ์ และไม่ใช่ real-money |
+| **Live Execution Host** | เครื่องที่รัน Execution Adapter ตัวเดียวต่อเทอร์มินัลที่ login Demo เป้าหมาย ลำดับแรก: โฮสต์เดียวกับเทอร์มินัลหลัง Exness ติด ถ้า IPC ยัง authorization failed จึงย้าย adapter ตัวเดิมไป Windows _Avoid_: MQL5 adapter ที่สอง, Python↔EA bridge สำหรับ path นี้ |
+| **Target Demo Account** | บัญชี Exness Demo ตาม identity ของระบบ (login/server ใน env) ต้อง Hedging; netting หรือ Foreign Position บนสัญลักษณ์เป้าหมาย → ห้ามส่ง OrderIntent ไม่ bypass เกตโหมดบัญชี |
+| **Target Broker Symbol** | สัญลักษณ์ทองที่ identity ของ **Target Demo Account** คืนมา ห้ามสลับทองอีกตัวเพื่อเลี่ยงเกต; Foreign Position บนสัญลักษณ์นี้บล็อก OrderIntent; บอทห้ามปิด Foreign Position |
+| **Execution Path Probe** | PLACE_LIMIT ผ่าน Orchestrator + sizing + geometry แล้วให้ broker ยืนยัน จากนั้น CANCEL_LIMIT Limit อยู่ห่างตลาดพอไม่เติม ไม่ใช่ Sweep setup และไม่ใช่การ qualify กลยุทธ์ |
+| **Foreign Position** | Position บนสัญลักษณ์เป้าหมายที่ comment ไม่ขึ้นต้น `SMC_` จึงไม่ใช่ของ bot ห้ามให้ OrderIntent ไปรวมหรือปิดไม้นี้ |
 | **Rollover Flat Rule** | บังคับปิดทุก Position ก่อนเวลา 20:55 UTC เพื่อหลีกเลี่ยง Spread ถ่างและ Swap |
 | **Two-Tier Scale-Out** | กลไกทำกำไร: เมื่อราคาแตะ **+1.0R** ให้ปิดแบ่งทำกำไร **50% ทันที (PARTIAL_CLOSE)** พร้อมเลื่อน SL ของอีก 50% มาที่ **Breakeven (Entry $\pm$ Spread Buffer)** ปล่อยให้ Runner วิ่งชน **+2.5R (Full TP)** |
 | **Max SL Cap** | จำกัดระยะ Stop Loss สูงสุดไม่เกิน **$25.00 (2500 points)** สอดคล้องกับความผันผวนของทองคำที่ราคา $4000-$5200 (หากเกิน Skip Setup) |
@@ -79,3 +87,4 @@
 * **[ADR-022] Timezone Uniformity Standard:** ข้อมูลเวลาทั้งหมดในระบบต้องเป็น Timezone-aware UTC ห้ามเปรียบเทียบ offset-naive กับ aware datetime
 * **[ADR-023] TradingView Master Copilot Indicator Architecture (Hardened):** พัฒนา indicator บน TradingView Pine Script v6 สำหรับ XAUUSD เพื่อเป็น Visual & Notification Copilot คู่ขนาน รองรับ 3 กลยุทธ์สถาบันแท้จริง (SMC Prime พร้อม 50% FVG Limit + 4-bar TTL, TSS Turtle Soup, GSS Golden Zone OTE ตรวจสอบทิศทางสวิง) ปลด Trend Flow ออกเพื่อป้องกันการขัดแย้งของสัญญาณ ทำงานบน M15/M5 ป้องกัน Repaint ด้วย Zero-Repaint H1 Confirmed Security (`close[1]`), จัดการความเสี่ยงแบบข้ามแพลตฟอร์ม 100% สอดคล้องกับ Python Core (Max SL Cap $25.00 หากเกิน Invalidate Setup ทันที, Two-Tier Scale-Out 1.0R TP1 ปิด 50% บังทุน + 2.5R Runner, London Liquidity Tracking 07:00-12:00 UTC), และ Real-Time Dashboard HUD พร้อมแจ้งเตือนสถานะการเทรดครบวงจร (Setup Pending, Filled, BE Moved, TP/SL Hit)
 * **[ADR-024] Live Execution Guardrails & Deterministic Lifecycle Binding:** (1) Conservative SL Invariant: ตรวจ Original SL ก่อนเสมอเมื่อแท่งแตะทั้ง SL และ TP1/TP2 เพื่อกำจัด Survivor Bias (2) Spread-Calibrated Match & Exit: Long limit entry ใช้ low+$0.30 เป็น Ask, Short TP exit ใช้ low+$0.30 เป็น Ask; Short SL ใช้ raw high เพราะ slBuffer บวกไว้แล้ว (3) tp1Bar Runner Guard: ห้ามเช็ค Breakeven SL ในแท่งเดียวกับที่เกิด TP1 เพราะ lower shadow เกิดก่อน expansion (4) Killzone Guard Expiration: ยกเลิก Pending Limit เมื่อพ้น Killzone (หากตั้งไว้ใน KZ) หรือครบ 4 แท่ง (5) Deterministic Order ID: แนบ order_id ทุก Webhook JSON (SETUP_PENDING, ORDER_FILLED, TP1_HIT_MOVE_BE, ORDER_CANCELED, TRADE_CLOSED) สำหรับ MT5 ticket mapping
+* **[ADR-0029] Demo Execution Path:** เป้าหมายแรกของ Automated Trading Strategy คือ pending limit ผ่าน Python adapter เดิมบน Exness Demo ไม่ใช่ MQL5 rewrite, ไม่ใช่ Computer Use, ไม่ใช่การ qualify กลยุทธ์

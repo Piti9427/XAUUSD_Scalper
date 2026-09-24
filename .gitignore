@@ -57,3 +57,6 @@ deploy/swapfile
 scripts/diagnose_gates.py
 scripts/simulate_gold_enhancements.py
 scripts/test_tuning.py
+
+# Broker Demo exports and account metadata stay local
+data/exness-demo/
