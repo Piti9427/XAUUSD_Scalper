@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+import os
 import pandas as pd
 from scripts.smc.types import (
     Direction,
@@ -197,7 +198,14 @@ class SMCBacktester:
         peak_equity = self.initial_balance
         max_drawdown = 0.0
 
+        try:
+            progress_every = int(os.environ.get("BACKTEST_PROGRESS_EVERY", "0") or 0)
+        except ValueError:
+            progress_every = 0
+
         for i in range(15, len(m5)):
+            if progress_every and (i == 15 or i % progress_every == 0 or i + 1 == len(m5)):
+                print(f"BACKTEST_PROGRESS i={i}/{len(m5)}", flush=True)
             bar_time: datetime = m5_times[i]
             current_bar = {
                 "time": bar_time,

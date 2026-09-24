@@ -75,40 +75,68 @@ def main():
     parser.add_argument(
         "--spread", type=float, default=0.30, help="Spread buffer in dollars (default 0.30)"
     )
+    parser.add_argument("--m5", dest="m5_path", default=None, help="M5 CSV path (UTC time,OHLC)")
+    parser.add_argument("--h1", dest="h1_path", default=None, help="H1 CSV path")
+    parser.add_argument(
+        "--window", choices=["development", "holdout", "out_of_range"], default=None
+    )
+    parser.add_argument("--source-label", default=None)
+    parser.add_argument(
+        "--proxy", action="store_true", help="Mark feed as proxy (cannot claim EVALUABLE)"
+    )
+    parser.add_argument("--gold-v2", action="store_true", help="Force GOLD_V2_DEMO risk/TP profile")
+
     args = parser.parse_args()
 
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    from scripts.smc.gold_v2_demo import GOLD_V2_DEMO, count_split_eligible, slice_m5_window
 
-    # Check for M5 data first, fall back to M15
-    m5_path = os.path.join(data_dir, "XAUUSD_M5.csv")
-    m15_path = os.path.join(data_dir, "XAUUSD_M15.csv")
-    h1_path = os.path.join(data_dir, "XAUUSD_H1.csv")
+    default_m5 = os.path.join(data_dir, "XAUUSD_M5.csv")
+    default_m15 = os.path.join(data_dir, "XAUUSD_M15.csv")
+    default_h1 = os.path.join(data_dir, "XAUUSD_H1.csv")
+    m5_path = args.m5_path
+    h1_path = args.h1_path or default_h1
 
     if not os.path.exists(h1_path):
-        print("ERROR: XAUUSD_H1.csv not found in data/")
+        print(f"ERROR: H1 CSV not found: {h1_path}")
         sys.exit(1)
 
     df_h1 = load_csv(h1_path)
     print(f"H1 data: {len(df_h1)} bars, {df_h1['time'].iloc[0]} to {df_h1['time'].iloc[-1]}")
 
-    if os.path.exists(m5_path):
+    is_proxy = bool(args.proxy)
+    source_label = args.source_label
+    if m5_path:
+        if not os.path.exists(m5_path):
+            print(f"ERROR: M5 CSV not found: {m5_path}")
+            sys.exit(1)
         df_m5 = load_csv(m5_path)
+        print(f"M5 data: {len(df_m5)} bars, {df_m5['time'].iloc[0]} to {df_m5['time'].iloc[-1]}")
+    elif os.path.exists(default_m5):
+        df_m5 = load_csv(default_m5)
         print(f"M5 data: {len(df_m5)} bars")
-    elif os.path.exists(m15_path):
-        # Use M15 as proxy — backtester uses bar-by-bar simulation
-        # Bar-count windows retain their configured values; this is not M5 parity.
-        df_m5 = load_csv(m15_path)
+    elif os.path.exists(default_m15):
+        df_m5 = load_csv(default_m15)
+        is_proxy = True
+        source_label = source_label or "m15_proxy"
         print(
             f"M15 data (used as M5 proxy): {len(df_m5)} bars, {df_m5['time'].iloc[0]} to {df_m5['time'].iloc[-1]}"
         )
         print(
             "DIAGNOSTIC ONLY: M15 proxy, unchanged bar-count windows; not a broker M5 readiness test."
         )
+
     else:
         print("ERROR: No M5 or M15 data found in data/")
         sys.exit(1)
 
-    # Filter H1 to overlap with M5/M15 date range
+    if args.window:
+        df_m5 = slice_m5_window(df_m5, args.window)
+        print(f"Window {args.window}: {len(df_m5)} M5 bars")
+        if df_m5.empty:
+            print(f"DATA_INSUFFICIENT: no M5 bars in window {args.window}")
+            sys.exit(3)
+
     m5_start = df_m5["time"].iloc[0]
     m5_end = df_m5["time"].iloc[-1]
     h1_before = df_h1[df_h1["time"] < m5_start]
@@ -120,15 +148,23 @@ def main():
     print(f"\nDate range: {m5_start.date()} to {m5_end.date()}")
     print(f"Calendar span: {(m5_end - m5_start).days} days\n")
 
-    # Determine profile parameters
-    if args.demo:
+    use_gold = bool(args.gold_v2 or args.m5_path)
+    if args.demo and not use_gold:
         balance = args.balance or 2254.16
         risk_pct = args.risk or 0.01
         profile_name = f"EXNESS DEMO PROFILE (${balance:,.2f}, Risk: {risk_pct * 100:.1f}%, Spread: ${args.spread:.2f})"
-    elif args.small:
+    elif args.small and not use_gold:
         balance = args.balance or 100.0
         risk_pct = args.risk or 0.01
         profile_name = f"SMALL-ACCOUNT $100 PROFILE (ADR-020 Gate, Risk: {risk_pct * 100:.1f}%, Spread: ${args.spread:.2f})"
+    elif use_gold:
+        balance = args.balance or 10000.0
+        risk_pct = args.risk if args.risk is not None else GOLD_V2_DEMO["risk_pct"]
+        profile_name = (
+            f"GOLD_V2_DEMO (${balance:,.2f}, Risk: {risk_pct * 100:.1f}%, "
+            f"Spread: ${GOLD_V2_DEMO['spread_buffer']:.2f}, window={args.window or 'unlabeled'})"
+        )
+
     else:
         balance = args.balance or 10000.0
         risk_pct = args.risk or 0.005
@@ -141,20 +177,23 @@ def main():
     bt_optimized = SMCBacktester(
         initial_balance=balance,
         risk_pct=risk_pct,
-        spread_buffer=args.spread,
-        max_sl_cap=25.00,
-        contract_size=100.0,
-        partial_tp_enabled=True,
-        partial_tp_r=1.0,
-        partial_tp_ratio=0.5,
+        spread_buffer=GOLD_V2_DEMO["spread_buffer"] if use_gold else args.spread,
+        max_sl_cap=GOLD_V2_DEMO["max_sl_cap"],
+        contract_size=GOLD_V2_DEMO["contract_size"],
+        partial_tp_enabled=GOLD_V2_DEMO["partial_tp_enabled"],
+        partial_tp_r=GOLD_V2_DEMO["partial_tp_r"],
+        partial_tp_ratio=GOLD_V2_DEMO["partial_tp_ratio"],
         be_trigger_r=1.0,
-        extended_killzones=True,
-        tp_r=2.5,
-        min_body_ratio=0.45,
-        max_sweep_pierce=8.0,
-        sweep_lookback=25,
-        max_sweep_to_mss_bars=8,
-        max_mss_to_fvg_bars=4,
+        extended_killzones=GOLD_V2_DEMO["extended_killzones"],
+        tp_r=GOLD_V2_DEMO["tp_r"],
+        min_body_ratio=GOLD_V2_DEMO["min_body_ratio"],
+        max_sweep_pierce=GOLD_V2_DEMO["max_sweep_pierce"],
+        sweep_lookback=GOLD_V2_DEMO["sweep_lookback"],
+        max_sweep_to_mss_bars=GOLD_V2_DEMO["max_sweep_to_mss_bars"],
+        max_mss_to_fvg_bars=GOLD_V2_DEMO["max_mss_to_fvg_bars"],
+        require_choch=GOLD_V2_DEMO["require_choch"],
+        is_proxy_feed=is_proxy,
+        source_label=source_label,
     )
     summary = bt_optimized.run(df_m5, df_h1)
     print(format_backtest_summary(summary))
@@ -180,6 +219,11 @@ def main():
             if c in summary.trades_df.columns
         ]
         print(summary.trades_df[display_cols].to_string(index=False))
+        if "lot_size" in summary.trades_df.columns:
+            split_ok, full_only = count_split_eligible(summary.trades_df["lot_size"].tolist())
+            print(
+                f"\nTwo-tier eligible lots (>=0.02): {split_ok}; full-ticket only (<0.02): {full_only}"
+            )
 
     return summary
 
