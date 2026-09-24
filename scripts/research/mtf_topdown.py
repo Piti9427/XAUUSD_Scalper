@@ -105,8 +105,8 @@ def topdown_signals(m1: pd.DataFrame, year: int):
 
 def run(cache: Path, output: Path, years: list[int]) -> dict:
     years = sorted(set(years))
-    if not years or any(year < 2011 or year > 2025 for year in years):
-        raise ValueError("2010 is warmup; scored years must be 2011–2025")
+    if not years or any(year < 2011 or year > 2026 for year in years):
+        raise ValueError("2010 is warmup; scored years must be 2011–2026 (2026 is partial)")
     if output.exists():
         raise FileExistsError(output)
     required_years = sorted(set(years) | {year - 1 for year in years})
@@ -119,6 +119,7 @@ def run(cache: Path, output: Path, years: list[int]) -> dict:
         "source_revision": REVISION,
         "source_inputs": source,
         "scored_years": years,
+        "partial_years": [2026] if 2026 in years else [],
         "warmup_years": required_years,
         "contract": asdict(SPEC),
         "context": {
@@ -127,7 +128,7 @@ def run(cache: Path, output: Path, years: list[int]) -> dict:
             "entry": "M15 Donchian20 close breakout aligned with all five states; exact next M1 open",
             "exit": "native Donchian20 regime and 2 ATR stop / 2R target",
             "week": "UTC Monday 00:00 to next Monday 00:00; only 10080-minute complete weeks",
-            "year": "previous complete year for indicators; positions reset and liquidated at year end",
+            "year": "previous complete year for indicators; positions reset and liquidated at each scored sample end",
         },
         "costs": asdict(Costs()),
         "risk": "1 oz-equivalent research exposure; no Exness lot/capital sizing",

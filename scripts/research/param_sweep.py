@@ -135,8 +135,8 @@ def audit_outputs(output, annual, summary, names, years):
 
 def run(spec_file, cache, output, years):
     years = sorted(set(years))
-    if not years or any(year < 2010 or year > 2025 for year in years):
-        raise ValueError("Use complete historical years 2010–2025")
+    if not years or any(year < 2010 or year > 2026 for year in years):
+        raise ValueError("Pinned historical data covers 2010–2026 (2026 is partial)")
     declaration, specs = load_candidates(spec_file)
     source_inputs = acquire(cache, years, download=False)
     output = Path(output)
@@ -147,6 +147,8 @@ def run(spec_file, cache, output, years):
         "status": "reconstructed_partial_rule_match_research_only",
         "production_ready": False,
         "years": years,
+        "partial_years": [2026] if 2026 in years else [],
+        "sample_end_policy": "Open positions close at last available M1 bar of each scored year",
         "mode": "native",
         "source_revision": REVISION,
         "source_inputs": source_inputs,
