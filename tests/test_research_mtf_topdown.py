@@ -2,15 +2,19 @@
 
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from scripts.research.mtf_topdown import (
     BASE,
     NAME,
     SPEC,
+    combine_entry_events,
+    context_any_mask,
     donchian_direction,
     ema_direction,
     last_closed_state,
+    m30_events_at_m15_close,
     weekly_bid_bars,
 )
 
@@ -65,6 +69,24 @@ class TopdownResearchTests(unittest.TestCase):
         self.assertEqual(result.iloc[:49].tolist(), [0] * 49)
         self.assertEqual(result.iloc[49], 1)
         self.assertEqual(result.iloc[49], ema_direction(frame.iloc[:50]).iloc[-1])
+
+    def test_context_any_requires_breakout_complete_w1_d1_and_matching_setup(self):
+        direction = np.array([0, 1, -1, 1, 1, 1, -1])
+        w1 = np.array([1, 1, 1, 0, 1, 1, 1])
+        d1 = np.array([1, -1, -1, 1, 0, -1, -1])
+        h4 = np.array([1, 1, -1, 1, 1, -1, -1])
+        h1 = np.array([1, 1, -1, 1, 1, 1, -1])
+        m30 = np.array([1, 1, -1, 1, 1, 1, -1])
+        result = context_any_mask(direction, w1, d1, h4, h1, m30)
+        self.assertEqual(result.tolist(), [False, True, True, False, False, False, True])
+
+    def test_dual_entry_uses_only_m30_close_and_abstains_on_conflict(self):
+        m30_frame = pd.DataFrame(index=pd.DatetimeIndex(["2025-01-01 10:00"], tz="UTC"))
+        m30_events = pd.DataFrame({"direction": [1]}, index=m30_frame.index)
+        m15_close = pd.DatetimeIndex(["2025-01-01 10:15", "2025-01-01 10:30"], tz="UTC")
+        mapped = m30_events_at_m15_close(m30_frame, m30_events, m15_close)
+        self.assertEqual(mapped.tolist(), [0, 1])
+        self.assertEqual(combine_entry_events([0, 1, -1], [1, 1, 1]).tolist(), [1, 1, 0])
 
 
 if __name__ == "__main__":
