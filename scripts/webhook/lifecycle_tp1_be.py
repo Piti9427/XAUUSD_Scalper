@@ -150,9 +150,7 @@ async def handle_tp1_hit_move_be(
             from scripts.smc.notifier import format_partial_tp_card
 
             tp_dir = (
-                Direction.BUY
-                if str(payload.get("dir", "BUY")).upper() == "BUY"
-                else Direction.SELL
+                Direction.BUY if str(payload.get("dir", "BUY")).upper() == "BUY" else Direction.SELL
             )
             tp_lot = float(payload.get("lot_size") or 0.02)
             closed_lot = round(tp_lot * (close_pct / 100.0), 2)

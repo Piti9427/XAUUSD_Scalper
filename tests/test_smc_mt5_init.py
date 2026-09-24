@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import unittest
-from types import SimpleNamespace
 
 from scripts.smc.mt5_init import MT5_PATH_ENV, initialize_mt5, resolve_mt5_terminal_path
 
@@ -25,7 +24,9 @@ class FakeMT5:
 class MT5InitTests(unittest.TestCase):
     def test_resolve_prefers_explicit_path(self):
         self.assertEqual(
-            resolve_mt5_terminal_path(path="C:\\MT5\\terminal64.exe", env={MT5_PATH_ENV: "ignored"}),
+            resolve_mt5_terminal_path(
+                path="C:\\MT5\\terminal64.exe", env={MT5_PATH_ENV: "ignored"}
+            ),
             "C:\\MT5\\terminal64.exe",
         )
 

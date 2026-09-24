@@ -1,17 +1,15 @@
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone, date, timedelta
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from scripts.smc.types import (
     Direction,
     OrderIntentType,
     AccountState,
-    Position,
-    SetupSignal,
     LiquidityLevels,
 )
 from scripts.smc.liquidity import compute_liquidity_levels
-from scripts.smc.detection import evaluate_smc_setup, is_in_session, resolve_h1_ema_bias
+from scripts.smc.detection import evaluate_smc_setup, resolve_h1_ema_bias
 from scripts.smc.orchestrator import StrategyOrchestrator
 from scripts.smc.tick_feed import annotate_bar_with_ticks, ticks_for_bar
 from scripts.smc.quotes import first_exit_from_ticks
@@ -210,9 +208,7 @@ class SMCBacktester:
             }
             if tick_df is not None:
                 bar_end = (
-                    m5_times[i + 1]
-                    if i + 1 < len(m5_times)
-                    else bar_time + timedelta(minutes=5)
+                    m5_times[i + 1] if i + 1 < len(m5_times) else bar_time + timedelta(minutes=5)
                 )
                 pos = account.open_position
                 pending = account.pending_order
@@ -264,8 +260,10 @@ class SMCBacktester:
                         bar_time,
                         spread_buffer=self.spread_buffer,
                         max_sl_cap=self.max_sl_cap,
-                        precomputed_swings=(all_sh[: i - 1] + [False, False],
-                                            all_sl[: i - 1] + [False, False]),
+                        precomputed_swings=(
+                            all_sh[: i - 1] + [False, False],
+                            all_sl[: i - 1] + [False, False],
+                        ),
                         extended_killzones=self.extended_killzones,
                         tp_r=self.tp_r,
                         min_body_ratio=self.min_body_ratio,
@@ -341,13 +339,21 @@ class SMCBacktester:
                 else (before.entry_price - float(current_bar["low"])) / before.initial_sl_distance
             )
             if before.initial_sl_distance > 0:
-                active_trade_log["mae_r"] = max(float(active_trade_log.get("mae_r", 0.0)), max(0.0, adverse))
-                active_trade_log["mfe_r"] = max(float(active_trade_log.get("mfe_r", 0.0)), max(0.0, favorable))
+                active_trade_log["mae_r"] = max(
+                    float(active_trade_log.get("mae_r", 0.0)), max(0.0, adverse)
+                )
+                active_trade_log["mfe_r"] = max(
+                    float(active_trade_log.get("mfe_r", 0.0)), max(0.0, favorable)
+                )
 
             for intent in intents:
                 if intent.intent_type == OrderIntentType.PARTIAL_CLOSE:
-                    partial_cash = (before.initial_sl_distance * self.partial_tp_r
-                                    * intent.lot_size * self.contract_size)
+                    partial_cash = (
+                        before.initial_sl_distance
+                        * self.partial_tp_r
+                        * intent.lot_size
+                        * self.contract_size
+                    )
                     account.balance += partial_cash
                     active_trade_log["partial_pnl"] += partial_cash
 
@@ -366,10 +372,17 @@ class SMCBacktester:
                     and "TIME_EXIT" not in x.reason
                     for x in intents
                 )
-                stop_hit = (float(current_bar["low"]) <= before.sl_price
-                            if sign == 1 else float(current_bar["high"]) >= before.sl_price)
+                stop_hit = (
+                    float(current_bar["low"]) <= before.sl_price
+                    if sign == 1
+                    else float(current_bar["high"]) >= before.sl_price
+                )
                 tick_exit = current_bar.get("tick_first_exit")
-                if tick_exit not in ("SL", "TP") and current_bar.get("has_tick_order") and current_bar.get("ticks"):
+                if (
+                    tick_exit not in ("SL", "TP")
+                    and current_bar.get("has_tick_order")
+                    and current_bar.get("ticks")
+                ):
                     tick_exit = first_exit_from_ticks(
                         direction=before.direction.value,
                         sl_price=before.sl_price,
@@ -378,11 +391,19 @@ class SMCBacktester:
                     )
 
                 def _book(exit_price: float, exit_reason: str):
-                    remaining_cash = sign * (exit_price - before.entry_price) * after.lot_size * self.contract_size
+                    remaining_cash = (
+                        sign
+                        * (exit_price - before.entry_price)
+                        * after.lot_size
+                        * self.contract_size
+                    )
                     account.balance += remaining_cash
                     total_cash = remaining_cash + active_trade_log["partial_pnl"]
-                    initial_risk = (active_trade_log["initial_sl_dist"]
-                                    * active_trade_log["lot_size"] * self.contract_size)
+                    initial_risk = (
+                        active_trade_log["initial_sl_dist"]
+                        * active_trade_log["lot_size"]
+                        * self.contract_size
+                    )
                     pnl_r = round(total_cash / initial_risk, 4) if initial_risk else 0.0
                     return exit_price, exit_reason, total_cash, pnl_r
 
@@ -411,23 +432,26 @@ class SMCBacktester:
                     )
                 else:
                     exit_price, exit_reason, total_cash, pnl_r = _book(before.tp_price, "TP")
-                active_trade_log.update({
-                    "exit_time": bar_time,
-                    "exit_price": exit_price,
-                    "exit_reason": exit_reason,
-                    "sl_touched": (
-                        float(current_bar["low"]) <= before.sl_price
-                        if sign == 1 else float(current_bar["high"]) >= before.sl_price
-                    ),
-                    "tp_touched": (
-                        float(current_bar["high"]) >= before.tp_price
-                        if sign == 1
-                        else (float(current_bar["low"]) + self.spread_buffer) <= before.tp_price
-                    ),
-                    "pnl_dollar": None if total_cash is None else round(total_cash, 2),
-                    "pnl_r": pnl_r,
-                    "balance": round(account.balance, 2),
-                })
+                active_trade_log.update(
+                    {
+                        "exit_time": bar_time,
+                        "exit_price": exit_price,
+                        "exit_reason": exit_reason,
+                        "sl_touched": (
+                            float(current_bar["low"]) <= before.sl_price
+                            if sign == 1
+                            else float(current_bar["high"]) >= before.sl_price
+                        ),
+                        "tp_touched": (
+                            float(current_bar["high"]) >= before.tp_price
+                            if sign == 1
+                            else (float(current_bar["low"]) + self.spread_buffer) <= before.tp_price
+                        ),
+                        "pnl_dollar": None if total_cash is None else round(total_cash, 2),
+                        "pnl_r": pnl_r,
+                        "balance": round(account.balance, 2),
+                    }
+                )
                 trades.append(active_trade_log)
                 funnel.bump("closed")
                 active_trade_log = None
@@ -439,16 +463,28 @@ class SMCBacktester:
         # Build Summary — AMBIGUOUS exits stay in the ledger but are excluded from expectancy.
         trades_df = pd.DataFrame(trades)
         total_trades = len(trades)
-        scored = [t for t in trades if t.get("exit_reason") != "AMBIGUOUS" and t.get("pnl_r") is not None]
+        scored = [
+            t for t in trades if t.get("exit_reason") != "AMBIGUOUS" and t.get("pnl_r") is not None
+        ]
         winning_trades = len([t for t in scored if t["pnl_r"] > 0])
         losing_trades = len([t for t in scored if t["pnl_r"] < 0])
         be_trades = len([t for t in scored if t["pnl_r"] == 0])
 
         scored_n = len(scored)
         win_rate = (winning_trades / scored_n * 100.0) if scored_n > 0 else 0.0
-        gross_profit = sum(t["pnl_dollar"] for t in scored if t["pnl_dollar"] is not None and t["pnl_dollar"] > 0)
-        gross_loss = abs(sum(t["pnl_dollar"] for t in scored if t["pnl_dollar"] is not None and t["pnl_dollar"] < 0))
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (999.0 if gross_profit > 0 else 1.0)
+        gross_profit = sum(
+            t["pnl_dollar"] for t in scored if t["pnl_dollar"] is not None and t["pnl_dollar"] > 0
+        )
+        gross_loss = abs(
+            sum(
+                t["pnl_dollar"]
+                for t in scored
+                if t["pnl_dollar"] is not None and t["pnl_dollar"] < 0
+            )
+        )
+        profit_factor = (
+            (gross_profit / gross_loss) if gross_loss > 0 else (999.0 if gross_profit > 0 else 1.0)
+        )
         avg_r = (sum(t["pnl_r"] for t in scored) / scored_n) if scored_n > 0 else 0.0
 
         net_profit = round(account.balance - self.initial_balance, 2)
@@ -544,4 +580,3 @@ def format_backtest_summary(summary: BacktestSummary) -> str:
 | **Max Drawdown** | {summary.max_drawdown_pct:.2f}% |
 | **Average R** | {summary.avg_r:.2f}R |
 """
-

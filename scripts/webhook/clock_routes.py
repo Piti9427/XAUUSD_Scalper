@@ -85,9 +85,7 @@ def register_clock_route(app: FastAPI, rt: WebhookRuntime) -> None:
             now_utc=now_utc,
             background_tasks=background_tasks,
         )
-        await apply_lifecycle_ttl_cancels(
-            rt, ttl_rows=lifecycle.get("ttl_cancels", [])
-        )
+        await apply_lifecycle_ttl_cancels(rt, ttl_rows=lifecycle.get("ttl_cancels", []))
         await apply_lifecycle_closes(
             rt,
             close_rows=lifecycle.get("broker_closes", []),

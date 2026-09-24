@@ -48,9 +48,13 @@ async def evaluate_setup_h1_gate(
     if order_id:
         rt.setup_registry.mark_terminal(order_id, bias_reason)
         await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_h1_bias")
-    return h1_bias, True, {
-        "status": "rejected",
-        "order_id": order_id,
-        "event": event,
-        "reason": reason,
-    }
+    return (
+        h1_bias,
+        True,
+        {
+            "status": "rejected",
+            "order_id": order_id,
+            "event": event,
+            "reason": reason,
+        },
+    )

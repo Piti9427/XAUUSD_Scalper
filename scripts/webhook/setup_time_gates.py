@@ -44,9 +44,7 @@ async def evaluate_setup_time_gates(
                 rt.dispatch_tg_safe, format_circuit_breaker_card(losses_today=losses_today)
             )
         if order_id:
-            await asyncio.to_thread(
-                rt.mark_processed, order_id, event, "rejected_circuit_breaker"
-            )
+            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_circuit_breaker")
         return parse_setup_event_time(payload.get("time")), {
             "status": "rejected",
             "order_id": order_id,
@@ -64,9 +62,7 @@ async def evaluate_setup_time_gates(
         )
         logger.warning(reason)
         if order_id:
-            await asyncio.to_thread(
-                rt.mark_processed, order_id, event, "rejected_out_of_session"
-            )
+            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_out_of_session")
         return event_dt, {
             "status": "rejected",
             "order_id": order_id,
@@ -75,8 +71,7 @@ async def evaluate_setup_time_gates(
         }
 
     if (event_dt.hour > rt.rollover_hour_utc) or (
-        event_dt.hour == rt.rollover_hour_utc
-        and event_dt.minute >= rt.rollover_minute_utc
+        event_dt.hour == rt.rollover_hour_utc and event_dt.minute >= rt.rollover_minute_utc
     ):
         reason = (
             f"Rollover Flat Guard (ADR-007): Orders blocked after "
@@ -104,9 +99,7 @@ async def evaluate_setup_time_gates(
             )
             logger.warning(reason)
             if order_id:
-                await asyncio.to_thread(
-                    rt.mark_processed, order_id, event, "rejected_cooldown"
-                )
+                await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_cooldown")
             return event_dt, {
                 "status": "rejected",
                 "order_id": order_id,
@@ -118,9 +111,7 @@ async def evaluate_setup_time_gates(
     if rt.news_manager is not None:
         if hasattr(rt.news_manager, "new_risk_allowed"):
             events = getattr(rt.news_manager, "events", None)
-            schedule_known = bool(
-                getattr(rt.news_manager, "schedule_known", events is not None)
-            )
+            schedule_known = bool(getattr(rt.news_manager, "schedule_known", events is not None))
             allowed_news, news_reason = await asyncio.to_thread(
                 rt.news_manager.new_risk_allowed,
                 event_dt,
@@ -131,9 +122,7 @@ async def evaluate_setup_time_gates(
                 reason = f"News gate blocked new risk: {news_reason}"
                 logger.warning(reason)
                 if order_id:
-                    await asyncio.to_thread(
-                        rt.mark_processed, order_id, event, "rejected_news"
-                    )
+                    await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_news")
                 return event_dt, {
                     "status": "rejected",
                     "order_id": order_id,
@@ -148,14 +137,11 @@ async def evaluate_setup_time_gates(
             )
             if is_blackout:
                 reason = (
-                    f"News Blackout (ADR-010): High-impact news '{news_name}' "
-                    "within 30m window."
+                    f"News Blackout (ADR-010): High-impact news '{news_name}' within 30m window."
                 )
                 logger.warning(reason)
                 if order_id:
-                    await asyncio.to_thread(
-                        rt.mark_processed, order_id, event, "rejected_news"
-                    )
+                    await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_news")
                 return event_dt, {
                     "status": "rejected",
                     "order_id": order_id,

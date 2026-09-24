@@ -66,10 +66,7 @@ class TestResolveLiveH1Bias(unittest.TestCase):
             broker.TIMEFRAME_H1 = 60
             broker.copy_rates_from_pos = Mock(
                 return_value=np.array(
-                    [
-                        (i, c, c, c, c, 0, 0, 0)
-                        for i, c in enumerate(closes)
-                    ],
+                    [(i, c, c, c, c, 0, 0, 0) for i, c in enumerate(closes)],
                     dtype=[
                         ("time", "i8"),
                         ("open", "f8"),

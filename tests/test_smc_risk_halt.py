@@ -28,7 +28,9 @@ class RiskHaltPersistenceTests(unittest.TestCase):
             self.assertTrue(restored.drawdown_halt)
 
             observe_equity(
-                restored, 480.0, now=datetime(2026, 3, 3, 1, tzinfo=timezone.utc),
+                restored,
+                480.0,
+                now=datetime(2026, 3, 3, 1, tzinfo=timezone.utc),
             )
             self.assertTrue(
                 restored.drawdown_halt,

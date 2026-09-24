@@ -5,9 +5,7 @@ from fastapi.testclient import TestClient
 
 # Wall-clock may be outside London/NY admission windows; bypass for fixture SETUP
 # paths. Dedicated test_out_of_session_rejects_setup_pending restores real gate.
-_SESSION_PATCHER = patch(
-    "scripts.webhook.setup_time_gates.is_in_session", return_value=True
-)
+_SESSION_PATCHER = patch("scripts.webhook.setup_time_gates.is_in_session", return_value=True)
 _SESSION_PATCHER.start()
 
 
@@ -20,6 +18,7 @@ class TestWebhookBridgeAuth(unittest.TestCase):
 
     def setUp(self):
         from scripts.webhook_bridge import create_app
+
         self.secret_token = "TEST_SECRET_TOKEN_123"
         self.app = create_app(auth_token=self.secret_token, dry_run=True)
         self.client = TestClient(self.app)
@@ -63,6 +62,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         import tempfile
         import os
         from scripts.webhook_bridge import create_app
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades.db")
         self.secret_token = "TEST_SECRET_TOKEN_456"
@@ -107,18 +107,27 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
     def test_broker_rejection_does_not_claim_placement_or_send_card(self):
         from scripts.smc.mt5_adapter import ExecutionResult
+
         notifier = Mock(enabled=True)
         payload = {
-            "event": "SETUP_PENDING", "order_id": "REJECTED_1",
+            "event": "SETUP_PENDING",
+            "order_id": "REJECTED_1",
             "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-            "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-            "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0,
+            "symbol": "XAUUSD",
+            "dir": "BUY",
+            "type": "SMC_PRIME",
+            "limit": 4050.0,
+            "sl": 4045.0,
+            "tp1": 4055.0,
             "tp2": 4062.5,
         }
         from scripts.webhook_bridge import create_app
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".rejected", notifier=notifier,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".rejected",
+            notifier=notifier,
         )
         app.state.adapter.execute_intent = Mock(
             return_value=ExecutionResult(False, None, "broker rejected")
@@ -134,21 +143,36 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_setup_without_cost_model_is_rejected_before_broker(self):
         self.app.state.adapter.dry_run = False
         self.app.state.adapter.get_account_equity = Mock(return_value=6000.0)
-        self.app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 6000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
+        self.app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 6000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 5500.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
+        )
         self.app.state.adapter.execute_intent = Mock()
         response = self.client.post(
             "/webhook/tradingview",
-            json={"event": "SETUP_PENDING", "order_id": "COST_MISSING_1",
-            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                  "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                  "limit": 4050.0, "sl": 4045.0,
-                  "tp1": 4055.0, "tp2": 4062.5},
+            json={
+                "event": "SETUP_PENDING",
+                "order_id": "COST_MISSING_1",
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "type": "SMC_PRIME",
+                "limit": 4050.0,
+                "sl": 4045.0,
+                "tp1": 4055.0,
+                "tp2": 4062.5,
+            },
             headers=self.headers,
         )
         self.assertEqual(response.json()["status"], "rejected")
@@ -157,32 +181,49 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_setup_uses_broker_equity_volume_and_cost_model(self):
         from scripts.webhook_bridge import create_app
         from scripts.smc.mt5_adapter import ExecutionResult
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
+            auth_token=self.secret_token,
+            dry_run=True,
             db_path=self.db_path + ".live-risk",
-            account_balance=10000.0, risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            account_balance=10000.0,
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 6000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
-        app.state.adapter.get_open_exposure = Mock(return_value=[])
-        app.state.adapter.execute_intent = Mock(
-            return_value=ExecutionResult(True, 42, "accepted")
+        app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 6000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 5500.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
         )
+        app.state.adapter.get_open_exposure = Mock(return_value=[])
+        app.state.adapter.execute_intent = Mock(return_value=ExecutionResult(True, 42, "accepted"))
         try:
             response = TestClient(app).post(
                 "/webhook/tradingview",
-                json={"event": "SETUP_PENDING", "order_id": "LIVE_RISK_1",
-                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                      "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                      "limit": 4050.0, "sl": 4045.0,
-                      "tp1": 4055.0, "tp2": 4062.5},
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "LIVE_RISK_1",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "symbol": "XAUUSD",
+                    "dir": "BUY",
+                    "type": "SMC_PRIME",
+                    "limit": 4050.0,
+                    "sl": 4045.0,
+                    "tp1": 4055.0,
+                    "tp2": 4062.5,
+                },
                 headers=self.headers,
             )
             self.assertEqual(response.json()["status"], "success")
@@ -194,31 +235,48 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_setup_blocks_when_broker_has_existing_exposure(self):
         from scripts.webhook_bridge import create_app
         from scripts.smc.mt5_adapter import ExecutionResult
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".exposure", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".exposure",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 6000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
-        app.state.adapter.get_open_exposure = Mock(return_value=["unknown-position"])
-        app.state.adapter.execute_intent = Mock(
-            return_value=ExecutionResult(True, 42, "accepted")
+        app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 6000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 5500.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
         )
+        app.state.adapter.get_open_exposure = Mock(return_value=["unknown-position"])
+        app.state.adapter.execute_intent = Mock(return_value=ExecutionResult(True, 42, "accepted"))
         try:
             response = TestClient(app).post(
                 "/webhook/tradingview",
-                json={"event": "SETUP_PENDING", "order_id": "EXPOSURE_1",
-                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                      "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                      "limit": 4050.0, "sl": 4045.0,
-                      "tp1": 4055.0, "tp2": 4062.5},
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": "EXPOSURE_1",
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "symbol": "XAUUSD",
+                    "dir": "BUY",
+                    "type": "SMC_PRIME",
+                    "limit": 4050.0,
+                    "sl": 4045.0,
+                    "tp1": 4055.0,
+                    "tp2": 4062.5,
+                },
                 headers=self.headers,
             )
             self.assertEqual(response.json()["status"], "rejected")
@@ -232,18 +290,29 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         def make_app():
             app = create_app(
-                auth_token=self.secret_token, dry_run=True,
-                db_path=self.db_path + ".claims", risk_pct=0.01,
-                commission_per_lot=10.0, slippage_allowance=0.5,
+                auth_token=self.secret_token,
+                dry_run=True,
+                db_path=self.db_path + ".claims",
+                risk_pct=0.01,
+                commission_per_lot=10.0,
+                slippage_allowance=0.5,
             )
             app.state.adapter.dry_run = False
-            app.state.adapter.get_risk_snapshot = Mock(return_value={
-                "balance": 10000.0, "equity": 6000.0,
-                "min_lot": 0.01, "max_lot": 5.0,
-                "lot_step": 0.01, "contract_size": 100.0,
-                "margin_free": 5500.0, "trade_allowed": 1.0,
-                "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-            })
+            app.state.adapter.get_risk_snapshot = Mock(
+                return_value={
+                    "balance": 10000.0,
+                    "equity": 6000.0,
+                    "min_lot": 0.01,
+                    "max_lot": 5.0,
+                    "lot_step": 0.01,
+                    "contract_size": 100.0,
+                    "margin_free": 5500.0,
+                    "trade_allowed": 1.0,
+                    "point": 0.01,
+                    "stops_level": 0.0,
+                    "freeze_level": 0.0,
+                }
+            )
             app.state.adapter.get_open_exposure = Mock(return_value=[])
             app.state.adapter.execute_intent = Mock(
                 return_value=ExecutionResult(True, 42, "accepted")
@@ -251,11 +320,18 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             return app
 
         def payload(order_id):
-            return {"event": "SETUP_PENDING", "order_id": order_id,
-            "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                    "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                    "limit": 4050.0, "sl": 4045.0,
-                    "tp1": 4055.0, "tp2": 4062.5}
+            return {
+                "event": "SETUP_PENDING",
+                "order_id": order_id,
+                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "type": "SMC_PRIME",
+                "limit": 4050.0,
+                "sl": 4045.0,
+                "tp1": 4055.0,
+                "tp2": 4062.5,
+            }
 
         first = make_app()
         try:
@@ -291,35 +367,54 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_confirmed_cancel_releases_claim_for_next_setup(self):
         from scripts.webhook_bridge import create_app
         from scripts.smc.mt5_adapter import ExecutionResult
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".release", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".release",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 6000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 5500.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
-        app.state.adapter.get_open_exposure = Mock(return_value=[])
-        app.state.adapter.execute_intent = Mock(
-            return_value=ExecutionResult(True, 42, "accepted")
+        app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 6000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 5500.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
         )
+        app.state.adapter.get_open_exposure = Mock(return_value=[])
+        app.state.adapter.execute_intent = Mock(return_value=ExecutionResult(True, 42, "accepted"))
         app.state.adapter.get_realized_pnl_for_order = Mock(return_value=0.0)
         client = TestClient(app)
+
         def setup(oid):
             return client.post(
                 "/webhook/tradingview",
-                json={"event": "SETUP_PENDING", "order_id": oid,
-                "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                      "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                      "limit": 4050.0, "sl": 4045.0,
-                      "tp1": 4055.0, "tp2": 4062.5},
+                json={
+                    "event": "SETUP_PENDING",
+                    "order_id": oid,
+                    "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                    "symbol": "XAUUSD",
+                    "dir": "BUY",
+                    "type": "SMC_PRIME",
+                    "limit": 4050.0,
+                    "sl": 4045.0,
+                    "tp1": 4055.0,
+                    "tp2": 4062.5,
+                },
                 headers=self.headers,
             )
+
         try:
             self.assertEqual(setup("RELEASE_A").json()["status"], "success")
             cancel = client.post(
@@ -331,8 +426,12 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             self.assertEqual(setup("RELEASE_B").json()["status"], "success")
             close = client.post(
                 "/webhook/tradingview",
-                json={"event": "TRADE_CLOSED", "order_id": "RELEASE_B",
-                      "reason": "manual close", "pnl_dollar": 0.0},
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": "RELEASE_B",
+                    "reason": "manual close",
+                    "pnl_dollar": 0.0,
+                },
                 headers=self.headers,
             )
             self.assertEqual(close.json()["status"], "success")
@@ -342,10 +441,14 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
     def test_live_order_filled_rejects_when_broker_has_no_matching_position(self):
         from scripts.webhook_bridge import create_app
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".live_fill_reject", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_fill_reject",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
         app.state.adapter.get_matching_position = Mock(return_value=None)
@@ -374,10 +477,14 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_order_filled_uses_broker_position_fill_price_and_ticket(self):
         from types import SimpleNamespace
         from scripts.webhook_bridge import create_app
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".live_fill_match", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_fill_match",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
         broker_pos = SimpleNamespace(ticket=999888, price_open=4049.50, volume=0.02)
@@ -419,13 +526,19 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_trade_closed_uses_broker_deal_pnl_instead_of_payload(self):
         from scripts.webhook_bridge import create_app
         from scripts.smc.mt5_adapter import ExecutionResult
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".live_trade_closed", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_trade_closed",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.execute_intent = Mock(return_value=ExecutionResult(True, 999888, "Closed on broker"))
+        app.state.adapter.execute_intent = Mock(
+            return_value=ExecutionResult(True, 999888, "Closed on broker")
+        )
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.get_realized_pnl_for_order = Mock(return_value=-150.0)
         app.state.adapter.log_lifecycle_event = Mock()
@@ -497,39 +610,65 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
     def test_live_setup_broker_rejection_frees_inbox_for_subsequent_setup(self):
         from scripts.webhook_bridge import create_app
         from scripts.smc.mt5_adapter import ExecutionResult
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".live_broker_reject", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_broker_reject",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 10000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 9000.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
+        app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 10000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 9000.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
+        )
         app.state.adapter.get_open_exposure = Mock(return_value=[])
-        app.state.adapter.execute_intent = Mock(side_effect=[
-            ExecutionResult(False, None, "Margin exceeded"),
-            ExecutionResult(True, 12345, "Accepted"),
-        ])
+        app.state.adapter.execute_intent = Mock(
+            side_effect=[
+                ExecutionResult(False, None, "Margin exceeded"),
+                ExecutionResult(True, 12345, "Accepted"),
+            ]
+        )
+
         def payload(oid):
             return {
-                "event": "SETUP_PENDING", "order_id": oid,
+                "event": "SETUP_PENDING",
+                "order_id": oid,
                 "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0, "tp2": 4062.5
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "type": "SMC_PRIME",
+                "limit": 4050.0,
+                "sl": 4045.0,
+                "tp1": 4055.0,
+                "tp2": 4062.5,
             }
+
         try:
             client = TestClient(app)
-            res1 = client.post("/webhook/tradingview", json=payload("ORDER_REJECT_A"), headers=self.headers)
+            res1 = client.post(
+                "/webhook/tradingview", json=payload("ORDER_REJECT_A"), headers=self.headers
+            )
             self.assertEqual(res1.status_code, 200)
             self.assertEqual(res1.json()["status"], "rejected")
 
             # Second setup must NOT be blocked with 'busy'
-            res2 = client.post("/webhook/tradingview", json=payload("ORDER_REJECT_B"), headers=self.headers)
+            res2 = client.post(
+                "/webhook/tradingview", json=payload("ORDER_REJECT_B"), headers=self.headers
+            )
             self.assertEqual(res2.status_code, 200)
             self.assertEqual(res2.json()["status"], "success")
         finally:
@@ -537,31 +676,53 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
     def test_live_setup_timeout_or_error_marks_uncertain_and_blocks_subsequent(self):
         from scripts.webhook_bridge import create_app
+
         app = create_app(
-            auth_token=self.secret_token, dry_run=True,
-            db_path=self.db_path + ".live_timeout", risk_pct=0.01,
-            commission_per_lot=10.0, slippage_allowance=0.5,
+            auth_token=self.secret_token,
+            dry_run=True,
+            db_path=self.db_path + ".live_timeout",
+            risk_pct=0.01,
+            commission_per_lot=10.0,
+            slippage_allowance=0.5,
         )
         app.state.adapter.dry_run = False
-        app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 10000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 9000.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 0.0,
-        })
+        app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 10000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 9000.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 0.0,
+            }
+        )
         app.state.adapter.get_open_exposure = Mock(return_value=[])
         app.state.adapter.execute_intent = Mock(side_effect=TimeoutError("Broker socket timed out"))
+
         def payload(oid):
             return {
-                "event": "SETUP_PENDING", "order_id": oid,
+                "event": "SETUP_PENDING",
+                "order_id": oid,
                 "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
-                "symbol": "XAUUSD", "dir": "BUY", "type": "SMC_PRIME",
-                "limit": 4050.0, "sl": 4045.0, "tp1": 4055.0, "tp2": 4062.5
+                "symbol": "XAUUSD",
+                "dir": "BUY",
+                "type": "SMC_PRIME",
+                "limit": 4050.0,
+                "sl": 4045.0,
+                "tp1": 4055.0,
+                "tp2": 4062.5,
             }
+
         try:
             client = TestClient(app)
-            res1 = client.post("/webhook/tradingview", json=payload("ORDER_TIMEOUT_1"), headers=self.headers)
+            res1 = client.post(
+                "/webhook/tradingview", json=payload("ORDER_TIMEOUT_1"), headers=self.headers
+            )
             self.assertEqual(res1.status_code, 200)
             self.assertEqual(res1.json()["status"], "uncertain")
 
@@ -569,7 +730,9 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
             self.assertEqual(status_info["status"], "uncertain")
 
             # Subsequent setup must be rejected because an uncertain claim is active
-            res2 = client.post("/webhook/tradingview", json=payload("ORDER_TIMEOUT_2"), headers=self.headers)
+            res2 = client.post(
+                "/webhook/tradingview", json=payload("ORDER_TIMEOUT_2"), headers=self.headers
+            )
             self.assertEqual(res2.status_code, 200)
             self.assertEqual(res2.json()["status"], "rejected")
             self.assertIn("broker reconciliation required", res2.json()["reason"].lower())
@@ -602,6 +765,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
     def test_setup_pending_small_account_risk_gate_rejected(self):
         from scripts.webhook_bridge import create_app
+
         # Small account ($100 balance) with high SL distance ($20.00)
         small_app = create_app(
             auth_token=self.secret_token,
@@ -620,7 +784,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
                 "dir": "BUY",
                 "type": "SMC_PRIME",
                 "limit": 4050.00,
-                "sl": 4030.00, # $20.00 SL distance -> 0.01 lot = $200 risk = 200% of $100 balance > 1.5%
+                "sl": 4030.00,  # $20.00 SL distance -> 0.01 lot = $200 risk = 200% of $100 balance > 1.5%
                 "tp1": 4070.00,
                 "tp2": 4100.00,
             }
@@ -641,6 +805,7 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         import tempfile
         import os
         from scripts.webhook_bridge import create_app
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades_scaleout.db")
         self.secret_token = "TEST_SECRET_TOKEN_789"
@@ -728,7 +893,9 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
             "tp1": 4055.00,
             "tp2": 4062.50,
         }
-        res_setup = self.client.post("/webhook/tradingview", json=setup_payload, headers=self.headers)
+        res_setup = self.client.post(
+            "/webhook/tradingview", json=setup_payload, headers=self.headers
+        )
         self.assertEqual(res_setup.status_code, 200)
         self.assertEqual(res_setup.json()["status"], "success")
 
@@ -771,63 +938,102 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
     def test_rejected_partial_requests_full_close_without_be(self):
         from scripts.smc.mt5_adapter import ExecutionResult
         from scripts.smc.types import OrderIntentType
-        self.app.state.adapter.execute_intent = Mock(side_effect=[
-            ExecutionResult(False, None, "partial rejected"),
-            ExecutionResult(True, 42, "closed"),
-        ])
+
+        self.app.state.adapter.execute_intent = Mock(
+            side_effect=[
+                ExecutionResult(False, None, "partial rejected"),
+                ExecutionResult(True, 42, "closed"),
+            ]
+        )
         response = self.client.post(
             "/webhook/tradingview",
-            json={"event": "TP1_HIT_MOVE_BE", "order_id": "TP1_REJECTED_1",
-                  "entry": 4050.0, "new_sl": 4050.1},
+            json={
+                "event": "TP1_HIT_MOVE_BE",
+                "order_id": "TP1_REJECTED_1",
+                "entry": 4050.0,
+                "new_sl": 4050.1,
+            },
             headers=self.headers,
         )
         calls = self.app.state.adapter.execute_intent.call_args_list
-        self.assertEqual([call.args[0].intent_type for call in calls], [
-            OrderIntentType.PARTIAL_CLOSE, OrderIntentType.CLOSE_MARKET,
-        ])
+        self.assertEqual(
+            [call.args[0].intent_type for call in calls],
+            [
+                OrderIntentType.PARTIAL_CLOSE,
+                OrderIntentType.CLOSE_MARKET,
+            ],
+        )
         self.assertEqual(response.json()["status"], "closed_for_safety")
 
     def test_rejected_be_after_partial_requests_runner_close(self):
         from scripts.smc.mt5_adapter import ExecutionResult
         from scripts.smc.types import OrderIntentType
-        self.app.state.adapter.execute_intent = Mock(side_effect=[
-            ExecutionResult(True, 42, "partial done"),
-            ExecutionResult(False, 42, "BE rejected"),
-            ExecutionResult(True, 42, "runner closed"),
-        ])
+
+        self.app.state.adapter.execute_intent = Mock(
+            side_effect=[
+                ExecutionResult(True, 42, "partial done"),
+                ExecutionResult(False, 42, "BE rejected"),
+                ExecutionResult(True, 42, "runner closed"),
+            ]
+        )
         response = self.client.post(
             "/webhook/tradingview",
-            json={"event": "TP1_HIT_MOVE_BE", "order_id": "BE_REJECTED_1",
-                  "entry": 4050.0, "new_sl": 4050.1},
+            json={
+                "event": "TP1_HIT_MOVE_BE",
+                "order_id": "BE_REJECTED_1",
+                "entry": 4050.0,
+                "new_sl": 4050.1,
+            },
             headers=self.headers,
         )
         calls = self.app.state.adapter.execute_intent.call_args_list
-        self.assertEqual([call.args[0].intent_type for call in calls], [
-            OrderIntentType.PARTIAL_CLOSE, OrderIntentType.MOVE_SL_TO_BE,
-            OrderIntentType.CLOSE_MARKET,
-        ])
+        self.assertEqual(
+            [call.args[0].intent_type for call in calls],
+            [
+                OrderIntentType.PARTIAL_CLOSE,
+                OrderIntentType.MOVE_SL_TO_BE,
+                OrderIntentType.CLOSE_MARKET,
+            ],
+        )
         self.assertEqual(response.json()["status"], "closed_for_safety")
 
     def test_live_tp1_rejects_before_partial_when_freeze_blocks_be(self):
         from scripts.smc.mt5_adapter import ExecutionResult
+
         self.app.state.adapter.dry_run = False
-        self.app.state.adapter.get_risk_snapshot = Mock(return_value={
-            "balance": 10000.0, "equity": 10000.0,
-            "min_lot": 0.01, "max_lot": 5.0,
-            "lot_step": 0.01, "contract_size": 100.0,
-            "margin_free": 9000.0, "trade_allowed": 1.0,
-            "point": 0.01, "stops_level": 0.0, "freeze_level": 50.0,
-        })
-        self.app.state.adapter.get_market_quotes = Mock(return_value={
-            "bid": 4050.2, "ask": 4050.4,
-        })
+        self.app.state.adapter.get_risk_snapshot = Mock(
+            return_value={
+                "balance": 10000.0,
+                "equity": 10000.0,
+                "min_lot": 0.01,
+                "max_lot": 5.0,
+                "lot_step": 0.01,
+                "contract_size": 100.0,
+                "margin_free": 9000.0,
+                "trade_allowed": 1.0,
+                "point": 0.01,
+                "stops_level": 0.0,
+                "freeze_level": 50.0,
+            }
+        )
+        self.app.state.adapter.get_market_quotes = Mock(
+            return_value={
+                "bid": 4050.2,
+                "ask": 4050.4,
+            }
+        )
         self.app.state.adapter.execute_intent = Mock(
             return_value=ExecutionResult(True, 42, "should not run")
         )
         response = self.client.post(
             "/webhook/tradingview",
-            json={"event": "TP1_HIT_MOVE_BE", "order_id": "FREEZE_BLOCK_1",
-                  "entry": 4050.0, "new_sl": 4050.0, "dir": "BUY"},
+            json={
+                "event": "TP1_HIT_MOVE_BE",
+                "order_id": "FREEZE_BLOCK_1",
+                "entry": 4050.0,
+                "new_sl": 4050.0,
+                "dir": "BUY",
+            },
             headers=self.headers,
         )
         self.assertEqual(response.json()["status"], "rejected")
@@ -842,6 +1048,7 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
         import tempfile
         import os
         from scripts.webhook_bridge import create_app
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades_cancel.db")
         self.secret_token = "TEST_SECRET_TOKEN_999"
@@ -863,23 +1070,31 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
     def test_rejected_close_does_not_record_trade_closed(self):
         from unittest.mock import Mock
         from scripts.smc.mt5_adapter import ExecutionResult
+
         self.app.state.adapter.execute_intent = Mock(
             return_value=ExecutionResult(False, None, "close rejected")
         )
         response = self.client.post(
             "/webhook/tradingview",
-            json={"event": "TRADE_CLOSED", "order_id": "CLOSE_REJECTED_1",
-                  "reason": "STOP LOSS HIT", "pnl_dollar": -50.0},
+            json={
+                "event": "TRADE_CLOSED",
+                "order_id": "CLOSE_REJECTED_1",
+                "reason": "STOP LOSS HIT",
+                "pnl_dollar": -50.0,
+            },
             headers=self.headers,
         )
         self.assertEqual(response.json()["status"], "rejected")
-        self.assertFalse(any(
-            row["event_type"] == "TRADE_CLOSED"
-            for row in self.app.state.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(
+                row["event_type"] == "TRADE_CLOSED"
+                for row in self.app.state.adapter.get_lifecycle_logs()
+            )
+        )
 
     def test_rejected_cancel_does_not_record_order_canceled(self):
         from scripts.smc.mt5_adapter import ExecutionResult
+
         self.app.state.adapter.execute_intent = Mock(
             return_value=ExecutionResult(False, None, "cancel rejected")
         )
@@ -889,10 +1104,12 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
             headers=self.headers,
         )
         self.assertEqual(response.json()["status"], "rejected")
-        self.assertFalse(any(
-            row["event_type"] == "ORDER_CANCELED"
-            for row in self.app.state.adapter.get_lifecycle_logs()
-        ))
+        self.assertFalse(
+            any(
+                row["event_type"] == "ORDER_CANCELED"
+                for row in self.app.state.adapter.get_lifecycle_logs()
+            )
+        )
 
     def test_order_canceled_ttl_expiration(self):
         # 1. Setup pending limit
@@ -908,7 +1125,9 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
             "tp1": 4055.00,
             "tp2": 4062.50,
         }
-        res_setup = self.client.post("/webhook/tradingview", json=setup_payload, headers=self.headers)
+        res_setup = self.client.post(
+            "/webhook/tradingview", json=setup_payload, headers=self.headers
+        )
         self.assertEqual(res_setup.status_code, 200)
 
         # 2. Cancel order
@@ -919,7 +1138,9 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
             "dir": "BUY",
             "reason": "TTL_EXPIRED (4 bars elapsed)",
         }
-        res_cancel = self.client.post("/webhook/tradingview", json=cancel_payload, headers=self.headers)
+        res_cancel = self.client.post(
+            "/webhook/tradingview", json=cancel_payload, headers=self.headers
+        )
         self.assertEqual(res_cancel.status_code, 200)
         data_cancel = res_cancel.json()
         self.assertEqual(data_cancel["status"], "success")
@@ -934,7 +1155,9 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
             "dir": "BUY",
             "reason": "FULL TP2 HIT (+2.5R) 🎯",
         }
-        res_close = self.client.post("/webhook/tradingview", json=close_payload, headers=self.headers)
+        res_close = self.client.post(
+            "/webhook/tradingview", json=close_payload, headers=self.headers
+        )
         self.assertEqual(res_close.status_code, 200)
         data_close = res_close.json()
         self.assertEqual(data_close["status"], "success")
@@ -948,6 +1171,7 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
         import tempfile
         import os
         from scripts.webhook_bridge import create_app
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades_shield.db")
         self.secret_token = "TEST_SECRET_TOKEN_SHIELD"
@@ -972,10 +1196,15 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
     def test_circuit_breaker_halts_after_2_daily_losses(self):
         # 1. Simulate 2 consecutive loss trades today in SQLite
         from scripts.smc.mt5_adapter import SMCExecutionAdapter
+
         adapter = SMCExecutionAdapter(dry_run=True, db_path=self.db_path)
         try:
-            adapter.log_lifecycle_event(event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 1")
-            adapter.log_lifecycle_event(event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 2")
+            adapter.log_lifecycle_event(
+                event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 1"
+            )
+            adapter.log_lifecycle_event(
+                event_type="TRADE_CLOSED", pnl_dollar=-100.0, pnl_r=-1.0, reason="SL Hit 2"
+            )
         finally:
             adapter.close()
 
@@ -1037,9 +1266,7 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
         }
         _SESSION_PATCHER.stop()
         try:
-            res = self.client.post(
-                "/webhook/tradingview", json=payload, headers=self.headers
-            )
+            res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         finally:
             _SESSION_PATCHER.start()
         self.assertEqual(res.status_code, 200)
@@ -1139,7 +1366,7 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
     def setUp(self):
         import tempfile
         import os
-        from scripts.webhook_bridge import create_app
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_fixes.db")
         self.secret_token = "TEST_FIXES_SECRET"
@@ -1151,6 +1378,7 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
     def test_f2_order_filled_updates_setup_inbox_to_accepted_with_ticket(self):
         from types import SimpleNamespace
         from scripts.webhook_bridge import create_app
+
         app = create_app(
             auth_token=self.secret_token,
             dry_run=True,
@@ -1190,6 +1418,7 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
     def test_f3_trade_closed_finalizes_when_broker_position_already_closed_by_tp(self):
         from scripts.smc.mt5_adapter import ExecutionResult
         from scripts.webhook_bridge import create_app
+
         app = create_app(
             auth_token=self.secret_token,
             dry_run=True,
@@ -1220,13 +1449,18 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
 
             # Confirm lifecycle log was written
             logs = app.state.adapter.get_lifecycle_logs()
-            tc_logs = [log for log in logs if log["event_type"] == "TRADE_CLOSED" and log["order_id"] == "TP2_ALREADY_CLOSED"]
+            tc_logs = [
+                log
+                for log in logs
+                if log["event_type"] == "TRADE_CLOSED" and log["order_id"] == "TP2_ALREADY_CLOSED"
+            ]
             self.assertEqual(len(tc_logs), 1)
         finally:
             app.state.adapter.close()
 
     def test_f4_custom_r_multiples_configured_via_create_app(self):
         from scripts.webhook_bridge import create_app
+
         app = create_app(
             auth_token=self.secret_token,
             dry_run=True,
@@ -1239,38 +1473,50 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
         try:
             client = TestClient(app)
             # Reason-only payload must NOT invent R from tp_r config.
-            res_reason_only = client.post("/webhook/tradingview", json={
-                "event": "TRADE_CLOSED",
-                "order_id": "ORDER_REASON_ONLY",
-                "symbol": "XAUUSD",
-                "reason": "TP2_RUNNER_HIT",
-            }, headers=self.headers)
+            res_reason_only = client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": "ORDER_REASON_ONLY",
+                    "symbol": "XAUUSD",
+                    "reason": "TP2_RUNNER_HIT",
+                },
+                headers=self.headers,
+            )
             self.assertEqual(res_reason_only.status_code, 200)
             self.assertIsNone(res_reason_only.json()["pnl_r"])
             self.assertIsNone(res_reason_only.json()["pnl_dollar"])
 
             # Explicit payload wins (operator/broker evidence).
-            res_tp2 = client.post("/webhook/tradingview", json={
-                "event": "TRADE_CLOSED",
-                "order_id": "ORDER_TP2_CUSTOM",
-                "symbol": "XAUUSD",
-                "reason": "TP2_RUNNER_HIT",
-                "pnl_r": 3.5,
-                "pnl_dollar": 350.0,
-            }, headers=self.headers)
+            res_tp2 = client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": "ORDER_TP2_CUSTOM",
+                    "symbol": "XAUUSD",
+                    "reason": "TP2_RUNNER_HIT",
+                    "pnl_r": 3.5,
+                    "pnl_dollar": 350.0,
+                },
+                headers=self.headers,
+            )
             self.assertEqual(res_tp2.status_code, 200)
             data_tp2 = res_tp2.json()
             self.assertEqual(data_tp2["pnl_r"], 3.5)
             self.assertEqual(data_tp2["pnl_dollar"], 350.0)
 
-            res_tp1 = client.post("/webhook/tradingview", json={
-                "event": "TRADE_CLOSED",
-                "order_id": "ORDER_TP1_CUSTOM",
-                "symbol": "XAUUSD",
-                "reason": "TP1_SCALE_OUT",
-                "pnl_r": 1.5,
-                "pnl_dollar": 150.0,
-            }, headers=self.headers)
+            res_tp1 = client.post(
+                "/webhook/tradingview",
+                json={
+                    "event": "TRADE_CLOSED",
+                    "order_id": "ORDER_TP1_CUSTOM",
+                    "symbol": "XAUUSD",
+                    "reason": "TP1_SCALE_OUT",
+                    "pnl_r": 1.5,
+                    "pnl_dollar": 150.0,
+                },
+                headers=self.headers,
+            )
             self.assertEqual(res_tp1.status_code, 200)
             data_tp1 = res_tp1.json()
             self.assertEqual(data_tp1["pnl_r"], 1.5)
@@ -1344,6 +1590,7 @@ class TestWebhookFoundationGates(unittest.TestCase):
         save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
         # Recreate app so loaded halt is clear; keep failing identity.
         from scripts.webhook_bridge import create_app
+
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
@@ -1373,10 +1620,13 @@ class TestWebhookFoundationGates(unittest.TestCase):
 
     def test_two_net_losses_trip_risk_halt_on_next_setup(self):
         from scripts.smc.broker_identity import BrokerIdentityReport
-        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state, load_risk_halt_state
+        from scripts.smc.risk_halt import (
+            new_risk_halt_state,
+            save_risk_halt_state,
+            load_risk_halt_state,
+        )
         from scripts.webhook_bridge import create_app
         from pathlib import Path
-        import os
 
         ok_identity = BrokerIdentityReport(
             ok=True,
@@ -1463,7 +1713,11 @@ class TestWebhookFoundationGates(unittest.TestCase):
 
     def test_incomplete_broker_equity_blocks_without_resetting_marks(self):
         from scripts.smc.broker_identity import BrokerIdentityReport
-        from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state, load_risk_halt_state
+        from scripts.smc.risk_halt import (
+            new_risk_halt_state,
+            save_risk_halt_state,
+            load_risk_halt_state,
+        )
         from scripts.webhook_bridge import create_app
         from pathlib import Path
         from unittest.mock import Mock
@@ -1679,9 +1933,7 @@ class TestWebhookFoundationGates(unittest.TestCase):
             "tp2": 4062.50,
             "time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
         }
-        res = self.client.post(
-            "/webhook/tradingview", json=payload, headers=self.headers
-        )
+        res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["status"], "rejected")
@@ -1904,16 +2156,31 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             adapter.connected = True
             deals = [
                 SimpleNamespace(
-                    ticket=101, type=DEAL_TYPE_BUY, comment="SMC_BOT1",
-                    profit=5.0, commission=0.0, swap=0.0, fee=0.0,
+                    ticket=101,
+                    type=DEAL_TYPE_BUY,
+                    comment="SMC_BOT1",
+                    profit=5.0,
+                    commission=0.0,
+                    swap=0.0,
+                    fee=0.0,
                 ),
                 SimpleNamespace(
-                    ticket=102, type=DEAL_TYPE_BUY, comment="hand trade",
-                    profit=-3.0, commission=0.0, swap=0.0, fee=0.0,
+                    ticket=102,
+                    type=DEAL_TYPE_BUY,
+                    comment="hand trade",
+                    profit=-3.0,
+                    commission=0.0,
+                    swap=0.0,
+                    fee=0.0,
                 ),
                 SimpleNamespace(
-                    ticket=103, type=DEAL_TYPE_BALANCE, comment="",
-                    profit=50.0, commission=0.0, swap=0.0, fee=0.0,
+                    ticket=103,
+                    type=DEAL_TYPE_BALANCE,
+                    comment="",
+                    profit=50.0,
+                    commission=0.0,
+                    swap=0.0,
+                    fee=0.0,
                 ),
             ]
             with patch.object(adapter, "fetch_recent_broker_deals", return_value=deals):
@@ -2050,8 +2317,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
             disclosures = data.get("missing_quote_disclosures") or []
             self.assertTrue(
                 any(
-                    d.get("order_id") == "ROLL_FILL_1"
-                    and d.get("context") == "session_flat_exit"
+                    d.get("order_id") == "ROLL_FILL_1" and d.get("context") == "session_flat_exit"
                     for d in disclosures
                 ),
                 msg=data,
@@ -2277,8 +2543,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         filled = [
             row
             for row in adapter.get_lifecycle_logs()
-            if row.get("event_type") == "ORDER_FILLED"
-            and row.get("order_id") == "LC_FILL_LEDGER_1"
+            if row.get("event_type") == "ORDER_FILLED" and row.get("order_id") == "LC_FILL_LEDGER_1"
         ]
         self.assertEqual(len(filled), 1)
 
@@ -2303,6 +2568,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         self.assertEqual(data["action"], "TRADE_CLOSED")
         # risk = 10 * 0.01 * 100 = 10; pnl 10 → 1.0R
         self.assertEqual(data["pnl_r"], 1.0)
+
 
 class TestWebhookDryRunSetupInbox(unittest.TestCase):
     def test_dry_run_setup_claims_inbox_for_clock_cancels(self):
@@ -2396,6 +2662,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
     def test_setup_uses_live_h1_bias_when_payload_omits_bias(self):
         """Live Gate C: TV omit h1_bias → broker H1 still blocks opposing SETUP."""
         from unittest.mock import patch
+
         with patch.object(
             self.app.state.adapter,
             "resolve_live_h1_bias",
@@ -2422,6 +2689,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
 
     def test_setup_does_not_invent_h1_reject_when_live_bias_unknown(self):
         from unittest.mock import patch
+
         with patch.object(
             self.app.state.adapter,
             "resolve_live_h1_bias",
@@ -2566,6 +2834,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
     def test_clock_uses_live_h1_bias_when_body_omits_bias(self):
         """Live Gate C cron (empty body) must still cancel on broker H1 bias."""
         from unittest.mock import patch
+
         adapter = self.app.state.adapter
         place = self.client.post(
             "/webhook/tradingview",
@@ -2595,6 +2864,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
 
     def test_clock_does_not_invent_h1_cancel_when_live_bias_unknown(self):
         from unittest.mock import patch
+
         adapter = self.app.state.adapter
         place = self.client.post(
             "/webhook/tradingview",

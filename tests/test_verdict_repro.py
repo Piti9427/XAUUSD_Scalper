@@ -94,7 +94,9 @@ class TestVerdictRepro(unittest.TestCase):
         res = self.client.post("/webhook/tradingview", json=payload, headers=self.headers)
         self.assertEqual(res.status_code, 200)
         data = res.json()
-        self.assertIn("execution", data, "TRADE_CLOSED must execute position liquidation on adapter")
+        self.assertIn(
+            "execution", data, "TRADE_CLOSED must execute position liquidation on adapter"
+        )
         self.assertTrue(data["execution"]["success"])
 
     def test_repro_orchestrator_short_tp_ignores_ask_spread(self):

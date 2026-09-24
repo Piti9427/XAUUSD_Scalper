@@ -31,7 +31,7 @@ def calculate_lot_size(
 ) -> LotResult:
     """
     Calculates XAUUSD position sizing based on strict mathematical risk control.
-    
+
     Formula:
         SL Distance = |Entry - SL Price| + Spread Buffer
         Raw Lot = (Balance * Risk Pct) / (SL Distance * Contract Size)
@@ -52,13 +52,37 @@ def calculate_lot_size(
         return LotResult(0.0, 0.0, 0.0, False, "Missing commission or slippage cost model")
     commission_per_lot = commission_per_lot or 0.0
     slippage_allowance = slippage_allowance or 0.0
-    if not all(math.isfinite(value) for value in (
-        capital, entry_price, sl_price, risk_pct, spread_buffer,
-        max_sl_cap, min_lot, max_lot, contract_size, lot_step,
-        commission_per_lot, slippage_allowance, max_risk_cap_pct,
-    )) or min(
-        risk_pct, max_sl_cap, min_lot, max_lot, contract_size, lot_step, max_risk_cap_pct,
-    ) <= 0 or min(spread_buffer, commission_per_lot, slippage_allowance) < 0:
+    if (
+        not all(
+            math.isfinite(value)
+            for value in (
+                capital,
+                entry_price,
+                sl_price,
+                risk_pct,
+                spread_buffer,
+                max_sl_cap,
+                min_lot,
+                max_lot,
+                contract_size,
+                lot_step,
+                commission_per_lot,
+                slippage_allowance,
+                max_risk_cap_pct,
+            )
+        )
+        or min(
+            risk_pct,
+            max_sl_cap,
+            min_lot,
+            max_lot,
+            contract_size,
+            lot_step,
+            max_risk_cap_pct,
+        )
+        <= 0
+        or min(spread_buffer, commission_per_lot, slippage_allowance) < 0
+    ):
         return LotResult(0.0, 0.0, 0.0, False, "Invalid risk or broker cost inputs")
     if capital <= 0:
         return LotResult(
@@ -66,7 +90,7 @@ def calculate_lot_size(
             sl_distance=0.0,
             risk_amount=0.0,
             is_valid=False,
-            reason="Invalid account balance <= 0"
+            reason="Invalid account balance <= 0",
         )
 
     raw_dist = abs(entry_price - sl_price)
@@ -76,7 +100,7 @@ def calculate_lot_size(
             sl_distance=0.0,
             risk_amount=0.0,
             is_valid=False,
-            reason="Entry and SL prices are identical"
+            reason="Entry and SL prices are identical",
         )
 
     total_sl_dist = round(raw_dist + spread_buffer, 4)
@@ -88,7 +112,7 @@ def calculate_lot_size(
             sl_distance=total_sl_dist,
             risk_amount=0.0,
             is_valid=False,
-            reason=f"SL distance exceeds max cap: {total_sl_dist:.2f} > {max_sl_cap:.2f}"
+            reason=f"SL distance exceeds max cap: {total_sl_dist:.2f} > {max_sl_cap:.2f}",
         )
 
     risk_budget = capital * risk_pct
@@ -113,9 +137,11 @@ def calculate_lot_size(
                 sl_distance=total_sl_dist,
                 risk_amount=min_lot_risk,
                 is_valid=False,
-                reason=f"Small-account protection: min lot {min_lot} risks ${min_lot_risk:.2f} ({(min_lot_risk/capital)*100:.2f}%), exceeding configured risk of {effective_cap_pct*100:.1f}% (${max_allowed_risk:.2f})"
+                reason=f"Small-account protection: min lot {min_lot} risks ${min_lot_risk:.2f} ({(min_lot_risk / capital) * 100:.2f}%), exceeding configured risk of {effective_cap_pct * 100:.1f}% (${max_allowed_risk:.2f})",
             )
-        return LotResult(0.0, total_sl_dist, 0.0, False, "Lot cannot split into two broker-valid legs")
+        return LotResult(
+            0.0, total_sl_dist, 0.0, False, "Lot cannot split into two broker-valid legs"
+        )
     else:
         final_lot = floored_lot
 
@@ -130,7 +156,7 @@ def calculate_lot_size(
             is_valid=False,
             reason=(
                 f"Risk Protection Invariant: computed risk ${risk_amount:.2f} "
-                f"exceeds budget ${risk_budget:.2f} ({risk_pct*100:.2f}%)"
+                f"exceeds budget ${risk_budget:.2f} ({risk_pct * 100:.2f}%)"
             ),
         )
     return LotResult(
@@ -138,7 +164,7 @@ def calculate_lot_size(
         sl_distance=total_sl_dist,
         risk_amount=risk_amount,
         is_valid=True,
-        reason="Valid lot size calculated"
+        reason="Valid lot size calculated",
     )
 
 

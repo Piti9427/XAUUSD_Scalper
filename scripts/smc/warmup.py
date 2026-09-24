@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from typing import Sequence
 
 # Foundation proposal locked until a measured coverage review changes it.
 H1_WARMUP_BARS = 1000
@@ -25,9 +25,7 @@ def assert_warmup_coverage(
     label: str = "bars",
 ) -> None:
     if not warmup_coverage_ok(len(bars), required=required):
-        raise ValueError(
-            f"{label} warmup insufficient: have={len(bars)} need>={required}"
-        )
+        raise ValueError(f"{label} warmup insufficient: have={len(bars)} need>={required}")
 
 
 def h1_warmup_ok(h1_bar_count: int) -> bool:

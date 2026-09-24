@@ -54,9 +54,7 @@ async def apply_lifecycle_fills(
                 open_time=now_utc,
                 initial_sl_distance=abs(entry - sl),
             )
-            background_tasks.add_task(
-                rt.dispatch_tg_safe, format_order_filled_card(pos_card)
-            )
+            background_tasks.add_task(rt.dispatch_tg_safe, format_order_filled_card(pos_card))
         except Exception as exc:
             logger.warning("Lifecycle fill notify failed for %s: %s", order_id, exc)
 
@@ -105,9 +103,7 @@ async def apply_lifecycle_closes(
 
                 fill = await asyncio.to_thread(rt.adapter.get_fill_geometry, order_id)
                 dir_raw = (fill or {}).get("direction", "BUY")
-                tc_dir = (
-                    Direction.BUY if str(dir_raw).upper() == "BUY" else Direction.SELL
-                )
+                tc_dir = Direction.BUY if str(dir_raw).upper() == "BUY" else Direction.SELL
                 card = format_trade_closed_card(
                     direction=tc_dir,
                     exit_price=0.0,
@@ -117,6 +113,4 @@ async def apply_lifecycle_closes(
                 )
                 background_tasks.add_task(rt.dispatch_tg_safe, card)
             except Exception as exc:
-                logger.warning(
-                    "Lifecycle close notify failed for %s: %s", order_id, exc
-                )
+                logger.warning("Lifecycle close notify failed for %s: %s", order_id, exc)

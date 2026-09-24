@@ -10,8 +10,12 @@ MARGIN_MODE_RETAIL_NETTING = 0
 MARGIN_MODE_EXCHANGE_NETTING = 1
 MARGIN_MODE_RETAIL_HEDGING = 2
 
-NETTING_MODES = frozenset({MARGIN_MODE_RETAIL_NETTING, MARGIN_MODE_EXCHANGE_NETTING, "netting", "NETTING"})
-HEDGING_MODES = frozenset({MARGIN_MODE_RETAIL_HEDGING, "hedging", "HEDGING", "account_margin_mode_retail_hedging"})
+NETTING_MODES = frozenset(
+    {MARGIN_MODE_RETAIL_NETTING, MARGIN_MODE_EXCHANGE_NETTING, "netting", "NETTING"}
+)
+HEDGING_MODES = frozenset(
+    {MARGIN_MODE_RETAIL_HEDGING, "hedging", "HEDGING", "account_margin_mode_retail_hedging"}
+)
 
 
 @dataclass(frozen=True)

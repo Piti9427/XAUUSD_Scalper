@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from scripts.smc.types import Direction, OrderIntentType, OrderIntent
 
@@ -17,9 +16,15 @@ class ExecutionMixin:
     def execute_intent(self, intent: OrderIntent) -> ExecutionResult:
         """Translates domain OrderIntent into MT5 broker calls or dry-run simulation."""
         # Enforce target scoping (ADR-024) on live broker execution
-        is_rollover_all = "ROLLOVER" in intent.reason.upper() and (intent.ticket is None and not intent.order_id)
+        is_rollover_all = "ROLLOVER" in intent.reason.upper() and (
+            intent.ticket is None and not intent.order_id
+        )
         if not self.dry_run:
-            if intent.intent_type in (OrderIntentType.CANCEL_LIMIT, OrderIntentType.MOVE_SL_TO_BE, OrderIntentType.PARTIAL_CLOSE):
+            if intent.intent_type in (
+                OrderIntentType.CANCEL_LIMIT,
+                OrderIntentType.MOVE_SL_TO_BE,
+                OrderIntentType.PARTIAL_CLOSE,
+            ):
                 if intent.ticket is None and not intent.order_id:
                     return ExecutionResult(
                         success=False,
@@ -57,9 +62,7 @@ class ExecutionMixin:
                 else runtime.mt5.ORDER_TYPE_SELL_LIMIT
             )
             comment_str = (
-                f"SMC_{intent.order_id}"
-                if intent.order_id
-                else f"SMC_v1_{intent.reason[:20]}"
+                f"SMC_{intent.order_id}" if intent.order_id else f"SMC_v1_{intent.reason[:20]}"
             )
             # Defense in depth: stops_level geometry even if caller skipped webhook gate.
             from scripts.smc.stops_geometry import pending_stops_geometry_allows
@@ -166,7 +169,9 @@ class ExecutionMixin:
                         req = {"action": runtime.mt5.TRADE_ACTION_REMOVE, "order": o.ticket}
                         result = runtime.mt5.order_send(req)
                         if result is None or result.retcode != runtime.mt5.TRADE_RETCODE_DONE:
-                            return ExecutionResult(False, o.ticket, "Broker rejected limit cancellation")
+                            return ExecutionResult(
+                                False, o.ticket, "Broker rejected limit cancellation"
+                            )
                         canceled_count += 1
             if canceled_count == 0:
                 return ExecutionResult(False, intent.ticket, "Target limit order not found")
@@ -233,7 +238,9 @@ class ExecutionMixin:
                         }
                         result = runtime.mt5.order_send(req)
                         if result is None or result.retcode != runtime.mt5.TRADE_RETCODE_DONE:
-                            return ExecutionResult(False, pos.ticket, "Broker rejected SL modification")
+                            return ExecutionResult(
+                                False, pos.ticket, "Broker rejected SL modification"
+                            )
                         moved_count += 1
             if moved_count == 0:
                 return ExecutionResult(False, intent.ticket, "Target position not found")
@@ -270,7 +277,9 @@ class ExecutionMixin:
                         )
                         tick = runtime.mt5.symbol_info_tick(self.symbol)
                         if tick is None:
-                            return ExecutionResult(False, intent.ticket, "Broker symbol tick unavailable")
+                            return ExecutionResult(
+                                False, intent.ticket, "Broker symbol tick unavailable"
+                            )
                         price = tick.bid if close_type == runtime.mt5.ORDER_TYPE_SELL else tick.ask
                         vol = min(pos.volume, intent.lot_size or (pos.volume * 0.5))
                         deal_filling = self._type_filling_for_symbol(for_pending=False)
@@ -294,7 +303,9 @@ class ExecutionMixin:
                         }
                         result = runtime.mt5.order_send(req)
                         if result is None or result.retcode != runtime.mt5.TRADE_RETCODE_DONE:
-                            return ExecutionResult(False, pos.ticket, "Broker rejected partial close")
+                            return ExecutionResult(
+                                False, pos.ticket, "Broker rejected partial close"
+                            )
                         closed_count += 1
             if closed_count == 0:
                 return ExecutionResult(False, intent.ticket, "Target position not found")
@@ -319,9 +330,7 @@ class ExecutionMixin:
                     owned_any = is_bot_owned_comment(getattr(pos, "comment", ""))
                     owned = is_bot_owned_comment(getattr(pos, "comment", ""), intent.order_id)
                     match_ticket = (
-                        intent.ticket is not None
-                        and pos.ticket == intent.ticket
-                        and owned_any
+                        intent.ticket is not None and pos.ticket == intent.ticket and owned_any
                     )
                     match_order_id = intent.order_id is not None and owned
                     # Rollover closes only bot-owned exposure — never foreign manual trades.
@@ -333,7 +342,9 @@ class ExecutionMixin:
                         )
                         tick = runtime.mt5.symbol_info_tick(self.symbol)
                         if tick is None:
-                            return ExecutionResult(False, intent.ticket, "Broker symbol tick unavailable")
+                            return ExecutionResult(
+                                False, intent.ticket, "Broker symbol tick unavailable"
+                            )
                         price = tick.bid if close_type == runtime.mt5.ORDER_TYPE_SELL else tick.ask
                         deal_filling = self._type_filling_for_symbol(for_pending=False)
                         if deal_filling is None:
@@ -360,7 +371,9 @@ class ExecutionMixin:
                         }
                         result = runtime.mt5.order_send(req)
                         if result is None or result.retcode != runtime.mt5.TRADE_RETCODE_DONE:
-                            return ExecutionResult(False, pos.ticket, "Broker rejected market close")
+                            return ExecutionResult(
+                                False, pos.ticket, "Broker rejected market close"
+                            )
                         closed_count += 1
             if closed_count == 0:
                 return ExecutionResult(False, intent.ticket, "Target position not found")
@@ -377,4 +390,3 @@ class ExecutionMixin:
             )
 
         return ExecutionResult(success=True, order_id=None, message="No action needed")
-

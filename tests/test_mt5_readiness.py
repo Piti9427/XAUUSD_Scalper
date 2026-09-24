@@ -16,18 +16,37 @@ class TestMT5Readiness(unittest.TestCase):
         self.mt5 = Mock(TIMEFRAME_M5=5, TIMEFRAME_H1=60)
         self.mt5.initialize.return_value = True
         self.mt5.account_info.return_value = SimpleNamespace(
-            login=123, server="Test-Demo", trade_mode=0, currency="USD", balance=2000.0, equity=2000.0)
+            login=123,
+            server="Test-Demo",
+            trade_mode=0,
+            currency="USD",
+            balance=2000.0,
+            equity=2000.0,
+        )
         self.mt5.symbol_info.return_value = SimpleNamespace(
-            point=0.01, digits=2, trade_contract_size=100.0,
-            volume_min=0.01, volume_step=0.01, volume_max=100.0)
+            point=0.01,
+            digits=2,
+            trade_contract_size=100.0,
+            volume_min=0.01,
+            volume_step=0.01,
+            volume_max=100.0,
+        )
         self.mt5.symbol_info_tick.return_value = SimpleNamespace(
-            bid=2010.0, ask=2010.2, time=int(self.start.timestamp()))
+            bid=2010.0, ask=2010.2, time=int(self.start.timestamp())
+        )
         self.mt5.positions_get.return_value = ()
         self.mt5.orders_get.return_value = ()
         self.mt5.copy_rates_range.return_value = [
-            {"time": int((self.start + timedelta(hours=i)).timestamp()),
-             "open": 2000.0, "high": 2010.0, "low": 1990.0, "close": 2005.0,
-             "tick_volume": 100, "spread": 20, "real_volume": 0}
+            {
+                "time": int((self.start + timedelta(hours=i)).timestamp()),
+                "open": 2000.0,
+                "high": 2010.0,
+                "low": 1990.0,
+                "close": 2005.0,
+                "tick_volume": 100,
+                "spread": 20,
+                "real_volume": 0,
+            }
             for i in range(25)
         ]
 

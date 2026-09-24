@@ -3,6 +3,7 @@
 Dry-Run Verification Script for XAUUSD Webhook Bridge.
 Runs end-to-end verification of the FastAPI ASGI app without external network dependencies.
 """
+
 import sys
 import os
 import tempfile

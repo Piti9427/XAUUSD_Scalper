@@ -15,6 +15,7 @@ from . import runtime
 class JournalInboxMixin:
     def _init_sqlite(self):
         import os
+
         try:
             dir_name = os.path.dirname(self.db_path)
             if dir_name:
@@ -139,14 +140,17 @@ class JournalInboxMixin:
                     "INSERT INTO setup_inbox "
                     "(receipt_id, order_id, payload_json, payload_hash, status, created_at) "
                     "VALUES (?, ?, ?, ?, 'claimed', ?)",
-                    (receipt_id, order_id, canonical, payload_hash,
-                     datetime.now(timezone.utc).isoformat()),
+                    (
+                        receipt_id,
+                        order_id,
+                        canonical,
+                        payload_hash,
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
                 )
                 return {"status": "claimed", "receipt_id": receipt_id}
 
-    def update_setup_status(
-        self, order_id: str, status: str, ticket: Optional[int] = None
-    ) -> None:
+    def update_setup_status(self, order_id: str, status: str, ticket: Optional[int] = None) -> None:
         """Update setup status and optional ticket; releases claim lock on 'rejected'/'closed'."""
         with self._claim_lock:
             with self.conn:
@@ -198,7 +202,9 @@ class JournalInboxMixin:
             # Check history orders if available with created_at lookback
             now = datetime.now(timezone.utc)
             from_date = None
-            cursor = self.conn.execute("SELECT created_at FROM setup_inbox WHERE order_id = ?", (order_id,))
+            cursor = self.conn.execute(
+                "SELECT created_at FROM setup_inbox WHERE order_id = ?", (order_id,)
+            )
             row = cursor.fetchone()
             if row and row[0]:
                 try:
@@ -271,9 +277,7 @@ class JournalInboxMixin:
         )
         return cursor.fetchone() is not None
 
-    def mark_webhook_processed(
-        self, order_id: str, event_type: str, status: str = "success"
-    ):
+    def mark_webhook_processed(self, order_id: str, event_type: str, status: str = "success"):
         """Records a processed webhook event to guarantee idempotency."""
         cursor = self.conn.cursor()
         now_utc = datetime.now(timezone.utc).isoformat()

@@ -97,10 +97,7 @@ async def execute_clock_exit_plans(
             reason=plan.reason,
         )
         exec_close = await asyncio.to_thread(rt.adapter.execute_intent, intent)
-        already_flat = (
-            not exec_close.success
-            and "not found" in (exec_close.message or "").lower()
-        )
+        already_flat = not exec_close.success and "not found" in (exec_close.message or "").lower()
         if not exec_close.success and not already_flat:
             exit_results.append(
                 {
@@ -188,11 +185,7 @@ async def execute_clock_exit_plans(
                     from scripts.smc.notifier import format_trade_closed_card
                     from scripts.smc.types import Direction as Dir
 
-                    tc_dir = (
-                        Dir.BUY
-                        if str(plan.direction or "BUY").upper() == "BUY"
-                        else Dir.SELL
-                    )
+                    tc_dir = Dir.BUY if str(plan.direction or "BUY").upper() == "BUY" else Dir.SELL
                     card = format_trade_closed_card(
                         direction=tc_dir,
                         exit_price=0.0,

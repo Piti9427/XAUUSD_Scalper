@@ -40,9 +40,13 @@ def main():
     parser = argparse.ArgumentParser(description="Run XAUUSD TradingView Webhook Bridge")
     parser.add_argument("--config", default="config/settings.yaml", help="Path to settings.yaml")
     parser.add_argument("--port", type=int, default=None, help="Port to bind (overrides config)")
-    parser.add_argument("--dry-run", action="store_true", default=None, help="Force dry-run simulation mode")
+    parser.add_argument(
+        "--dry-run", action="store_true", default=None, help="Force dry-run simulation mode"
+    )
     parser.add_argument("--balance", type=float, default=None, help="Account equity for lot sizing")
-    parser.add_argument("--risk", type=float, default=None, help="Risk percentage per trade (e.g. 0.01)")
+    parser.add_argument(
+        "--risk", type=float, default=None, help="Risk percentage per trade (e.g. 0.01)"
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -50,10 +54,14 @@ def main():
 
     host = wh_cfg.get("host", "0.0.0.0")
     port = args.port or wh_cfg.get("port", 8000)
-    secret_token = os.environ.get("WEBHOOK_SECRET") or wh_cfg.get("secret_token", "XAUUSD_MASTER_SECRET_2026")
+    secret_token = os.environ.get("WEBHOOK_SECRET") or wh_cfg.get(
+        "secret_token", "XAUUSD_MASTER_SECRET_2026"
+    )
     dry_run = args.dry_run if args.dry_run is not None else wh_cfg.get("dry_run", True)
     # Story 49: Demo readiness ≠ real-money. Live non-demo needs dual approval.
-    allow_demo_only = bool(wh_cfg.get("allow_demo_only", cfg.get("mt5", {}).get("allow_demo_only", True)))
+    allow_demo_only = bool(
+        wh_cfg.get("allow_demo_only", cfg.get("mt5", {}).get("allow_demo_only", True))
+    )
     real_money_cfg = cfg.get("real_money", {}) or {}
     require_real_money_approval(
         dry_run=bool(dry_run),
@@ -75,7 +83,9 @@ def main():
     logger.info(f"📍 Binding: http://{host}:{port}")
     logger.info(f"🛡️ Security Token: {'*' * (len(secret_token) - 4) + secret_token[-4:]}")
     logger.info(f"💼 Mode: {'DRY-RUN (Simulated)' if dry_run else 'LIVE BROKER (MetaTrader 5)'}")
-    logger.info(f"💰 Account Equity: ${account_balance:,.2f} | Risk per Trade: {risk_pct * 100:.1f}%")
+    logger.info(
+        f"💰 Account Equity: ${account_balance:,.2f} | Risk per Trade: {risk_pct * 100:.1f}%"
+    )
     logger.info(f"🛑 Circuit Breaker: Max {max_daily_losses} daily losses (ADR-011)")
     logger.info(f"⏰ Rollover Cutoff: {rollover_hour_utc}:{rollover_minute_utc:02d} UTC (ADR-007)")
     logger.info(f"📱 Telegram Alerts: {'ENABLED' if notifier and notifier.enabled else 'DISABLED'}")
@@ -106,9 +116,7 @@ def main():
         or cfg.get("mt5", {}).get("terminal_path")
         or os.environ.get("MT5_TERMINAL_PATH")
     )
-    setup_registry_path = strategy_cfg.get(
-        "setup_registry_path", "data/setup_registry.json"
-    )
+    setup_registry_path = strategy_cfg.get("setup_registry_path", "data/setup_registry.json")
     mt5_cfg = cfg.get("mt5", {}) or {}
     mt5_login = mt5_cfg.get("login")
     mt5_password = mt5_cfg.get("password")

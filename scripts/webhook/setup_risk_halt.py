@@ -31,9 +31,7 @@ async def evaluate_risk_halt_gate(
     equity_raw = await asyncio.to_thread(rt.adapter.get_account_equity)
     # Dry-run uses configured balance; live must see broker equity or stay blocked.
     history_ready = rt.adapter.dry_run or equity_raw is not None
-    equity_now = (
-        float(equity_raw) if equity_raw is not None else float(rt.account_balance)
-    )
+    equity_now = float(equity_raw) if equity_raw is not None else float(rt.account_balance)
     observe_equity(
         rt.risk_halt,
         equity_now,

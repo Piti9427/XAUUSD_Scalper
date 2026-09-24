@@ -14,7 +14,14 @@ class AlertV2(BaseModel):
     secret: str
     event_id: str
     setup_id: str
-    event: Literal["SIMULATED_SETUP", "SIMULATED_ENTRY", "SIMULATED_TP1", "SIMULATED_TP2", "SIMULATED_STOP", "SIMULATED_CANCEL"]
+    event: Literal[
+        "SIMULATED_SETUP",
+        "SIMULATED_ENTRY",
+        "SIMULATED_TP1",
+        "SIMULATED_TP2",
+        "SIMULATED_STOP",
+        "SIMULATED_CANCEL",
+    ]
     simulation: bool
     symbol: Literal["XAUUSD"]
     timeframe: Literal["M15"]

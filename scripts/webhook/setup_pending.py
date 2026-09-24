@@ -34,9 +34,7 @@ async def handle_setup_pending(
         if not allowed_id:
             reason = f"Setup identity gate blocked new risk: {admit_reason}"
             logger.warning(reason)
-            await asyncio.to_thread(
-                rt.mark_processed, order_id, event, "rejected_setup_terminal"
-            )
+            await asyncio.to_thread(rt.mark_processed, order_id, event, "rejected_setup_terminal")
             return {
                 "status": "rejected",
                 "order_id": order_id,
@@ -82,9 +80,7 @@ async def handle_setup_pending(
     sl = float(payload["sl"])
     tp1 = float(payload.get("tp1") or 0.0)
     tp2 = float(payload.get("tp2") or 0.0)
-    direction = (
-        Direction.BUY if payload.get("dir") == "BUY" else Direction.SELL
-    )
+    direction = Direction.BUY if payload.get("dir") == "BUY" else Direction.SELL
 
     # Scenario 8: invalidation before submission on known opposing H1 bias.
     _, _, h1_reject = await evaluate_setup_h1_gate(

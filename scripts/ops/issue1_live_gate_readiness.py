@@ -39,9 +39,7 @@ def _gh_auth_ok() -> bool:
         )
         text = (proc.stdout or "") + (proc.stderr or "")
         # Parentheses matter: status text always contains "Token: …".
-        if ("Failed to log in" in text) or (
-            "token" in text.lower() and "invalid" in text.lower()
-        ):
+        if ("Failed to log in" in text) or ("token" in text.lower() and "invalid" in text.lower()):
             return False
         # Probe a cheap authenticated call — status text alone can be misleading.
         api = subprocess.run(
@@ -189,17 +187,13 @@ def main() -> int:
             ],
         },
         "gate_c_oracle_soak": {
-            "checklist_present": _exists(
-                "docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md"
-            ),
+            "checklist_present": _exists("docs/ops/2026-09-16-oracle-arm64-runtime-checklist.md"),
             "completed_artifact_present": soak_ok,
             "artifact": soak_artifact,
             "template": "docs/ops/oracle-soak-result.template.json",
         },
         "gate_d_demo_12w": {
-            "protocol_present": _exists(
-                "docs/ops/2026-09-16-foundation-demo-12w-protocol.md"
-            ),
+            "protocol_present": _exists("docs/ops/2026-09-16-foundation-demo-12w-protocol.md"),
             "start_artifact_present": demo_ok,
             "artifact": demo_artifact,
             "template": "docs/ops/demo-12w-start.template.json",

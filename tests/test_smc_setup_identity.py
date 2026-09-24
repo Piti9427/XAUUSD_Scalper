@@ -132,9 +132,7 @@ class SetupIdentityTests(unittest.TestCase):
             "low": 2014,
             "close": 2015,
         }
-        intents = orch.on_bar(
-            bar0, account, signal, h1_bias=Direction.SELL, h1_bias_known=True
-        )
+        intents = orch.on_bar(bar0, account, signal, h1_bias=Direction.SELL, h1_bias_known=True)
         self.assertEqual(intents, [])
         self.assertIsNone(account.pending_order)
         self.assertTrue(registry.is_blocked(setup_id))
@@ -175,9 +173,7 @@ class SetupIdentityTests(unittest.TestCase):
             "low": 2014,
             "close": 2015,
         }
-        place = orch.on_bar(
-            bar0, account, signal, h1_bias=Direction.BUY, h1_bias_known=True
-        )
+        place = orch.on_bar(bar0, account, signal, h1_bias=Direction.BUY, h1_bias_known=True)
         self.assertEqual(place[0].intent_type, OrderIntentType.PLACE_LIMIT)
 
         bar1 = {
@@ -187,17 +183,13 @@ class SetupIdentityTests(unittest.TestCase):
             "low": 2014,
             "close": 2015,
         }
-        cancel = orch.on_bar(
-            bar1, account, None, h1_bias=Direction.SELL, h1_bias_known=True
-        )
+        cancel = orch.on_bar(bar1, account, None, h1_bias=Direction.SELL, h1_bias_known=True)
         self.assertEqual(len(cancel), 1)
         self.assertEqual(cancel[0].intent_type, OrderIntentType.CANCEL_LIMIT)
         self.assertIn("h1_bias_invalidated", cancel[0].reason)
         self.assertTrue(registry.is_blocked(setup_id))
         self.assertEqual(registry.terminal_reason(setup_id), "h1_bias_invalidated")
-        revive = orch.on_bar(
-            bar0, account, signal, h1_bias=Direction.BUY, h1_bias_known=True
-        )
+        revive = orch.on_bar(bar0, account, signal, h1_bias=Direction.BUY, h1_bias_known=True)
         self.assertEqual(revive, [])
 
     def test_unknown_h1_bias_does_not_invent_cancel(self):
@@ -276,7 +268,7 @@ class SetupIdentityTests(unittest.TestCase):
     def test_registry_survives_restart_after_ttl(self):
         import tempfile
         from pathlib import Path
-        from scripts.smc.setup_identity import load_setup_registry, save_setup_registry
+        from scripts.smc.setup_identity import load_setup_registry
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "setup_registry.json"

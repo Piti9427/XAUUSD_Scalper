@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Tuple, Optional
 from scripts.smc.types import Position, OrderIntentType
 
@@ -24,7 +24,7 @@ class NewsManager:
         events: List[NewsEvent],
         window_mins: int = 30,
         filter_currency: str = "USD",
-        filter_impact: str = "HIGH"
+        filter_impact: str = "HIGH",
     ) -> Tuple[bool, Optional[str]]:
         """
         Checks if current_time falls within window_mins before or after
@@ -116,7 +116,7 @@ class NewsManager:
         current_price: float,
         pre_window_mins: int = 15,
         filter_currency: str = "USD",
-        filter_impact: str = "HIGH"
+        filter_impact: str = "HIGH",
     ) -> Optional[OrderIntentType]:
         """
         Foundation BaselinePlay (Issue #1 scenario 18): hold existing positions
@@ -138,10 +138,7 @@ class NewsManager:
         return None
 
     def parse_calendar_items(
-        self,
-        raw_items: List[dict],
-        target_country: str = "USD",
-        target_impact: str = "HIGH"
+        self, raw_items: List[dict], target_country: str = "USD", target_impact: str = "HIGH"
     ) -> List[NewsEvent]:
         """
         Parses raw calendar JSON items into NewsEvent dataclasses,
@@ -179,7 +176,7 @@ class NewsManager:
         self,
         cache_path: str = "data/news_cache.json",
         cache_ttl_hours: int = 24,
-        timeout_seconds: int = 10
+        timeout_seconds: int = 10,
     ) -> List[NewsEvent]:
         """
         Downloads the weekly economic calendar feed from ForexFactory
@@ -203,6 +200,7 @@ class NewsManager:
         # Fetch fresh data from ForexFactory
         try:
             import requests
+
             url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
             resp = requests.get(url, timeout=timeout_seconds)
             if resp.status_code == 200:
@@ -227,4 +225,3 @@ class NewsManager:
                 pass
 
         return []
-

@@ -21,9 +21,7 @@ FUNNEL_STAGES = (
 
 @dataclass
 class SetupFunnel:
-    counts: Dict[str, int] = field(
-        default_factory=lambda: {stage: 0 for stage in FUNNEL_STAGES}
-    )
+    counts: Dict[str, int] = field(default_factory=lambda: {stage: 0 for stage in FUNNEL_STAGES})
     reject_reasons: Dict[str, int] = field(default_factory=dict)
 
     def bump(self, stage: str, n: int = 1) -> None:

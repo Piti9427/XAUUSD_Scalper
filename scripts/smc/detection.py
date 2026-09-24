@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, List, Tuple
 import pandas as pd
 import numpy as np
 from scripts.smc.types import Direction, SetupSignal, SetupDecision, LiquidityLevels
@@ -37,10 +37,10 @@ def is_in_session(dt: datetime, extended: bool = True) -> bool:
 
     if extended:
         is_london = 420 <= minutes_of_day < 630  # 07:00 - 10:30
-        is_ny = 750 <= minutes_of_day < 990      # 12:30 - 16:30
+        is_ny = 750 <= minutes_of_day < 990  # 12:30 - 16:30
     else:
         is_london = 420 <= minutes_of_day < 600  # 07:00 - 10:00
-        is_ny = 750 <= minutes_of_day < 930      # 12:30 - 15:30
+        is_ny = 750 <= minutes_of_day < 930  # 12:30 - 15:30
 
     return is_london or is_ny
 
@@ -129,7 +129,9 @@ def evaluate_smc_setup(
     if atr_sl_multiplier is not None:
         recent_bars = m5_candles.tail(min(50, len(m5_candles)))
         tr_values = (recent_bars["high"] - recent_bars["low"]).values
-        atr_14 = float(np.mean(tr_values[-14:])) if len(tr_values) >= 14 else float(np.mean(tr_values))
+        atr_14 = (
+            float(np.mean(tr_values[-14:])) if len(tr_values) >= 14 else float(np.mean(tr_values))
+        )
         effective_sl_cap = min(max_sl_cap, atr_14 * atr_sl_multiplier)
     else:
         effective_sl_cap = max_sl_cap
@@ -177,20 +179,16 @@ def evaluate_smc_setup(
     # For BUY: sweep of Asian Low or PDL
     # For SELL: sweep of Asian High or PDH
     if bias == Direction.BUY:
-        levels_to_check = [
-            lvl for lvl in [liquidity.asian_low, liquidity.pdl] if lvl is not None
-        ]
+        levels_to_check = [lvl for lvl in [liquidity.asian_low, liquidity.pdl] if lvl is not None]
         if current_time.hour >= 12 and liquidity.london_low is not None:
             levels_to_check.append(liquidity.london_low)
     else:
-        levels_to_check = [
-            lvl for lvl in [liquidity.asian_high, liquidity.pdh] if lvl is not None
-        ]
+        levels_to_check = [lvl for lvl in [liquidity.asian_high, liquidity.pdh] if lvl is not None]
         if current_time.hour >= 12 and liquidity.london_high is not None:
             levels_to_check.append(liquidity.london_high)
     if not levels_to_check:
         return SetupDecision(None, "no_liquidity_levels")
-    is_high_level = (bias == Direction.SELL)
+    is_high_level = bias == Direction.SELL
 
     # Search backwards for a valid sweep bar within the last sweep_lookback bars
     sweep_idx = None
@@ -202,9 +200,12 @@ def evaluate_smc_setup(
 
         # A breakout invalidates older sweeps of that level only.
         levels_to_check = [
-            lvl for lvl in levels_to_check
+            lvl
+            for lvl in levels_to_check
             if not is_expansion_breakout(
-                bar, lvl, is_high_level=is_high_level,
+                bar,
+                lvl,
+                is_high_level=is_high_level,
                 max_breakout_pierce=max_breakout_pierce,
             )
         ]
@@ -212,7 +213,9 @@ def evaluate_smc_setup(
             break
 
         for lvl in levels_to_check:
-            is_sw, wick = check_sweep(bar, level=lvl, is_high_level=is_high_level, max_pierce=max_sweep_pierce)
+            is_sw, wick = check_sweep(
+                bar, level=lvl, is_high_level=is_high_level, max_pierce=max_sweep_pierce
+            )
             if is_sw:
                 sweep_idx = i
                 sweep_wick = wick
@@ -238,7 +241,7 @@ def evaluate_smc_setup(
             if swing_idx is None:
                 continue
             recent_swing_high = df_m5.iloc[swing_idx]["high"]
-            
+
             bar_i = df_m5.iloc[i]
             # Body close must exceed swing high AND be a green candle
             if bar_i["close"] > recent_swing_high and bar_i["close"] > bar_i["open"]:
@@ -250,7 +253,9 @@ def evaluate_smc_setup(
                     mss_swing_price = recent_swing_high
                     displacement_body_ratio = float(ratio)
                     # True Swing Extremum: lowest low among all candles from sweep up to MSS
-                    true_sweep_wick = min(float(df_m5.iloc[k]["low"]) for k in range(sweep_idx, mss_idx + 1))
+                    true_sweep_wick = min(
+                        float(df_m5.iloc[k]["low"]) for k in range(sweep_idx, mss_idx + 1)
+                    )
                     break
     else:  # SELL
         for i in range(sweep_idx + 1, min(n_m5, sweep_idx + max_sweep_to_mss_bars + 1)):
@@ -270,7 +275,9 @@ def evaluate_smc_setup(
                     mss_swing_price = recent_swing_low
                     displacement_body_ratio = float(ratio)
                     # True Swing Extremum: highest high among all candles from sweep up to MSS
-                    true_sweep_wick = max(float(df_m5.iloc[k]["high"]) for k in range(sweep_idx, mss_idx + 1))
+                    true_sweep_wick = max(
+                        float(df_m5.iloc[k]["high"]) for k in range(sweep_idx, mss_idx + 1)
+                    )
                     break
 
     if mss_idx is None:
@@ -286,7 +293,12 @@ def evaluate_smc_setup(
         lows = [float(x) for x in df_m5["low"].tolist()]
         closes = [float(x) for x in df_m5["close"].tolist()]
         state_before = replay_structure_until(
-            highs, lows, closes, swing_highs, swing_lows, mss_idx,
+            highs,
+            lows,
+            closes,
+            swing_highs,
+            swing_lows,
+            mss_idx,
         )
         break_side = "above" if bias == Direction.BUY else "below"
         if bias == Direction.BUY:
@@ -297,19 +309,23 @@ def evaluate_smc_setup(
             ]
             # Opposite pivots must sit between the broken swing and the break bar.
             broken_idx = next(
-                (k for k in range(mss_idx - 1, -1, -1)
-                 if swing_highs[k] and float(df_m5.iloc[k]["high"]) == float(mss_swing_price)),
+                (
+                    k
+                    for k in range(mss_idx - 1, -1, -1)
+                    if swing_highs[k] and float(df_m5.iloc[k]["high"]) == float(mss_swing_price)
+                ),
                 None,
             )
             if broken_idx is None:
                 return SetupDecision(None, "choch_broken_swing_unresolved")
-            opposite = [
-                (idx, price) for idx, price in opposite if broken_idx < idx < mss_idx
-            ]
+            opposite = [(idx, price) for idx, price in opposite if broken_idx < idx < mss_idx]
         else:
             broken_idx = next(
-                (k for k in range(mss_idx - 1, -1, -1)
-                 if swing_lows[k] and float(df_m5.iloc[k]["low"]) == float(mss_swing_price)),
+                (
+                    k
+                    for k in range(mss_idx - 1, -1, -1)
+                    if swing_lows[k] and float(df_m5.iloc[k]["low"]) == float(mss_swing_price)
+                ),
                 None,
             )
             if broken_idx is None:
@@ -331,9 +347,7 @@ def evaluate_smc_setup(
 
         # Story 17: record confirmation times (second right-hand bar close).
         broken_swing_index = int(broken_idx)
-        bar_times = (
-            df_m5["time"].tolist() if "time" in df_m5.columns else None
-        )
+        bar_times = df_m5["time"].tolist() if "time" in df_m5.columns else None
         if bar_times is not None:
             bt = pivot_confirmation_time(broken_swing_index, bar_times)
             if bt is not None:
@@ -365,7 +379,9 @@ def evaluate_smc_setup(
         c_disp = df_m5.iloc[disp_i].to_dict()
         c_next = df_m5.iloc[disp_i + 1].to_dict()
 
-        is_fvg, g_high, g_low, ce_50 = detect_fvg(c_prev, c_disp, c_next, direction=bias, min_gap=min_fvg_gap)
+        is_fvg, g_high, g_low, ce_50 = detect_fvg(
+            c_prev, c_disp, c_next, direction=bias, min_gap=min_fvg_gap
+        )
         if is_fvg:
             fvg_found = True
             fvg_high_val = g_high
@@ -507,7 +523,7 @@ def detect_smc_setup(
     require_choch: bool = True,
     min_target_r: float = 1.5,
 ) -> Optional[SetupSignal]:
-    """Backward-compatible wrapper — prefer evaluate_smc_setup for reject reasons. """
+    """Backward-compatible wrapper — prefer evaluate_smc_setup for reject reasons."""
     return evaluate_smc_setup(
         h1_candles,
         m5_candles,

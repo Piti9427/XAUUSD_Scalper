@@ -30,15 +30,11 @@ async def evaluate_identity_gate(
             try:
                 import MetaTrader5 as mt5
             except ImportError:
-                return verify_broker_identity(
-                    account_info=None, symbol_info=None
-                )
+                return verify_broker_identity(account_info=None, symbol_info=None)
             return verify_broker_identity(
                 account_info=mt5.account_info() if not rt.adapter.dry_run else None,
                 symbol_info=(
-                    mt5.symbol_info(rt.adapter.symbol)
-                    if not rt.adapter.dry_run
-                    else None
+                    mt5.symbol_info(rt.adapter.symbol) if not rt.adapter.dry_run else None
                 ),
             )
 

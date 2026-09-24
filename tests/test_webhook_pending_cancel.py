@@ -18,9 +18,7 @@ def _runtime(adapter) -> SimpleNamespace:
 class PendingCancelHelperTests(unittest.TestCase):
     def test_success_cancels_and_finishes(self):
         adapter = SimpleNamespace(
-            execute_intent=Mock(
-                return_value=SimpleNamespace(success=True, message="ok")
-            ),
+            execute_intent=Mock(return_value=SimpleNamespace(success=True, message="ok")),
             log_lifecycle_event=Mock(),
             finish_setup=Mock(),
         )
@@ -65,9 +63,7 @@ class PendingCancelHelperTests(unittest.TestCase):
 
     def test_hard_reject_keeps_pending(self):
         adapter = SimpleNamespace(
-            execute_intent=Mock(
-                return_value=SimpleNamespace(success=False, message="broker busy")
-            ),
+            execute_intent=Mock(return_value=SimpleNamespace(success=False, message="broker busy")),
             log_lifecycle_event=Mock(),
             finish_setup=Mock(),
         )

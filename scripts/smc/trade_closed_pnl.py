@@ -54,13 +54,7 @@ def resolve_trade_closed_pnl(
             initial_sl_distance=initial_dist,
             filled_lot=float(lot),
         )
-    elif (
-        dry_run
-        and pnl_r is None
-        and initial_dist > 0
-        and entry
-        and exit_price
-    ):
+    elif dry_run and pnl_r is None and initial_dist > 0 and entry and exit_price:
         # Dry-run only: geometric R from TV exit (not live invent cash).
         signed = (
             (float(exit_price) - float(entry))

@@ -9,12 +9,7 @@ class TestSMCNewsManager(unittest.TestCase):
         self.manager = NewsManager()
         self.nfp_time = datetime(2026, 3, 6, 13, 30, tzinfo=timezone.utc)
         self.events = [
-            NewsEvent(
-                time=self.nfp_time,
-                currency="USD",
-                impact="HIGH",
-                name="Non-Farm Payrolls"
-            )
+            NewsEvent(time=self.nfp_time, currency="USD", impact="HIGH", name="Non-Farm Payrolls")
         ]
 
     def test_news_blackout_window(self):
@@ -36,19 +31,25 @@ class TestSMCNewsManager(unittest.TestCase):
 
     def test_foundation_blocks_unknown_news_and_blackout_without_forcing_exit(self):
         allowed, reason = self.manager.new_risk_allowed(
-            self.nfp_time, None, schedule_known=False,
+            self.nfp_time,
+            None,
+            schedule_known=False,
         )
         self.assertFalse(allowed)
         self.assertEqual(reason, "unknown_or_stale_news_schedule")
 
         blocked, reason = self.manager.new_risk_allowed(
-            self.nfp_time - timedelta(minutes=10), self.events, schedule_known=True,
+            self.nfp_time - timedelta(minutes=10),
+            self.events,
+            schedule_known=True,
         )
         self.assertFalse(blocked)
         self.assertIn("news_blackout", reason)
 
         ok, reason = self.manager.new_risk_allowed(
-            self.nfp_time - timedelta(minutes=45), self.events, schedule_known=True,
+            self.nfp_time - timedelta(minutes=45),
+            self.events,
+            schedule_known=True,
         )
         self.assertTrue(ok)
         self.assertEqual(reason, "ok")
@@ -109,17 +110,16 @@ class TestSMCNewsManager(unittest.TestCase):
             )
         )
 
-
     def test_parse_forexfactory_json(self):
         # Sample raw JSON from ForexFactory
         sample_json = [
             {
                 "title": "Non-Farm Employment Change",
                 "country": "USD",
-                "date": "2026-03-06T08:30:00-05:00", # 08:30 EST = 13:30 UTC
+                "date": "2026-03-06T08:30:00-05:00",  # 08:30 EST = 13:30 UTC
                 "impact": "High",
                 "forecast": "180K",
-                "previous": "150K"
+                "previous": "150K",
             },
             {
                 "title": "EUR German Prelim CPI m/m",
@@ -127,11 +127,11 @@ class TestSMCNewsManager(unittest.TestCase):
                 "date": "2026-03-06T08:00:00+01:00",
                 "impact": "High",
                 "forecast": "0.4%",
-                "previous": "0.2%"
-            }
+                "previous": "0.2%",
+            },
         ]
         events = self.manager.parse_calendar_items(sample_json)
-        self.assertEqual(len(events), 1) # Only USD High impact
+        self.assertEqual(len(events), 1)  # Only USD High impact
         self.assertEqual(events[0].name, "Non-Farm Employment Change")
         self.assertEqual(events[0].currency, "USD")
         self.assertEqual(events[0].impact, "HIGH")
@@ -143,4 +143,3 @@ class TestSMCNewsManager(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

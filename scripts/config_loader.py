@@ -66,7 +66,9 @@ def _parse_scalar(value):
         return True
     if value.lower() == "false":
         return False
-    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+    if (value.startswith('"') and value.endswith('"')) or (
+        value.startswith("'") and value.endswith("'")
+    ):
         return value[1:-1]
     try:
         return int(value)

@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone, timedelta, date
+from datetime import datetime, timezone, timedelta
 import pandas as pd
 from scripts.smc.backtester import SMCBacktester, BacktestSummary
 
@@ -11,21 +11,30 @@ class TestSMCBacktester(unittest.TestCase):
         # Day 2: 2026-03-02 (setup triggers in London and hits 2R TP)
         m5_records = []
         base_time = datetime(2026, 3, 1, 0, 0, tzinfo=timezone.utc)
-        
+
         # Day 1: Asian H=2030, L=2020. Day 1 H=2050, L=2000.
         for i in range(288):
-            ts = base_time + timedelta(minutes=i*5)
+            ts = base_time + timedelta(minutes=i * 5)
             h = 2050.0 if i == 100 else 2030.0
             l = 2000.0 if i == 80 else 2020.0
-            m5_records.append({"time": ts, "open": 2025.0, "high": h, "low": l, "close": 2025.0, "tick_volume": 100})
-            
+            m5_records.append(
+                {
+                    "time": ts,
+                    "open": 2025.0,
+                    "high": h,
+                    "low": l,
+                    "close": 2025.0,
+                    "tick_volume": 100,
+                }
+            )
+
         # Day 2: Asian H=2040, L=2010 (hours 0-6)
         day2_base = datetime(2026, 3, 2, 0, 0, tzinfo=timezone.utc)
         for i in range(288):
-            ts = day2_base + timedelta(minutes=i*5)
+            ts = day2_base + timedelta(minutes=i * 5)
             hour = ts.hour
             minute = ts.minute
-            
+
             if hour < 7:
                 o = 2020.0
                 h = 2040.0 if hour == 3 and minute == 0 else 2035.0
@@ -76,29 +85,33 @@ class TestSMCBacktester(unittest.TestCase):
                 h = 2025.0
                 l = 2020.0
                 c = 2022.0
-                
-            m5_records.append({"time": ts, "open": o, "high": h, "low": l, "close": c, "tick_volume": 100})
-            
+
+            m5_records.append(
+                {"time": ts, "open": o, "high": h, "low": l, "close": c, "tick_volume": 100}
+            )
+
         self.df_m5 = pd.DataFrame(m5_records)
 
         # H1 DataFrame (Bullish, 250 bars > EMA 200)
         h1_records = []
         for i in range(250):
             ts = datetime(2026, 2, 20, 0, 0, tzinfo=timezone.utc) + timedelta(hours=i)
-            h1_records.append({
-                "time": ts,
-                "open": 2000.0 + i * 0.1,
-                "high": 2005.0 + i * 0.1,
-                "low": 1995.0 + i * 0.1,
-                "close": 2002.0 + i * 0.1,
-                "tick_volume": 1000
-            })
+            h1_records.append(
+                {
+                    "time": ts,
+                    "open": 2000.0 + i * 0.1,
+                    "high": 2005.0 + i * 0.1,
+                    "low": 1995.0 + i * 0.1,
+                    "close": 2002.0 + i * 0.1,
+                    "tick_volume": 1000,
+                }
+            )
         self.df_h1 = pd.DataFrame(h1_records)
 
     def test_backtest_execution_and_summary(self):
         backtester = SMCBacktester(initial_balance=10000.0, require_choch=False)
         summary = backtester.run(self.df_m5, self.df_h1)
-        
+
         self.assertIsInstance(summary, BacktestSummary)
         self.assertGreaterEqual(summary.total_trades, 1)
         self.assertEqual(summary.winning_trades, 1)
@@ -160,6 +173,7 @@ class TestSMCBacktester(unittest.TestCase):
         from unittest.mock import patch
         from scripts.smc.structure import find_fractals_5bar
         from scripts.smc.types import SetupDecision
+
         calls = []
 
         def inspect(h1, m5, liquidity, now, **kwargs):
@@ -173,11 +187,15 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertTrue(calls)
 
     def test_partial_and_tp_cash_conserve_filled_volume(self):
-        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(
+            self.df_m5, self.df_h1
+        )
         trade = result.trades_df.iloc[0]
         partial_lots = round(trade.lot_size * 0.5, 2)
-        expected = (partial_lots * trade.initial_sl_dist +
-                    (trade.lot_size - partial_lots) * (trade.exit_price - trade.entry_price)) * 100
+        expected = (
+            partial_lots * trade.initial_sl_dist
+            + (trade.lot_size - partial_lots) * (trade.exit_price - trade.entry_price)
+        ) * 100
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
         self.assertAlmostEqual(result.net_profit, expected, places=2)
 
@@ -244,9 +262,7 @@ class TestSMCBacktester(unittest.TestCase):
     def test_mixed_dev_holdout_bars_refuse_evaluable(self):
         # Graft a holdout-day bar onto an otherwise development tape.
         hold = self.df_m5.iloc[:5].copy()
-        hold["time"] = [
-            datetime(2026, 7, 1, 12, i * 5, tzinfo=timezone.utc) for i in range(5)
-        ]
+        hold["time"] = [datetime(2026, 7, 1, 12, i * 5, tzinfo=timezone.utc) for i in range(5)]
         mixed = pd.concat([self.df_m5, hold], ignore_index=True)
         result = SMCBacktester(require_choch=False).run(mixed, self.df_h1)
         self.assertIsNone(result.eval_window)

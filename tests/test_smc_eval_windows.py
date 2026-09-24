@@ -42,15 +42,11 @@ class EvalWindowsTests(unittest.TestCase):
         self.assertEqual(reason2, "ok")
 
     def test_mixed_timestamps_blocked(self):
-        window, reason = assert_single_window_or_reason(
-            [date(2026, 1, 1), date(2026, 7, 1)]
-        )
+        window, reason = assert_single_window_or_reason([date(2026, 1, 1), date(2026, 7, 1)])
         self.assertIsNone(window)
         self.assertIn("refuse_merge", reason)
 
-        window2, reason2 = assert_single_window_or_reason(
-            [date(2026, 7, 1), date(2026, 8, 1)]
-        )
+        window2, reason2 = assert_single_window_or_reason([date(2026, 7, 1), date(2026, 8, 1)])
         self.assertEqual(window2, "holdout")
         self.assertEqual(reason2, "ok")
 

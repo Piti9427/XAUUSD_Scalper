@@ -38,12 +38,17 @@ def register_tradingview_route(app: FastAPI, rt: WebhookRuntime) -> None:
             existing_setup = await asyncio.to_thread(rt.adapter.inspect_setup, payload)
             if existing_setup is not None:
                 return {
-                    "status": "ignored_duplicate" if existing_setup["status"] == "duplicate" else "rejected",
+                    "status": "ignored_duplicate"
+                    if existing_setup["status"] == "duplicate"
+                    else "rejected",
                     "order_id": order_id,
                     "event": event,
                     "receipt_id": existing_setup["receipt_id"],
-                    **({"reason": "Conflicting payload for existing order_id"}
-                       if existing_setup["status"] == "conflict" else {}),
+                    **(
+                        {"reason": "Conflicting payload for existing order_id"}
+                        if existing_setup["status"] == "conflict"
+                        else {}
+                    ),
                 }
 
         # Idempotency Check: Fast-path in-memory check followed by SQLite
@@ -51,7 +56,8 @@ def register_tradingview_route(app: FastAPI, rt: WebhookRuntime) -> None:
             logger.warning(f"Ignoring duplicate webhook delivery for {order_id} ({event})")
             receipt_id = (
                 await asyncio.to_thread(rt.adapter.get_setup_receipt, order_id)
-                if event == "SETUP_PENDING" else None
+                if event == "SETUP_PENDING"
+                else None
             )
             return {
                 "status": "ignored_duplicate",

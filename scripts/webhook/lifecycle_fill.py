@@ -63,9 +63,7 @@ async def handle_order_filled(
         sl_price=sl,
         tp_price=tp2 if tp2 > 0 else tp1,
         lot_size=(
-            float(pos.volume)
-            if pos is not None
-            else float(payload.get("lot_size") or 0.0) or None
+            float(pos.volume) if pos is not None else float(payload.get("lot_size") or 0.0) or None
         ),
         order_id=order_id,
         ticket=ticket,
@@ -86,9 +84,7 @@ async def handle_order_filled(
             if not may_notify_execution(success=True, status="FILLED"):
                 raise RuntimeError("notification policy blocked fill card")
             fill_lot = (
-                float(pos.volume)
-                if pos is not None
-                else float(payload.get("lot_size") or 0.01)
+                float(pos.volume) if pos is not None else float(payload.get("lot_size") or 0.01)
             )
             pos_card = Position(
                 direction=direction,
