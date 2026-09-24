@@ -1,0 +1,9 @@
+{
+  "captured_at_utc": "2026-09-16T09:57:21.216957+00:00",
+  "host": "mac",
+  "git_head": "ee8222c1d358753c0f5c09d16c99bda8f87fe77a",
+  "mt5_terminal_path_env": true,
+  "ok": false,
+  "package": "missing:ModuleNotFoundError:No module named 'MetaTrader5'",
+  "blocker": "MetaTrader5 package missing on Mac venv; Gate C requires Windows/Wine host with Exness Demo"
+}

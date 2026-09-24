@@ -9,6 +9,7 @@ __pycache__/
 *.so
 
 # Virtual Environments
+.venv
 .venv/
 env/
 venv/
@@ -27,6 +28,8 @@ config/settings.yaml
 data/*.db
 data/smc_trades.db
 data/news_cache.json
+data/setup_registry.json
+data/risk_halt_state.json
 
 # Logs
 *.log
@@ -49,3 +52,8 @@ data/*.png
 
 # Deployment Artefacts
 deploy/swapfile
+
+# Scratch & Diagnostic Scripts
+scripts/diagnose_gates.py
+scripts/simulate_gold_enhancements.py
+scripts/test_tuning.py

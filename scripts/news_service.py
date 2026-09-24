@@ -10,21 +10,25 @@ logger = logging.getLogger(__name__)
 
 class NewsIntelligenceService:
     def __init__(self, config):
-        self.config = config.get('news', {})
-        self.enabled = self.config.get('enabled', False)
-        self.impact_threshold = self.config.get('impact_threshold', 'HIGH')
-        self.pause_window_mins = self.config.get('pause_window_mins', 60)
+        self.config = config.get("news", {})
+        self.enabled = self.config.get("enabled", False)
+        self.impact_threshold = self.config.get("impact_threshold", "HIGH")
+        self.pause_window_mins = self.config.get("pause_window_mins", 60)
         self.last_update = None
         self.upcoming_news = []
         if not self.enabled:
-            logger.warning("News filter is disabled placeholder; high-impact news is not being fetched.")
+            logger.warning(
+                "News filter is disabled placeholder; high-impact news is not being fetched."
+            )
 
     def fetch_news(self):
         """
         In a production scenario, this would scrape ForexFactory or use a Financial Calendar API.
         For this version, we implement a placeholder that can be easily extended.
         """
-        logger.warning("News fetch is not implemented; returning configured in-memory news list only.")
+        logger.warning(
+            "News fetch is not implemented; returning configured in-memory news list only."
+        )
         return []
 
     def is_safe_to_trade(self, symbol="USD"):
@@ -36,19 +40,22 @@ class NewsIntelligenceService:
             return True, "NEWS_FILTER_DISABLED"
 
         now = datetime.datetime.now(datetime.timezone.utc)
-        
+
         # In a real run, we would call fetch_news() periodically
         # self.upcoming_news = self.fetch_news()
-        
+
         for event in self.upcoming_news:
-            event_time = event.get('time') # Expected to be UTC datetime
-            if event.get('impact') == self.impact_threshold and event.get('currency') in [symbol, "USD"]:
+            event_time = event.get("time")  # Expected to be UTC datetime
+            if event.get("impact") == self.impact_threshold and event.get("currency") in [
+                symbol,
+                "USD",
+            ]:
                 time_diff = (event_time - now).total_seconds() / 60
-                
+
                 # If news is within the window (before or shortly after)
                 if -15 < time_diff < self.pause_window_mins:
-                    return False, event.get('name')
-        
+                    return False, event.get("name")
+
         return True, None
 
     def update_news_data(self, news_list):

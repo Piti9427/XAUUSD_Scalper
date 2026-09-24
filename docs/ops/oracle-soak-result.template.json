@@ -1,0 +1,11 @@
+{
+  "captured_at_utc": "TBD",
+  "host": "TBD",
+  "vm_image": "TBD",
+  "infra_status": "INCONCLUSIVE_INFRA",
+  "completed": false,
+  "exness_smoke_artifact": "docs/ops/YYYY-MM-DD-exness-smoke.json",
+  "soak_hours": 0,
+  "restart_reconnect_ok": false,
+  "notes": "Copy to docs/ops/<date>-oracle-soak.json; set completed=true only after real soak. Do not invent PASS_INFRA."
+}

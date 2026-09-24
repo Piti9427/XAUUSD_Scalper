@@ -8,8 +8,9 @@
 
 | ไฟล์ | ประเภท | เหมาะสำหรับ |
 | :--- | :--- | :--- |
-| [`xauusd_pro_copilot.pine`](file:///Users/nopparuj/my-agents/XAUUSD_Scalper/tradingview/xauusd_pro_copilot.pine) | **Strategy (ระบบทดสอบ Backtest)** | ทดสอบประสิทธิภาพ (Strategy Tester), ดู Win Rate / Profit Factor, จำลอง Spread Exness 30 pts ($0.30) และระบบปิดกำไรครึ่งหนึ่ง (Partial TP1) |
-| [`xauusd_pro_indicator.pine`](file:///Users/nopparuj/my-agents/XAUUSD_Scalper/tradingview/xauusd_pro_indicator.pine) | **Indicator (อินดิเคเตอร์บนชาร์ต)** | แสดงผลบนชาร์ตแบบคลีน ไม่มีลูกศรคำสั่งซื้อขายกวนสายตา และรองรับเมนูสร้าง **Alertcondition** บน TradingView ได้โดยตรง |
+| [`xauusd_master_pro_v6.pine`](file:///Users/nopparuj/my-agents/XAUUSD_Scalper/tradingview/xauusd_master_pro_v6.pine) | **Master Indicator (Live Trading & Alerts)** | **ใช้งานจริง:** SMC Prime (Sweep + MSS + 50% FVG Limit TTL 4 บาร์), TSS, GSS, SMT Divergence, Multi-Session (Asian, PDH/PDL, London H/L), Two-Tier Scale-Out (1.0R TP1 ปิด 50% บังทุน + 2.5R Runner), Max SL Cap $25.00, Dashboard HUD และระบบ Dual Alert / Webhook ครบวงจร |
+| [`xauusd_master_pro_strategy.pine`](file:///Users/nopparuj/my-agents/XAUUSD_Scalper/tradingview/xauusd_master_pro_strategy.pine) | **Master Strategy (Backtest Lab)** | **ทดสอบประสิทธิภาพ:** ใช้เปิดในแท็บ Strategy Tester บน Timeframe M15/M5 ดูสถิติ Win Rate, Net Profit, Profit Factor, Drawdown (พร้อมแก้ไข 50% partial close และ limit fill แล้ว) |
+| `archive/` | **Legacy & Superseded Scripts** | รวมไฟล์รุ่นเก่าที่ยกเลิกใช้งานแล้ว (`btcusd_*`, `xauusd_pro_copilot`, `xauusd_pro_indicator`, `xauusd_smc_system_v1`) |
 
 ---
 

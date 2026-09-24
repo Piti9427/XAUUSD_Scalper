@@ -1,0 +1,42 @@
+{
+  "captured_at_utc": "2026-09-16T10:25:52.409688+00:00",
+  "git_head": "0c8852424db2f50073b8dadc8382707088baf774",
+  "purpose": "Re-check Gate C SSH reachability; do not invent auth success",
+  "ssh_probes": [
+    {
+      "host": "158.178.243.98",
+      "tcp22": "fail:PermissionError",
+      "auth": "n/a",
+      "attempts": []
+    },
+    {
+      "host": "192.168.7.8",
+      "tcp22": "fail:PermissionError",
+      "auth": "n/a",
+      "attempts": []
+    },
+    {
+      "host": "192.168.7.19",
+      "tcp22": "fail:PermissionError",
+      "auth": "n/a",
+      "attempts": []
+    },
+    {
+      "host": "192.168.7.21",
+      "tcp22": "fail:PermissionError",
+      "auth": "n/a",
+      "attempts": []
+    },
+    {
+      "host": "192.168.7.22",
+      "tcp22": "fail:PermissionError",
+      "auth": "n/a",
+      "attempts": []
+    }
+  ],
+  "local_ssh_pubkeys": [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO2tN+89r1bT9rrROO8mJ6Y632YN0Hx+bucIxmaooqAU"
+  ],
+  "gate_c_reachable_from_this_mac": false,
+  "note": "LAN/OCI hosts may answer SSH but reject this Mac key \u2014 operator must authorize id_ed25519.pub"
+}

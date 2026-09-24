@@ -1,0 +1,10 @@
+{
+  "captured_at_utc": "2026-09-17T04:48:12.254210+00:00",
+  "git_head": "f30c56139efc9b31f829cb56e3ded40973b8c04e",
+  "host": "158.178.243.98",
+  "user": "ubuntu",
+  "method": "ssh BatchMode ConnectTimeout=8",
+  "result": "Operation not permitted",
+  "exit_code": 255,
+  "note": "Agent sandbox/OS denies outbound SSH port 22. Operator must authorize pubkey or run foundation_live_gate on host. Do not invent Gate C PASS."
+}

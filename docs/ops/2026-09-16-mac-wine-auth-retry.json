@@ -1,0 +1,2 @@
+0368:fixme:sync:SetWaitableTimerEx (0000000000000078, 000000000030F8E0, 0, 0000000000000000, 0000000000000000, 0000000000000000, 0) semi-stub
+{"ok": false, "rows": [{"i": 0, "ok": false, "err": [-6, "Terminal: Authorization failed"]}, {"i": 1, "ok": false, "err": [-6, "Terminal: Authorization failed"]}, {"i": 2, "ok": false, "err": [-6, "Terminal: Authorization failed"]}]}

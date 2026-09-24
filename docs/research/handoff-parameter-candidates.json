@@ -1,0 +1,55 @@
+{
+  "version": "btg-handoff-parameter-v1",
+  "status": "reconstructed_execution_partial_rule_match",
+  "candidates": [
+    {
+      "name": "Legacy_Donchian30_plain_2p5_2p5",
+      "family": "donchian",
+      "lookback": 30,
+      "sl": 2.5,
+      "tp": 2.5,
+      "filters": [],
+      "handoff_reference": "xauusd_trading_research_handoff_2026-09-21.md:1311-1328",
+      "known_mismatch": "Indicator warmup, fill conventions, and provisional native sideway filter may differ from original backtest."
+    },
+    {
+      "name": "Legacy_State20_3_3",
+      "family": "state",
+      "lookback": 20,
+      "sl": 3.0,
+      "tp": 3.0,
+      "filters": [],
+      "handoff_reference": "xauusd_trading_research_handoff_2026-09-21.md:1284-1305",
+      "known_mismatch": "State-machine mechanics and provisional native sideway filter have not been matched trade by trade to original."
+    },
+    {
+      "name": "Legacy_State10_FVG_3_3",
+      "family": "state",
+      "lookback": 10,
+      "sl": 3.0,
+      "tp": 3.0,
+      "filters": ["fvg"],
+      "handoff_reference": "xauusd_trading_research_handoff_2026-09-21.md:1256-1278",
+      "known_mismatch": "Original requires exactly one opposing candle; current continuation permits one or two. FVG and regime conventions also remain reconstructed."
+    },
+    {
+      "name": "Legacy_ORB60_H1EMA_2_3",
+      "family": "orb",
+      "lookback": 60,
+      "sl": 2.0,
+      "tp": 3.0,
+      "filters": ["h1ema"],
+      "handoff_reference": "xauusd_trading_research_handoff_2026-09-21.md:1369-1393",
+      "known_mismatch": "Original breakout cutoff is 12:00 UTC; current session_signal allows closes before 17:00 UTC."
+    },
+    {
+      "name": "Legacy_GSS_OTE_H1Structure_2p5_3",
+      "family": "ote",
+      "sl": 2.5,
+      "tp": 3.0,
+      "filters": ["h1structure"],
+      "handoff_reference": "xauusd_trading_research_handoff_2026-09-21.md:1339-1365",
+      "known_mismatch": "Original impulse>=1 ATR and body>=60%; current OTE signal uses >=1.5 ATR and >=50%."
+    }
+  ]
+}

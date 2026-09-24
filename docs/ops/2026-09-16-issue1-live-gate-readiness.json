@@ -1,0 +1,45 @@
+{
+  "captured_at_utc": "2026-09-17T05:03:08.198535+00:00",
+  "git_head": "86ef41803109b3c19de0c39190e04ca051bc7e60",
+  "gate_b_scenario_software": {
+    "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
+    "software_evidence_complete": true,
+    "note": "Scenarios 1\u201323 software only; does not close #1"
+  },
+  "gate_c_exness_smoke": {
+    "ok": false,
+    "artifact": null,
+    "latest_attempt_artifact": "docs/ops/2026-09-17-exness-smoke-mac-probe.json",
+    "blocker_docs": [
+      "docs/ops/2026-09-16-mac-live-gate-blocker.md",
+      "docs/ops/2026-09-16-mac-wine-initialize-path.json",
+      "docs/ops/2026-09-16-mac-wine-reprobe-running.json",
+      "docs/ops/2026-09-16-exness-smoke-mac-post-split.json",
+      "docs/ops/2026-09-16-host-ssh-reprobe.json",
+      "docs/ops/2026-09-17-host-ssh-agent-sandbox-denied.json",
+      "docs/ops/2026-09-16-host-reachability-hunt.json"
+    ]
+  },
+  "gate_c_oracle_soak": {
+    "checklist_present": true,
+    "completed_artifact_present": false,
+    "artifact": null,
+    "template": "docs/ops/oracle-soak-result.template.json"
+  },
+  "gate_d_demo_12w": {
+    "protocol_present": true,
+    "start_artifact_present": false,
+    "artifact": null,
+    "template": "docs/ops/demo-12w-start.template.json",
+    "note": "Do not invent a start artifact; operator fills after Gates B/C."
+  },
+  "operator_blockers": {
+    "gh_auth_ok": false,
+    "operator_gh_auth_paste": "docs/ops/2026-09-17-operator-gh-auth-paste.json",
+    "host_reachability_artifact": "docs/ops/2026-09-16-host-reachability-hunt.json",
+    "utm_app_present": true,
+    "utm_app_present_no_vms": true,
+    "next_action": "Authorize Mac SSH pubkey on Oracle/Windows MT5 host, or run ./scripts/ops/foundation_live_gate.sh there with Exness Demo (hedging). See ./scripts/ops/issue1_operator_unblock.sh"
+  },
+  "issue1_closable": false
+}

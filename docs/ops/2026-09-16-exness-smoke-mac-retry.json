@@ -1,0 +1,10 @@
+{
+  "captured_at_utc": "2026-09-16T09:37:42.749140+00:00",
+  "git_head": "d7ebd5f0b9e3837e698f41df158112a402eeedcf",
+  "ok": false,
+  "reasons": [
+    "mt5_import_missing"
+  ],
+  "infra_verdict": "INCONCLUSIVE_INFRA",
+  "infra_detail": "mt5_unavailable_on_host"
+}

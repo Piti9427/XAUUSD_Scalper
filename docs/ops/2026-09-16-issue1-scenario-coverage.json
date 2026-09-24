@@ -1,0 +1,207 @@
+{
+  "captured_at_utc": "2026-09-17T04:59:22.842225+00:00",
+  "git_head": "1e75beb6668590d56b7f9e7a3046f93be6db5572",
+  "source": "docs/specs/gold-playbook-foundation.md \u00a7 Required scenarios",
+  "scenarios": [
+    {
+      "id": 1,
+      "title": "H1 bias ok but M5 BOS/no CHoCH blocks entry",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 2,
+      "title": "Protected swing vs internal; wick-only fails body confirmation",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": "HH/HL construction details remain open material (story 48)"
+    },
+    {
+      "id": 3,
+      "title": "UNKNOWN/RANGE and unconfirmed swings match structure contract",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 4,
+      "title": "Replay-prefix / future-append invariance",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 5,
+      "title": "Sweep\u2192MSS 8 / MSS\u2192FVG 4 / no fill before confirmation",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 6,
+      "title": "Displacement/body-ratio/FVG orientation boundaries",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 7,
+      "title": "Pool availability / consumed / nearest R / tick rounding",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 8,
+      "title": "Setup identity: TTL / H1 invalidate / SL-before-fill / fill / no revive",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 9,
+      "title": "Fib/OTE research log without admission filter",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 10,
+      "title": "Min lot over budget / volume floor / stops+freeze metadata",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 11,
+      "title": "Manual vs bot PnL; incomplete history blocks parity/reset",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 12,
+      "title": "Account-mode / bot-owned cancel-close isolation",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 13,
+      "title": "Accept/reject/UNKNOWN / duplicate / restart claim races",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 14,
+      "title": "Fill-during-cancel / partial residual reconcile",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 15,
+      "title": "Spread blowout after pending does not invent no-fill",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 16,
+      "title": "SL/TP same bar / tick order / TIME_EXIT P/L/flat",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 17,
+      "title": "Daily losses / equity halt / 5% DD persistence",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 18,
+      "title": "News blackout: cancel pending; no pre-news BE/force exit",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 19,
+      "title": "Wall-clock TIME_EXIT; no close notify without broker evidence",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 20,
+      "title": "Accepted vs fill notifications; no phantom TRADE_CLOSED",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 21,
+      "title": "Cost layers; frozen R; operating cost not hidden",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 22,
+      "title": "Provenance gap/proxy \u2192 DATA_INSUFFICIENT; few trades INCONCLUSIVE",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 23,
+      "title": "Frozen Wilson/sample protocol fixtures",
+      "status": "software_covered",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": null
+    },
+    {
+      "id": 24,
+      "title": "Oracle/Mac-off infra \u2260 strategy PnL; live Exness identity",
+      "status": "live_ops_required",
+      "evidence_ok": true,
+      "missing_evidence": [],
+      "note": "Software labels infra failures; live smoke/soak/Demo start still required"
+    }
+  ],
+  "summary": {
+    "total": 24,
+    "software_covered": 23,
+    "software_evidence_complete": true,
+    "live_ops_required": 1,
+    "issue1_closable_from_software_alone": false,
+    "note": "Scenarios 1\u201323 software evidence is Gate B support only. Scenario 24 + Exness/Oracle/Demo artifacts still required to close #1."
+  }
+}

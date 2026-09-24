@@ -1,0 +1,1 @@
+{"attempts": [{"path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe", "ok": false, "last_error": [-6, "Terminal: Authorization failed"]}, {"path": "C:\\Program Files\\MetaTrader 5\\terminal.exe", "ok": false, "last_error": [-10003, "IPC initialize failed, Process create failed 'C:\\Program Files\\MetaTrader 5\\terminal.exe'"]}]}

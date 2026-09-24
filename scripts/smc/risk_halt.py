@@ -1,0 +1,137 @@
+"""Persistent account risk halt state for foundation BaselinePlay."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, fields
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional, Sequence
+
+
+@dataclass
+class RiskHaltState:
+    high_water_equity: float
+    day_start_equity: float
+    day_utc: str
+    drawdown_halt: bool = False
+    daily_equity_halt: bool = False
+    net_losing_trades_today: int = 0
+    history_ready: bool = True
+
+    @property
+    def halted(self) -> bool:
+        return (
+            (not self.history_ready)
+            or self.drawdown_halt
+            or self.daily_equity_halt
+            or self.net_losing_trades_today >= 2
+        )
+
+
+def _utc_today(now: Optional[datetime] = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    else:
+        now = now.astimezone(timezone.utc)
+    return now.date().isoformat()
+
+
+def new_risk_halt_state(equity: float, now: Optional[datetime] = None) -> RiskHaltState:
+    day = _utc_today(now)
+    return RiskHaltState(
+        high_water_equity=float(equity),
+        day_start_equity=float(equity),
+        day_utc=day,
+        history_ready=True,
+    )
+
+
+def observe_equity(
+    state: RiskHaltState,
+    equity: float,
+    *,
+    now: Optional[datetime] = None,
+    drawdown_pct: float = 0.05,
+    daily_decline_pct: float = 0.01,
+    history_ready: bool = True,
+) -> RiskHaltState:
+    """
+    Update high-water / daily equity gates.
+
+    Drawdown halt persists across days/restarts once tripped.
+    Daily equity halt resets only on a new UTC day together with losing-trade count.
+
+    Incomplete/stale account history must not invent a fresh day start, zero the
+    losing-trade count, or collapse the high-water mark. New risk stays blocked
+    until history_ready is true again.
+    """
+    state.history_ready = bool(history_ready)
+    if not state.history_ready:
+        return state
+
+    day = _utc_today(now)
+    equity = float(equity)
+    if day != state.day_utc:
+        state.day_utc = day
+        state.day_start_equity = equity
+        state.daily_equity_halt = False
+        state.net_losing_trades_today = 0
+        # high_water and drawdown_halt intentionally survive day rollover
+
+    if equity > state.high_water_equity:
+        state.high_water_equity = equity
+
+    if state.high_water_equity > 0:
+        dd = (state.high_water_equity - equity) / state.high_water_equity
+        if dd >= drawdown_pct:
+            state.drawdown_halt = True
+
+    if state.day_start_equity > 0:
+        decline = (state.day_start_equity - equity) / state.day_start_equity
+        if decline >= daily_decline_pct:
+            state.daily_equity_halt = True
+
+    return state
+
+
+def record_net_losing_trade(state: RiskHaltState) -> RiskHaltState:
+    state.net_losing_trades_today += 1
+    return state
+
+
+def apply_broker_lifecycle_losses(
+    state: RiskHaltState,
+    broker_closes: Sequence[dict[str, Any]],
+) -> int:
+    """
+    Count net losing closes detected by broker lifecycle reconciler (clock tick).
+
+    Returns number of losses recorded (for tests/telemetry).
+    """
+    recorded = 0
+    for close in broker_closes:
+        pnl_dollar = close.get("pnl_dollar")
+        pnl_r = close.get("pnl_r")
+        is_net_loss = (pnl_r is not None and float(pnl_r) < 0) or (
+            pnl_dollar is not None and float(pnl_dollar) < 0
+        )
+        if is_net_loss:
+            record_net_losing_trade(state)
+            recorded += 1
+    return recorded
+
+
+def save_risk_halt_state(path: Path, state: RiskHaltState) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(asdict(state), indent=2, sort_keys=True) + "\n")
+
+
+def load_risk_halt_state(path: Path) -> Optional[RiskHaltState]:
+    if not path.is_file():
+        return None
+    raw = json.loads(path.read_text())
+    allowed = {f.name for f in fields(RiskHaltState)}
+    filtered = {k: v for k, v in raw.items() if k in allowed}
+    return RiskHaltState(**filtered)

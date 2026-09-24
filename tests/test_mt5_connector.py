@@ -26,6 +26,15 @@ class MT5ConnectorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported timeframe"):
             connector.get_candles("XAUUSD", "D1", 100)
 
+    def test_get_spread_uses_ask_minus_bid(self):
+        fake_mt5.symbol_info = lambda symbol: types.SimpleNamespace(
+            ask=2650.125,
+            bid=2650.025,
+            spread=999,
+        )
+        connector = MT5Connector(login=1, password="x", server="demo")
+        self.assertEqual(connector.get_spread("XAUUSD"), 0.1)
+
 
 if __name__ == "__main__":
     unittest.main()

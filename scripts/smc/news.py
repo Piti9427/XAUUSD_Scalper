@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Tuple, Optional
-from scripts.smc.types import Direction, Position, OrderIntentType
+from scripts.smc.types import Position, OrderIntentType
 
 
 @dataclass(frozen=True)
@@ -14,8 +14,8 @@ class NewsEvent:
 
 class NewsManager:
     """
-    Manages economic news events, 30-minute blackout enforcement,
-    and pre-news position evaluation (ADR-010).
+    Manages economic news events and foundation BaselinePlay news gates:
+    blackout blocks new/pending risk; open positions keep SL/TP (no pre-news BE/exit).
     """
 
     def is_in_blackout(
@@ -24,7 +24,7 @@ class NewsManager:
         events: List[NewsEvent],
         window_mins: int = 30,
         filter_currency: str = "USD",
-        filter_impact: str = "HIGH"
+        filter_impact: str = "HIGH",
     ) -> Tuple[bool, Optional[str]]:
         """
         Checks if current_time falls within window_mins before or after
@@ -51,6 +51,63 @@ class NewsManager:
 
         return False, None
 
+    def new_risk_allowed(
+        self,
+        current_time: datetime,
+        events: Optional[List[NewsEvent]],
+        *,
+        schedule_known: bool,
+        window_mins: int = 30,
+        filter_currency: str = "USD",
+        filter_impact: str = "HIGH",
+    ) -> Tuple[bool, str]:
+        """
+        Foundation BaselinePlay admission gate for new/pending exposure.
+
+        Unknown or stale news schedules block new risk. Existing positions are
+        not force-closed or moved to BE by this method (unlike Legacy ADR-010).
+        """
+        if not schedule_known or events is None:
+            return False, "unknown_or_stale_news_schedule"
+        in_blackout, name = self.is_in_blackout(
+            current_time,
+            events,
+            window_mins=window_mins,
+            filter_currency=filter_currency,
+            filter_impact=filter_impact,
+        )
+        if in_blackout:
+            return False, f"news_blackout:{name}"
+        return True, "ok"
+
+    def should_cancel_pending(
+        self,
+        current_time: datetime,
+        events: Optional[List[NewsEvent]],
+        *,
+        schedule_known: bool,
+        window_mins: int = 30,
+        filter_currency: str = "USD",
+        filter_impact: str = "HIGH",
+    ) -> Tuple[bool, str]:
+        """
+        Pending cancellation shares the new-risk news gate (scenario 18).
+
+        Does not force-close open positions — BaselinePlay holds through news
+        without pre-news BE/exit unless a separate Legacy path is enabled.
+        """
+        allowed, reason = self.new_risk_allowed(
+            current_time,
+            events,
+            schedule_known=schedule_known,
+            window_mins=window_mins,
+            filter_currency=filter_currency,
+            filter_impact=filter_impact,
+        )
+        if allowed:
+            return False, "ok"
+        return True, reason
+
     def evaluate_pre_news_position(
         self,
         current_time: datetime,
@@ -59,50 +116,29 @@ class NewsManager:
         current_price: float,
         pre_window_mins: int = 15,
         filter_currency: str = "USD",
-        filter_impact: str = "HIGH"
+        filter_impact: str = "HIGH",
     ) -> Optional[OrderIntentType]:
         """
-        ADR-010: Evaluates open position within pre_window_mins (15 min) before red news:
-        - If profit >= 1.0R -> lock Breakeven (MOVE_SL_TO_BE)
-        - If profit < 1.0R -> close immediately (CLOSE_MARKET)
+        Foundation BaselinePlay (Issue #1 scenario 18): hold existing positions
+        through news with their original SL/TP.
+
+        Returns None always — no pre-news BE and no forced exit. ADR-010 legacy
+        MOVE_SL_TO_BE / CLOSE_MARKET behavior is intentionally not applied here.
+        Risk halt and TIME_EXIT remain separate policies.
         """
-        if current_time.tzinfo is None:
-            current_time = current_time.replace(tzinfo=timezone.utc)
-        else:
-            current_time = current_time.astimezone(timezone.utc)
-
-        for event in events:
-            if event.currency == filter_currency and event.impact == filter_impact:
-                ev_time = event.time
-                if ev_time.tzinfo is None:
-                    ev_time = ev_time.replace(tzinfo=timezone.utc)
-                else:
-                    ev_time = ev_time.astimezone(timezone.utc)
-
-                # Time remaining before news (positive if before news)
-                seconds_before = (ev_time - current_time).total_seconds()
-                minutes_before = seconds_before / 60.0
-
-                if 0 <= minutes_before <= pre_window_mins:
-                    # Calculate current R
-                    if position.direction == Direction.BUY:
-                        profit_pts = current_price - position.entry_price
-                    else:
-                        profit_pts = position.entry_price - current_price
-
-                    current_r = profit_pts / position.initial_sl_distance if position.initial_sl_distance > 0 else 0.0
-                    if current_r >= 1.0:
-                        return OrderIntentType.MOVE_SL_TO_BE
-                    else:
-                        return OrderIntentType.CLOSE_MARKET
-
+        _ = (
+            current_time,
+            events,
+            position,
+            current_price,
+            pre_window_mins,
+            filter_currency,
+            filter_impact,
+        )
         return None
 
     def parse_calendar_items(
-        self,
-        raw_items: List[dict],
-        target_country: str = "USD",
-        target_impact: str = "HIGH"
+        self, raw_items: List[dict], target_country: str = "USD", target_impact: str = "HIGH"
     ) -> List[NewsEvent]:
         """
         Parses raw calendar JSON items into NewsEvent dataclasses,
@@ -140,7 +176,7 @@ class NewsManager:
         self,
         cache_path: str = "data/news_cache.json",
         cache_ttl_hours: int = 24,
-        timeout_seconds: int = 10
+        timeout_seconds: int = 10,
     ) -> List[NewsEvent]:
         """
         Downloads the weekly economic calendar feed from ForexFactory
@@ -164,6 +200,7 @@ class NewsManager:
         # Fetch fresh data from ForexFactory
         try:
             import requests
+
             url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
             resp = requests.get(url, timeout=timeout_seconds)
             if resp.status_code == 200:
@@ -188,4 +225,3 @@ class NewsManager:
                 pass
 
         return []
-

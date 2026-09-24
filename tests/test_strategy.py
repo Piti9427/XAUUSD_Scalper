@@ -36,11 +36,46 @@ def make_strategy():
 def make_bars(hour=12):
     return pd.DataFrame(
         [
-            {"time": f"2026-05-18 {hour}:00:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400, "tick_volume": 1},
-            {"time": f"2026-05-18 {hour}:15:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400, "tick_volume": 1},
-            {"time": f"2026-05-18 {hour}:30:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400, "tick_volume": 1},
-            {"time": f"2026-05-18 {hour}:45:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400, "tick_volume": 1},
-            {"time": f"2026-05-18 {hour}:59:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400, "tick_volume": 1},
+            {
+                "time": f"2026-05-18 {hour}:00:00",
+                "open": 2400,
+                "high": 2401,
+                "low": 2399,
+                "close": 2400,
+                "tick_volume": 1,
+            },
+            {
+                "time": f"2026-05-18 {hour}:15:00",
+                "open": 2400,
+                "high": 2401,
+                "low": 2399,
+                "close": 2400,
+                "tick_volume": 1,
+            },
+            {
+                "time": f"2026-05-18 {hour}:30:00",
+                "open": 2400,
+                "high": 2401,
+                "low": 2399,
+                "close": 2400,
+                "tick_volume": 1,
+            },
+            {
+                "time": f"2026-05-18 {hour}:45:00",
+                "open": 2400,
+                "high": 2401,
+                "low": 2399,
+                "close": 2400,
+                "tick_volume": 1,
+            },
+            {
+                "time": f"2026-05-18 {hour}:59:00",
+                "open": 2400,
+                "high": 2401,
+                "low": 2399,
+                "close": 2400,
+                "tick_volume": 1,
+            },
         ]
     )
 
@@ -56,7 +91,9 @@ class StrategyTests(unittest.TestCase):
     def test_check_signals_returns_outside_session(self):
         strategy = make_strategy()
 
-        result = strategy.check_signals(make_bars(hour=9), make_bars(), make_bars(), current_spread=1)
+        result = strategy.check_signals(
+            make_bars(hour=9), make_bars(), make_bars(), current_spread=1
+        )
 
         self.assertEqual(result, "OUTSIDE_SESSION")
 

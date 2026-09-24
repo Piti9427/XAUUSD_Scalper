@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import matplotlib
+
     matplotlib.use("Agg")  # Non-interactive headless backend
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
@@ -17,9 +18,7 @@ except ImportError:
 
 
 def generate_setup_chart(
-    candles: pd.DataFrame,
-    signal: SetupSignal,
-    output_path: str = "data/latest_setup.png"
+    candles: pd.DataFrame, signal: SetupSignal, output_path: str = "data/latest_setup.png"
 ) -> Optional[str]:
     """
     Generates a dark-theme technical chart snapshot highlighting:
@@ -40,13 +39,13 @@ def generate_setup_chart(
         ax.set_facecolor("#181818")
 
         for i, row in df.iterrows():
-            o, h, l, c = row["open"], row["high"], row["low"], row["close"]
-            color = "#00e676" if c >= o else "#ff1744"
+            bar_o, bar_h, bar_l, bar_c = row["open"], row["high"], row["low"], row["close"]
+            color = "#00e676" if bar_c >= bar_o else "#ff1744"
             # Wick
-            ax.plot([i, i], [l, h], color=color, linewidth=1.2)
+            ax.plot([i, i], [bar_l, bar_h], color=color, linewidth=1.2)
             # Body
-            body_bottom = min(o, c)
-            body_height = max(abs(c - o), 0.1)
+            body_bottom = min(bar_o, bar_c)
+            body_height = max(abs(bar_c - bar_o), 0.1)
             rect = patches.Rectangle(
                 (i - 0.3, body_bottom),
                 0.6,
@@ -57,9 +56,18 @@ def generate_setup_chart(
             ax.add_patch(rect)
 
         # Plot levels
-        ax.axhline(signal.entry_price, color="#00e5ff", linestyle="--", label=f"Entry: {signal.entry_price:.2f}")
-        ax.axhline(signal.sl_price, color="#ff5252", linestyle="-.", label=f"SL: {signal.sl_price:.2f}")
-        ax.axhline(signal.tp_price, color="#69f0ae", linestyle="-.", label=f"TP: {signal.tp_price:.2f}")
+        ax.axhline(
+            signal.entry_price,
+            color="#00e5ff",
+            linestyle="--",
+            label=f"Entry: {signal.entry_price:.2f}",
+        )
+        ax.axhline(
+            signal.sl_price, color="#ff5252", linestyle="-.", label=f"SL: {signal.sl_price:.2f}"
+        )
+        ax.axhline(
+            signal.tp_price, color="#69f0ae", linestyle="-.", label=f"TP: {signal.tp_price:.2f}"
+        )
 
         # FVG zone box
         fvg_box = patches.Rectangle(
@@ -68,7 +76,7 @@ def generate_setup_chart(
             abs(signal.fvg_high - signal.fvg_low),
             facecolor="#ffd600",
             alpha=0.18,
-            label="FVG Zone"
+            label="FVG Zone",
         )
         ax.add_patch(fvg_box)
 
@@ -76,7 +84,7 @@ def generate_setup_chart(
             f"XAUUSD SMC Setup — {signal.direction.value} @ {signal.entry_price:.2f}",
             color="#ffffff",
             fontsize=13,
-            pad=12
+            pad=12,
         )
         ax.tick_params(colors="#aaaaaa")
         for spine in ax.spines.values():

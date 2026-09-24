@@ -1,0 +1,15 @@
+{
+  "captured_at_utc": "2026-09-16T07:51:53.658661+00:00",
+  "git_head": "00b2e111fbd5a270c6a0e40215a339a134223fc5",
+  "ok": false,
+  "reasons": [
+    "mt5_import_missing"
+  ],
+  "infra_verdict": "INCONCLUSIVE_INFRA",
+  "infra_detail": "mt5_unavailable_on_host",
+  "confirmed_at": "2026-09-16T15:22+07",
+  "operator_host": "macOS",
+  "user_confirmed_mac": true,
+  "native_mt5": "ModuleNotFoundError",
+  "live_gates": "blocked"
+}

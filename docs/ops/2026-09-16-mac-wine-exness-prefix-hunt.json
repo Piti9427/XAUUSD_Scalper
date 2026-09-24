@@ -1,0 +1,39 @@
+{
+  "captured_at_utc": "2026-09-16T09:44:37.575892+00:00",
+  "git_head": "adb89da8f26cf47b8a25c2273581ee7cf5540cbd",
+  "paths_exist": {
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/users/user/AppData/Roaming/MetaQuotes/Terminal": true,
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/Users/user/AppData/Roaming/MetaQuotes/Terminal": true,
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/Program Files/MetaTrader 5": true
+  },
+  "terminal_children": {
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/users/user/AppData/Roaming/MetaQuotes/Terminal_children": [
+      "Common",
+      "Community",
+      "D0E8209F77C8CF37AD8BF550E51FF075"
+    ],
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/Users/user/AppData/Roaming/MetaQuotes/Terminal_children": [
+      "Common",
+      "Community",
+      "D0E8209F77C8CF37AD8BF550E51FF075"
+    ],
+    "/Users/nopparuj/Library/Application Support/net.metaquotes.wine.metatrader5/drive_c/Program Files/MetaTrader 5_children": [
+      "Bases",
+      "MQL5",
+      "Sounds",
+      "Tester",
+      "config",
+      "llm-agent",
+      "logs",
+      "metaeditor64.exe",
+      "metatester64.exe",
+      "temp",
+      "terminal64.exe"
+    ]
+  },
+  "exness_in_filename_hits": [],
+  "exness_ini_match_count": 0,
+  "exness_ini_sample_paths": [],
+  "gate_c_verdict": "INCONCLUSIVE_INFRA",
+  "note": "No invent PASS. Exness presence search in Wine prefix; zero matches means GUI never added Exness Demo."
+}

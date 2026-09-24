@@ -1,0 +1,33 @@
+{
+  "captured_at_utc": "2026-09-16T09:38:01.428982+00:00",
+  "git_head": "d7ebd5f0b9e3837e698f41df158112a402eeedcf",
+  "host": "macOS darwin",
+  "terminal_process_running": true,
+  "terminal_path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+  "wine_python": "C:\\tools\\python312\\python.exe",
+  "wine_python_initialize": {
+    "ok": false,
+    "last_error": [-6, "Terminal: Authorization failed"]
+  },
+  "account": {
+    "login": null,
+    "server": null,
+    "trade_mode": null,
+    "currency": null
+  },
+  "bases_sample": [
+    "Common",
+    "Community",
+    "D0E8209F77C8CF37AD8BF550E51FF075"
+  ],
+  "exness_bases_present": false,
+  "exness_in_server": false,
+  "native_smoke_artifact": "docs/ops/2026-09-16-exness-smoke-mac-retry.json",
+  "native_smoke": {
+    "ok": false,
+    "reasons": ["mt5_import_missing"],
+    "infra_verdict": "INCONCLUSIVE_INFRA"
+  },
+  "gate_c_verdict": "INCONCLUSIVE_INFRA",
+  "note": "Wine terminal64 still running; Wine IPC initialize still -6 Authorization failed; no Exness account/server on this session. Native .venv lacks MetaTrader5. Do not invent Gate C PASS."
+}

@@ -1,4 +1,3 @@
-from datetime import timezone
 from typing import Optional, Dict, Any
 import logging
 from scripts.smc.types import Direction, SetupSignal, Position
@@ -12,10 +11,7 @@ except ImportError:
 
 
 def format_smc_trade_card(
-    signal: SetupSignal,
-    lot_size: float,
-    risk_amount: float = 50.0,
-    symbol: str = "XAUUSD"
+    signal: SetupSignal, lot_size: float, risk_amount: float = 50.0, symbol: str = "XAUUSD"
 ) -> str:
     """Formats an institutional-grade Markdown alert card for Telegram."""
     direction_emoji = "🟢 BUY" if signal.direction == Direction.BUY else "🔴 SELL"
@@ -24,11 +20,7 @@ def format_smc_trade_card(
     pts_tp = abs(signal.tp_price - signal.entry_price)
     pips_tp = pts_tp * 10.0
 
-    time_str = (
-        signal.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
-        if signal.timestamp
-        else "N/A"
-    )
+    time_str = signal.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC") if signal.timestamp else "N/A"
 
     card = f"""🚨 *{symbol} SMC SIGNAL: {signal.direction.value}* {direction_emoji}
 ━━━━━━━━━━━━━━━━━━━━━
@@ -52,11 +44,7 @@ def format_smc_trade_card(
 def format_order_filled_card(position: Position, symbol: str = "XAUUSD") -> str:
     """Formats a milestone card when a pending limit order is filled."""
     direction_emoji = "🟢 BUY" if position.direction == Direction.BUY else "🔴 SELL"
-    time_str = (
-        position.open_time.strftime("%Y-%m-%d %H:%M:%S UTC")
-        if position.open_time
-        else "N/A"
-    )
+    time_str = position.open_time.strftime("%Y-%m-%d %H:%M:%S UTC") if position.open_time else "N/A"
     card = f"""⚡ *{symbol} ORDER FILLED: {position.direction.value}* {direction_emoji}
 ━━━━━━━━━━━━━━━━━━━━━
 📍 *Fill Price:* `{position.entry_price:.2f}`
@@ -64,6 +52,34 @@ def format_order_filled_card(position: Position, symbol: str = "XAUUSD") -> str:
 🎯 *Take Profit:* `{position.tp_price:.2f}`
 💼 *Volume:* `{position.lot_size:.2f} Lot`
 ⏰ *Fill Time:* `{time_str}`
+━━━━━━━━━━━━━━━━━━━━━"""
+    return card
+
+
+def format_order_accepted_card(
+    *,
+    direction: Direction,
+    limit_price: float,
+    sl_price: float,
+    tp_price: float,
+    lot_size: float,
+    order_id: Optional[str] = None,
+    ticket: Optional[int] = None,
+    symbol: str = "XAUUSD",
+) -> str:
+    """Broker-accepted pending only — must not be confused with a fill card."""
+    direction_emoji = "🟢 BUY" if direction == Direction.BUY else "🔴 SELL"
+    oid = order_id or "n/a"
+    tix = ticket if ticket is not None else "n/a"
+    card = f"""📥 *{symbol} ORDER ACCEPTED (PENDING): {direction.value}* {direction_emoji}
+━━━━━━━━━━━━━━━━━━━━━
+📍 *Limit:* `{limit_price:.2f}`
+🛑 *Stop Loss:* `{sl_price:.2f}`
+🎯 *Take Profit:* `{tp_price:.2f}`
+💼 *Volume:* `{lot_size:.2f} Lot`
+🆔 *Order ID:* `{oid}`
+🎫 *Ticket:* `{tix}`
+⚠️ *Not filled yet* — await ORDER_FILLED / broker fill evidence
 ━━━━━━━━━━━━━━━━━━━━━"""
     return card
 
@@ -77,6 +93,27 @@ def format_be_moved_card(position: Position, symbol: str = "XAUUSD") -> str:
 🛡️ *New SL (BE):* `{position.sl_price:.2f}` (Capital secured: +0.0R)
 🎯 *Take Profit:* `{position.tp_price:.2f}`
 📈 *Progress:* Price reached +1.0R. Free trade!
+━━━━━━━━━━━━━━━━━━━━━"""
+    return card
+
+
+def format_partial_tp_card(
+    direction: Direction,
+    closed_lot: float,
+    remaining_lot: float,
+    r_multiple: float,
+    entry_price: float,
+    symbol: str = "XAUUSD",
+) -> str:
+    """Formats a milestone card when a partial take profit target is reached."""
+    direction_emoji = "🟢 BUY" if direction == Direction.BUY else "🔴 SELL"
+    card = f"""🎯 *{symbol} PARTIAL TAKE PROFIT HIT!* {direction_emoji}
+━━━━━━━━━━━━━━━━━━━━━
+💰 *Milestone:* `+{r_multiple:.1f}R Profit Locked In`
+📦 *Closed Volume:* `{closed_lot:.2f} lots`
+🛡️ *Remaining Volume:* `{remaining_lot:.2f} lots`
+🔒 *Risk Management:* `SL Moved to Breakeven ({entry_price:.2f})`
+🚀 *Target:* Final TP (Risk-Free Runner)
 ━━━━━━━━━━━━━━━━━━━━━"""
     return card
 
@@ -136,11 +173,7 @@ class SMCTelegramNotifier:
             return False
         try:
             async with self.bot:
-                await self.bot.send_message(
-                    chat_id=self.chat_id,
-                    text=text,
-                    parse_mode="Markdown"
-                )
+                await self.bot.send_message(chat_id=self.chat_id, text=text, parse_mode="Markdown")
                 return True
         except Exception as e:
             logger.error("Failed to send Telegram message: %s", e)
@@ -151,7 +184,7 @@ class SMCTelegramNotifier:
         signal: SetupSignal,
         lot_size: float,
         risk_amount: float = 50.0,
-        chart_image_path: Optional[str] = None
+        chart_image_path: Optional[str] = None,
     ) -> bool:
         if not self.enabled or not self.bot:
             logger.info("Telegram notifier disabled or bot not available.")
@@ -167,16 +200,14 @@ class SMCTelegramNotifier:
                                 chat_id=self.chat_id,
                                 photo=photo,
                                 caption=card_text,
-                                parse_mode="Markdown"
+                                parse_mode="Markdown",
                             )
                             return True
                     except Exception as exc:
                         logger.warning("Failed to send photo, falling back to text: %s", exc)
 
                 await self.bot.send_message(
-                    chat_id=self.chat_id,
-                    text=card_text,
-                    parse_mode="Markdown"
+                    chat_id=self.chat_id, text=card_text, parse_mode="Markdown"
                 )
                 return True
         except Exception as e:
