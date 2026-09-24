@@ -89,9 +89,7 @@ def main():
         raw_signals = {}
         for spec in specs:
             f = frames[spec.timeframe]
-            raw_spec = replace(
-                spec, name="", filters=(), sl=2.0, tp=2.0, reconstruction=True
-            )
+            raw_spec = replace(spec, name="", filters=(), sl=2.0, tp=2.0, reconstruction=True)
             if raw_spec not in raw_signals:
                 raw_signals[raw_spec] = signals(f, raw_spec)
             sig = apply_filters(f, raw_signals[raw_spec], spec)
@@ -140,9 +138,7 @@ def main():
                     if count
                     else log.iloc[:0]
                 )
-                equal.append(
-                    {"strategy": name, "mode": mode, "year": year, **metrics(sample)}
-                )
+                equal.append({"strategy": name, "mode": mode, "year": year, **metrics(sample)})
         pd.DataFrame(annual).to_csv(args.output / "annual.csv", index=False)
         (args.output / "data-audit.json").write_text(json.dumps(audits, indent=2))
         print(f"{year}: paired={len(m1):,}, strategies={len(specs)}, done", flush=True)
@@ -181,9 +177,7 @@ def main():
     )
     print(
         pd.DataFrame(summaries)
-        .sort_values("net", ascending=False)[
-            ["strategy", "mode", "trades", "net", "pf", "screen"]
-        ]
+        .sort_values("net", ascending=False)[["strategy", "mode", "trades", "net", "pf", "screen"]]
         .head(20)
         .to_string(index=False)
     )

@@ -54,9 +54,11 @@ def evidence_row(name, spec, summary, annual, years, units):
         raise ValueError(f"Invalid net or units: {name}")
     cost_budget = native_net / (trades * units) if native_net > 0 and trades else None
     status = (
-        "no_observed_trades" if not trades else
-        "nonpositive_reconstructed_native" if native_net <= 0 else
-        "positive_reconstructed_only"
+        "no_observed_trades"
+        if not trades
+        else "nonpositive_reconstructed_native"
+        if native_net <= 0
+        else "positive_reconstructed_only"
     )
     return {
         "strategy": name,
@@ -75,7 +77,9 @@ def evidence_row(name, spec, summary, annual, years, units):
         "latest_year": years[-1],
         "latest_year_net": yearly_nets[-1],
         "net_excluding_latest_year": sum(yearly_nets[:-1]),
-        "largest_positive_year_share": max(positive_year_nets) / sum_positive if sum_positive else None,
+        "largest_positive_year_share": max(positive_year_nets) / sum_positive
+        if sum_positive
+        else None,
         "extra_cost_to_zero_per_unit_roundtrip": cost_budget,
         "cost_budget_units": "USD per 1 oz per trade, in addition to observed historical Bid/Ask spread",
         "source_trade_logs": f"trades/{name}__native__YEAR.csv",
@@ -91,10 +95,7 @@ def build_gate(baseline, cache, output, code_dir, expected_names=120, expected_y
     source_check = verify_source_cache(cache, manifest)
     years = sorted(manifest["years"])
     units = float(manifest["costs"]["units"])
-    rows = [
-        evidence_row(spec["name"], spec, summary, annual, years, units)
-        for spec in specs
-    ]
+    rows = [evidence_row(spec["name"], spec, summary, annual, years, units) for spec in specs]
     base_names = set(BASE_NAMES)
     family_rows = [row for row in rows if row["strategy"] in base_names]
     if expected_names == 120 and len(family_rows) != 17:
@@ -113,14 +114,25 @@ def build_gate(baseline, cache, output, code_dir, expected_names=120, expected_y
         "source_cache": source_check,
         "source_revision": manifest["source_revision"],
         "baseline": str(baseline),
-        "baseline_sha256": {name: sha256(baseline / name) for name in
-                            ("manifest.json", "summary.csv", "annual.csv", "data-audit.json", "COMPLETE")},
+        "baseline_sha256": {
+            name: sha256(baseline / name)
+            for name in (
+                "manifest.json",
+                "summary.csv",
+                "annual.csv",
+                "data-audit.json",
+                "COMPLETE",
+            )
+        },
         "code_sha256": manifest["code_sha256"],
-        "audit_code_sha256": {name: sha256(Path(__file__).with_name(name)) for name in
-                              ("matrix.py", "evidence_gate.py")},
+        "audit_code_sha256": {
+            name: sha256(Path(__file__).with_name(name))
+            for name in ("matrix.py", "evidence_gate.py")
+        },
         "counts": {"families": len(family_rows), "specs": len(rows), "years": len(years)},
-        "output_sha256": {name: sha256(output / name) for name in
-                          ("family-screen.csv", "all-specs-screen.csv")},
+        "output_sha256": {
+            name: sha256(output / name) for name in ("family-screen.csv", "all-specs-screen.csv")
+        },
     }
     (output / "gate-manifest.json").write_text(json.dumps(gate, indent=2) + "\n")
     (output / "COMPLETE").write_text("Price bytes and trade logs audited; research screen only.\n")

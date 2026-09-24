@@ -29,33 +29,70 @@ class EvidenceGateTests(unittest.TestCase):
         self.manifest = {
             "version": "btg-research-v1",
             "years": [2025, 2026],
-            "strategies": [{"name": "Donchian20", "family": "donchian", "filters": [], "reconstruction": True}],
-            "costs": {"units": 1.0, "commission_per_unit_roundtrip": 0,
-                      "slippage": 0, "swap_per_unit_night": 0},
+            "strategies": [
+                {"name": "Donchian20", "family": "donchian", "filters": [], "reconstruction": True}
+            ],
+            "costs": {
+                "units": 1.0,
+                "commission_per_unit_roundtrip": 0,
+                "slippage": 0,
+                "swap_per_unit_night": 0,
+            },
             "delay_minutes": 0,
             "source_revision": "fixture",
-            "inputs": [{"file": source.name, "bytes": source.stat().st_size,
-                        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-                        "url": "https://example.test/prices.csv"}],
-            "code_sha256": {"run.py": hashlib.sha256((self.code / "run.py").read_bytes()).hexdigest()},
+            "inputs": [
+                {
+                    "file": source.name,
+                    "bytes": source.stat().st_size,
+                    "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    "url": "https://example.test/prices.csv",
+                }
+            ],
+            "code_sha256": {
+                "run.py": hashlib.sha256((self.code / "run.py").read_bytes()).hexdigest()
+            },
         }
         (self.baseline / "manifest.json").write_text(json.dumps(self.manifest))
         annual, summary = [], []
         for mode in ("common", "native"):
             for year, net in ((2025, -2.0), (2026, 5.0)):
-                annual.append({"strategy": "Donchian20", "mode": mode, "year": year,
-                               "trades": 1, "net": net, "total_r": net,
-                               "pf": "" if net > 0 else 0})
-                self.write_csv(self.baseline / "trades" / f"Donchian20__{mode}__{year}.csv", [
-                    {"signal_time": f"{year}-01-01 00:00:00+00:00",
-                     "entry_time": f"{year}-01-01 00:01:00+00:00",
-                     "exit_time": f"{year}-01-01 00:02:00+00:00",
-                     "net": net, "r": net}
-                ])
-            summary.append({"strategy": "Donchian20", "mode": mode, "trades": 2,
-                            "net": 3, "total_r": 3, "pf": 2.5,
-                            "years": 2, "positive_years": 1, "worst_year_net": -2,
-                            "production_ready": False})
+                annual.append(
+                    {
+                        "strategy": "Donchian20",
+                        "mode": mode,
+                        "year": year,
+                        "trades": 1,
+                        "net": net,
+                        "total_r": net,
+                        "pf": "" if net > 0 else 0,
+                    }
+                )
+                self.write_csv(
+                    self.baseline / "trades" / f"Donchian20__{mode}__{year}.csv",
+                    [
+                        {
+                            "signal_time": f"{year}-01-01 00:00:00+00:00",
+                            "entry_time": f"{year}-01-01 00:01:00+00:00",
+                            "exit_time": f"{year}-01-01 00:02:00+00:00",
+                            "net": net,
+                            "r": net,
+                        }
+                    ],
+                )
+            summary.append(
+                {
+                    "strategy": "Donchian20",
+                    "mode": mode,
+                    "trades": 2,
+                    "net": 3,
+                    "total_r": 3,
+                    "pf": 2.5,
+                    "years": 2,
+                    "positive_years": 1,
+                    "worst_year_net": -2,
+                    "production_ready": False,
+                }
+            )
         self.write_csv(self.baseline / "annual.csv", annual)
         self.write_csv(self.baseline / "summary.csv", summary)
 
@@ -85,8 +122,10 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertEqual(row["production_ready"], "False")
         gate = json.loads((out / "gate-manifest.json").read_text())
         self.assertEqual(gate["source_cache"]["files_verified"], 1)
-        self.assertEqual(gate["audit_code_sha256"]["evidence_gate.py"],
-                         hashlib.sha256(Path(build_gate.__code__.co_filename).read_bytes()).hexdigest())
+        self.assertEqual(
+            gate["audit_code_sha256"]["evidence_gate.py"],
+            hashlib.sha256(Path(build_gate.__code__.co_filename).read_bytes()).hexdigest(),
+        )
 
     def test_negative_native_net_is_rejected_without_fake_cost_budget(self):
         for path in (self.baseline / "summary.csv", self.baseline / "annual.csv"):
@@ -98,14 +137,25 @@ class EvidenceGateTests(unittest.TestCase):
             self.write_csv(path, rows)
         # Audit must reject an internally inconsistent edited result.
         with self.assertRaisesRegex(ValueError, "reconciliation"):
-            build_gate(self.baseline, self.cache, self.root / "out", self.code,
-                       expected_names=1, expected_years=2)
+            build_gate(
+                self.baseline,
+                self.cache,
+                self.root / "out",
+                self.code,
+                expected_names=1,
+                expected_years=2,
+            )
 
     def test_nonpositive_observation_has_no_cost_headroom(self):
         spec = {"name": "Donchian20", "family": "donchian"}
         summary = {
-            ("Donchian20", "native"): {"net": -3, "total_r": -2, "trades": 2,
-                                        "pf": 0.8, "positive_years": 1},
+            ("Donchian20", "native"): {
+                "net": -3,
+                "total_r": -2,
+                "trades": 2,
+                "pf": 0.8,
+                "positive_years": 1,
+            },
             ("Donchian20", "common"): {"net": -5, "total_r": -4},
         }
         annual = {

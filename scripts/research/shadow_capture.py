@@ -14,7 +14,7 @@ import hashlib
 import json
 import math
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -40,12 +40,22 @@ def _positive(value) -> float:
     return number
 
 
-def capture(mt5, *, start: datetime, end: datetime, freeze_at: datetime,
-            symbol: str, expected_login: int, expected_server: str,
-            output: Path) -> dict:
+def capture(
+    mt5,
+    *,
+    start: datetime,
+    end: datetime,
+    freeze_at: datetime,
+    symbol: str,
+    expected_login: int,
+    expected_server: str,
+    output: Path,
+) -> dict:
     """Capture one UTC day at most; caller owns MT5 initialize/shutdown."""
-    if any(value.tzinfo is None or value.utcoffset() != timedelta(0)
-           for value in (start, end, freeze_at)):
+    if any(
+        value.tzinfo is None or value.utcoffset() != timedelta(0)
+        for value in (start, end, freeze_at)
+    ):
         raise ValueError("capture times must be timezone-aware UTC")
     if start < freeze_at or not start < end or end - start > timedelta(days=1):
         raise ValueError("invalid post-freeze capture window")
@@ -60,8 +70,10 @@ def capture(mt5, *, start: datetime, end: datetime, freeze_at: datetime,
         raise ValueError("target account is not Demo")
     if str(account.currency) != "USD":
         raise ValueError("target account currency is not USD")
-    if not all(math.isfinite(float(value)) and float(value) > 0
-               for value in (account.balance, account.equity)):
+    if not all(
+        math.isfinite(float(value)) and float(value) > 0
+        for value in (account.balance, account.equity)
+    ):
         raise ValueError("invalid target account balance/equity")
     info = mt5.symbol_info(symbol)
     if info is None or str(info.name) != symbol or "XAUUSD" not in symbol:
@@ -101,8 +113,9 @@ def capture(mt5, *, start: datetime, end: datetime, freeze_at: datetime,
         writer = csv.writer(handle)
         writer.writerow(names)
         for row in ticks:
-            writer.writerow([row[name].item() if hasattr(row[name], "item") else row[name]
-                             for name in names])
+            writer.writerow(
+                [row[name].item() if hasattr(row[name], "item") else row[name] for name in names]
+            )
     manifest = {
         "schema": "btg-shadow-ticks-v1",
         "status": "captured_research_only",
@@ -158,14 +171,25 @@ def main() -> None:
         raise RuntimeError(f"MT5 initialize failed: {mt5.last_error()[0]}")
     try:
         result = capture(
-            mt5, start=args.start, end=args.end, freeze_at=args.freeze_at,
-            symbol=args.symbol, expected_login=int(login),
-            expected_server=server, output=args.output,
+            mt5,
+            start=args.start,
+            end=args.end,
+            freeze_at=args.freeze_at,
+            symbol=args.symbol,
+            expected_login=int(login),
+            expected_server=server,
+            output=args.output,
         )
     finally:
         mt5.shutdown()
-    print(json.dumps({key: result[key] for key in
-                      ("status", "symbol", "tick_count", "tick_sha256", "order_api_called")}))
+    print(
+        json.dumps(
+            {
+                key: result[key]
+                for key in ("status", "symbol", "tick_count", "tick_sha256", "order_api_called")
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

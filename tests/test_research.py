@@ -93,9 +93,7 @@ class RegistryAndCausalityTests(unittest.TestCase):
             start="2025-01-01",
         )
         all_frames = {tf: features(m1, tf) for tf in (15, 240)}
-        prefix_frames = {
-            tf: features(m1.iloc[: 12 * 24 * 60 + 37], tf) for tf in (15, 240)
-        }
+        prefix_frames = {tf: features(m1.iloc[: 12 * 24 * 60 + 37], tf) for tf in (15, 240)}
         for tf, short in prefix_frames.items():
             assert_frame_equal(short, all_frames[tf].loc[short.index])
         for spec in registry():
@@ -152,16 +150,10 @@ class EntryPatternTests(unittest.TestCase):
             self.assertEqual(signals(f, spec).direction.iloc[-1], 0, family)
 
     def test_h4_ote_requires_signal_close_inside_session(self):
-        rows = (
-            [[100, 110, 100, 109]]
-            + [[108, 109, 106, 108]] * 5
-            + [[103, 104, 102, 103.8]]
-        )
+        rows = [[100, 110, 100, 109]] + [[108, 109, 106, 108]] * 5 + [[103, 104, 102, 103.8]]
         f = pattern(rows, "2025-01-01 08:00")
         f.index = pd.date_range("2025-01-01 08:00", periods=len(f), freq="4h", tz="UTC")
-        self.assertFalse(
-            signals(f, Spec("fixture", "ote", timeframe=240)).direction.any()
-        )
+        self.assertFalse(signals(f, Spec("fixture", "ote", timeframe=240)).direction.any())
 
     def test_state_and_atr_wait_for_pullback_then_continuation(self):
         rows = [[100, 101, 99, 100]] * 2 + [
@@ -174,24 +166,18 @@ class EntryPatternTests(unittest.TestCase):
                 with self.subTest(family=family, direction=direction):
                     spec = Spec("fixture", family, lookback=2)
                     self.assertEqual(
-                        signals(
-                            pattern(rows, direction=direction), spec
-                        ).direction.tolist(),
+                        signals(pattern(rows, direction=direction), spec).direction.tolist(),
                         [0, 0, 0, 0, direction],
                     )
                     invalid = [list(r) for r in rows]
                     invalid[3][2] = 99
                     self.assertFalse(
-                        signals(
-                            pattern(invalid, direction=direction), spec
-                        ).direction.any()
+                        signals(pattern(invalid, direction=direction), spec).direction.any()
                     )
                     no_pullback = [list(r) for r in rows]
                     no_pullback[3][0] = 101.5
                     self.assertFalse(
-                        signals(
-                            pattern(no_pullback, direction=direction), spec
-                        ).direction.any()
+                        signals(pattern(no_pullback, direction=direction), spec).direction.any()
                     )
 
     def test_asian_and_orb_require_complete_range_and_take_only_first_break(self):
@@ -226,9 +212,7 @@ class EntryPatternTests(unittest.TestCase):
             with self.subTest(direction=direction):
                 f = pattern(rows, "2025-01-01", direction)
                 spec = Spec("fixture", "asian_retest")
-                self.assertEqual(
-                    signals(f, spec).direction.tolist(), [0] * 30 + [direction, 0]
-                )
+                self.assertEqual(signals(f, spec).direction.tolist(), [0] * 30 + [direction, 0])
                 self.assertFalse(signals(f.iloc[:30], spec).direction.any())
 
     def test_sweep_mss_choch_and_fvg_have_distinct_confirmation_times(self):
@@ -276,15 +260,11 @@ class EntryPatternTests(unittest.TestCase):
                 spec = Spec("fixture", "ob", entry="ob")
                 result = signals(pattern(rows, direction=direction), spec)
                 self.assertEqual(result.direction.tolist(), [0, 0, direction])
-                self.assertAlmostEqual(
-                    result.limit.iloc[2], 100.4 if direction == 1 else 99.6
-                )
+                self.assertAlmostEqual(result.limit.iloc[2], 100.4 if direction == 1 else 99.6)
                 no_opposition = [list(r) for r in rows]
                 no_opposition[1][0] = 99.8
                 self.assertFalse(
-                    signals(
-                        pattern(no_opposition, direction=direction), spec
-                    ).direction.any()
+                    signals(pattern(no_opposition, direction=direction), spec).direction.any()
                 )
 
     def test_ote_requires_session_impulse_and_618_786_retracement(self):
@@ -293,27 +273,19 @@ class EntryPatternTests(unittest.TestCase):
             with self.subTest(direction=direction):
                 spec = Spec("fixture", "ote")
                 self.assertEqual(
-                    signals(
-                        pattern(rows, direction=direction), spec
-                    ).direction.tolist(),
+                    signals(pattern(rows, direction=direction), spec).direction.tolist(),
                     [0, direction],
                 )
                 self.assertFalse(
-                    signals(
-                        pattern(rows, "2025-01-01 05:00", direction), spec
-                    ).direction.any()
+                    signals(pattern(rows, "2025-01-01 05:00", direction), spec).direction.any()
                 )
                 no_touch = [rows[0], [106, 108, 105, 107]]
                 self.assertFalse(
-                    signals(
-                        pattern(no_touch, direction=direction), spec
-                    ).direction.any()
+                    signals(pattern(no_touch, direction=direction), spec).direction.any()
                 )
                 invalidated = [rows[0], [101, 104, 99, 103]]
                 self.assertFalse(
-                    signals(
-                        pattern(invalidated, direction=direction), spec
-                    ).direction.any()
+                    signals(pattern(invalidated, direction=direction), spec).direction.any()
                 )
 
 
@@ -401,9 +373,7 @@ class ExecutionTests(unittest.TestCase):
             self.assertEqual(result, (0, opened, "SL_GAP"))
 
     def test_range_limit_fill_cannot_take_earlier_same_minute_tp(self):
-        log, _ = run_one(
-            [[101, 105, 99.7, 100], [100, 101, 99, 100]], entry="ce50", limit=100
-        )
+        log, _ = run_one([[101, 105, 99.7, 100], [100, 101, 99, 100]], entry="ce50", limit=100)
         trade = log.iloc[0]
         self.assertEqual(trade.reason, "END_OF_SAMPLE")
         self.assertEqual(trade.exit_time, trade.entry_time + pd.Timedelta(minutes=1))
@@ -421,9 +391,7 @@ class ExecutionTests(unittest.TestCase):
             slippage=0.05,
             swap_per_unit_night=0.3,
         )
-        log, dd = run_one(
-            [[100, 100.5, 99.5, 100]] * 2, costs=costs, start="2025-01-01 23:59"
-        )
+        log, dd = run_one([[100, 100.5, 99.5, 100]] * 2, costs=costs, start="2025-01-01 23:59")
         trade = log.iloc[0]
         self.assertAlmostEqual(trade.entry, 100.25)
         self.assertAlmostEqual(trade.exit, 99.95)
@@ -435,9 +403,7 @@ class ExecutionTests(unittest.TestCase):
 
     def test_missing_exact_next_open_does_not_execute_later(self):
         m1 = quotes([[100, 101, 99, 100]], start="2025-01-01 00:16")
-        f = pd.DataFrame(
-            {"atr": [1.0], "regime": ["trend"]}, index=[m1.index[0].normalize()]
-        )
+        f = pd.DataFrame({"atr": [1.0], "regime": ["trend"]}, index=[m1.index[0].normalize()])
         sig = pd.DataFrame({"direction": [1], "limit": [np.nan]}, index=f.index)
         log, dd = simulate(m1, f, sig, Spec("test", "donchian"))
         self.assertTrue(log.empty)

@@ -25,19 +25,36 @@ class FakeMT5:
     def __init__(self, start):
         self.start = start
         self.order_send_calls = 0
-        self.account = SimpleNamespace(login=123, server="Exness-MT5Demo", trade_mode=0,
-                                       currency="USD", margin_mode=2, balance=1000.0,
-                                       equity=999.0)
-        self.symbol = SimpleNamespace(name="XAUUSDm", trade_contract_size=100.0,
-                                      volume_min=0.01, volume_step=0.01, volume_max=100.0,
-                                      point=0.01, trade_tick_size=0.01,
-                                      trade_tick_value=1.0)
+        self.account = SimpleNamespace(
+            login=123,
+            server="Exness-MT5Demo",
+            trade_mode=0,
+            currency="USD",
+            margin_mode=2,
+            balance=1000.0,
+            equity=999.0,
+        )
+        self.symbol = SimpleNamespace(
+            name="XAUUSDm",
+            trade_contract_size=100.0,
+            volume_min=0.01,
+            volume_step=0.01,
+            volume_max=100.0,
+            point=0.01,
+            trade_tick_size=0.01,
+            trade_tick_value=1.0,
+        )
         self.rows = np.array(
-            [(int((start + timedelta(minutes=i)).timestamp() * 1000),
-              4000.0 + i * 0.01, 4000.2 + i * 0.01, 6)
-             for i in range(125)],
-            dtype=[("time_msc", "i8"), ("bid", "f8"),
-                   ("ask", "f8"), ("flags", "i4")],
+            [
+                (
+                    int((start + timedelta(minutes=i)).timestamp() * 1000),
+                    4000.0 + i * 0.01,
+                    4000.2 + i * 0.01,
+                    6,
+                )
+                for i in range(125)
+            ],
+            dtype=[("time_msc", "i8"), ("bid", "f8"), ("ask", "f8"), ("flags", "i4")],
         )
 
     def account_info(self):
@@ -65,9 +82,16 @@ class ShadowMonitorTests(unittest.TestCase):
 
     def make_capture(self, name="capture"):
         path = self.root / name
-        capture(self.mt5, start=self.start, end=self.end, freeze_at=self.start,
-                symbol="XAUUSDm", expected_login=123,
-                expected_server="Exness-MT5Demo", output=path)
+        capture(
+            self.mt5,
+            start=self.start,
+            end=self.end,
+            freeze_at=self.start,
+            symbol="XAUUSDm",
+            expected_login=123,
+            expected_server="Exness-MT5Demo",
+            output=path,
+        )
         return path
 
     def test_capture_and_signal_audit_seal_actual_quotes_without_orders(self):
@@ -91,10 +115,16 @@ class ShadowMonitorTests(unittest.TestCase):
 
     def test_bad_window_and_non_utc_rejected(self):
         with self.assertRaisesRegex(ValueError, "post-freeze"):
-            capture(self.mt5, start=self.start, end=self.end,
-                    freeze_at=self.start + timedelta(minutes=1),
-                    symbol="XAUUSDm", expected_login=123,
-                    expected_server="Exness", output=self.root / "bad")
+            capture(
+                self.mt5,
+                start=self.start,
+                end=self.end,
+                freeze_at=self.start + timedelta(minutes=1),
+                symbol="XAUUSDm",
+                expected_login=123,
+                expected_server="Exness",
+                output=self.root / "bad",
+            )
         with self.assertRaisesRegex(ValueError, "UTC"):
             utc_time("2026-09-24T07:00:00+07:00")
 

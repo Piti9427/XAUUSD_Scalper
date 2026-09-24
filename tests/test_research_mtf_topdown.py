@@ -23,16 +23,19 @@ class TopdownResearchTests(unittest.TestCase):
     def test_contract_reuses_sourced_donchian_exit_without_parameter_grid(self):
         self.assertNotEqual(NAME, BASE.name)
         self.assertEqual((SPEC.lookback, SPEC.fast, SPEC.slow), (20, 20, 50))
-        self.assertEqual((SPEC.sl, SPEC.tp, SPEC.timeframe, SPEC.entry),
-                         (2.0, 2.0, 15, "market"))
+        self.assertEqual((SPEC.sl, SPEC.tp, SPEC.timeframe, SPEC.entry), (2.0, 2.0, 15, "market"))
 
     def test_weekly_bar_requires_full_utc_monday_week(self):
-        index = pd.date_range("2024-01-01", periods=7 * 24 * 60,
-                              freq="min", tz="UTC")
-        m1 = pd.DataFrame({
-            "bid_open": 2000.0, "bid_high": 2001.0,
-            "bid_low": 1999.0, "bid_close": 2000.0,
-        }, index=index)
+        index = pd.date_range("2024-01-01", periods=7 * 24 * 60, freq="min", tz="UTC")
+        m1 = pd.DataFrame(
+            {
+                "bid_open": 2000.0,
+                "bid_high": 2001.0,
+                "bid_low": 1999.0,
+                "bid_close": 2000.0,
+            },
+            index=index,
+        )
         week = weekly_bid_bars(m1)
         self.assertEqual(list(week.index), [pd.Timestamp("2024-01-01", tz="UTC")])
         self.assertEqual(float(week.iloc[0].close), 2000.0)
@@ -40,10 +43,15 @@ class TopdownResearchTests(unittest.TestCase):
 
     def test_weekly_state_is_unavailable_until_close_and_expires_if_missing(self):
         state = pd.Series([1], index=pd.DatetimeIndex(["2024-01-01"], tz="UTC"))
-        times = pd.DatetimeIndex([
-            "2024-01-07 23:45", "2024-01-08 00:00",
-            "2024-01-14 23:45", "2024-01-15 00:15",
-        ], tz="UTC")
+        times = pd.DatetimeIndex(
+            [
+                "2024-01-07 23:45",
+                "2024-01-08 00:00",
+                "2024-01-14 23:45",
+                "2024-01-15 00:15",
+            ],
+            tz="UTC",
+        )
         aligned = last_closed_state(state, pd.Timedelta(days=7), times)
         self.assertEqual(aligned.tolist(), [0, 1, 1, 0])
 
@@ -54,9 +62,9 @@ class TopdownResearchTests(unittest.TestCase):
 
     def test_donchian_state_persists_until_opposite_break(self):
         index = pd.date_range("2024-01-01", periods=23, freq="h", tz="UTC")
-        frame = pd.DataFrame({"high": [101.0] * 23,
-                              "low": [99.0] * 23,
-                              "close": [100.0] * 23}, index=index)
+        frame = pd.DataFrame(
+            {"high": [101.0] * 23, "low": [99.0] * 23, "close": [100.0] * 23}, index=index
+        )
         frame.loc[index[20], ["high", "close"]] = [103.0, 102.0]
         frame.loc[index[22], ["low", "close"]] = [97.0, 98.0]
         state = donchian_direction(frame)

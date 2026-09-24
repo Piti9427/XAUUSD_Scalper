@@ -8,7 +8,7 @@ import gzip
 import json
 import math
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -31,7 +31,10 @@ def load_capture(folder: Path) -> tuple[dict, pd.DataFrame]:
     if not (folder / "COMPLETE").is_file():
         raise ValueError(f"capture lacks COMPLETE: {folder}")
     manifest = json.loads((folder / "manifest.json").read_text())
-    if manifest.get("schema") != "btg-shadow-ticks-v1" or manifest.get("order_api_called") is not False:
+    if (
+        manifest.get("schema") != "btg-shadow-ticks-v1"
+        or manifest.get("order_api_called") is not False
+    ):
         raise ValueError("invalid read-only capture manifest")
     if manifest.get("tick_file") != "ticks.csv.gz":
         raise ValueError("unexpected tick filename")
@@ -51,10 +54,14 @@ def load_capture(folder: Path) -> tuple[dict, pd.DataFrame]:
         for row in reader:
             stamp = int(row["time_msc"])
             bid, ask = float(row["bid"]), float(row["ask"])
-            if (stamp < int(start.timestamp() * 1000)
-                    or stamp > int(end.timestamp() * 1000)
-                    or not math.isfinite(bid) or not math.isfinite(ask)
-                    or bid <= 0 or ask < bid):
+            if (
+                stamp < int(start.timestamp() * 1000)
+                or stamp > int(end.timestamp() * 1000)
+                or not math.isfinite(bid)
+                or not math.isfinite(ask)
+                or bid <= 0
+                or ask < bid
+            ):
                 raise ValueError("invalid captured quote or timestamp")
             rows.append((stamp, bid, ask, int(row["flags"])))
     if not rows or len(rows) != manifest.get("tick_count"):
@@ -82,14 +89,22 @@ def record_signals(captures: list[Path], output: Path) -> dict:
         raise ValueError("at least one sealed capture is required")
     loaded = [load_capture(path) for path in captures]
     identity = [
-        (m["account"]["login"], m["account"]["server"],
-         m["account"]["currency"], m["account"]["trade_mode"],
-         m["symbol"], m["symbol_specification"], m["freeze_at"])
+        (
+            m["account"]["login"],
+            m["account"]["server"],
+            m["account"]["currency"],
+            m["account"]["trade_mode"],
+            m["symbol"],
+            m["symbol_specification"],
+            m["freeze_at"],
+        )
         for m, _ in loaded
     ]
     if any(value != identity[0] for value in identity[1:]):
         raise ValueError("capture account/symbol/freeze mismatch")
-    windows = sorted((utc_time(m["requested_start"]), utc_time(m["requested_end"])) for m, _ in loaded)
+    windows = sorted(
+        (utc_time(m["requested_start"]), utc_time(m["requested_end"])) for m, _ in loaded
+    )
     if any(right[0] < left[1] for left, right in zip(windows, windows[1:])):
         raise ValueError("overlapping capture windows")
     ticks = pd.concat([frame for _, frame in loaded], ignore_index=True).sort_values(
@@ -113,20 +128,29 @@ def record_signals(captures: list[Path], output: Path) -> dict:
         direction = signals(frame, spec).direction
         for bar_open, side in direction[direction != 0].items():
             available = bar_open + pd.Timedelta(minutes=spec.timeframe)
-            records.append({
-                "strategy": name,
-                "bar_open_utc": bar_open.isoformat(),
-                "signal_available_utc": available.isoformat(),
-                "side": "buy" if side == 1 else "sell",
-                "atr": float(frame.loc[bar_open, "atr"]),
-                "signal_only": True,
-                "qualification_status": "INCONCLUSIVE",
-            })
+            records.append(
+                {
+                    "strategy": name,
+                    "bar_open_utc": bar_open.isoformat(),
+                    "signal_available_utc": available.isoformat(),
+                    "side": "buy" if side == 1 else "sell",
+                    "atr": float(frame.loc[bar_open, "atr"]),
+                    "signal_only": True,
+                    "qualification_status": "INCONCLUSIVE",
+                }
+            )
     records.sort(key=lambda row: (row["signal_available_utc"], row["strategy"]))
     output.mkdir(parents=True)
     ledger = output / "signals.csv"
-    fields = ("strategy", "bar_open_utc", "signal_available_utc", "side", "atr",
-              "signal_only", "qualification_status")
+    fields = (
+        "strategy",
+        "bar_open_utc",
+        "signal_available_utc",
+        "side",
+        "atr",
+        "signal_only",
+        "qualification_status",
+    )
     with ledger.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
@@ -139,8 +163,11 @@ def record_signals(captures: list[Path], output: Path) -> dict:
         "frozen_signal_code_sha256": FROZEN_CODE_SHA256,
         "monitor_code_sha256": sha256(Path(__file__)),
         "captured_inputs": [
-            {"manifest_sha256": sha256(path / "manifest.json"),
-             "tick_sha256": m["tick_sha256"], "folder": str(path)}
+            {
+                "manifest_sha256": sha256(path / "manifest.json"),
+                "tick_sha256": m["tick_sha256"],
+                "folder": str(path),
+            }
             for path, (m, _) in zip(captures, loaded)
         ],
         "account": loaded[0][0]["account"],
@@ -166,8 +193,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = record_signals(args.capture, args.output)
-    print(json.dumps({key: result[key] for key in
-                      ("status", "symbol", "tick_count", "signal_count", "minute_gaps")}))
+    print(
+        json.dumps(
+            {
+                key: result[key]
+                for key in ("status", "symbol", "tick_count", "signal_count", "minute_gaps")
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

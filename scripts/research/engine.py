@@ -74,9 +74,7 @@ def simulate(m1, f, signal, spec, costs=Costs(), native=False, delay_minutes=0):
             expiry = available + pd.Timedelta(minutes=4 * spec.timeframe)
             end = idx.searchsorted(expiry)
             block = opening[start:end]
-            hits = np.flatnonzero(
-                block[:, 2] <= limit if d == 1 else block[:, 1] >= limit
-            )
+            hits = np.flatnonzero(block[:, 2] <= limit if d == 1 else block[:, 1] >= limit)
             busy_until = end - 1  # pending order reserves exposure even if never filled
             if not len(hits):
                 continue
@@ -106,9 +104,7 @@ def simulate(m1, f, signal, spec, costs=Costs(), native=False, delay_minutes=0):
             else:
                 exit_index, exit_price, reason = entry_index, a[3], "END_OF_SAMPLE"
         else:
-            exit_index, exit_price, reason = first_exit(
-                closing, entry_index, d, stop, target
-            )
+            exit_index, exit_price, reason = first_exit(closing, entry_index, d, stop, target)
         if not reason.startswith("TP"):
             exit_price -= d * costs.slippage
         nights = max(0, (idx[exit_index].date() - idx[entry_index].date()).days)
@@ -127,21 +123,15 @@ def simulate(m1, f, signal, spec, costs=Costs(), native=False, delay_minutes=0):
             accrued_nights = (
                 idx[entry_index:exit_index].normalize() - idx[entry_index].normalize()
             ).days
-            marks -= (
-                np.asarray(accrued_nights) * costs.units * costs.swap_per_unit_night
-            )
+            marks -= np.asarray(accrued_nights) * costs.units * costs.swap_per_unit_night
         marks = np.append(marks, balance + net)
         peaks = np.maximum.accumulate(np.r_[peak, marks])[1:]
         max_dd = max(max_dd, float(np.max(peaks - marks)))
         peak = max(peak, float(np.max(marks)))
         # Range-filled orders have unknown entry-minute extrema too.
         path = closing[entry_index if at_open else entry_index + 1 : exit_index]
-        adverse = (
-            d * (path[:, 2 if d == 1 else 1] - entry) if len(path) else np.array([0.0])
-        )
-        favorable = (
-            d * (path[:, 1 if d == 1 else 2] - entry) if len(path) else np.array([0.0])
-        )
+        adverse = d * (path[:, 2 if d == 1 else 1] - entry) if len(path) else np.array([0.0])
+        favorable = d * (path[:, 1 if d == 1 else 2] - entry) if len(path) else np.array([0.0])
         balance += net
         busy_until = exit_index
         trades.append(
