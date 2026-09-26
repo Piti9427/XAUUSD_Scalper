@@ -123,7 +123,7 @@ class B1FinalTests(unittest.TestCase):
         self.assertEqual(normalize_price(100.125,.25),100.25)
         self.assertEqual(normalize_price(100.375,.25),100.5)
 
-    def run_replay(self, balance=1000., quotes=None, state=None):
+    def run_replay(self, balance=1000., quotes=None, state=None, decisions=None):
         index = pd.date_range('2026-01-01',periods=2,freq='15min',tz='UTC')
         frame = pd.DataFrame({'atr':[1.,1.]},index=index)
         sig = pd.DataFrame({'direction':[1,1]},index=index)
@@ -135,7 +135,7 @@ class B1FinalTests(unittest.TestCase):
                   'trade_tick_size':.001,'point':.001,'swap_long':0.,'swap_short':0.,'swap_mode':1,'swap_rollover3days':3}
         state = state or RiskState(balance)
         log,stats = replay(times,bid,ask,frame,sig,Spec('B1-FINAL-v1','donchian',sl=2.5,tp=3.5),
-                           broker,balance,risk_state=state,price_normalizer=normalize_price,entry_window_ms=900000)
+                           broker,balance,risk_state=state,price_normalizer=normalize_price,entry_window_ms=900000,decision_log=decisions)
         return log,stats,state
 
     def test_restored_hwm_controls_sizing_and_reported_drawdown(self):
@@ -160,6 +160,19 @@ class B1FinalTests(unittest.TestCase):
         log,stats,state = self.run_replay(balance=100.)
         self.assertTrue(log.empty)
         self.assertEqual(stats['rejections']['risk_below_min'],2)
+
+    def test_decision_ledger_explains_rejections_without_changing_trades(self):
+        decisions=[]
+        log,stats,state=self.run_replay(balance=100.,decisions=decisions)
+        self.assertEqual(len(decisions),2)
+        self.assertEqual(decisions[0]['outcome'],'RISK_BELOW_MINIMUM_LOT')
+        self.assertGreater(decisions[0]['minimum_lot_stop_risk'],decisions[0]['risk_budget'])
+        self.assertEqual(decisions[0]['normalized_volume'],0.)
+        accepted=[]
+        observed,_,_=self.run_replay(decisions=accepted)
+        expected,_,_=self.run_replay()
+        pd.testing.assert_frame_equal(observed,expected)
+        self.assertEqual(sum(x['outcome']=='REPLAY_EXECUTED' for x in accepted),len(observed))
 
     def test_intratrade_hard_dd_does_not_panic_close_but_blocks_next_entry(self):
         log,stats,state = self.run_replay(quotes=[100.,60.,100.])

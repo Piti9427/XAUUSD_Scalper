@@ -9,7 +9,7 @@ import pandas as pd
 from .strategies import features, registry, signals
 
 
-def replay(times, bid, ask, frame, signal, spec, broker, balance, extra_cost_r=0.0, *, risk_pct=0.005, delay_ms=0, slippage=0.0, _validated_tape=False, _exit_cache=None, risk_state=None, price_normalizer=None, entry_window_ms=None):
+def replay(times, bid, ask, frame, signal, spec, broker, balance, extra_cost_r=0.0, *, risk_pct=0.005, delay_ms=0, slippage=0.0, _validated_tape=False, _exit_cache=None, risk_state=None, price_normalizer=None, entry_window_ms=None, decision_log=None):
     """One independent candidate/account; risk-flooring, no regime filter.
 
     Stops/targets rounded to observed tick grid. Historical leverage/margin and
@@ -44,14 +44,20 @@ def replay(times, bid, ask, frame, signal, spec, broker, balance, extra_cost_r=0
         rejected['hard_dd_stop']=0
     for i in np.flatnonzero(signal.direction.to_numpy()):
         when=frame.index[i]+pd.Timedelta(minutes=15)
+        decision={'signal_bar_open_utc':frame.index[i],'signal_time':when,
+                  'direction':int(signal.direction.iloc[i]),'atr':float(frame.atr.iloc[i]),
+                  'equity':balance,'outcome':'UNPROCESSED'}
+        if decision_log is not None: decision_log.append(decision)
         stamp=when.value//1_000_000+delay_ms
         j=int(np.searchsorted(times,stamp))
         missing_tick=j>=len(times)
         if not missing_tick:
             missing_tick=(times[j]-stamp>60000) if entry_window_ms is None else (times[j]-stamp>=entry_window_ms)
         if missing_tick:
+            decision['outcome']='TICK_GAP'
             rejected['tick_gap']+=1;continue
         if j<=busy:
+            decision['outcome']='POSITION_OPEN'
             rejected['busy']+=1;continue
         effective_risk=risk_pct
         entry_dd=None
@@ -60,19 +66,28 @@ def replay(times, bid, ask, frame, signal, spec, broker, balance, extra_cost_r=0
             effective_risk=risk_state.risk_pct
             entry_dd=risk_state.drawdown
             if effective_risk==0:
+                decision.update({'outcome':'HARD_DD_STOP','risk_pct':0.,'entry_dd_pct':entry_dd*100})
                 rejected['hard_dd_stop']+=1;continue
         direction=int(signal.direction.iloc[i]);entry=float(ask[j] if direction==1 else bid[j])+direction*slippage
         distance=float(frame.atr.iloc[i])*spec.sl
         stop=normalize(entry-direction*distance)
         distance=abs(entry-stop)
-        if not np.isfinite(distance) or distance<=0: continue
+        if not np.isfinite(distance) or distance<=0:
+            decision['outcome']='INVALID_STOP_DISTANCE';continue
         target=normalize(entry+direction*distance*spec.tp)
         budget=balance*effective_risk
         # Reserve extra scenario cost in admission budget; never clamp up to min.
         raw=budget/(distance*contract*(1+extra_cost_r))
         volume=min(broker['volume_max'],np.floor(raw/step+1e-10)*step)
+        decision.update({'entry_time':pd.Timestamp(int(times[j]),unit='ms',tz='UTC'),
+                         'entry':entry,'stop':stop,'target':target,'risk_pct':effective_risk,
+                         'risk_budget':budget,'raw_volume':raw,'normalized_volume':volume,
+                         'minimum_lot_stop_risk':distance*contract*minimum,
+                         'entry_dd_pct':None if entry_dd is None else entry_dd*100})
         if volume<minimum or distance*contract*volume*(1+extra_cost_r)>budget+1e-9:
+            decision['outcome']='RISK_BELOW_MINIMUM_LOT'
             rejected['risk_below_min']+=1;continue
+        decision['outcome']='REPLAY_EXECUTED'
         quotes=bid if direction==1 else ask
         cache_key=(j,direction,stop,target)
         cached=None if _exit_cache is None else _exit_cache.get(cache_key)

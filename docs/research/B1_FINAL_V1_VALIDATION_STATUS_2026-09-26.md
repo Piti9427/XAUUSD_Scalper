@@ -2,6 +2,8 @@
 
 **Decision: NO-GO for Demo trading deployment and real money.** Frozen contract and deterministic Python reference implemented; compiled MQL5 parity probe prepared. Full execution EA and broker validation remain incomplete. No order API invoked.
 
+Latest user-requested rerun: [current Demo backtest](B1_FINAL_DEMO_BACKTEST_2026-09-26.md), same $1,173.46 account only. Added per-signal admission ledger; 553 minimum-lot rejections independently verified, zero trades. Latest telemetry regression: 31 focused tests / 531 full-suite tests PASS. Earlier reference-build evidence below remains historical.
+
 ## Active contract
 
 Source: [user-provided handoff](B1_FINAL_v1_implementation_validation_handoff.md), SHA-256 `4905603e9a59412fbb7d05828256f4632c779cdc7277890af982615eed968932`.

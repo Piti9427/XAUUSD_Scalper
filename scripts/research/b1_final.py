@@ -194,20 +194,28 @@ def main():
     parity_input.to_csv(out/'parity_input.csv',index=False,float_format='%.17g')
     spec = Spec('B1-FINAL-v1','donchian',lookback=30,filters=('rsi',),sl=2.5,tp=3.5)
     rows = []
+    initial_equity = meta['account']['equity']
     for stage,(start,end) in STAGES.items():
         mask = (frame.index+pd.Timedelta(minutes=15) >= start) & (frame.index+pd.Timedelta(minutes=15) < end)
         sig = frame[['direction']].copy()
         sig.loc[~mask,'direction'] = 0
         a,b = np.searchsorted(times,[start.value//10**6,end.value//10**6])
-        state = RiskState(meta['account']['balance'])
+        state = RiskState(initial_equity)
+        decisions = []
         log,stats = replay(times[a:b],bid[a:b],ask[a:b],frame,sig,spec,meta['symbol_spec'],
                            state.equity,risk_state=state,price_normalizer=normalize_price,
-                           entry_window_ms=900000,_validated_tape=True)
+                           entry_window_ms=900000,_validated_tape=True,decision_log=decisions)
+        decision_frame = pd.DataFrame(decisions)
+        if not decision_frame.empty:
+            decision_frame['signal_id'] = [f'B1-FINAL-v1|{meta["symbol"]}|{row.signal_time.isoformat()}|{row.direction}'
+                                            for row in decision_frame.itertuples()]
+            if decision_frame.signal_id.duplicated().any(): raise RuntimeError('duplicate signal identity')
+        decision_frame.to_csv(out/f'{stage}_decisions.csv',index=False,float_format='%.17g')
         if log.empty:
             log = pd.DataFrame(columns=['entry_time','exit_time','net','r','risk_money','risk_budget'])
         log.to_csv(out/f'{stage}_ledger.csv',index=False,float_format='%.17g')
         state.save(out/f'{stage}_risk_state.json',config_hash)
-        rows.append({'stage':stage,**summarize(log,stats)})
+        rows.append({'stage':stage,'initial_equity':initial_equity,**summarize(log,stats)})
         print(f'{stage}: {len(log)} trades; DD {state.max_dd*100:.2f}%; hard stop {state.hard_stop}',flush=True)
     manifest = {'strategy_id':'B1-FINAL-v1','created_at_utc':pd.Timestamp.now(tz='UTC').isoformat(),
                 'config_sha256':config_hash,'capture_manifest_sha256':hashlib.sha256((args.capture/'manifest.json').read_bytes()).hexdigest(),
@@ -215,6 +223,7 @@ def main():
                                  ['scripts/research/b1_final.py','scripts/research/b1_d_ticks.py','scripts/research/strategies.py','scripts/research/b1_d_comprehensive.py','scripts/research/data.py']},
                 'artifacts_sha256':{x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in out.glob('*.csv')},
                 'broker_snapshot':meta['symbol_spec'],'account_snapshot':meta['account'],'ticks':len(times),
+                'initial_equity':initial_equity,'hypothetical_capital_override':False,
                 'results':rows,'tester_mode':'python_actual_bid_ask_tick_replay_NOT_MT5_Strategy_Tester',
                 'cost_model':'observed_spread_plus_present_swap_spec_UTC_rollover_scenario',
                 'limitations':['Historical dataset exposed; not untouched OOS','Actual commission/slippage/margin approval unknown',
