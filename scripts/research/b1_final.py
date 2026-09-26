@@ -22,6 +22,14 @@ def load_contract(path):
     return yaml.safe_load(raw)
 
 
+def resolve_initial_equity(account, simulated_deposit):
+    """Change only research capital, preserving actual broker account metadata."""
+    equity = account['equity'] if simulated_deposit is None else simulated_deposit
+    if not math.isfinite(equity) or equity <= 0:
+        raise ValueError('initial equity must be finite and positive')
+    return float(equity)
+
+
 def signal_direction(close, hh30, ll30, rsi, ready):
     if not ready or not all(math.isfinite(x) for x in (close, hh30, ll30, rsi)):
         return 0
@@ -163,7 +171,11 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--compare-mql',type=Path)
     p.add_argument('--reference-bars',type=Path)
+    p.add_argument('--initial-equity',type=float,help='Simulated backtest deposit; never modifies broker account')
     args = p.parse_args()
+    if args.initial_equity is not None:
+        try: resolve_initial_equity({},args.initial_equity)
+        except ValueError as exc: p.error(str(exc))
     if args.compare_mql is not None:
         if args.reference_bars is None or args.output.exists():
             p.error('comparison requires --reference-bars and new --output JSON path')
@@ -194,7 +206,7 @@ def main():
     parity_input.to_csv(out/'parity_input.csv',index=False,float_format='%.17g')
     spec = Spec('B1-FINAL-v1','donchian',lookback=30,filters=('rsi',),sl=2.5,tp=3.5)
     rows = []
-    initial_equity = meta['account']['equity']
+    initial_equity = resolve_initial_equity(meta['account'],args.initial_equity)
     for stage,(start,end) in STAGES.items():
         mask = (frame.index+pd.Timedelta(minutes=15) >= start) & (frame.index+pd.Timedelta(minutes=15) < end)
         sig = frame[['direction']].copy()
@@ -223,7 +235,7 @@ def main():
                                  ['scripts/research/b1_final.py','scripts/research/b1_d_ticks.py','scripts/research/strategies.py','scripts/research/b1_d_comprehensive.py','scripts/research/data.py']},
                 'artifacts_sha256':{x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in out.glob('*.csv')},
                 'broker_snapshot':meta['symbol_spec'],'account_snapshot':meta['account'],'ticks':len(times),
-                'initial_equity':initial_equity,'hypothetical_capital_override':False,
+                'initial_equity':initial_equity,'hypothetical_capital_override':args.initial_equity is not None,
                 'results':rows,'tester_mode':'python_actual_bid_ask_tick_replay_NOT_MT5_Strategy_Tester',
                 'cost_model':'observed_spread_plus_present_swap_spec_UTC_rollover_scenario',
                 'limitations':['Historical dataset exposed; not untouched OOS','Actual commission/slippage/margin approval unknown',

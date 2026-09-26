@@ -6,12 +6,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts.research.b1_final import RiskState, reference_bars, signal_direction, normalize_price, load_contract, compare_mql
+from scripts.research.b1_final import RiskState, reference_bars, signal_direction, normalize_price, load_contract, compare_mql, resolve_initial_equity
 from scripts.research.b1_d_ticks import replay
 from scripts.research.strategies import Spec
 
 
 class B1FinalTests(unittest.TestCase):
+    def test_explicit_simulated_deposit_preserves_broker_snapshot(self):
+        account={'equity':1173.46,'balance':1173.46}
+        self.assertEqual(resolve_initial_equity(account,None),1173.46)
+        self.assertEqual(resolve_initial_equity(account,100.),100.)
+        self.assertEqual(account,{'equity':1173.46,'balance':1173.46})
+        for invalid in (0.,-1.,float('nan'),float('inf')):
+            with self.subTest(invalid=invalid),self.assertRaises(ValueError):
+                resolve_initial_equity(account,invalid)
+
     def test_parity_gate_detects_indicator_signal_and_timestamp_drift(self):
         reference = reference_bars(self.bars())
         observed = reference[['atr','rsi','hh30','ll30','direction']].reset_index(drop=True)
