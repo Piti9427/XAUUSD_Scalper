@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-27
 **Status:** ready-for-agent — scope and ticket breakdown approved
-**Target:** Standard Demo identified by configured local credentials
+**Target:** locked test account `Standard_demo_100` (Standard Demo in the private `.env`; broker display name `Standard_demo_100$`)
 **Delivery:** executable MQL5 EA, MT5 Tester evidence, frozen release package
 **Trading authorization:** this document does not enable Demo orders or authorize real-money trading.
 
@@ -65,10 +65,10 @@
 
 ### Account, capital and architecture
 
-- The latest decision uses Standard Demo from configured local credentials. Standard Cent exploration is superseded.
-- Verify expected login/server locally, Demo trade mode, hedging mode, exact symbol and current specification. Account identity and secrets stay out of published documentation and artifacts intended for sharing.
+- The locked test account is `Standard_demo_100`: the Standard Demo whose credentials are only in the private `.env`. Broker display name is `Standard_demo_100$`. Standard Cent and the previous ~$1,173.46 Demo are superseded for new target-account work.
+- Verify expected login/server locally, Demo trade mode, hedging mode, exact symbol and current specification. Account identity and secrets stay out of published documentation and artifacts intended for sharing. A 2026-09-27 04:32 UTC read-only probe matched this identity: Demo, hedging, USD, leverage 1:1000, equity and free margin 100.00, floating PnL 0, symbol `XAUUSDm`, no exposure. Refresh that snapshot before treating equity as still $100.
 - The known target symbol is XAUUSDm; confirm it from the target account rather than substituting another gold symbol. Configuration currently identifies credentials but is not proof of successful connection or current broker identity.
-- Use actual broker equity for account-constrained scenarios. Retain $100 as a separately labelled hypothetical research deposit; never change broker balance, deposit or risk to manufacture trades.
+- Use this account's actual broker equity for account-constrained scenarios. New target-account Tester deposits use that equity in whole dollars (100 on the 2026-09-27 snapshot). The labelled hypothetical $100 deposit stays a separate research label and must not overwrite a later broker balance. Never change broker balance, deposit or risk to manufacture trades.
 - Implement the B1 Tester EA as a separate path. Existing SMC Python Demo Execution Path remains governed by its accepted architecture decision; no replacement or second concurrent trading owner is deployed through this PRD.
 - Default executable order mode is Strategy Tester only. Any later Demo activation requires its documented qualification gates and a separately authorized activation. Real-account order sending remains disabled.
 

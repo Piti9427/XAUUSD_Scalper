@@ -2,7 +2,11 @@
 
 **PRD:** [Finalize B1 for Standard Demo](../specs/b1-final-standard-demo-prd.md) · **Plan:** [implementation plan](../plans/b1-final-standard-demo.md) · **Runbook:** [B1-FINAL runbook](../ops/B1_FINAL_RUNBOOK.md)
 
-## Verdicts (separate by design)
+**Correction update (same day):** The table below records historical commit `6b39e89`, not current worktree qualification. Review found risk/recovery/outbox and validator defects. Corrections now pass 585 Python tests, 127 MQL checks and a target-equity Tester rerun; complete exit replay/stress and target-account fill acceptance remain open. Do not carry `IMPLEMENTATION_VERIFIED` forward as proof that all eight tickets are complete. Current evidence, state-schema-2 compatibility and remaining work: [fix ledger](../updates/B1_FINAL_FIXES_2026-09-27.md).
+
+**Locked test account (2026-09-27 11:40 UTC+7):** `Standard_demo_100` (broker display name `Standard_demo_100$`), leverage 1:1000, equity and free margin 100.00 USD, floating PnL 0. Read-only probe matched the private `.env` identity and returned `ACCOUNT_BLOCKED` at a 1% budget of $1.00 versus a cheapest 0.01-lot stop of about $15.59. New target-account Tester runs use whole-dollar deposit 100. The $1,173.46 figures and `--deposit 1173.46` command below reproduce the previous Demo account. Login, server and password stay in `.env` only.
+
+## Historical verdicts at 6b39e89 (separate by design)
 
 | Area | Verdict |
 |---|---|

@@ -13,8 +13,8 @@
 
 - B1 เดิม: M15, Donchian30, RSI14 75/25, SL 2.5ATR, TP 3.5R, maximum one position.
 - Risk tiers 1/0.75/0.5/0.25%; equity-HWM DD >=12% latches stop-new-entries.
-- ใช้ actual Demo equity ใน account-constrained run; $100 เป็น hypothetical scenario แยก ห้ามแทนที่ broker balance.
-- เป้าหมาย Standard Demo supersedes Cent. Verify credentials/identity privately; no credentials or account numbers in these artifacts.
+- บัญชีทดสอบที่ล็อกแล้วคือ `Standard_demo_100` (Standard Demo ใน `.env`, ชื่อบนโบรกเกอร์ `Standard_demo_100$`). Account-constrained run ใช้ equity จริงของบัญชีนี้. Snapshot 2026-09-27 คือ $100, leverage 1:1000; Tester deposit ของรอบบัญชีนี้เป็นจำนวนเต็ม 100. Hypothetical $100 ยังเป็นป้ายวิจัยแยก และห้ามแทนที่ broker balance ถ้า equity เปลี่ยนทีหลัง.
+- เป้าหมายนี้ supersedes Cent และ Demo เก่าประมาณ $1,173.46. Verify credentials/identity privately; no credentials or account numbers in these artifacts.
 - Original frozen version remains intact. Only proposed strategy adjustment is one-shot cost-covering SL after +2R in a separate version.
 
 ## Execution path

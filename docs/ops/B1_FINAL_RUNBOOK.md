@@ -2,6 +2,8 @@
 
 Scope: `mql5/B1FinalEA.mq5` in the MT5 Strategy Tester on this Mac (Wine). Order execution outside the Tester is disabled in this release. The EA fails `OnInit` on a live chart and on any account that is not Demo. Do not modify the code to bypass this without the separately authorized Demo activation gates. The existing SMC runtime is a separate owner and is not replaced.
 
+Current correction status: [2026-09-27 fix ledger](../updates/B1_FINAL_FIXES_2026-09-27.md). State schema is now 2: schema-1 files are preserved and rejected, not silently migrated or bootstrapped. Do not delete old state to reset HWM. Legacy release evidence is historical and does not verify changed sources.
+
 Release state and verdicts: [B1-FINAL release package](../research/B1_FINAL_RELEASE_2026-09-27.md).
 
 ## Before any run
@@ -16,6 +18,8 @@ Release state and verdicts: [B1-FINAL release package](../research/B1_FINAL_RELE
    Pass `--commission-per-lot`, `--exit-fee-per-lot` and `--admission-reserve-r` with the same values as the EA inputs, so the report sizes exactly like the EA. Run it on a weekday while the market is open: only a fresh tick can show `utc_offset_status=VERIFIED`.
 
    The wrapper launches the terminal, and the terminal keeps the wrapper's output pipe open. Once `preflight_snapshot_*.json` exists, stop the wrapper. `UNVERIFIED` means the connection failed; it is not an account verdict. `BLOCKED` lists reasons such as identity mismatch, not Demo, not hedging, symbol or spec missing, or foreign exposure. `ACCOUNT_BLOCKED` in a scenario means the minimum lot exceeds the risk budget. Never raise risk, deposit or lot size to get past it.
+
+   The locked test account is `Standard_demo_100` in the private `.env` (broker display name `Standard_demo_100$`). Target-account Tester deposits use that account's whole-dollar equity. The 2026-09-27 snapshot is deposit `100`. Deposit `1173` belongs to the previous Demo and is not this account.
 2. **Close the terminal.** MT5 allows one instance per data folder:
 
    ```sh
@@ -27,7 +31,7 @@ Release state and verdicts: [B1-FINAL release package](../research/B1_FINAL_RELE
 
 ```sh
 python3 -m scripts.ops.mt5_wine_tester run B1FinalEA \
-  --sources B1FinalCore.mqh B1FinalState.mqh B1FinalEngine.mqh B1FinalEA.mq5 \
+  --sources B1FinalCore.mqh B1FinalState.mqh B1FinalEngine.mqh B1FinalOutbox.mqh B1FinalEA.mq5 \
   --output data/b1_final_release/tester/<new-name> --model real_ticks \
   --start 2026.05.14 --end 2026.09.26 --deposit <deposit> \
   --param ExpectedLogin=env:XAUUSD_MT5_LOGIN --param ExpectedServer=env:XAUUSD_MT5_SERVER \
@@ -45,7 +49,7 @@ Check the run afterwards:
 .venv/bin/python -m scripts.research.b1_final_release --run data/b1_final_release/tester/<new-name> --output <new>.json
 ```
 
-Require `signal_parity.passed` and `reconciliation.passed`. Read `admissions` for the reason behind any zero-trade result.
+Require `signal_parity.passed`, per-position `reconciliation.passed`, trusted state, no incident, zero outbox failures and zero pending confirmed events. Post-hoc sensitivity output cannot qualify replay/stress. Consumers persist `SENDING` before submission; unresolved sends become `DELIVERY_UNKNOWN`, never automatic resend. Only explicit `NotSentError` proves a retry is safe. Read `admissions` for the reason behind any zero-trade result.
 
 ## Stop
 
