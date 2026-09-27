@@ -4,7 +4,37 @@
 #define B1_FINAL_STATE
 #include "B1FinalCore.mqh"
 
-#define B1_STATE_SCHEMA 1
+#define B1_STATE_SCHEMA 2
+
+// Nested documents must not introduce newlines into the outer key=value state.
+string B1Hex(const string text)
+{
+   string out="",digits="0123456789abcdef";
+   for(int i=0;i<StringLen(text);i++)
+   {
+      int c=(int)StringGetCharacter(text,i);
+      for(int shift=12;shift>=0;shift-=4) out+=StringSubstr(digits,(c>>shift)&15,1);
+   }
+   return out;
+}
+
+bool B1Unhex(const string text,string &out)
+{
+   out="";
+   if(StringLen(text)%4!=0) return false;
+   for(int i=0;i<StringLen(text);i+=4)
+   {
+      int c=0;
+      for(int j=0;j<4;j++)
+      {
+         int n=StringFind("0123456789abcdef",StringSubstr(text,i+j,1));
+         if(n<0) return false;
+         c=(c<<4)|n;
+      }
+      out+=ShortToString((ushort)c);
+   }
+   return true;
+}
 
 union B1Bits { double d; long l; };
 

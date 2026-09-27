@@ -2,6 +2,7 @@
 #property version "1.100"
 #property description "B1-FINAL execution EA. Order execution is Strategy Tester only in this release."
 #include "B1FinalEngine.mqh"
+#include "B1FinalOutbox.mqh"
 
 input long       ExpectedLogin=0;
 input string     ExpectedServer="";
@@ -117,6 +118,7 @@ public:
          if(t==0 || PositionGetString(POSITION_SYMBOL)!=sym || PositionGetInteger(POSITION_MAGIC)!=magic) continue;
          int n=ArraySize(out); ArrayResize(out,n+1);
          out[n].ticket=t;
+         out[n].identifier=(ulong)PositionGetInteger(POSITION_IDENTIFIER);
          out[n].direction=PositionGetInteger(POSITION_TYPE)==POSITION_TYPE_BUY ? 1 : -1;
          out[n].volume=PositionGetDouble(POSITION_VOLUME); out[n].price_open=PositionGetDouble(POSITION_PRICE_OPEN);
          out[n].sl=PositionGetDouble(POSITION_SL); out[n].tp=PositionGetDouble(POSITION_TP);
@@ -172,6 +174,10 @@ public:
       if(position==0 || !HistorySelectByPosition(position)) return false;
       double volume=0.0,notional=0.0;
       filled.ticket=position; filled.swap=0.0; filled.comment=c; filled.sl=0.0; filled.tp=0.0; filled.direction=0;
+      filled.identifier=position;
+      B1Position owned[];
+      int owned_count=OwnedPositions(owned);
+      for(int i=0;i<owned_count;i++) if(owned[i].identifier==position) filled.ticket=owned[i].ticket;
       for(int i=0;i<HistoryDealsTotal();i++)
       {
          ulong d=HistoryDealGetTicket(i);
@@ -252,67 +258,6 @@ public:
       return GlobalVariableSetOnCondition(lock_name,lock_token,0.0);
    }
    virtual bool OwnerLock() { return GlobalVariableCheck(lock_name) && GlobalVariableGet(lock_name)==lock_token; }
-};
-
-string JsonEscape(string s)
-{
-   StringReplace(s,"\\","\\\\"); StringReplace(s,"\"","\\\"");
-   return s;
-}
-
-// Engine numbers come from IntegerToString/DoubleToString: optional '-', digits, at most one '.'.
-bool IsNumber(const string s)
-{
-   int n=StringLen(s), digits=0, dots=0;
-   for(int i=0;i<n;i++)
-   {
-      ushort c=StringGetCharacter(s,i);
-      if(c>='0' && c<='9') digits++;
-      else if(c=='.' && dots==0 && digits>0) dots++;
-      else if(!(c=='-' && i==0)) return false;
-   }
-   return digits>0 && StringGetCharacter(s,n-1)!='.';
-}
-
-string IsoUtc(const long utc_msc)
-{
-   string t=TimeToString((datetime)(utc_msc/1000),TIME_DATE|TIME_SECONDS);
-   StringReplace(t,".","-"); StringReplace(t," ","T");
-   return t+"."+StringFormat("%03d",(int)(utc_msc%1000))+"Z";
-}
-
-// Durable append-only outbox; each line is flushed and closed before returning.
-class CB1JsonlSink : public CB1Sink
-{
-public:
-   string file,version,symbol;
-   int    failed;
-   CB1JsonlSink() { failed=0; }
-   virtual void Emit(const string id,const string type,const bool confirmed,const long utc,CB1Doc &f)
-   {
-      string pub="",prv="";
-      for(int i=0;i<ArraySize(f.keys);i++)
-      {
-         string v=IsNumber(f.values[i]) ? f.values[i] : "\""+JsonEscape(f.values[i])+"\"";
-         if(StringFind(f.keys[i],"private_")==0)
-            prv+=(prv=="" ? "" : ",")+"\""+StringSubstr(f.keys[i],8)+"\":"+v;
-         else pub+=(pub=="" ? "" : ",")+"\""+JsonEscape(f.keys[i])+"\":"+v;
-      }
-      string line="{\"event_id\":\""+JsonEscape(id)+"\",\"type\":\""+type+"\",\"confirmed\":"+(confirmed ? "true" : "false")+
-                  ",\"utc_ms\":"+IntegerToString(utc)+",\"utc\":\""+IsoUtc(utc)+"\",\"strategy\":\"B1-FINAL\",\"version\":\""+version+
-                  "\",\"symbol\":\""+symbol+"\",\"fields\":{"+pub+"},\"private\":{"+prv+"}}";
-      int h=FileOpen(file,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ);
-      if(h==INVALID_HANDLE)
-      {
-         // Execution must not depend on the outbox; the journal keeps the lost event.
-         failed++;
-         Print("OUTBOX_WRITE_FAILED ",GetLastError()," ",line);
-         return;
-      }
-      FileSeek(h,0,SEEK_END);
-      FileWriteString(h,line+"\n");
-      FileFlush(h); FileClose(h);
-   }
 };
 
 CB1MtBroker   g_broker;
@@ -455,6 +400,7 @@ void OnDeinit(const int reason)
       f.Set("max_dd",B1F(g_engine.max_dd)); f.SetL("dd_stop",g_engine.dd_stop); f.SetL("incident",g_engine.incident);
       f.SetL("trusted",g_engine.trusted); f.Set("block_reason",g_engine.block_reason);
       f.SetL("outbox_write_failures",g_sink.failed);
+      f.SetL("pending_confirmed_events",ArraySize(g_engine.pending_events));
       g_engine.Emit("RUN_SUMMARY",false,"deinit",f);
    }
    if(GlobalVariableCheck(g_broker.lock_name) && GlobalVariableGet(g_broker.lock_name)==g_broker.lock_token)

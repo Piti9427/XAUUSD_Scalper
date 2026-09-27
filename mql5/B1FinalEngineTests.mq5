@@ -3,6 +3,7 @@
 #property description "B1-FINAL engine fault-injection tests against a fake broker. Tester only; no orders."
 #property tester_file "B1_FINAL_parity_input.csv"
 #include "B1FinalEngine.mqh"
+#include "B1FinalOutbox.mqh"
 
 input string ResultFile="B1_engine_tests.csv";
 
@@ -16,6 +17,7 @@ public:
    B1Position pos[];
    double pos_commission[];
    ulong  closed_ticket[];
+   ulong  closed_identifier[];
    string closed_comment[];
    B1CloseDeal closed[];
    B1Position closed_entry[];
@@ -83,18 +85,19 @@ public:
    }
    virtual bool EntryCommission(const ulong position,double &cost)
    {
-      for(int i=0;i<ArraySize(pos);i++) if(pos[i].ticket==position) { cost=pos_commission[i]; return true; }
+      for(int i=0;i<ArraySize(pos);i++) if(pos[i].identifier==position) { cost=pos_commission[i]; return true; }
       return false;
    }
    virtual bool CloseDeal(const ulong position,B1CloseDeal &deal)
    {
-      for(int i=0;i<ArraySize(closed_ticket);i++) if(closed_ticket[i]==position) { deal=closed[i]; return true; }
+      for(int i=0;i<ArraySize(closed_identifier);i++) if(closed_identifier[i]==position) { deal=closed[i]; return true; }
       return false;
    }
    ulong Open(const int dir,const double v,const double price,const double sl,const double tp,const string c)
    {
       int n=ArraySize(pos); ArrayResize(pos,n+1); ArrayResize(pos_commission,n+1);
       pos[n].ticket=next_ticket++; pos[n].direction=dir; pos[n].volume=v; pos[n].price_open=price+dir*slippage;
+      pos[n].identifier=pos[n].ticket;
       pos[n].sl=omit_sl ? 0.0 : sl; pos[n].tp=tp; pos[n].swap=0.0; pos[n].comment=rewrite_comment ? "broker-rewritten" : c;
       pos_commission[n]=commission_per_lot*v; balance-=pos_commission[n];
       return pos[n].ticket;
@@ -127,6 +130,7 @@ public:
    {
       int n=ArraySize(closed_ticket);
       ArrayResize(closed_ticket,n+1); ArrayResize(closed_comment,n+1); ArrayResize(closed,n+1); ArrayResize(closed_entry,n+1);
+      ArrayResize(closed_identifier,n+1); closed_identifier[n]=pos[i].identifier;
       double profit=pos[i].direction*(price-pos[i].price_open)*contract*pos[i].volume;
       closed_ticket[n]=pos[i].ticket; closed_comment[n]=pos[i].comment; closed_entry[n]=pos[i];
       closed[n].price=price; closed[n].profit=profit; closed[n].commission=0.0; closed[n].swap=pos[i].swap;
@@ -160,13 +164,21 @@ public:
 class CFakeSink : public CB1Sink
 {
 public:
+   bool fail_confirmed;
+   CB1MemoryStore *fail_checkpoint;
+   string fail_checkpoint_type;
+   CFakeSink() { fail_confirmed=false; fail_checkpoint=NULL; fail_checkpoint_type=""; }
    string ids[],types[],bodies[];
    bool   confirmed[];
-   virtual void Emit(const string id,const string type,const bool conf,const long utc,CB1Doc &f)
+   virtual bool Emit(const string id,const string type,const bool conf,const long utc,CB1Doc &f)
    {
+      if(conf && fail_confirmed) return false;
+      if(conf) for(int i=0;i<ArraySize(ids);i++) if(ids[i]==id) return true;
       int n=ArraySize(ids);
       ArrayResize(ids,n+1); ArrayResize(types,n+1); ArrayResize(bodies,n+1); ArrayResize(confirmed,n+1);
       ids[n]=id; types[n]=type; bodies[n]=f.Body(); confirmed[n]=conf;
+      if(conf && type==fail_checkpoint_type && fail_checkpoint!=NULL) fail_checkpoint.fail_save=true;
+      return true;
    }
    int Count(const string type) { int c=0; for(int i=0;i<ArraySize(types);i++) if(types[i]==type) c++; return c; }
    string Last(const string type) { for(int i=ArraySize(types)-1;i>=0;i--) if(types[i]==type) return bodies[i]; return ""; }
@@ -338,6 +350,80 @@ void TestRejectedAndAmbiguousSends()
            "late volume growth re-verified against budget"); }
 }
 
+class CShortWriteSink : public CB1JsonlSink
+{
+public:
+   virtual uint WriteRecord(const int handle,const string record) { return FileWriteString(handle,StringSubstr(record,0,12)); }
+};
+
+void TestRealOutboxAdapter()
+{
+   g_test="real_outbox_adapter";
+   string path="B1_review_outbox.jsonl"; FileDelete(path);
+   CB1JsonlSink sink; sink.file=path; sink.version="B1-FINAL-v1"; sink.symbol="XAUUSDm";
+   CB1Doc f; f.Set("request_id","test"); f.Set("net_profit","12.00");
+   Check(sink.Emit("close-1","CLOSE_CONFIRMED",true,Msc(0),f),"real sink appends confirmed record");
+   Check(sink.Emit("close-1","CLOSE_CONFIRMED",true,Msc(0),f),"real sink acknowledges identical replay without append");
+   int h=FileOpen(path,FILE_READ|FILE_TXT|FILE_ANSI); int lines=0;
+   while(h!=INVALID_HANDLE && !FileIsEnding(h)) if(FileReadString(h)!="") lines++;
+   if(h!=INVALID_HANDLE) FileClose(h);
+   Check(lines==1,"append-before-checkpoint crash replay produces one JSONL record");
+   f.Set("net_profit","13.00");
+   Check(!sink.Emit("close-1","CLOSE_CONFIRMED",true,Msc(0),f),"same event ID with changed payload fails closed");
+   h=FileOpen(path,FILE_READ|FILE_TXT|FILE_ANSI);
+   Check(!sink.Emit("close-2","CLOSE_CONFIRMED",true,Msc(1),f),"locked output fails append without acknowledgment");
+   if(h!=INVALID_HANDLE) FileClose(h);
+   FileDelete(path);
+   CShortWriteSink short_sink; short_sink.file=path; short_sink.version=sink.version; short_sink.symbol=sink.symbol;
+   Check(!short_sink.Emit("close-3","CLOSE_CONFIRMED",true,Msc(2),f) && short_sink.failed==1,"short write increments failure counter and returns no acknowledgment");
+   Check(!sink.Emit("close-4","CLOSE_CONFIRMED",true,Msc(3),f),"torn JSONL tail blocks further append and preserves evidence");
+   FileDelete(path);
+   h=FileOpen(path,FILE_WRITE|FILE_TXT|FILE_ANSI);
+   FileWriteString(h,"{\"event_id\":\"unterminated\"}"); FileClose(h);
+   Check(!sink.Emit("close-5","CLOSE_CONFIRMED",true,Msc(4),f),"complete JSON without line terminator is not acknowledged or appended behind");
+   FileDelete(path);
+}
+
+void TestReviewRegressions()
+{
+   g_test="review_regressions";
+   { CRig r; r.b.send_mode=1; r.b.cancel_fail=true; r.e.Init(); r.Arm(1,2.0); r.Tick(100.0,0);
+     double entry=r.e.pos_entry;
+     r.b.pos[0].volume=r.e.req_volume; r.b.pos[0].price_open=entry+3.0;
+     r.b.pos_commission[0]=7.0*r.b.pos[0].volume;
+     r.Tick(103.0,1);
+     Check(r.e.pos_entry==entry+3.0 && r.e.pos_r==MathAbs(entry+3.0-r.e.req_sl),"late partial fill refreshes weighted entry and initial R");
+     Check(r.e.pos_commission==7.0*r.e.pos_volume,"late partial fill refreshes cumulative entry commission");
+     Check(r.e.incident && r.b.closes==1,"late adverse partial fill closes over-budget owned exposure"); }
+   { CRig r; r.e.Init(); r.Arm(1,2.0); r.Tick(100.0,0);
+     r.b.pos[0].ticket+=100; r.Tick(100.0,1);
+     Check(!r.e.incident && r.e.pos_ticket==r.b.pos[0].ticket,"server ticket replacement retains owned position identity");
+     r.b.CloseAt(0,r.e.pos_tp,"TP"); r.Tick(100.0,2);
+     Check(r.s.Count("CLOSE_CONFIRMED")==1,"history close uses stable position identifier after ticket change"); }
+   { CRig r; r.e.Init(); r.Arm(1,2.0); r.Tick(100.0,0);
+     r.s.fail_confirmed=true; r.Tick(r.e.pos_tp+0.1,1);
+     Check(r.s.Count("CLOSE_CONFIRMED")==0,"failed producer append does not fake delivered close");
+     r.s.fail_confirmed=false;
+     CB1Engine e2; r.Wire(e2); e2.Init(); r.b.Tick(100.0,100.2,Msc(2)); e2.OnTick();
+     Check(r.s.Count("CLOSE_CONFIRMED")==1,"restart retries durable pending confirmed close");
+     e2.OnTick(); Check(r.s.Count("CLOSE_CONFIRMED")==1,"acknowledged close not repeated on later ticks"); }
+   { CRig r; r.e.Init(); r.Arm(1,2.0); r.Tick(100.0,0);
+     r.s.fail_checkpoint=GetPointer(r.m); r.s.fail_checkpoint_type="CLOSE_CONFIRMED";
+     r.Tick(r.e.pos_tp+0.1,1);
+     double closed_day_r=r.e.day_r;
+     Check(!r.e.trusted && r.s.Count("CLOSE_CONFIRMED")==1,"append succeeds but checkpoint failure blocks new entries");
+     r.m.fail_save=false; r.s.fail_checkpoint=NULL;
+     CB1Engine e2; r.Wire(e2); e2.Init(); r.b.Tick(100.0,100.2,Msc(2)); e2.OnTick();
+     Check(e2.trusted && ArraySize(e2.pending_events)==0 && r.s.Count("CLOSE_CONFIRMED")==1,"append-before-ack replay deduplicates and clears durable queue");
+     Check(e2.day_r==closed_day_r && e2.pos_ticket==0,"restart does not apply closed trade R twice"); }
+   { CRig r; r.e.Init(); r.b.balance=97010.0;
+     CB1Engine e2; r.Wire(e2); e2.Init(); e2.ObserveEquity(r.b.balance);
+     Check(e2.RiskPct(r.b.balance)==r.e.RiskPct(r.b.balance) && e2.RiskPct(r.b.balance)==0.01,"exact HWM keeps restart risk just above 3pct boundary"); }
+   { CRig r; r.e.Init(); CB1Doc old; old.Parse(r.m.text); old.SetL("schema",1); r.m.text=old.Serialize();
+     string evidence=r.m.text; CB1Engine e2; r.Wire(e2); e2.Init();
+     Check(!e2.trusted && r.m.text==evidence,"old schema rejected and preserved without optimistic HWM migration"); }
+}
+
 void TestRestartRecovery()
 {
    g_test="restart_recovery";
@@ -388,7 +474,7 @@ void TestStateIntegrity()
      double hwm=r.e.hwm, persisted=r.e.saved_hwm;
      Check(hwm==110000.0 && persisted>=hwm,"persisted HWM never below true HWM");
      CB1Engine e2; r.Wire(e2); e2.Init();
-     Check(e2.trusted && e2.hwm>=hwm && e2.RiskPct(96000.0)<=r.e.RiskPct(96000.0),"restart never lowers HWM or raises risk");
+     Check(e2.trusted && e2.hwm==hwm && e2.RiskPct(96000.0)==r.e.RiskPct(96000.0),"restart preserves exact HWM and risk tier");
      string saved=r.m.text;
      r.m.text=saved; StringSetCharacter(r.m.text,10,'9');
      CB1Engine e3; r.Wire(e3); e3.Init();
@@ -620,6 +706,8 @@ int OnInit()
    TestSignalTimingAndDuplicates();
    TestAdmissionRejections();
    TestRejectedAndAmbiguousSends();
+   TestRealOutboxAdapter();
+   TestReviewRegressions();
    TestRestartRecovery();
    TestStateIntegrity();
    TestDrawdownTiers();

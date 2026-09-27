@@ -14,7 +14,6 @@ enum B1ExitState { B1_EX_NONE=0, B1_EX_ARMED=1, B1_EX_REQUESTED=2, B1_EX_CONFIRM
 #define B1_SL_ATR 2.5
 #define B1_TARGET_R 3.5
 #define B1_TRIGGER_R 2.0
-#define B1_HWM_PERSIST_MARGIN 0.0005
 
 struct B1Spec
 {
@@ -26,6 +25,7 @@ struct B1Spec
 struct B1Position
 {
    ulong  ticket;
+   ulong  identifier;
    int    direction;
    double volume,price_open,sl,tp,swap;
    string comment;
@@ -66,8 +66,14 @@ class CB1Sink
 {
 public:
    // `confirmed` marks broker-confirmed execution; everything else is diagnostic.
-   virtual void Emit(const string event_id,const string type,const bool confirmed,
+   virtual bool Emit(const string event_id,const string type,const bool confirmed,
                      const long utc_msc,CB1Doc &fields)=0;
+};
+
+struct B1PendingEvent
+{
+   string id,type,fields;
+   long utc_msc;
 };
 
 struct B1Config
@@ -117,6 +123,7 @@ public:
    long       req_msc;
    ulong      req_order;
    ulong      pos_ticket;
+   ulong      pos_identifier;
    int        pos_dir;
    double     pos_volume,pos_entry,pos_sl,pos_tp,pos_r,pos_intended_r,pos_commission;
    int        exit_state;
@@ -124,6 +131,7 @@ public:
    long       exit_armed_msc,exit_request_msc;
    long       day,remainder_open;
    double     day_r;
+   B1PendingEvent pending_events[];
    // runtime
    double     last_bid,last_ask;
    long       last_msc;
@@ -139,6 +147,7 @@ public:
       sig_bar=0; sig_dir=0; sig_atr=0.0;
       ClearRequest(); ClearPosition();
       day=0; day_r=0.0; remainder_open=0;
+      ArrayResize(pending_events,0);
       last_bid=0.0; last_ask=0.0; last_msc=0;
    }
 
@@ -146,11 +155,11 @@ public:
    { req_status=B1_REQ_NONE; req_id=""; req_dir=0; req_volume=0; req_quote=0; req_sl=0; req_tp=0; req_budget=0; req_msc=0; req_order=0; }
 
    bool IsRequestPosition(const B1Position &p) const
-   { return req_id!="" && (p.comment==req_id || (req_order!=0 && p.ticket==req_order)); }
+   { return req_id!="" && (p.comment==req_id || (req_order!=0 && (p.ticket==req_order || p.identifier==req_order))); }
 
    void ClearPosition()
    {
-      pos_ticket=0; pos_dir=0; pos_volume=0; pos_entry=0; pos_sl=0; pos_tp=0; pos_r=0; pos_intended_r=0;
+      pos_ticket=0; pos_identifier=0; pos_dir=0; pos_volume=0; pos_entry=0; pos_sl=0; pos_tp=0; pos_r=0; pos_intended_r=0;
       pos_commission=0; exit_state=B1_EX_NONE; exit_sl=0; exit_armed_msc=0; exit_request_msc=0;
    }
 
@@ -162,7 +171,30 @@ public:
    void Emit(const string type,const bool confirmed,const string ref,CB1Doc &f)
    {
       if(sink==NULL) return;
-      sink.Emit(EventId(type,ref),type,confirmed,UtcMsc(last_msc),f);
+      if(!confirmed) { sink.Emit(EventId(type,ref),type,false,UtcMsc(last_msc),f); return; }
+      string id=EventId(type,ref);
+      for(int i=0;i<ArraySize(pending_events);i++) if(pending_events[i].id==id) return;
+      int n=ArraySize(pending_events); ArrayResize(pending_events,n+1);
+      pending_events[n].id=id; pending_events[n].type=type;
+      pending_events[n].fields=f.Serialize(); pending_events[n].utc_msc=UtcMsc(last_msc);
+      // Execution transition and event intent are saved together before append.
+      if(Save()) FlushConfirmed();
+   }
+
+   void FlushConfirmed()
+   {
+      if(!trusted || sink==NULL) return;
+      while(ArraySize(pending_events)>0)
+      {
+         CB1Doc f;
+         if(!f.Parse(pending_events[0].fields)) { Untrust("PENDING_EVENT_CORRUPT"); return; }
+         if(!sink.Emit(pending_events[0].id,pending_events[0].type,true,pending_events[0].utc_msc,f)) return;
+         int n=ArraySize(pending_events);
+         for(int i=1;i<n;i++) pending_events[i-1]=pending_events[i];
+         ArrayResize(pending_events,n-1);
+         // Sink must deduplicate IDs if append succeeds but this checkpoint fails.
+         if(!Save()) return;
+      }
    }
 
    void Diag(const string type,const string ref,const string reason)
@@ -185,11 +217,20 @@ public:
       d.SetD("req_tp",req_tp); d.SetD("req_budget",req_budget); d.SetL("req_msc",req_msc);
       d.SetL("req_order",(long)req_order);
       d.SetL("pos_ticket",(long)pos_ticket); d.SetL("pos_dir",pos_dir); d.SetD("pos_volume",pos_volume);
+      d.SetL("pos_identifier",(long)pos_identifier);
       d.SetD("pos_entry",pos_entry); d.SetD("pos_sl",pos_sl); d.SetD("pos_tp",pos_tp); d.SetD("pos_r",pos_r);
       d.SetD("pos_intended_r",pos_intended_r); d.SetD("pos_commission",pos_commission);
       d.SetL("exit_state",exit_state); d.SetD("exit_sl",exit_sl); d.SetL("exit_armed_msc",exit_armed_msc);
       d.SetL("exit_request_msc",exit_request_msc);
       d.SetL("day",day); d.SetD("day_r",day_r);
+      d.SetL("pending_count",ArraySize(pending_events));
+      for(int i=0;i<ArraySize(pending_events);i++)
+      {
+         CB1Doc event;
+         event.Set("id",pending_events[i].id); event.Set("type",pending_events[i].type);
+         event.Set("fields",B1Hex(pending_events[i].fields)); event.SetL("utc_msc",pending_events[i].utc_msc);
+         d.Set("pending_"+IntegerToString(i),B1Hex(event.Serialize()));
+      }
       B1IndSave(ind,d);
       return d.Serialize();
    }
@@ -199,7 +240,7 @@ public:
    {
       if(store==NULL || !trusted) return false;
       double previous=saved_hwm;
-      if(hwm>saved_hwm) saved_hwm=hwm*(1.0+B1_HWM_PERSIST_MARGIN);
+      if(hwm>saved_hwm) saved_hwm=hwm;
       if(store.Save(Serialize())) return true;
       saved_hwm=previous;
       Untrust("STATE_WRITE_FAILED");
@@ -220,7 +261,7 @@ public:
          d.L("magic")!=cfg.magic) return false;
       double h=d.D("hwm");
       if(!MathIsValidNumber(h) || h<=0.0) return false;
-      // Persisted HWM carries a safety margin above the true peak; keep it on restore.
+      // Exact bits preserve tier boundaries and hard-stop behavior across restart.
       hwm=h; saved_hwm=h; max_dd=d.D("max_dd"); dd_stop=d.L("dd_stop")!=0;
       incident=d.L("incident")!=0; incident_id=d.S("incident_id"); close_required=d.L("close_required")!=0;
       sig_bar=d.L("sig_bar"); sig_dir=(int)d.L("sig_dir"); sig_atr=d.D("sig_atr");
@@ -228,11 +269,28 @@ public:
       req_volume=d.D("req_volume"); req_quote=d.D("req_quote"); req_sl=d.D("req_sl"); req_tp=d.D("req_tp");
       req_budget=d.D("req_budget"); req_msc=d.L("req_msc"); req_order=(ulong)d.L("req_order");
       pos_ticket=(ulong)d.L("pos_ticket"); pos_dir=(int)d.L("pos_dir"); pos_volume=d.D("pos_volume");
+      pos_identifier=(ulong)d.L("pos_identifier");
+      if(pos_ticket!=0 && pos_identifier==0) return false;
       pos_entry=d.D("pos_entry"); pos_sl=d.D("pos_sl"); pos_tp=d.D("pos_tp"); pos_r=d.D("pos_r");
       pos_intended_r=d.D("pos_intended_r"); pos_commission=d.D("pos_commission");
       exit_state=(int)d.L("exit_state"); exit_sl=d.D("exit_sl"); exit_armed_msc=d.L("exit_armed_msc");
       exit_request_msc=d.L("exit_request_msc");
       day=d.L("day"); day_r=d.D("day_r");
+      if(!d.Has("pending_count")) return false;
+      int count=(int)d.L("pending_count");
+      if(count<0 || count>100000) return false;
+      ArrayResize(pending_events,count);
+      for(int i=0;i<count;i++)
+      {
+         string text,fields; CB1Doc event,body;
+         if(!B1Unhex(d.S("pending_"+IntegerToString(i)),text) || !event.Parse(text) ||
+            !B1Unhex(event.S("fields"),fields) || !body.Parse(fields)) return false;
+         string type=event.S("type");
+         if(type!="FILL_CONFIRMED" && type!="SL_MODIFIED_CONFIRMED" && type!="CLOSE_CONFIRMED") return false;
+         if(event.S("id")=="" || event.L("utc_msc")<=0) return false;
+         pending_events[i].id=event.S("id"); pending_events[i].type=type;
+         pending_events[i].fields=fields; pending_events[i].utc_msc=event.L("utc_msc");
+      }
       return B1IndLoad(ind,d);
    }
 
@@ -337,6 +395,7 @@ public:
       double bid,ask; long msc;
       if(!broker.Quote(bid,ask,msc) || !(bid>0.0) || ask<bid) return;
       last_bid=bid; last_ask=ask; last_msc=msc;
+      FlushConfirmed();
       ObserveEquity(broker.Equity());
       RollDay();
       if(req_status==B1_REQ_PENDING) ReconcileRequest(false);
@@ -374,12 +433,12 @@ public:
 
    void Adopt(const B1Position &p)
    {
-      bool first=pos_ticket!=p.ticket;
-      pos_ticket=p.ticket; pos_dir=p.direction; pos_volume=p.volume; pos_entry=p.price_open;
+      bool first=pos_identifier!=p.identifier;
+      pos_ticket=p.ticket; pos_identifier=p.identifier; pos_dir=p.direction; pos_volume=p.volume; pos_entry=p.price_open;
       pos_sl=p.sl; pos_tp=p.tp;
       pos_r=MathAbs(p.price_open-req_sl); pos_intended_r=MathAbs(req_quote-req_sl);
       double cost=0.0;
-      if(broker.EntryCommission(p.ticket,cost)) pos_commission=cost;
+      if(broker.EntryCommission(p.identifier,cost)) pos_commission=cost;
       req_status=B1_REQ_FILLED;
       remainder_open=broker.OwnedPendingOrders(req_id);
       if(remainder_open>0) CancelRemainder();
@@ -392,6 +451,7 @@ public:
          f.Set("position_r_price",B1F(pos_r)); f.Set("intended_r_price",B1F(pos_intended_r));
          f.Set("entry_commission_cost",B1F(pos_commission)); f.Set("risk_budget",B1F(req_budget));
          f.SetL("private_position_ticket",(long)pos_ticket);
+         f.SetL("private_position_identifier",(long)pos_identifier);
          Emit("FILL_CONFIRMED",true,req_id,f);
       }
       Save();
@@ -426,18 +486,24 @@ public:
       int idx=-1;
       for(int i=0;i<n;i++)
       {
-         if(pos_ticket!=0 && owned[i].ticket==pos_ticket) { idx=i; continue; }
+         if(pos_identifier!=0 && owned[i].identifier==pos_identifier) { idx=i; continue; }
          if(req_status==B1_REQ_PENDING && IsRequestPosition(owned[i])) continue;
          if(!incident) RaiseIncident("UNEXPECTED_OWNED_EXPOSURE",false);
       }
       if(pos_ticket!=0 && idx<0) { DetectClose(); return; }
       if(idx<0) return;
+      if(pos_ticket!=owned[idx].ticket) { pos_ticket=owned[idx].ticket; Save(); }
       pos_sl=owned[idx].sl; pos_tp=owned[idx].tp;
       if(MathAbs(owned[idx].volume-pos_volume)>1e-9)
       {
          CB1Doc f; f.Set("previous_volume",B1F(pos_volume)); f.Set("volume",B1F(owned[idx].volume));
          Emit("POSITION_VOLUME_CHANGED",false,IntegerToString((long)pos_ticket)+"|"+B1F(owned[idx].volume),f);
          pos_volume=owned[idx].volume;
+         pos_entry=owned[idx].price_open;
+         pos_r=MathAbs(pos_entry-req_sl);
+         double cost=0.0;
+         if(!broker.EntryCommission(pos_identifier,cost)) { RaiseIncident("FILL_COST_UNVERIFIABLE",true); }
+         else pos_commission=cost;
          Save();
          VerifyFillRisk();
       }
@@ -449,7 +515,7 @@ public:
    void DetectClose()
    {
       B1CloseDeal deal;
-      if(!broker.CloseDeal(pos_ticket,deal)) return;
+      if(!broker.CloseDeal(pos_identifier,deal)) return;
       double net=deal.profit+deal.swap+deal.commission-pos_commission;
       double risk_money=0.0, loss=0.0;
       if(broker.CalcProfit(pos_dir,pos_volume,pos_entry,pos_entry-pos_dir*pos_r,loss)) risk_money=-loss;
@@ -462,11 +528,13 @@ public:
       f.Set("net_profit",B1F(net)); f.Set("position_risk_money",B1F(risk_money)); f.Set("net_r",B1F(r));
       f.SetL("exit_state",exit_state); f.Set("day_r",B1F(day_r));
       f.SetL("private_position_ticket",(long)pos_ticket);
-      Emit("CLOSE_CONFIRMED",true,IntegerToString((long)pos_ticket),f);
+      f.SetL("private_position_identifier",(long)pos_identifier);
+      string ref=IntegerToString((long)pos_identifier);
       if(day_r<=-2.0) Diag("DAILY_R_TELEMETRY",IntegerToString(day)+(day_r<=-3.0 ? "|-3R" : "|-2R"),"informational; daily hard stop disabled");
       if(close_required) close_required=false;
       ClearPosition(); ClearRequest();
-      Save();
+      // A restart must not apply day_r twice for the same closed position.
+      Emit("CLOSE_CONFIRMED",true,ref,f);
    }
 
    void AttemptIncidentClose()
@@ -507,7 +575,7 @@ public:
       if(exit_state==B1_EX_CONFIRMED || exit_state==B1_EX_REJECTED || exit_state==B1_EX_SKIPPED) return;
       B1Spec spec;
       if(!broker.Spec(spec)) return;
-      string ref=IntegerToString((long)pos_ticket);
+      string ref=IntegerToString((long)pos_identifier);
       if(exit_state==B1_EX_REQUESTED)
       {
          if(MathAbs(p.sl-exit_sl)<=spec.tick_size*0.5) ConfirmExit(ref);
@@ -541,7 +609,7 @@ public:
       exit_state=B1_EX_REQUESTED; exit_sl=stop; exit_request_msc=last_msc;
       CB1Doc f; f.Set("requested_sl",B1F(stop)); f.Set("previous_sl",B1F(p.sl)); f.Set("tp",B1F(p.tp));
       Emit("MODIFY_REQUESTED",false,ref,f);
-      Save();
+      if(!Save()) return;
       int result=broker.ModifyStops(pos_ticket,stop,p.tp);
       // Broker state decides: a stop already in place counts even if the retcode says otherwise.
       B1Position owned[];
@@ -563,6 +631,7 @@ public:
       exit_state=B1_EX_CONFIRMED; pos_sl=exit_sl;
       CB1Doc f; f.Set("confirmed_sl",B1F(exit_sl)); f.SetL("exit_mode",cfg.exit_mode);
       f.SetL("private_position_ticket",(long)pos_ticket);
+      f.SetL("private_position_identifier",(long)pos_identifier);
       Emit("SL_MODIFIED_CONFIRMED",true,ref,f);
       Save();
    }
