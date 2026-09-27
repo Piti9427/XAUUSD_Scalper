@@ -31,13 +31,29 @@ data/news_cache.json
 data/setup_registry.json
 data/risk_halt_state.json
 
-# Logs
+# Logs and generated tester artifacts
 *.log
 logs/
+*.jsonl
+*.state
+*.ex5
+*.htm
+*.npy
+*.npz
 
 # Historical CSV Datasets (Large Data)
 data/*.csv
+data/**/*.csv
 !data/.gitkeep
+
+# Local backtest, research, and probe dumps
+COMPLETE
+data/**/*.json
+data/b1_*/
+data/bottradegold_*/
+data/research_cache/
+data/research_output*/
+data/research_results/
 
 # Chart Snapshots
 data/*.png
