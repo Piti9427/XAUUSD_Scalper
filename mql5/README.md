@@ -1,22 +1,24 @@
-# B1-FINAL-v1 validation probe
+# B1-FINAL MQL5
 
-`B1FinalValidationEA.mq5` is a **non-trading, tester-only indicator parity probe**, not the completed order EA. `OnTick` is empty. `OnInit` rejects attachment outside Strategy Tester. No OrderSend or notification side effects.
+| File | Role |
+|---|---|
+| `B1FinalCore.mqh` | Frozen deterministic indicator/signal/risk-tier core (batch). No orders. |
+| `B1FinalState.mqh` | Incremental indicators equal to the batch core, exact checkpoint, integrity-checked state document, atomic file store. |
+| `B1FinalEngine.mqh` | Execution engine: admission gates, broker-calculated sizing, persisted request identity, reconciliation, HWM tiers and 12% latch, incidents, one-shot +2R stop, outbox events. Broker, sink and store are injected interfaces. |
+| `B1FinalEA.mq5` | MT5 adapter and EA. **Order execution is Strategy Tester only**: `OnInit` fails on live charts, non-Demo accounts, identity/hedging/symbol mismatch. |
+| `B1FinalEngineTests.mq5` | Fault-injection tests of the real engine against a fake broker; run in the Tester, write `B1_engine_tests.csv`. |
+| `B1FinalValidationEA.mq5` | Frozen non-trading parity probe (unchanged). |
+| `B1FinalParityRunner.mq5` | Tester wrapper that ships the parity CSV to the agent sandbox and includes the probe verbatim. |
 
-Compile with MetaEditor, keeping `B1FinalCore.mqh` next to the source. Compilation alone does not pass parity or the final real-tick gate.
+Compile and run through `scripts/ops/mt5_wine_tester.py` (MetaEditor cannot take paths with spaces, so builds happen in `C:\b1build`; each Tester run archives its exact `.ex5`). Evidence, verdicts and hashes: [release package](../docs/research/B1_FINAL_RELEASE_2026-09-27.md). Operation: [runbook](../docs/ops/B1_FINAL_RUNBOOK.md).
 
-For a parity run, copy `data/b1_final_reference_2026-09-26_final/parity_input.csv` into the test agent's `MQL5/Files` sandbox as `B1_FINAL_parity_input.csv`. Use identical hashed bars; retain the full oldest-bar seed. Run the probe in Strategy Tester. Save `B1_FINAL_mql_indicators.csv` and `B1_FINAL_mql_risk.csv` from the agent's Files directory. Input transfer, tester execution and output retrieval have not yet been automated or executed.
-
-Compare indicators and directions:
+Parity comparison of probe output:
 
 ```sh
 .venv/bin/python -m scripts.research.b1_final \
-  --compare-mql /path/to/B1_FINAL_mql_indicators.csv \
+  --compare-mql <agent Files>/B1_FINAL_mql_indicators.csv \
   --reference-bars data/b1_final_reference_2026-09-26_final/reference_bars.csv \
-  --output /path/to/new-parity-result.json
+  --output <new-result>.json
 ```
 
-Comparator requires every timestamp in exact order, matching missing-value positions, absolute numerical tolerance 1e-8 and exact directions. Nonzero exit means FAIL. It does not validate trade parity. Risk-boundary CSV requires separate comparison; current Python boundary tests do not prove executed MQL5 parity.
-
-Sizing helper uses broker `OrderCalcProfit` and `OrderCalcMargin`. OrderCheck, actual send/fill reconciliation, partial fills, retries, persistent idempotency and broker restart recovery remain work for the execution EA. Do not deploy this probe as a trading bot.
-
-API references: [CopyRates](https://www.mql5.com/en/docs/series/copyrates), [OrderCalcProfit](https://www.mql5.com/en/docs/trading/ordercalcprofit), [MT5 testing](https://www.mql5.com/en/docs/runtime/testing).
+API references: [CopyRates](https://www.mql5.com/en/docs/series/copyrates), [OrderCalcProfit](https://www.mql5.com/en/docs/trading/ordercalcprofit), [OrderSend](https://www.mql5.com/en/docs/trading/ordersend), [MT5 testing](https://www.mql5.com/en/docs/runtime/testing).
