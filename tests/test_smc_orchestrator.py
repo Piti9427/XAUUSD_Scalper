@@ -9,6 +9,7 @@ from scripts.smc.types import (
     SetupSignal,
 )
 from scripts.smc.orchestrator import StrategyOrchestrator
+from scripts.smc.basket_manager import BasketManager, BasketConfig
 
 
 class TestSMCOrchestrator(unittest.TestCase):
@@ -681,6 +682,45 @@ class TestSMCOrchestrator(unittest.TestCase):
         )
         self.assertIsNotNone(account2.open_position)
         self.assertIsNone(account2.pending_order)
+
+    def test_orchestrator_basket_manager_pending_order_and_estimated_floating_pnl(self):
+        cfg = BasketConfig(
+            basket_fraction=0.15,
+            basket_absolute_cap_usd=30.0,
+            day_loss_fraction=0.15,
+            max_new_baskets_per_utc_day=2,
+            recovery_lots=[0.01, 0.02],
+            max_recovery_legs=2,
+            hwm_halt_fraction=0.20,
+            reset_hwm_automatically=False,
+        )
+        mgr = BasketManager(config=cfg)
+        orch = StrategyOrchestrator(risk_pct=0.05, basket_manager=mgr)
+        account = AccountState(balance=200.0, equity=200.0)
+
+        now = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
+        signal = SetupSignal(
+            direction=Direction.BUY,
+            sweep_price=2599.0, sweep_wick=2595.0, mss_price=2601.0,
+            entry_price=2602.0, sl_price=2595.0, tp_price=2630.0,
+            sl_distance=7.0, risk_r=2.0,
+            fvg_high=2605.0, fvg_low=2601.0,
+            reason="test signal",
+            timestamp=now,
+        )
+        bar = {"time": now, "open": 2600.0, "high": 2605.0, "low": 2598.0, "close": 2603.0}
+
+        # 1. Opening new basket syncs account.pending_order
+        intents = orch.on_bar(bar, account, setup_signal=signal, floating_pnl=0.0)
+        self.assertEqual(len(intents), 1)
+        self.assertEqual(intents[0].intent_type, OrderIntentType.PLACE_LIMIT)
+        self.assertIsNotNone(account.pending_order)
+        self.assertEqual(account.pending_order.limit_price, 2602.0)
+
+        # 2. Crash bar without explicit floating_pnl triggers Basket SL via bar estimation
+        crash_bar = {"time": now, "open": 2600.0, "high": 2601.0, "low": 2298.0, "close": 2300.0}
+        intents2 = orch.on_bar(crash_bar, account, floating_pnl=0.0)
+        self.assertTrue(any(i.reason.startswith("BASKET_SL") for i in intents2))
 
 
 if __name__ == "__main__":

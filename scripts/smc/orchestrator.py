@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any
+from typing import TYPE_CHECKING, List, Optional, Dict, Any
 import logging
 from scripts.smc.types import (
     Direction,
@@ -17,6 +17,9 @@ from scripts.smc.quotes import (
     pending_sl_touched_before_fill,
 )
 from scripts.smc.setup_identity import SetupRegistry, make_setup_id, pending_h1_bias_allows
+
+if TYPE_CHECKING:
+    from scripts.smc.basket_manager import BasketManager
 
 
 class StrategyOrchestrator:
@@ -44,6 +47,7 @@ class StrategyOrchestrator:
         bar_minutes: int = 5,
         setup_registry: Optional[SetupRegistry] = None,
         risk_pct: float = 0.005,
+        basket_manager: Optional["BasketManager"] = None,
     ):
         self.max_daily_losses = max_daily_losses
         self.cooldown_minutes = cooldown_minutes
@@ -62,6 +66,8 @@ class StrategyOrchestrator:
         self.bar_minutes = bar_minutes
         self.setup_registry = setup_registry if setup_registry is not None else SetupRegistry()
         self.risk_pct = risk_pct
+        # Optional Smart Zone Recovery basket manager (Hybrid Sniper-Recovery strategy)
+        self.basket_manager = basket_manager
 
     def _evaluate_open_position(
         self,
@@ -306,6 +312,7 @@ class StrategyOrchestrator:
         news_cancel_reason: str = "",
         h1_bias: Optional[Direction] = None,
         h1_bias_known: bool = False,
+        floating_pnl: float = 0.0,
     ) -> List[OrderIntent]:
         intents: List[OrderIntent] = []
 
@@ -325,8 +332,37 @@ class StrategyOrchestrator:
         if account.open_position is not None:
             return self._evaluate_open_position(account, bar, bar_time)
 
+        # 2b. Basket SL/TP check (Smart Zone Recovery — runs when FLAT at position level
+        #     but basket manager may still have open legs from recovery ladder)
+        if self.basket_manager is not None:
+            # M5 fix: estimate floating PnL from bar close when caller does not provide it.
+            # XAUUSD contract: 1 lot = 100 troy oz; price in USD/oz → PnL in USD.
+            _floating_pnl = floating_pnl
+            if (
+                _floating_pnl == 0.0
+                and self.basket_manager.basket is not None
+                and self.basket_manager.basket.open_legs
+            ):
+                bar_close = float(bar.get("close", 0.0))
+                _floating_pnl = 0.0
+                for _leg in self.basket_manager.basket.open_legs:
+                    price_diff = bar_close - _leg.entry_price
+                    if _leg.direction.value == "SELL":
+                        price_diff = -price_diff
+                    # contract size = 100 for XAUUSD (1 lot = 100 oz)
+                    _floating_pnl += price_diff * _leg.lot_size * 100.0
+            basket_intents = self.basket_manager.on_bar(
+                floating_pnl=_floating_pnl,
+                equity=account.equity,
+                now=bar_time,
+            )
+            if basket_intents:
+                intents.extend(basket_intents)
+                return intents
+
         # 3. Check Pending Order Lifecycle
         if account.pending_order is not None:
+
             order = account.pending_order
 
             # B15 / S1–S4: SL before fill ends pending; setup identity retained.
@@ -473,6 +509,42 @@ class StrategyOrchestrator:
             allowed, _admit_reason = self.setup_registry.admit(setup_id)
             if not allowed:
                 return []
+
+            # 5a. Basket manager signal routing (Smart Zone Recovery)
+            # When basket_manager is enabled:
+            #   - FLAT basket  → open new basket via on_new_signal (budget-controlled lot sizing)
+            #   - OPEN basket  → attempt recovery leg via on_recovery_signal (same-direction MSS only)
+            if self.basket_manager is not None:
+                from scripts.smc.basket_manager import BasketState  # local import avoids circular
+                if self.basket_manager.state == BasketState.FLAT:
+                    basket_intents = self.basket_manager.on_new_signal(
+                        direction=setup_signal.direction,
+                        entry_price=setup_signal.entry_price,
+                        sl_price=setup_signal.sl_price,
+                        tp_price=setup_signal.tp_price,
+                        equity=account.equity,
+                        now=bar_time,
+                    )
+                    intents.extend(basket_intents)
+                    # B1 fix: sync pending_order so orchestrator tracks the open intent
+                    # and step-2b basket SL/TP check skips correctly on subsequent bars.
+                    if basket_intents:
+                        account.pending_order = basket_intents[0]
+                        account.pending_bars_held = 0
+                elif self.basket_manager.state == BasketState.OPEN:
+                    basket_intents = self.basket_manager.on_recovery_signal(
+                        direction=setup_signal.direction,
+                        entry_price=setup_signal.entry_price,
+                        sl_price=setup_signal.sl_price,
+                        tp_price=setup_signal.tp_price,
+                        equity=account.equity,
+                        floating_pnl=floating_pnl,
+                        now=bar_time,
+                    )
+                    intents.extend(basket_intents)
+                return intents
+
+            # 5b. Standard single-position entry (no basket manager)
             lot_res = calculate_lot_size(
                 balance=account.balance,
                 entry_price=setup_signal.entry_price,
@@ -498,3 +570,4 @@ class StrategyOrchestrator:
                 intents.append(new_order)
 
         return intents
+

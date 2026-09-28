@@ -69,6 +69,17 @@ class XAUUSDSniperStrategy:
         if not is_ny_session:
             return "OUTSIDE_SESSION"
 
+        # 6. EMA Trend Filter (optional, default enabled)
+        if self.config.get("ema_trend_filter", True):
+            ema_long_val = last_bar.get("ema_long")
+            if ema_long_val is None or pd.isna(ema_long_val):
+                # Fail-closed: no EMA data → block signal rather than let it pass
+                return "EMA_DATA_MISSING"
+            if mss_long and last_bar["close"] <= ema_long_val:
+                return "EMA_FILTER_BLOCKED"
+            if mss_short and last_bar["close"] >= ema_long_val:
+                return "EMA_FILTER_BLOCKED"
+
         if mss_long:
             return "BUY"
         if mss_short:

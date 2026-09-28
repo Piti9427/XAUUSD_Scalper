@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-28T02:54:54.253297+00:00",
-  "git_head": "c7b25d4fefc59dbe747da47a8b1f8427cd8f3aac",
+  "captured_at_utc": "2026-09-28T06:08:07.826963+00:00",
+  "git_head": "ca79207a5f5d6c23119b119b83b10cecfa925ef5",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -9,7 +9,7 @@
   "gate_c_exness_smoke": {
     "ok": false,
     "artifact": null,
-    "latest_attempt_artifact": "docs/ops/2026-09-27-exness-smoke-mac-probe.json",
+    "latest_attempt_artifact": "docs/ops/2026-09-28-exness-smoke-mac-probe.json",
     "blocker_docs": [
       "docs/ops/2026-09-16-mac-live-gate-blocker.md",
       "docs/ops/2026-09-16-mac-wine-initialize-path.json",
