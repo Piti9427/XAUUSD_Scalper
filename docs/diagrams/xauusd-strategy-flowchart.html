@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XAUUSD Strategy Flowchart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--paper:#f5f5f5;--ink:#2d3142;--muted:#4f5d75;--soft:#7a8399;--accent:#eb6c36;--tint:rgba(235,108,54,.08);--rule:rgba(45,49,66,.12)}
+    body{background:var(--paper);color:var(--ink);font-family:'Noto Sans Thai','Geist',sans-serif;padding:48px 32px;min-height:100vh}
+    main{max-width:1200px;margin:auto}.eyebrow{font:500 8px 'Geist Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    h1{font:400 32px 'Instrument Serif','Noto Sans Thai',serif;margin-bottom:8px}.subtitle{font-size:12px;color:var(--muted);margin-bottom:24px}
+    .canvas{overflow-x:auto}svg{display:block;width:100%;min-width:1000px}.note{border-top:1px solid var(--rule);margin-top:16px;padding-top:12px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body><main>
+  <p class="eyebrow">DECISION LOGIC · STRATEGY</p>
+  <h1>XAUUSD Strategy Signal Flow</h1>
+  <p class="subtitle">ลำดับการตรวจสอบเงื่อนไข Trade Signal ต่อ 1 แท่งเทียน (อ้างอิง scripts/strategy.py)</p>
+  <div class="canvas">
+  <svg viewBox="0 0 1120 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="flow-title flow-desc">
+    <title id="flow-title">Strategy Flowchart</title>
+    <desc id="flow-desc">Flowchart of conditions from Spread to Market Structure Shift to Time Filter</desc>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#eb6c36"/></marker>
+    </defs>
+    
+    <rect width="1120" height="600" fill="#f5f5f5"/>
+    
+    <!-- ARROWS (Drawn first so z-order puts them behind nodes) -->
+    
+    <!-- Start to Spread Check -->
+    <path d="M 560 60 V 120" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <!-- Spread Check False -->
+    <path d="M 640 160 H 760" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="680" y="154" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="694" y="163" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FAIL</text>
+
+    <!-- Spread Check True to Wick Check -->
+    <path d="M 560 200 V 260" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="546" y="220" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="560" y="229" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">PASS</text>
+
+    <!-- Wick Check False -->
+    <path d="M 640 300 H 760" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="680" y="294" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="694" y="303" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FAIL</text>
+
+    <!-- Wick Check True to MSS Check -->
+    <path d="M 560 340 V 400" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="546" y="360" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="560" y="369" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">PASS</text>
+
+    <!-- MSS False -->
+    <path d="M 640 440 H 760" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="680" y="434" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="694" y="443" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FAIL</text>
+
+    <!-- MSS True to Session -->
+    <path d="M 560 480 V 520" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="546" y="490" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="560" y="499" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">PASS</text>
+
+    <!-- Session False -->
+    <path d="M 480 540 H 360" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="406" y="534" width="28" height="12" rx="2" fill="#f5f5f5"/><text x="420" y="543" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FAIL</text>
+
+    <!-- Session True to Final -->
+    <path d="M 640 540 H 760" fill="none" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+    <rect x="670" y="534" width="48" height="12" rx="2" fill="#f5f5f5"/><text x="694" y="543" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">VALID SIGNAL</text>
+
+
+    <!-- NODES -->
+
+    <!-- START Node -->
+    <rect x="480" y="20" width="160" height="40" rx="20" fill="#fff" stroke="#2d3142" stroke-width="1"/>
+    <text x="560" y="44" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">New M15 Candle</text>
+
+    <!-- Condition 1: Spread -->
+    <polygon points="560,120 640,160 560,200 480,160" fill="#fff" stroke="#4f5d75" stroke-width="1"/>
+    <text x="560" y="156" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Spread OK?</text>
+    <text x="560" y="170" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">&lt;= max_spread</text>
+
+    <rect x="760" y="140" width="120" height="40" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+    <text x="820" y="164" fill="#4f5d75" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SPREAD_UNAVAILABLE</text>
+
+    <!-- Condition 2: Wick Rejection -->
+    <polygon points="560,260 640,300 560,340 480,300" fill="#fff" stroke="#4f5d75" stroke-width="1"/>
+    <text x="560" y="296" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Liquidity Sweep?</text>
+    <text x="560" y="310" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Wick &gt; 2x Body &amp; &gt;2.0</text>
+    
+    <rect x="760" y="280" width="120" height="40" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+    <text x="820" y="304" fill="#4f5d75" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">NO_SWEEP</text>
+
+    <!-- Condition 3: MSS -->
+    <polygon points="560,400 640,440 560,480 480,440" fill="#fff" stroke="#4f5d75" stroke-width="1"/>
+    <text x="560" y="436" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">MSS Confirmed?</text>
+    <text x="560" y="450" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Close breaks prev H/L</text>
+    
+    <rect x="760" y="420" width="120" height="40" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+    <text x="820" y="444" fill="#4f5d75" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">NO_MSS</text>
+
+    <!-- Condition 4: Session Time Filter -->
+    <polygon points="560,520 640,540 560,560 480,540" fill="#fff" stroke="#4f5d75" stroke-width="1"/>
+    <text x="560" y="543" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">NY Session?</text>
+
+    <!-- Result: Outside Session -->
+    <rect x="200" y="520" width="160" height="40" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+    <text x="280" y="544" fill="#4f5d75" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">OUTSIDE_SESSION</text>
+
+    <!-- Result: Signal -->
+    <rect x="760" y="510" width="160" height="60" rx="6" fill="rgba(235,108,54,.08)" stroke="#eb6c36" stroke-width="1"/>
+    <rect x="768" y="516" width="48" height="12" rx="2" fill="transparent" stroke="#eb6c36" stroke-width="0.8"/>
+    <text x="792" y="525" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXECUTABLE</text>
+    <text x="840" y="544" fill="#eb6c36" font-size="14" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">BUY / SELL</text>
+    <text x="840" y="560" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">TP/SL Set via ATR/Pips</text>
+
+  </svg></div>
+  <p class="note">Generated via diagram-design · Strategy flowchart · 2026-09-28</p>
+</main></body></html>
