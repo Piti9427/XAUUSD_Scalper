@@ -45,7 +45,7 @@ SELL = Direction.SELL
 ENTRY = 2000.0
 SL = 1990.0
 TP = 2020.0
-EQUITY = 1000.0  # budget = min(0.15*1000, 30) = 30 USD
+EQUITY = 200.0  # budget = min(0.15*200, 30) = 30 USD
 NOW = datetime(2026, 9, 28, 8, 0, 0, tzinfo=timezone.utc)
 NOW_DAY2 = datetime(2026, 9, 29, 8, 0, 0, tzinfo=timezone.utc)
 
@@ -76,6 +76,7 @@ class TestBasketManager(unittest.TestCase):
         self.assertEqual(intent.intent_type, OrderIntentType.PLACE_LIMIT)
         self.assertAlmostEqual(intent.lot_size, 0.01)
         self.assertEqual(mgr.state, BasketState.OPEN)
+        self.assertAlmostEqual(mgr.basket.frozen_budget_usd, 30.0)
 
     # 2. Second on_new_signal while OPEN → []
     def test_second_entry_blocked_when_basket_open(self):
@@ -141,7 +142,7 @@ class TestBasketManager(unittest.TestCase):
     # 8. on_bar with floating_pnl=-31.0 (budget=$30) → CLOSE_MARKET (SL breached)
     def test_basket_sl_force_close(self):
         mgr = _make_manager()
-        _open_basket(mgr)  # budget = $30 (min(0.15*1000, 30))
+        _open_basket(mgr)  # budget = $30 (min(0.15*200, 30))
 
         # net_pnl = 0 + (-31) = -31 <= -30 → SL breached
         intents = mgr.on_bar(floating_pnl=-31.0, equity=EQUITY, now=NOW)
@@ -187,13 +188,13 @@ class TestBasketManager(unittest.TestCase):
     # 11. HWM halt blocks new basket
     def test_hwm_halt_blocks_new_basket(self):
         mgr = _make_manager()
-        # Day 1: open and close a basket — this seeds HWM = 1000
+        # Day 1: open and close a basket — this seeds HWM = 200
         _open_basket(mgr, now=NOW)
         mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
-        # Day 2: equity collapses to 790 → drawdown = 21% > hwm_halt_fraction(20%).
+        # Day 2: equity collapses to 158 → drawdown = 21% > hwm_halt_fraction(20%).
         # Using NOW_DAY2 avoids the daily-loss guard from day 1 blocking us first.
-        low_equity = 790.0
+        low_equity = 158.0
         intents = mgr.on_new_signal(BUY, ENTRY, SL, TP, low_equity, NOW_DAY2)
         self.assertEqual(intents, [])
         self.assertEqual(mgr.state, BasketState.HALTED)
@@ -206,7 +207,7 @@ class TestBasketManager(unittest.TestCase):
         mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
         # Day 2: trigger HWM halt
-        low_equity = 790.0
+        low_equity = 158.0
         mgr.on_new_signal(BUY, ENTRY, SL, TP, low_equity, NOW_DAY2)
         self.assertEqual(mgr.state, BasketState.HALTED)
 

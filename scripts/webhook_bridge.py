@@ -169,5 +169,7 @@ if __name__ == "__main__":
         news_manager=news_mgr,
         max_hold_bars=max_hold_bars,
         bar_minutes=bar_minutes,
+        account_balance=float(os.environ.get("SMC_ACCOUNT_BALANCE", "200")),
+        risk_pct=float(os.environ.get("SMC_RISK_PCT", "0.05")),
     )
     uvicorn.run(app, host="0.0.0.0", port=8000)

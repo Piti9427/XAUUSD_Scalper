@@ -68,7 +68,7 @@ def main():
         allow_demo_only=allow_demo_only,
         config_approved=bool(real_money_cfg.get("approved", False)),
     )
-    account_balance = args.balance or wh_cfg.get("account_balance", 10000.0)
+    account_balance = args.balance or wh_cfg.get("account_balance", 200.0)
     risk_pct = args.risk or wh_cfg.get("risk_pct", 0.005)
     commission_per_lot = wh_cfg.get("commission_per_lot")
     slippage_allowance = wh_cfg.get("slippage_allowance")
