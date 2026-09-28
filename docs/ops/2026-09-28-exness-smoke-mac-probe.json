@@ -1,0 +1,10 @@
+{
+  "captured_at_utc": "2026-09-28T02:54:56.199490+00:00",
+  "host": "mac",
+  "git_head": "c7b25d4fefc59dbe747da47a8b1f8427cd8f3aac",
+  "ok": false,
+  "path_resolved": null,
+  "account_kwargs_complete": false,
+  "package": "missing:No module named 'MetaTrader5'",
+  "blocker": "MetaTrader5 package missing on this Mac venv; run Gate C on Windows/Wine Exness Demo host via ./scripts/ops/foundation_live_gate.sh"
+}

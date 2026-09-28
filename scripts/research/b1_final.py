@@ -81,8 +81,8 @@ def reference_bars(completed):
     f["ll30"] = f.low.shift().rolling(30).min()
     f["ready"] = (np.arange(len(f)) >= 99) & f[["atr", "rsi", "hh30", "ll30"]].notna().all(axis=1)
     f["direction"] = [
-        signal_direction(c, h, l, r, ready)
-        for c, h, l, r, ready in zip(f.close, f.hh30, f.ll30, f.rsi, f.ready)
+        signal_direction(c, h, low, r, ready)
+        for c, h, low, r, ready in zip(f.close, f.hh30, f.ll30, f.rsi, f.ready)
     ]
     return f
 
