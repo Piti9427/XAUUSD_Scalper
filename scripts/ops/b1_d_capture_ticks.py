@@ -88,16 +88,22 @@ def main():
         }
         day = start
         while day < end:
+            next_day = day + timedelta(days=1)
             ticks = mt5.copy_ticks_range(
                 "XAUUSDm",
                 day,
-                day + timedelta(days=1) - timedelta(milliseconds=1),
+                next_day,
                 mt5.COPY_TICKS_ALL,
             )
             if ticks is None:
                 raise RuntimeError(f"ticks failed {day.date()} {mt5.last_error()}")
-            valid = ticks[(ticks["bid"] > 0) & (ticks["ask"] >= ticks["bid"])]
-            if len(valid) != len(ticks):
+            start_ms = int(day.timestamp() * 1000)
+            end_ms = int(next_day.timestamp() * 1000)
+            # MT5 Python dates have second precision. Query through next UTC
+            # midnight, then filter by time_msc to retain the final second.
+            within_day = ticks[(ticks["time_msc"] >= start_ms) & (ticks["time_msc"] < end_ms)]
+            valid = within_day[(within_day["bid"] > 0) & (within_day["ask"] >= within_day["bid"])]
+            if len(valid) != len(within_day):
                 raise RuntimeError("invalid/crossed quotes")
             path = output / f"{day:%Y-%m-%d}.npz"
             np.savez_compressed(
@@ -111,7 +117,7 @@ def main():
                 }
             )
             print(json.dumps({"day": str(day.date()), "ticks": len(valid)}), flush=True)
-            day += timedelta(days=1)
+            day = next_day
         manifest["m1_sha256"] = hashlib.sha256((output / "m1.npz").read_bytes()).hexdigest()
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
         (output / "COMPLETE").write_text("Read-only broker historical capture completed.\n")
