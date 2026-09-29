@@ -116,13 +116,45 @@ class StrategyTests(unittest.TestCase):
     def test_check_signals_ema_trend_filter_blocks_counter_trend(self):
         strategy = make_strategy()
         # Create bars with bullish MSS signal
-        bars = pd.DataFrame([
-            {"time": "2026-05-18 12:00:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:15:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:30:00", "open": 2400, "high": 2405, "low": 2395, "close": 2400},
-            {"time": "2026-05-18 12:45:00", "open": 2404, "high": 2407, "low": 2398, "close": 2406},
-            {"time": "2026-05-18 13:00:00", "open": 2406, "high": 2407, "low": 2405, "close": 2406},
-        ])
+        bars = pd.DataFrame(
+            [
+                {
+                    "time": "2026-05-18 12:00:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:15:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:30:00",
+                    "open": 2400,
+                    "high": 2405,
+                    "low": 2395,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:45:00",
+                    "open": 2404,
+                    "high": 2407,
+                    "low": 2398,
+                    "close": 2406,
+                },
+                {
+                    "time": "2026-05-18 13:00:00",
+                    "open": 2406,
+                    "high": 2407,
+                    "low": 2405,
+                    "close": 2406,
+                },
+            ]
+        )
         bars["ema_long"] = 2410.0  # Price (2406) is below EMA 50 (2410) -> counter-trend
 
         result = strategy.check_signals(bars, bars, bars, current_spread=1.0)
@@ -130,13 +162,45 @@ class StrategyTests(unittest.TestCase):
 
     def test_check_signals_ema_trend_filter_allows_aligned_trend(self):
         strategy = make_strategy()
-        bars = pd.DataFrame([
-            {"time": "2026-05-18 12:00:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:15:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:30:00", "open": 2400, "high": 2405, "low": 2395, "close": 2400},
-            {"time": "2026-05-18 12:45:00", "open": 2404, "high": 2407, "low": 2398, "close": 2406},
-            {"time": "2026-05-18 13:00:00", "open": 2406, "high": 2407, "low": 2405, "close": 2406},
-        ])
+        bars = pd.DataFrame(
+            [
+                {
+                    "time": "2026-05-18 12:00:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:15:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:30:00",
+                    "open": 2400,
+                    "high": 2405,
+                    "low": 2395,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:45:00",
+                    "open": 2404,
+                    "high": 2407,
+                    "low": 2398,
+                    "close": 2406,
+                },
+                {
+                    "time": "2026-05-18 13:00:00",
+                    "open": 2406,
+                    "high": 2407,
+                    "low": 2405,
+                    "close": 2406,
+                },
+            ]
+        )
         bars["ema_long"] = 2400.0  # Price (2406) is above EMA 50 (2400) -> aligned with trend
 
         result = strategy.check_signals(bars, bars, bars, current_spread=1.0)
@@ -144,13 +208,45 @@ class StrategyTests(unittest.TestCase):
 
     def test_check_signals_ema_data_missing_fails_closed(self):
         strategy = make_strategy()
-        bars = pd.DataFrame([
-            {"time": "2026-05-18 12:00:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:15:00", "open": 2400, "high": 2401, "low": 2399, "close": 2400},
-            {"time": "2026-05-18 12:30:00", "open": 2400, "high": 2405, "low": 2395, "close": 2400},
-            {"time": "2026-05-18 12:45:00", "open": 2404, "high": 2407, "low": 2398, "close": 2406},
-            {"time": "2026-05-18 13:00:00", "open": 2406, "high": 2407, "low": 2405, "close": 2406},
-        ])
+        bars = pd.DataFrame(
+            [
+                {
+                    "time": "2026-05-18 12:00:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:15:00",
+                    "open": 2400,
+                    "high": 2401,
+                    "low": 2399,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:30:00",
+                    "open": 2400,
+                    "high": 2405,
+                    "low": 2395,
+                    "close": 2400,
+                },
+                {
+                    "time": "2026-05-18 12:45:00",
+                    "open": 2404,
+                    "high": 2407,
+                    "low": 2398,
+                    "close": 2406,
+                },
+                {
+                    "time": "2026-05-18 13:00:00",
+                    "open": 2406,
+                    "high": 2407,
+                    "low": 2405,
+                    "close": 2406,
+                },
+            ]
+        )
         # bars has no 'ema_long' column
 
         result = strategy.check_signals(bars, bars, bars, current_spread=1.0)

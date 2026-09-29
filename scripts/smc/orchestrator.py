@@ -362,7 +362,6 @@ class StrategyOrchestrator:
 
         # 3. Check Pending Order Lifecycle
         if account.pending_order is not None:
-
             order = account.pending_order
 
             # B15 / S1–S4: SL before fill ends pending; setup identity retained.
@@ -516,6 +515,7 @@ class StrategyOrchestrator:
             #   - OPEN basket  → attempt recovery leg via on_recovery_signal (same-direction MSS only)
             if self.basket_manager is not None:
                 from scripts.smc.basket_manager import BasketState  # local import avoids circular
+
                 if self.basket_manager.state == BasketState.FLAT:
                     basket_intents = self.basket_manager.on_new_signal(
                         direction=setup_signal.direction,
@@ -570,4 +570,3 @@ class StrategyOrchestrator:
                 intents.append(new_order)
 
         return intents
-

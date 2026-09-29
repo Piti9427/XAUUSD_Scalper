@@ -36,17 +36,18 @@ logger = logging.getLogger("smc.basket_manager")
 # Config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BasketConfig:
     """Loaded from settings.yaml money_management section."""
 
-    basket_fraction: float = 0.15          # 15% of equity per basket
+    basket_fraction: float = 0.15  # 15% of equity per basket
     basket_absolute_cap_usd: float = 30.0  # Hard ceiling regardless of equity
-    day_loss_fraction: float = 0.15        # Daily halt threshold
-    max_new_baskets_per_utc_day: int = 2   # Max baskets opened per day
+    day_loss_fraction: float = 0.15  # Daily halt threshold
+    max_new_baskets_per_utc_day: int = 2  # Max baskets opened per day
     recovery_lots: List[float] = field(default_factory=lambda: [0.01, 0.02])
-    max_recovery_legs: int = 2             # Hard cap on legs
-    hwm_halt_fraction: float = 0.20        # HWM drawdown halt
+    max_recovery_legs: int = 2  # Hard cap on legs
+    hwm_halt_fraction: float = 0.20  # HWM drawdown halt
     reset_hwm_automatically: bool = False  # Manual reset only
 
     @classmethod
@@ -68,11 +69,12 @@ class BasketConfig:
 # State
 # ---------------------------------------------------------------------------
 
+
 class BasketState(Enum):
     FLAT = "FLAT"
-    OPEN = "OPEN"               # At least 1 open leg
+    OPEN = "OPEN"  # At least 1 open leg
     CLOSE_PENDING = "CLOSE_PENDING"  # Waiting for broker close confirmation
-    HALTED = "HALTED"           # HWM or day-loss halt; manual reset required
+    HALTED = "HALTED"  # HWM or day-loss halt; manual reset required
 
 
 @dataclass
@@ -85,7 +87,7 @@ class Leg:
     sl_price: float
     tp_price: float
     open_time: datetime
-    leg_index: int              # 0 = entry leg, 1 = recovery leg
+    leg_index: int  # 0 = entry leg, 1 = recovery leg
     realized_pnl: float = 0.0
     is_open: bool = True
 
@@ -105,10 +107,10 @@ class Basket:
 
     basket_id: str
     direction: Direction
-    frozen_budget_usd: float          # Max allowable net loss for this basket
+    frozen_budget_usd: float  # Max allowable net loss for this basket
     open_time: datetime
     legs: List[Leg] = field(default_factory=list)
-    net_realized_pnl: float = 0.0     # Sum of closed legs' PnL
+    net_realized_pnl: float = 0.0  # Sum of closed legs' PnL
     state: BasketState = BasketState.OPEN
 
     @property
@@ -117,7 +119,7 @@ class Basket:
 
     @property
     def open_legs(self) -> List[Leg]:
-        return [l for l in self.legs if l.is_open]
+        return [leg for leg in self.legs if leg.is_open]
 
     def net_pnl_with_floating(self, floating_pnl: float) -> float:
         """Total PnL = realized (closed legs) + floating (open legs)."""
@@ -138,17 +140,19 @@ class Basket:
 # Day / HWM accounting
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DayAccount:
     utc_date: str = ""
     baskets_opened: int = 0
-    realized_loss_usd: float = 0.0    # Only counts losses; wins don't offset
+    realized_loss_usd: float = 0.0  # Only counts losses; wins don't offset
     day_start_equity: float = 0.0
 
 
 # ---------------------------------------------------------------------------
 # BasketManager
 # ---------------------------------------------------------------------------
+
 
 class BasketManager:
     """
@@ -252,7 +256,10 @@ class BasketManager:
         )
         logger.info(
             "Basket %s opened: dir=%s lot=%.2f budget=$%.2f",
-            basket_id, direction.value, lot, budget,
+            basket_id,
+            direction.value,
+            lot,
+            budget,
         )
         return [intent]
 
@@ -327,7 +334,9 @@ class BasketManager:
         )
         logger.info(
             "Recovery leg-%d opened: lot=%.2f basket=%s",
-            leg_index, lot, basket.basket_id,
+            leg_index,
+            lot,
+            basket.basket_id,
         )
         return [intent]
 
@@ -407,12 +416,14 @@ class BasketManager:
                 self.basket.net_realized_pnl += realized_pnl
                 logger.info(
                     "Leg %d closed: pnl=%.2f basket_net=%.2f",
-                    leg_index, realized_pnl, self.basket.net_realized_pnl,
+                    leg_index,
+                    realized_pnl,
+                    self.basket.net_realized_pnl,
                 )
                 break
 
         # If all legs closed, reset to FLAT
-        if all(not l.is_open for l in self.basket.legs):
+        if all(not leg.is_open for leg in self.basket.legs):
             logger.info("Basket %s fully closed — returning to FLAT", self.basket.basket_id)
             self.basket = None
             self.state = BasketState.FLAT
@@ -514,6 +525,7 @@ class BasketManager:
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
+
 
 def _ensure_utc(dt: datetime) -> datetime:
     """Enforce timezone-aware UTC (AGENTS.md: all timestamps must be UTC-aware)."""

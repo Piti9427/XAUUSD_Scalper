@@ -64,8 +64,8 @@ def _open_basket(mgr: BasketManager, direction: Direction = BUY, now: datetime =
 # Test cases
 # ---------------------------------------------------------------------------
 
-class TestBasketManager(unittest.TestCase):
 
+class TestBasketManager(unittest.TestCase):
     # 1. New signal → PLACE_LIMIT with lot=0.01
     def test_open_basket_creates_entry_leg(self):
         mgr = _make_manager()
@@ -102,8 +102,8 @@ class TestBasketManager(unittest.TestCase):
     # 4. 3rd on_recovery_signal → [] (max_recovery_legs=2 already hit after 2 legs total)
     def test_recovery_blocked_at_max_legs(self):
         mgr = _make_manager()
-        _open_basket(mgr)                                                     # leg 0
-        mgr.on_recovery_signal(BUY, ENTRY, SL, TP, EQUITY, -5.0, NOW)       # leg 1
+        _open_basket(mgr)  # leg 0
+        mgr.on_recovery_signal(BUY, ENTRY, SL, TP, EQUITY, -5.0, NOW)  # leg 1
         # basket now has 2 legs (leg_count == max_recovery_legs == 2)
         intents = mgr.on_recovery_signal(BUY, ENTRY, SL, TP, EQUITY, -10.0, NOW)
 
@@ -213,7 +213,9 @@ class TestBasketManager(unittest.TestCase):
     def test_basket_tp_does_not_fire_at_zero_pnl(self):
         mgr = _make_manager()
         _open_basket(mgr)
-        mgr.on_recovery_signal(BUY, ENTRY, SL, TP, EQUITY, -5.0, NOW)  # Add recovery leg so basket TP is active
+        mgr.on_recovery_signal(
+            BUY, ENTRY, SL, TP, EQUITY, -5.0, NOW
+        )  # Add recovery leg so basket TP is active
         # floating_pnl=0.0 must NOT trigger basket TP
         intents = mgr.on_bar(floating_pnl=0.0, equity=EQUITY, now=NOW)
         self.assertEqual(intents, [])

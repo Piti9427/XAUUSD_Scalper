@@ -125,7 +125,7 @@ def calculate_lot_size(
             sl_distance=total_sl_dist,
             risk_amount=min_lot_sl_risk,
             is_valid=False,
-            reason=f"Risk cap: min lot risks ${min_lot_sl_risk:.2f} > {max_risk_cap_pct*100:.0f}% of ${capital:.2f} (${capital*max_risk_cap_pct:.2f})",
+            reason=f"Risk cap: min lot risks ${min_lot_sl_risk:.2f} > {max_risk_cap_pct * 100:.0f}% of ${capital:.2f} (${capital * max_risk_cap_pct:.2f})",
         )
 
     risk_budget = capital * risk_pct

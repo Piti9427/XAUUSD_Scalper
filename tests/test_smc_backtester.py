@@ -120,7 +120,11 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(summary.win_rate, 100.0)
 
     def test_cash_uses_filled_volume(self):
-        trade = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1).trades_df.iloc[0]
+        trade = (
+            SMCBacktester(initial_balance=10000.0, require_choch=False)
+            .run(self.df_m5, self.df_h1)
+            .trades_df.iloc[0]
+        )
         expected = (trade.exit_price - trade.entry_price) * trade.lot_size * 100
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
 
@@ -150,7 +154,9 @@ class TestSMCBacktester(unittest.TestCase):
                 {"time": "2026-03-02T08:15:20Z", "bid": 2000.0, "ask": 2000.2},
             ]
         )
-        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(bars, self.df_h1, df_ticks=ticks)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(
+            bars, self.df_h1, df_ticks=ticks
+        )
         trade = result.trades_df.iloc[0]
         self.assertEqual(trade.exit_reason, "TP")
         self.assertTrue(trade.sl_touched)
@@ -187,9 +193,9 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertTrue(calls)
 
     def test_partial_and_tp_cash_conserve_filled_volume(self):
-        result = SMCBacktester(initial_balance=10000.0, partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(
-            self.df_m5, self.df_h1
-        )
+        result = SMCBacktester(
+            initial_balance=10000.0, partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False
+        ).run(self.df_m5, self.df_h1)
         trade = result.trades_df.iloc[0]
         partial_lots = round(trade.lot_size * 0.5, 2)
         expected = (
@@ -202,7 +208,9 @@ class TestSMCBacktester(unittest.TestCase):
     def test_default_replay_labeled_theoretical_not_usd500(self):
         from scripts.smc.replay_report import ReplayKind
 
-        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(
+            self.df_m5, self.df_h1
+        )
         self.assertIsNotNone(result.replay_report)
         self.assertEqual(result.replay_report.kind, ReplayKind.THEORETICAL_TAPE)
         self.assertIn("theoretical_tape_not_account_performance", result.replay_report.notes)
@@ -244,7 +252,9 @@ class TestSMCBacktester(unittest.TestCase):
             )
 
     def test_few_trades_sample_verdict_is_inconclusive(self):
-        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(
+            self.df_m5, self.df_h1
+        )
         self.assertEqual(result.sample_verdict, "INCONCLUSIVE")
         if result.winning_trades + result.losing_trades + result.be_trades > 0:
             self.assertIsNotNone(result.wilson)

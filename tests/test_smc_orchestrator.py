@@ -701,10 +701,16 @@ class TestSMCOrchestrator(unittest.TestCase):
         now = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
         signal = SetupSignal(
             direction=Direction.BUY,
-            sweep_price=2599.0, sweep_wick=2595.0, mss_price=2601.0,
-            entry_price=2602.0, sl_price=2595.0, tp_price=2630.0,
-            sl_distance=7.0, risk_r=2.0,
-            fvg_high=2605.0, fvg_low=2601.0,
+            sweep_price=2599.0,
+            sweep_wick=2595.0,
+            mss_price=2601.0,
+            entry_price=2602.0,
+            sl_price=2595.0,
+            tp_price=2630.0,
+            sl_distance=7.0,
+            risk_r=2.0,
+            fvg_high=2605.0,
+            fvg_low=2601.0,
             reason="test signal",
             timestamp=now,
         )

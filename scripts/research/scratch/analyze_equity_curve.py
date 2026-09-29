@@ -1,7 +1,7 @@
 import pandas as pd
 
-df = pd.read_csv('data/feedback_comparison_2026-09-28/continuous_B1_TP25_0.1.csv')
-net_001 = df['net'] / df['volume'] * 0.01
+df = pd.read_csv("data/feedback_comparison_2026-09-28/continuous_B1_TP25_0.1.csv")
+net_001 = df["net"] / df["volume"] * 0.01
 
 balance = 200.0
 peak = 200.0
@@ -29,8 +29,10 @@ for idx, n in enumerate(net_001, 1):
 print("=" * 60)
 print("EQUITY CURVE ANALYSIS: B1_TP25 (Fixed 0.01 Lot on $200)")
 print("=" * 60)
-print(f"Starting Balance:          $200.00")
-print(f"Final Balance:             ${balance:.2f} (Net: +${balance - 200.0:.2f} / +{(balance/200 - 1)*100:.1f}%)")
+print("Starting Balance:          $200.00")
+print(
+    f"Final Balance:             ${balance:.2f} (Net: +${balance - 200.0:.2f} / +{(balance / 200 - 1) * 100:.1f}%)"
+)
 print(f"Highest Balance Reached:   ${peak:.2f} (at Trade #{peak_trade})")
 print(f"Lowest Balance from Start: ${low_bal:.2f} (at Trade #{low_trade})")
 print("-" * 60)
