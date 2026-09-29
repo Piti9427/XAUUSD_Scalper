@@ -1,5 +1,7 @@
 # CONTEXT: XAUUSD Trading System v2 (SMC Liquidity & Structure Engine)
 
+> **Scope note (2026-09-29):** เอกสารนี้อธิบายศัพท์และ ADR ของ SMC v2 เดิม. Contract ของ Pure B1 research target และสถานะ NO-GO อยู่ที่ [CORE_STRATEGY.md](CORE_STRATEGY.md); ผลย้อนหลังให้ยึด [target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md). SMC sizing, exits, sessions และ execution path ด้านล่างไม่ใช่กฎ Pure B1.
+
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
 > **Last Updated:** 2026-09-24

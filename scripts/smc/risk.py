@@ -12,6 +12,87 @@ class LotResult:
     reason: str
 
 
+def check_fixed_lot_risk(
+    *,
+    equity: float,
+    entry_price: float,
+    sl_price: float,
+    lot_size: float = 0.01,
+    max_risk_cap_pct: float = 0.10,
+    contract_size: float = 100.0,
+    spread_buffer: float = 0.0,
+    commission_per_lot: float | None = None,
+    slippage_allowance: float | None = None,
+    min_lot: float = 0.01,
+    max_lot: float = 10.0,
+    lot_step: float = 0.01,
+    require_cost_model: bool = False,
+) -> LotResult:
+    """Admit one fixed-size B1 leg only when broker volume and equity cap allow it.
+
+    Entry and SL should be broker-side prices. Use spread_buffer only when those
+    prices do not already include spread. Live callers must require a cost model.
+    """
+    if require_cost_model and (commission_per_lot is None or slippage_allowance is None):
+        return LotResult(0.0, 0.0, 0.0, False, "Missing commission or slippage cost model")
+    commission = 0.0 if commission_per_lot is None else commission_per_lot
+    slippage = 0.0 if slippage_allowance is None else slippage_allowance
+    values = (
+        equity,
+        entry_price,
+        sl_price,
+        lot_size,
+        max_risk_cap_pct,
+        contract_size,
+        spread_buffer,
+        commission,
+        slippage,
+        min_lot,
+        max_lot,
+        lot_step,
+    )
+    if (
+        not all(math.isfinite(v) for v in values)
+        or min(
+            equity,
+            entry_price,
+            sl_price,
+            lot_size,
+            max_risk_cap_pct,
+            contract_size,
+            min_lot,
+            max_lot,
+            lot_step,
+        )
+        <= 0
+        or min(spread_buffer, commission, slippage) < 0
+    ):
+        return LotResult(0.0, 0.0, 0.0, False, "Invalid fixed-lot risk inputs")
+    if lot_size != 0.01:
+        return LotResult(0.0, 0.0, 0.0, False, "Pure B1 requires fixed 0.01 lot")
+    distance = abs(entry_price - sl_price) + spread_buffer
+    if distance <= 0:
+        return LotResult(0.0, 0.0, 0.0, False, "Entry and SL prices are identical")
+    if not min_lot <= lot_size <= max_lot or not math.isclose(
+        (lot_size - min_lot) / lot_step,
+        round((lot_size - min_lot) / lot_step),
+        rel_tol=0.0,
+        abs_tol=1e-8,
+    ):
+        return LotResult(0.0, distance, 0.0, False, "Fixed lot does not meet broker volume rules")
+    risk = lot_size * ((distance + slippage) * contract_size + commission)
+    budget = equity * max_risk_cap_pct
+    if risk > budget:
+        return LotResult(
+            0.0,
+            distance,
+            round(risk, 2),
+            False,
+            f"Risk cap: fixed lot risks ${risk:.2f} > {max_risk_cap_pct * 100:.0f}% of equity (${budget:.2f})",
+        )
+    return LotResult(lot_size, distance, round(risk, 2), True, "Fixed lot within risk cap")
+
+
 def calculate_lot_size(
     balance: float,
     entry_price: float,
@@ -115,9 +196,8 @@ def calculate_lot_size(
             reason=f"SL distance exceeds max cap: {total_sl_dist:.2f} > {max_sl_cap:.2f}",
         )
 
-    # ADR-025: Risk Cap — reject if min lot SL risk > risk_cap_pct of equity.
-    # Prevents $200 micro-account blowup during drawdown streaks.
-    # Tick-replay verified 2026-09-29: 10% cap → $200→$884 (+342%), DD 34.4%.
+    # Legacy SMC sizing retains its existing cap and two-leg volume rules.
+    # Pure B1 uses check_fixed_lot_risk above, not this sizing function.
     min_lot_sl_risk = total_sl_dist * contract_size * min_lot
     if capital > 0 and min_lot_sl_risk > capital * max_risk_cap_pct:
         return LotResult(

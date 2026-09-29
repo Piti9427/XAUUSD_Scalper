@@ -23,14 +23,17 @@ The owner works on this project with both Codex and agy/Antigravity.
 
 ## Current Core Strategy & Historical Context (CRITICAL FOR AGENTS)
 
-The active core strategy is **Pure B1 Single-Position (Donchian Breakout + RSI Guard + EMA Filter)**.
+**SINGLE SOURCE OF TRUTH:** The active trading strategy, logic, and risk/fee math are centrally documented in `CORE_STRATEGY.md` at the project root. **Any time you modify the strategy, entry logic, parameters, or risk calculations, you MUST update `CORE_STRATEGY.md` to reflect the changes.**
+
+The declared research target is **Pure B1 Single-Position (Donchian Breakout + RSI Guard + EMA Filter)**. It is not connected to live execution; keep it research-only until a separate Demo and real-money readiness review.
 *   **Timeframe:** M15
+*   **Bar input:** UTC Bid M15 assembled from all 15 M1 bars; direct MT5 M15 may include partial rollover bars excluded by the archived replay.
 *   **Capital:** $200 (Micro-account)
 *   **TP / SL:** 6.25 ATR / 2.5 ATR
 *   **Risk Cap:** 10% of equity per trade (reject if SL risk exceeds cap)
 *   **Risk / Sizing:** 0.01 lot fixed (no martingale, no basket recovery).
 *   **Daily Loss Limit:** 40% ($80).
-*   **Backtest Result:** $200 → $884 (+342%), Max DD 34.4%, WR 37.4%, 190 trades (6-month Exness tick replay, verified 2026-09-29).
+*   **Backtest Evidence:** Archived $200 → $884 (+342%), Max DD 34.4%, WR 37.4%, 190 trades used a different RSI guard and no EMA50. The declared RSI 30–70 + EMA50 target replayed on the same Exness ticks at **-33.51%** spread-only (4 trades); a hypothetical 0.10R fee/current-spec swap scenario yielded **+150.31%** (49 trades) by changing 10% cap admission and equity path. Neither proves live broker parity or target profitability. Use `docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md` and its hashed `contract.json` as result references.
 
 **DO NOT RE-ENABLE RECOVERY BASKETS.** 
 History: On 2026-09-28, extensive backtesting proved that the original "Hybrid Basket Recovery" logic was mathematically incompatible with Breakout entries. A breakout logic will *never* fire a same-direction entry while a trade is drawing down, meaning recovery legs never trigger. The system is explicitly configured to trade single isolated legs only. See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md).

@@ -1,13 +1,13 @@
 # XAUUSD Scalper Project
 - **Goal:** Implement a hybrid backtesting and real-time alert system for Gold (XAUUSD).
-- **Strategy:** Core System: **Pure B1 Single-Position** (Donchian Breakout + RSI + EMA 50) with 6.25 ATR TP, 2.5 ATR SL, and 10% Risk Cap. (See [2026-09-28 Pivot Post-Mortem](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md) and [Strategy Evolution](docs/STRATEGY_EVOLUTION.md) for details).
+- **Strategy target (research only):** **Pure B1 Single-Position** (Donchian Breakout + RSI 30–70 + EMA 50) with 6.25 ATR TP, 2.5 ATR SL, and 10% Risk Cap. See [current target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md).
 - **Architecture:** Python + MetaTrader 5 API / Webhook Bridge + Telegram Bot.
 
 ## 🔄 Recent Updates (2026-09-29)
-- **Strategy Pivot Complete:** Transitioned from Hybrid Recovery Basket to Pure B1 Single-Position.
-- **Risk Management Hardened:** Enforced a strict **10% Risk Cap** per trade to prevent $200 micro-accounts from blowing up during wide-SL drawdowns.
-- **Profitability Verified:** Forward-tested 6 months of real Exness tick data (45M+ ticks, full spread/swap/commission cost). Final result: **$200 → $884 (+342%), Max DD 34.4%, Win Rate 37.4%.**
-- **Test Suite Passed:** 608/608 unit tests aligned with the new strict risk parameters.
+- **Strategy Pivot In Research:** Target Pure B1 detection is separate from legacy live alert and webhook paths. Live execution remains NO-GO.
+- **Risk Gate Built:** Target fixed 0.01 lot is checked against a strict **10% equity cap**, including modeled costs. The gate is not connected to `main.py`.
+- **Replay Evidence:** Archived +342% tick result uses a different RSI guard and no EMA50. Target RSI 30–70 + EMA50 replay on the same saved Exness ticks returned -33.51% spread-only (4 trades). A hypothetical 0.10R fee/current-spec swap scenario returned +150.31% (49 trades) because it changed 10% risk admission; neither establishes target profitability or broker fill parity. See [target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md).
+- **Tests:** Legacy SMC, frozen B1-FINAL, and target Pure B1 tests coexist; suite count alone does not prove live parity.
 
 ## Project Structure
 - `docs/`: System specifications, improvement plans, logic audits, and engineering handoffs.
@@ -15,6 +15,18 @@
 - `scripts/`: Implementation of the Pine Script logic in Python.
 - `data/`: Historical data for backtesting and performance logs.
 - `main.py`: Main entry point for the legacy alert loop.
+
+Do not use `main.py` as a Pure B1 live runner: it still evaluates wick rejection and can send signal alerts without broker order approval. The target signal remains in research pending further validation.
+
+## Pure B1 read-only broker capture and Shadow
+
+The Pure B1 Shadow entrypoint reads the configured Exness Demo MT5 terminal under Wine. It assembles M15 Bid bars only when all 15 Bid M1 minutes exist, matching the archived replay. It writes append-only JSONL and never submits orders or sends Telegram alerts. See [broker-bar parity audit](docs/reviews/2026-09-29-pure-b1-broker-bar-parity.md).
+
+```bash
+.venv/bin/python scripts/ops/run_b1_d_wine.py --script scripts/ops/mt5_wine_pure_b1_shadow.py
+```
+
+This runs one cycle using the ignored `.env` login. Day-start equity is sampled only during the first UTC second; missing boundary or later balance change rejects a signal. To supply costs, copy `config/pure_b1_shadow_cost_policy.example.json` to a private file, fill the target account fingerprint, current UTC review time, account-specific evidence SHA-256, round-trip commission in USD per lot, swap-free assertion and explicit adverse slippage allowance, then set `PURE_B1_COST_POLICY` to that file. This is an operator-attested Shadow assumption, not broker-verified historical cost or fill evidence. Missing, stale or wrong-account policy rejects admission. This is Shadow only; it does not enable Demo or real-money orders.
 
 `smc_main.py` is offline-only. It refuses to start when MT5 connects because its local position state and fixed-balance sizing are not broker-reconciled. Its disconnected simulation disables Telegram alerts. Use the webhook bridge in dry-run or demo testing; neither path is certified for real-money trading.
 

@@ -1,5 +1,5 @@
 import unittest
-from scripts.smc.risk import calculate_lot_size, LotResult, frozen_initial_r
+from scripts.smc.risk import calculate_lot_size, check_fixed_lot_risk, LotResult, frozen_initial_r
 from scripts.smc.types import Direction, OrderIntentType
 
 
@@ -143,6 +143,102 @@ class TestSMCRiskCalculator(unittest.TestCase):
         self.assertTrue(result.is_valid)
         self.assertEqual(result.lot_size, 0.04)
         self.assertAlmostEqual(result.risk_amount, 42.4)
+
+    def test_generic_sizing_keeps_configured_five_percent_budget(self):
+        result = calculate_lot_size(
+            balance=200,
+            entry_price=2600,
+            sl_price=2588,
+            risk_pct=0.05,
+            max_risk_cap_pct=0.10,
+        )
+        self.assertFalse(result.is_valid)
+        self.assertIn("configured risk of 5.0%", result.reason)
+
+    def test_pure_b1_accepts_fixed_lot_between_five_and_ten_percent(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2588,
+            lot_size=0.01,
+            spread_buffer=0.30,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.01)
+        self.assertEqual(result.risk_amount, 12.30)
+
+    def test_pure_b1_rejects_above_ten_percent_with_costs(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2581,
+            lot_size=0.01,
+            spread_buffer=0.30,
+            slippage_allowance=0.50,
+            commission_per_lot=30,
+        )
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.lot_size, 0)
+        self.assertEqual(result.risk_amount, 20.10)
+
+    def test_pure_b1_does_not_size_up_when_stop_is_narrow(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2598,
+            lot_size=0.01,
+        )
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.lot_size, 0.01)
+
+    def test_pure_b1_rejects_other_lot_even_under_cap(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2598,
+            lot_size=0.02,
+        )
+        self.assertFalse(result.is_valid)
+
+    def test_pure_b1_rejects_broker_volume_mismatch(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2598,
+            lot_size=0.01,
+            min_lot=0.02,
+        )
+        self.assertFalse(result.is_valid)
+
+    def test_pure_b1_rejects_off_step_volume(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2598,
+            lot_size=0.01,
+            min_lot=0.005,
+            lot_step=0.01,
+        )
+        self.assertFalse(result.is_valid)
+
+    def test_pure_b1_requires_live_cost_model(self):
+        result = check_fixed_lot_risk(
+            equity=200,
+            entry_price=2600,
+            sl_price=2598,
+            require_cost_model=True,
+        )
+        self.assertFalse(result.is_valid)
+        self.assertIn("Missing commission or slippage", result.reason)
+
+    def test_pure_b1_cap_uses_current_equity(self):
+        result = check_fixed_lot_risk(
+            equity=100,
+            entry_price=2600,
+            sl_price=2588,
+            lot_size=0.01,
+        )
+        self.assertFalse(result.is_valid)
 
     def test_strict_cost_model_rejects_missing_allowance(self):
         result = calculate_lot_size(
