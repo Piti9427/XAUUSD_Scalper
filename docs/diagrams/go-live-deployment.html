@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XAUUSD Scalper · Go-Live Deployment &amp; Infra Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-paper:       #f5f5f5;
+      --color-paper-2:     #ececec;
+      --color-ink:         #2d3142;
+      --color-muted:       #4f5d75;
+      --color-soft:        #7a8399;
+      --color-rule:        rgba(45,49,66,0.12);
+      --color-rule-solid:  rgba(79,93,117,0.25);
+      --color-accent:      #eb6c36;
+      --color-accent-tint: rgba(235,108,54,0.08);
+      --color-link:        #2e5aa8;
+      --font-sans:   'Geist', system-ui, -apple-system, sans-serif;
+      --font-serif:  'Instrument Serif', Georgia, serif;
+      --font-mono:   'Geist Mono', ui-monospace, Menlo, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      min-height: 100vh;
+      padding: 3rem 2rem;
+      color: var(--color-ink);
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 3vw + 1rem, 2.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--color-muted);
+      max-width: 68ch;
+    }
+
+    /* ── Diagram container ────────────────────────────────────────── */
+    .diagram-container {
+      background: transparent;
+      border: none;
+      padding: 0;
+      overflow-x: auto;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 960px;
+      display: block;
+    }
+
+    /* ── Info cards ───────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: 1.05fr 1.15fr 1fr;
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 860px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.25rem;
+    }
+
+    .card-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .card-dot.link   { background: var(--color-link); }
+    .card-dot.coral  { background: var(--color-accent); }
+    .card-dot.slate  { background: var(--color-muted); }
+
+    .card-header h3 {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+      letter-spacing: -0.01em;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .card li {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--color-muted);
+    }
+
+    .card li strong {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+
+    .card li code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(45,49,66,0.05);
+      padding: 0.15rem 0.35rem;
+      border-radius: 3px;
+      color: var(--color-ink);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--color-soft);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <p class="header-eyebrow">Deployment · Diagram Design</p>
+      <h1>Go-Live Deployment &amp; Infra Architecture</h1>
+      <p class="subtitle">Physical topology, external cloud APIs, Oracle Cloud VPS execution host with Dockerized Wine MT5, and phased Go-Live validation roadmap.</p>
+    </header>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1040 576" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="golive-deploy-title golive-deploy-desc">
+        <title id="golive-deploy-title">XAUUSD Scalper Go-Live Deployment Architecture</title>
+        <desc id="golive-deploy-desc">Infrastructure deployment topology showing external broker and news APIs, Oracle Cloud VPS running Docker with headless Wine and MT5 terminal, and trader supervision clients.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <!-- Base clean paper -->
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- ── Tier Zones (Painted before arrows and nodes) ────────── -->
+        <!-- Zone 1: External APIs & Broker -->
+        <rect x="48" y="88" width="264" height="384" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <rect x="108" y="92" width="144" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="180" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">EXTERNAL BROKER &amp; APIS</text>
+
+        <!-- Zone 2: Oracle Cloud Host -->
+        <rect x="344" y="88" width="352" height="384" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <rect x="424" y="92" width="192" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="520" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">HOST: ORACLE CLOUD VPS (UBUNTU)</text>
+
+        <!-- Zone 3: Supervision Client -->
+        <rect x="728" y="88" width="264" height="384" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="0.8" stroke-dasharray="4,4"/>
+        <rect x="784" y="92" width="152" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="860" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">TRADER &amp; AUDIT CLIENTS</text>
+
+        <!-- ── Connectors (Behind nodes) ──────────────────────────── -->
+        <!-- Path 1: Broker TCP Gateway (Exness <-> Wine MT5) -->
+        <line x1="296" y1="184" x2="360" y2="184" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+        <!-- Path 2: Forex News Polling (News API -> Core Bot) -->
+        <path d="M 296,300 H 320 Q 328,300 328,292 V 228 Q 328,220 336,220 H 360"
+              fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Path 3: Telemetry Outbox (Core Bot -> Cloud SaaS) -->
+        <line x1="360" y1="396" x2="296" y2="396" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Path 4: Real-time Alert Push (Core Bot -> Telegram Mobile) -->
+        <line x1="680" y1="208" x2="744" y2="208" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Path 5: Audit Sync (Core Bot -> Google Sheets) -->
+        <line x1="680" y1="384" x2="744" y2="384" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ── Path Labels (With >=8px gap from stroke) ──────────── -->
+        <!-- Label 1: TCP:443 MT5 -->
+        <rect x="300" y="164" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="328" y="172" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TCP:443</text>
+
+        <!-- Label 2: HTTPS:443 News -->
+        <rect x="264" y="252" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="292" y="260" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTPS:443</text>
+
+        <!-- Label 3: HTTPS:443 SaaS -->
+        <rect x="300" y="376" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="328" y="384" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HTTPS:443</text>
+
+        <!-- Label 4: TELEGRAM PUSH -->
+        <rect x="684" y="188" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="712" y="196" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ALERTS</text>
+
+        <!-- Label 5: SHEETS SYNC -->
+        <rect x="684" y="364" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="712" y="372" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SHEETS</text>
+
+        <!-- ── Zone 1 Nodes: External Services ────────────────────── -->
+        <!-- Node 1A: Exness MT5 Server -->
+        <rect x="64" y="136" width="232" height="96" rx="6" fill="#f5f5f5"/>
+        <rect x="64" y="136" width="232" height="96" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="72" y="144" width="48" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="96" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BROKER</text>
+        <text x="180" y="164" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Exness MT5 Gateway</text>
+        <text x="180" y="180" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Exness-MT5Trial7 · XAUUSDm</text>
+        <!-- Artifact Chip -->
+        <rect x="72" y="196" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="80" y="212" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Standard Demo / Real ($200)</text>
+        <text x="280" y="212" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">0.01 lot</text>
+
+        <!-- Node 1B: Macro News Provider -->
+        <rect x="64" y="256" width="232" height="88" rx="6" fill="#f5f5f5"/>
+        <rect x="64" y="256" width="232" height="88" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="72" y="264" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="90" y="272" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">NEWS</text>
+        <text x="180" y="284" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Forex Calendar API</text>
+        <!-- Artifact Chip -->
+        <rect x="72" y="308" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="80" y="324" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">ForexFactory / TradingEcon</text>
+        <text x="280" y="324" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">±30m Cut</text>
+
+        <!-- Node 1C: Cloud Relays (Telegram & GWS) -->
+        <rect x="64" y="368" width="232" height="88" rx="6" fill="#f5f5f5"/>
+        <rect x="64" y="368" width="232" height="88" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="72" y="376" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="90" y="384" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SAAS</text>
+        <text x="180" y="396" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Notification Services</text>
+        <!-- Artifact Chip -->
+        <rect x="72" y="420" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="80" y="436" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Telegram Bot + Google Sheets</text>
+        <text x="280" y="436" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">OAuth2</text>
+
+        <!-- ── Zone 2 Node: Oracle Cloud Execution Host (FOCAL) ───── -->
+        <rect x="360" y="136" width="320" height="320" rx="6" fill="#f5f5f5"/>
+        <rect x="360" y="136" width="320" height="320" rx="6" fill="rgba(235,108,54,0.06)" stroke="#eb6c36" stroke-width="1.2"/>
+        <rect x="368" y="144" width="48" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+        <text x="392" y="152" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DOCKER</text>
+        <!-- Replica badge -->
+        <rect x="636" y="144" width="36" height="12" rx="2" fill="#f5f5f5" stroke="rgba(45,49,66,0.20)" stroke-width="0.8"/>
+        <text x="654" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">1x REP</text>
+        
+        <text x="520" y="164" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">xauusd_scalper_bot:v1</text>
+        <text x="520" y="180" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Oracle Ampere A1 (24GB) / AMD Micro (4GB Swap)</text>
+
+        <!-- Stacked Artifact Chips inside Docker -->
+        <!-- Chip 2A: Python Core Engine -->
+        <rect x="376" y="196" width="288" height="48" rx="4" fill="#ffffff" stroke="#eb6c36" stroke-width="1"/>
+        <text x="388" y="214" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Pure B1 Core Strategy Engine</text>
+        <text x="656" y="214" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">v1.2 (Active)</text>
+        <text x="388" y="232" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">Donchian 20 + RSI 30-70 + 10% Risk Cap</text>
+
+        <!-- Chip 2B: Wine Headless + MT5 -->
+        <rect x="376" y="256" width="288" height="48" rx="4" fill="#ffffff" stroke="#2d3142" stroke-width="0.8"/>
+        <text x="388" y="274" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Wine 8.0 + Xvfb Virtual Display</text>
+        <text x="656" y="274" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">v8.0 (Headless)</text>
+        <text x="388" y="292" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">Hosts Native Windows MT5 Terminal (x86_64)</text>
+
+        <!-- Chip 2C: Broker Adapter & Staging -->
+        <rect x="376" y="316" width="288" height="48" rx="4" fill="#ffffff" stroke="#2d3142" stroke-width="0.8"/>
+        <text x="388" y="334" fill="#2d3142" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Broker Staging Outbox (b1_outbox)</text>
+        <text x="656" y="334" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">v1.0 (Safety)</text>
+        <text x="388" y="352" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">OrderCheck · Margin Filter · Deal Reconciliation</text>
+
+        <!-- Chip 2D: Systemd Watchdog -->
+        <rect x="376" y="376" width="288" height="36" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="388" y="398" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Daemon Watchdog (restart: unless-stopped)</text>
+        <text x="656" y="398" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">systemd</text>
+
+        <!-- ── Zone 3 Nodes: Trader Supervision ───────────────────── -->
+        <!-- Node 3A: Trader Mobile App -->
+        <rect x="744" y="136" width="232" height="144" rx="6" fill="#f5f5f5"/>
+        <rect x="744" y="136" width="232" height="144" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="752" y="144" width="48" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="776" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MOBILE</text>
+        <text x="860" y="168" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Trader Supervision</text>
+        <text x="860" y="184" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Telegram App &amp; Exness Mobile</text>
+        <!-- Artifact Chips -->
+        <rect x="752" y="200" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="760" y="216" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Deal Confirmed Alert</text>
+        <text x="960" y="216" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">Push</text>
+        <rect x="752" y="232" width="216" height="24" rx="4" fill="rgba(235,108,54,0.06)" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+        <text x="760" y="248" fill="#eb6c36" font-size="8" font-weight="600" font-family="'Geist', sans-serif">Circuit Breaker Kill-Switch</text>
+        <text x="960" y="248" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">/halt</text>
+
+        <!-- Node 3B: Audit Dashboard -->
+        <rect x="744" y="312" width="232" height="144" rx="6" fill="#f5f5f5"/>
+        <rect x="744" y="312" width="232" height="144" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="752" y="320" width="40" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="772" y="328" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AUDIT</text>
+        <text x="860" y="344" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Audit &amp; Journaling</text>
+        <text x="860" y="360" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Cloud Ledger &amp; Terminal</text>
+        <!-- Artifact Chips -->
+        <rect x="752" y="376" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="760" y="392" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Google Sheets Live Journal</text>
+        <text x="960" y="392" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">Daily P/L</text>
+        <rect x="752" y="408" width="216" height="24" rx="4" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="760" y="424" fill="#2d3142" font-size="8" font-family="'Geist', sans-serif">Exness WebTerminal Viewer</text>
+        <text x="960" y="424" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end">Browser</text>
+
+        <!-- ── Legend Strip ──────────────────────────────────────── -->
+        <line x1="48" y1="496" x2="992" y2="496" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <text x="48" y="516" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <!-- Legend Items -->
+        <rect x="48" y="532" width="16" height="12" rx="2" fill="rgba(235,108,54,0.06)" stroke="#eb6c36" stroke-width="1.2"/>
+        <text x="72" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Core Execution Host (Docker)</text>
+
+        <rect x="232" y="532" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="256" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Managed Host / API</text>
+
+        <rect x="388" y="532" width="16" height="12" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="0.8"/>
+        <text x="412" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Artifact Chip (Versioned)</text>
+
+        <line x1="560" y1="538" x2="588" y2="538" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <text x="596" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Broker TCP Gateway</text>
+
+        <line x1="720" y1="538" x2="748" y2="538" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <text x="756" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Primary Alert Push</text>
+
+        <line x1="868" y1="538" x2="896" y2="538" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="904" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Async Audit Log</text>
+      </svg>
+    </div>
+
+    <!-- ── Summary Cards ─────────────────────────────────────────── -->
+    <div class="cards">
+      <div class="card">
+        <p class="card-eyebrow">Pillar 01 · APIs &amp; Broker</p>
+        <div class="card-header">
+          <span class="card-dot link"></span>
+          <h3>Data &amp; Broker Gateway</h3>
+        </div>
+        <ul>
+          <li><strong>Exness MT5 Gateway (TCP:443):</strong> Connects via native Python <code>MetaTrader5</code> library to <code>Exness-MT5Trial7</code> (Standard Demo, $200 equity, 1:1000 max leverage) on symbol <code>XAUUSDm</code> (100 oz contract, min 0.01 lot, 0 commission, qualified swap-free).</li>
+          <li><strong>Forex News API (HTTPS:443):</strong> TradingEconomics &amp; ForexFactory calendar feed. Blocks trade entries 30 minutes before and after high-impact USD events (CPI, NFP, FOMC).</li>
+          <li><strong>Telegram &amp; GWS APIs:</strong> Sends real-time deal confirmation cards to Trader's Telegram channel; logs trade audit entries to Google Sheets.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="card-eyebrow">Pillar 02 · Execution Host</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Oracle Cloud VPS &amp; Docker</h3>
+        </div>
+        <ul>
+          <li><strong>Cloud Infrastructure:</strong> Runs on Oracle Cloud Always-Free VM running Ubuntu 22.04 LTS (Ampere A1 ARM64 with 24GB RAM or AMD Micro with 4GB swap space to eliminate OOM).</li>
+          <li><strong>Headless Wine 8.0 + Xvfb:</strong> Runs official 64-bit Windows MetaTrader 5 Terminal inside Docker container headlessly without requiring a full Windows OS license.</li>
+          <li><strong>Outbox Staging (<code>b1_outbox.py</code>):</strong> Enforces strict <code>order_check</code> and pre-entry margin verification. Auto-managed by systemd watchdog (<code>restart: unless-stopped</code>).</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="card-eyebrow">Pillar 03 · Go-Live Roadmap</p>
+        <div class="card-header">
+          <span class="card-dot slate"></span>
+          <h3>Phased Transition Gates</h3>
+        </div>
+        <ul>
+          <li><strong>Phase 1 · Staging Dry-Run:</strong> Local probe validating order check math, broker symbol specifications, and zero-phantom alert coupling.</li>
+          <li><strong>Phase 2 · Exness Demo Forward Test:</strong> 2–4 weeks continuous forward trading on Exness Standard Demo ($200) to measure real slippage, broker fill latency, and swap behavior.</li>
+          <li><strong>Phase 3 · Risk &amp; Invariant Review:</strong> Audit drawdown (&lt; 40% / $80 limit) and verify 100% adherence to the 10% equity cap before human real-money GO decision.</li>
+          <li><strong>Phase 4 · Real-Money Micro ($200):</strong> Switch credentials to Exness Real Standard Account with strict fixed 0.01 lot size and 24/7 Telegram kill-switch.</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span>XAUUSD_Scalper · Go-Live Deployment Architecture</span>
+      <span>Rendered with Diagram Design Editorial System</span>
+    </footer>
+  </div>
+</body>
+</html>
