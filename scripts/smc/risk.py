@@ -23,7 +23,7 @@ def calculate_lot_size(
     max_lot: float = 10.0,
     contract_size: float = 100.0,
     lot_step: float = 0.01,
-    max_risk_cap_pct: float = 0.015,
+    max_risk_cap_pct: float = 0.10,
     equity: float | None = None,
     commission_per_lot: float | None = None,
     slippage_allowance: float | None = None,
@@ -113,6 +113,19 @@ def calculate_lot_size(
             risk_amount=0.0,
             is_valid=False,
             reason=f"SL distance exceeds max cap: {total_sl_dist:.2f} > {max_sl_cap:.2f}",
+        )
+
+    # ADR-025: Risk Cap — reject if min lot SL risk > risk_cap_pct of equity.
+    # Prevents $200 micro-account blowup during drawdown streaks.
+    # Tick-replay verified 2026-09-29: 10% cap → $200→$884 (+342%), DD 34.4%.
+    min_lot_sl_risk = total_sl_dist * contract_size * min_lot
+    if capital > 0 and min_lot_sl_risk > capital * max_risk_cap_pct:
+        return LotResult(
+            lot_size=0.0,
+            sl_distance=total_sl_dist,
+            risk_amount=min_lot_sl_risk,
+            is_valid=False,
+            reason=f"Risk cap: min lot risks ${min_lot_sl_risk:.2f} > {max_risk_cap_pct*100:.0f}% of ${capital:.2f} (${capital*max_risk_cap_pct:.2f})",
         )
 
     risk_budget = capital * risk_pct

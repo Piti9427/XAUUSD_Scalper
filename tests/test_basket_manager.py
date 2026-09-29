@@ -156,9 +156,7 @@ class TestBasketManager(unittest.TestCase):
         mgr = _make_manager()
         _open_basket(mgr)  # leg 0
 
-        mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)  # triggers CLOSE_PENDING
-
-        # Simulate broker confirming all open legs closed
+        # Simulate broker confirming all open legs closed (single leg TP/SL hit)
         mgr.on_leg_closed(leg_index=0, realized_pnl=1.0)
 
         self.assertEqual(mgr.state, BasketState.FLAT)
@@ -172,13 +170,11 @@ class TestBasketManager(unittest.TestCase):
         intents1 = _open_basket(mgr, now=NOW)
         self.assertEqual(len(intents1), 1)
         # Close it so state returns to FLAT for the next open
-        mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
 
         # Second basket — same day
         intents2 = _open_basket(mgr, now=NOW)
         self.assertEqual(len(intents2), 1)
-        mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
 
         # Third basket — same day → quota exceeded
@@ -190,7 +186,6 @@ class TestBasketManager(unittest.TestCase):
         mgr = _make_manager()
         # Day 1: open and close a basket — this seeds HWM = 200
         _open_basket(mgr, now=NOW)
-        mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
         # Day 2: equity collapses to 158 → drawdown = 21% > hwm_halt_fraction(20%).
         # Using NOW_DAY2 avoids the daily-loss guard from day 1 blocking us first.
@@ -204,7 +199,6 @@ class TestBasketManager(unittest.TestCase):
         mgr = _make_manager()
         # Seed HWM on day 1
         _open_basket(mgr, now=NOW)
-        mgr.on_bar(floating_pnl=1.0, equity=EQUITY, now=NOW)
         mgr.on_leg_closed(0, 1.0)
         # Day 2: trigger HWM halt
         low_equity = 158.0
@@ -219,6 +213,7 @@ class TestBasketManager(unittest.TestCase):
     def test_basket_tp_does_not_fire_at_zero_pnl(self):
         mgr = _make_manager()
         _open_basket(mgr)
+        mgr.on_recovery_signal(BUY, ENTRY, SL, TP, EQUITY, -5.0, NOW)  # Add recovery leg so basket TP is active
         # floating_pnl=0.0 must NOT trigger basket TP
         intents = mgr.on_bar(floating_pnl=0.0, equity=EQUITY, now=NOW)
         self.assertEqual(intents, [])

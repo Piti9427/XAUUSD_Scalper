@@ -188,11 +188,11 @@ class ReviewRegressions(unittest.TestCase):
         base_run, variant_run = {"run": "base", "metrics": {}}, {"run": "be", "metrics": {}}
         for key, reserve, adverse in release.SCENARIOS:
             base_run["metrics"][key] = dict(
-                release.metrics(ledger, 10000.0, 0.08, False, reserve, adverse),
+                release.metrics(ledger, 200.0, 0.08, False, reserve, adverse),
                 blocks={"a": 1.0, "b": 1.0, "c": 1.0},
             )
             variant_run["metrics"][key] = dict(
-                release.metrics(variant, 10000.0, 0.07, False, reserve, adverse),
+                release.metrics(variant, 200.0, 0.07, False, reserve, adverse),
                 blocks={"a": 2.0, "b": 2.0, "c": 1.0},
             )
         result = release.compare_exits(base_run, variant_run, ledger, variant)

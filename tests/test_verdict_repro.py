@@ -20,7 +20,7 @@ class TestVerdictRepro(unittest.TestCase):
             auth_token=self.secret,
             dry_run=True,
             db_path=self.db_path,
-            account_balance=10000.0,
+            account_balance=200.0,
             risk_pct=0.01,
             max_daily_losses=2,
         )
@@ -105,7 +105,7 @@ class TestVerdictRepro(unittest.TestCase):
         For SELL trade, it compares raw bar['low'] <= tp_price without Ask spread.
         """
         orch = StrategyOrchestrator()
-        account = AccountState(balance=10000.0, equity=10000.0)
+        account = AccountState(balance=200.0, equity=200.0)
         pos = Position(
             direction=Direction.SELL,
             entry_price=2500.0,
@@ -140,7 +140,7 @@ class TestVerdictRepro(unittest.TestCase):
         (ADR-018 / ADR-024). Foundation BaselinePlay keeps be_enabled=False by default.
         """
         orch = StrategyOrchestrator(be_enabled=True)
-        account = AccountState(balance=10000.0, equity=10000.0)
+        account = AccountState(balance=200.0, equity=200.0)
         pos = Position(
             direction=Direction.BUY,
             entry_price=2500.0,

@@ -133,7 +133,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
             )
         ]
         broker.account_info.return_value = SimpleNamespace(
-            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+            balance=200.0, equity=200.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01,
@@ -173,7 +173,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
             )
         ]
         broker.account_info.return_value = SimpleNamespace(
-            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+            balance=200.0, equity=200.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01,
@@ -278,7 +278,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         broker.ORDER_FILLING_FOK = 0
         broker.ORDER_FILLING_RETURN = 2
         broker.account_info.return_value = SimpleNamespace(
-            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+            balance=200.0, equity=200.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
             filling_mode=broker.SYMBOL_FILLING_IOC,
@@ -349,7 +349,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
     def test_live_risk_snapshot_reads_balance_equity_and_symbol_volume(self):
         broker = Mock()
         broker.account_info.return_value = SimpleNamespace(
-            balance=10000.0, equity=6000.0, margin_free=5500.0, trade_allowed=True
+            balance=200.0, equity=6000.0, margin_free=5500.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01,
@@ -364,7 +364,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
         self.adapter.connected = True
         with patch("scripts.smc.mt5_adapter.runtime.mt5", broker):
             snapshot = self.adapter.get_risk_snapshot()
-        self.assertEqual(snapshot["balance"], 10000.0)
+        self.assertEqual(snapshot["balance"], 200.0)
         self.assertEqual(snapshot["equity"], 6000.0)
         self.assertEqual(snapshot["min_lot"], 0.01)
         self.assertEqual(snapshot["max_lot"], 5.0)
@@ -378,7 +378,7 @@ class TestSMCMT5Adapter(unittest.TestCase):
 
     def test_live_risk_snapshot_none_when_margin_free_missing(self):
         broker = Mock()
-        broker.account_info.return_value = SimpleNamespace(balance=10000.0, equity=6000.0)
+        broker.account_info.return_value = SimpleNamespace(balance=200.0, equity=6000.0)
         broker.symbol_info.return_value = SimpleNamespace(
             volume_min=0.01,
             volume_max=5.0,

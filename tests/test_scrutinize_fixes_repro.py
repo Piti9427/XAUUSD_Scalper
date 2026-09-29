@@ -32,7 +32,7 @@ class TestScrutinizeFixesRepro(unittest.TestCase):
         broker.SYMBOL_FILLING_IOC = 2
         broker.ORDER_FILLING_RETURN = 2
         broker.account_info.return_value = SimpleNamespace(
-            balance=10000.0, equity=10000.0, margin_free=9000.0, trade_allowed=True
+            balance=200.0, equity=200.0, margin_free=9000.0, trade_allowed=True
         )
         broker.symbol_info.return_value = SimpleNamespace(
             filling_mode=2,

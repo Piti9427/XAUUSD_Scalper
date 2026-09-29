@@ -120,7 +120,7 @@ class TestSMCBacktester(unittest.TestCase):
         self.assertEqual(summary.win_rate, 100.0)
 
     def test_cash_uses_filled_volume(self):
-        trade = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1).trades_df.iloc[0]
+        trade = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1).trades_df.iloc[0]
         expected = (trade.exit_price - trade.entry_price) * trade.lot_size * 100
         self.assertAlmostEqual(trade.pnl_dollar, expected, places=2)
 
@@ -128,7 +128,7 @@ class TestSMCBacktester(unittest.TestCase):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 15)
         bars.loc[mask, "low"] = 2000.0
-        result = SMCBacktester(require_choch=False).run(bars, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(bars, self.df_h1)
         trade = result.trades_df.iloc[0]
         self.assertEqual(trade.exit_reason, "AMBIGUOUS")
         self.assertTrue(trade.sl_touched)
@@ -150,7 +150,7 @@ class TestSMCBacktester(unittest.TestCase):
                 {"time": "2026-03-02T08:15:20Z", "bid": 2000.0, "ask": 2000.2},
             ]
         )
-        result = SMCBacktester(require_choch=False).run(bars, self.df_h1, df_ticks=ticks)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(bars, self.df_h1, df_ticks=ticks)
         trade = result.trades_df.iloc[0]
         self.assertEqual(trade.exit_reason, "TP")
         self.assertTrue(trade.sl_touched)
@@ -164,7 +164,7 @@ class TestSMCBacktester(unittest.TestCase):
         bars = self.df_m5.copy()
         mask = (bars.time.dt.day == 2) & (bars.time.dt.hour == 8) & (bars.time.dt.minute == 10)
         bars.loc[mask, "low"] = 2000.0
-        result = SMCBacktester(require_choch=False).run(bars, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(bars, self.df_h1)
         self.assertEqual(result.total_trades, 0)
         self.assertEqual(result.final_balance, result.initial_balance)
         self.assertTrue(result.trades_df.empty)
@@ -183,11 +183,11 @@ class TestSMCBacktester(unittest.TestCase):
             return SetupDecision(None, "mocked_reject")
 
         with patch("scripts.smc.backtester.evaluate_smc_setup", side_effect=inspect):
-            SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
+            SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1)
         self.assertTrue(calls)
 
     def test_partial_and_tp_cash_conserve_filled_volume(self):
-        result = SMCBacktester(partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(
+        result = SMCBacktester(initial_balance=10000.0, partial_tp_enabled=True, partial_tp_r=1.0, require_choch=False).run(
             self.df_m5, self.df_h1
         )
         trade = result.trades_df.iloc[0]
@@ -202,7 +202,7 @@ class TestSMCBacktester(unittest.TestCase):
     def test_default_replay_labeled_theoretical_not_usd500(self):
         from scripts.smc.replay_report import ReplayKind
 
-        result = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1)
         self.assertIsNotNone(result.replay_report)
         self.assertEqual(result.replay_report.kind, ReplayKind.THEORETICAL_TAPE)
         self.assertIn("theoretical_tape_not_account_performance", result.replay_report.notes)
@@ -222,6 +222,7 @@ class TestSMCBacktester(unittest.TestCase):
         from scripts.smc.cost_accounting import expectancy_hides_operating_loss
 
         result = SMCBacktester(
+            initial_balance=10000.0,
             require_choch=False,
             operating_costs=500.0,
             fees_and_swap=1.0,
@@ -243,7 +244,7 @@ class TestSMCBacktester(unittest.TestCase):
             )
 
     def test_few_trades_sample_verdict_is_inconclusive(self):
-        result = SMCBacktester(require_choch=False).run(self.df_m5, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(self.df_m5, self.df_h1)
         self.assertEqual(result.sample_verdict, "INCONCLUSIVE")
         if result.winning_trades + result.losing_trades + result.be_trades > 0:
             self.assertIsNotNone(result.wilson)
@@ -252,6 +253,7 @@ class TestSMCBacktester(unittest.TestCase):
 
     def test_proxy_feed_cannot_claim_evaluable(self):
         result = SMCBacktester(
+            initial_balance=10000.0,
             require_choch=False,
             is_proxy_feed=True,
             source_label="yfinance",
@@ -264,7 +266,7 @@ class TestSMCBacktester(unittest.TestCase):
         hold = self.df_m5.iloc[:5].copy()
         hold["time"] = [datetime(2026, 7, 1, 12, i * 5, tzinfo=timezone.utc) for i in range(5)]
         mixed = pd.concat([self.df_m5, hold], ignore_index=True)
-        result = SMCBacktester(require_choch=False).run(mixed, self.df_h1)
+        result = SMCBacktester(initial_balance=10000.0, require_choch=False).run(mixed, self.df_h1)
         self.assertIsNone(result.eval_window)
         self.assertIn("refuse_merge", result.sample_verdict)
 

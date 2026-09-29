@@ -11,6 +11,33 @@ This is a Python trading-alert and backtesting project for XAUUSD.
 - `test_mt5.py` is a manual MT5 connectivity smoke test.
 - `README.md` and `SYSTEM_REPORT.md` provide context.
 
+## Codex and Antigravity Collaboration
+
+The owner works on this project with both Codex and agy/Antigravity.
+
+- Antigravity's local workspace/artifacts commonly live under `/Users/nopparuj/.gemini/antigravity-cli/`.
+- When a referenced script or experiment is absent from this repository or `/tmp`, search `brain/<session-id>/scratch/` under that root. Do not assume it is missing before checking there.
+- Example located on 2026-09-28: `brain/1730c142-c74c-49ae-b1bc-af441f236211/scratch/compare_basket_rules.py`. Session IDs vary; discover the relevant file rather than hardcoding this session.
+- Read external scripts before running them. Resolve relative data paths against their intended working directory; the example above expects this repository root.
+- Treat scratch scripts and summaries as evidence to verify against source, inputs and reproducible outputs, not as proof of current runtime behavior. Preserve original artifacts; keep audit copies and provenance in this repository when needed.
+
+## Current Core Strategy & Historical Context (CRITICAL FOR AGENTS)
+
+The active core strategy is **Pure B1 Single-Position (Donchian Breakout + RSI Guard + EMA Filter)**.
+*   **Timeframe:** M15
+*   **Capital:** $200 (Micro-account)
+*   **TP / SL:** 6.25 ATR / 2.5 ATR
+*   **Risk Cap:** 10% of equity per trade (reject if SL risk exceeds cap)
+*   **Risk / Sizing:** 0.01 lot fixed (no martingale, no basket recovery).
+*   **Daily Loss Limit:** 40% ($80).
+*   **Backtest Result:** $200 → $884 (+342%), Max DD 34.4%, WR 37.4%, 190 trades (6-month Exness tick replay, verified 2026-09-29).
+
+**DO NOT RE-ENABLE RECOVERY BASKETS.** 
+History: On 2026-09-28, extensive backtesting proved that the original "Hybrid Basket Recovery" logic was mathematically incompatible with Breakout entries. A breakout logic will *never* fire a same-direction entry while a trade is drawing down, meaning recovery legs never trigger. The system is explicitly configured to trade single isolated legs only. See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md).
+
+**DO NOT REMOVE THE 10% RISK CAP.**
+History: On 2026-09-29, tick replay proved that without the risk cap, $200 account blows up from 8-trade losing streaks. The 10% cap rejects trades when equity is too low, letting the account survive drawdowns. See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md).
+
 ## Build, Test, and Development Commands
 
 Create an isolated environment before installing dependencies:

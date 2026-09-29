@@ -127,7 +127,10 @@ class Basket:
         return self.net_pnl_with_floating(floating_pnl) <= -self.frozen_budget_usd
 
     def basket_tp_reached(self, floating_pnl: float) -> bool:
-        """Basket TP: net turns strictly positive. Break-even alone is not enough to close."""
+        """Basket TP: net turns strictly positive. Break-even alone is not enough to close.
+        Only applies if there's more than one leg (recovery active). Single legs must hit their 2.5R TP."""
+        if self.leg_count <= 1:
+            return False
         return self.net_pnl_with_floating(floating_pnl) > 0.0
 
 

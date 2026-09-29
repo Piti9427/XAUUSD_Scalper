@@ -1,7 +1,7 @@
 # 📊 XAUUSD Pro Sniper V2 - Project Report
 - **Project Name:** XAUUSD Scalper
 - **Current Status:** Phase 2 (Implementation Complete, Ready for Config & Test)
-- **Last Updated:** 2026-05-18
+- **Last Updated:** 2026-09-29
 
 ## 🛡️ 1. System Overview
 A professional-grade, multi-tool trading system for Gold (XAUUSD) designed to eliminate emotional trading through strict logic and institutional filters.
@@ -12,13 +12,21 @@ A professional-grade, multi-tool trading system for Gold (XAUUSD) designed to el
 - **Dynamic Risk Mgmt:** ATR-based Target Profit and Stop Loss calculation.
 - **Portfolio Analytics:** Live-syncing of every trade to Google Sheets and Docs.
 
-## 📈 2. Strategy Architecture
-- **Timeframe:** M15 (Execution), H1 & H4 (Trend Filters).
-- **Core Logic:**
-    - **Trend:** EMA 20 crossing EMA 50.
-    - **Reversal:** RSI < 35 (Buy) / RSI > 70 (Sell).
-    - **Volume:** MFI (Money Flow Index) for additional confirmation.
-- **Risk/Reward:** Target minimum 1:1.5 using ATR scaling.
+## 📈 2. Strategy Architecture (Core System)
+- **Timeframe:** M15 (Execution).
+- **Core Strategy:** **Pure B1 Single-Position (Donchian Breakout + RSI Guard + EMA Filter)**
+    - **Logic:** Donchian 30 Breakout with RSI14 Guard + EMA 50 Trend Filter.
+    - **Target (TP):** 6.25 ATR — tick-replay verified 2026-09-29.
+    - **Stop Loss (SL):** 2.5 ATR — gives price room to breathe through noise.
+    - **Risk Cap:** 10% of equity per trade — rejects signal if SL risk too high for current balance.
+    - **Position:** Single 0.01 lot per signal. No recovery legs.
+    - **Backtest:** $200 → $884 (+342%), WR 37.4%, Max DD 34.4%, 190 trades (6-month Exness tick replay).
+    - **Recovery:** **DISABLED** — 6-month tick-by-tick replay proved Breakout
+      entry signals never repeat while price moves against you, making
+      same-direction Recovery legs mathematically impossible. (See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md))
+    - **Circuit Breakers:** Daily loss limit (40% of equity = $80 on $200).
+    - **HWM Halt:** Disabled for $200 micro-account.
+    - **Evidence:** `data/b1_tick_sweep_results.json` (280-config tick-replay sweep), `data/b1_verify_winning_config/`.
 
 ## 📁 3. File Structure & Responsibilities
 - `main.py`: The system brain (Orchestrator).

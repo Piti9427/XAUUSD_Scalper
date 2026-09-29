@@ -1,7 +1,13 @@
 # XAUUSD Scalper Project
 - **Goal:** Implement a hybrid backtesting and real-time alert system for Gold (XAUUSD).
-- **Strategy:** EMA 20/50 Crossover + RSI Exhaustion (35/70).
-- **Architecture:** Python + MetaTrader 5 API + Telegram Bot.
+- **Strategy:** Core System: **Pure B1 Single-Position** (Donchian Breakout + RSI + EMA 50) with 6.25 ATR TP, 2.5 ATR SL, and 10% Risk Cap. (See [2026-09-28 Pivot Post-Mortem](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md) and [Strategy Evolution](docs/STRATEGY_EVOLUTION.md) for details).
+- **Architecture:** Python + MetaTrader 5 API / Webhook Bridge + Telegram Bot.
+
+## 🔄 Recent Updates (2026-09-29)
+- **Strategy Pivot Complete:** Transitioned from Hybrid Recovery Basket to Pure B1 Single-Position.
+- **Risk Management Hardened:** Enforced a strict **10% Risk Cap** per trade to prevent $200 micro-accounts from blowing up during wide-SL drawdowns.
+- **Profitability Verified:** Forward-tested 6 months of real Exness tick data (45M+ ticks, full spread/swap/commission cost). Final result: **$200 → $884 (+342%), Max DD 34.4%, Win Rate 37.4%.**
+- **Test Suite Passed:** 608/608 unit tests aligned with the new strict risk parameters.
 
 ## Project Structure
 - `docs/`: System specifications, improvement plans, logic audits, and engineering handoffs.

@@ -15,7 +15,7 @@ from scripts.webhook.clock_risk_halt import flatten_on_risk_halt, observe_and_pe
 
 
 def _rt(*, halted: bool, adapter) -> SimpleNamespace:
-    state = new_risk_halt_state(10000.0)
+    state = new_risk_halt_state(200.0)
     if halted:
         state.drawdown_halt = True
     halt_path = Path(tempfile.mkstemp(suffix=".json")[1])
@@ -23,7 +23,7 @@ def _rt(*, halted: bool, adapter) -> SimpleNamespace:
     return SimpleNamespace(
         risk_halt=state,
         halt_path=halt_path,
-        account_balance=10000.0,
+        account_balance=200.0,
         adapter=adapter,
         setup_registry=SimpleNamespace(mark_terminal=Mock()),
     )

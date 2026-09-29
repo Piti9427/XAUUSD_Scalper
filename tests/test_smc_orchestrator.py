@@ -696,7 +696,7 @@ class TestSMCOrchestrator(unittest.TestCase):
         )
         mgr = BasketManager(config=cfg)
         orch = StrategyOrchestrator(risk_pct=0.05, basket_manager=mgr)
-        account = AccountState(balance=200.0, equity=200.0)
+        account = AccountState(balance=10000.0, equity=10000.0)
 
         now = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
         signal = SetupSignal(

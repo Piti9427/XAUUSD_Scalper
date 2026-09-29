@@ -29,7 +29,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
         # SL distance before buffer = $6.00 + $0.30 = $6.30 > $6.00 max cap
         # Should be skipped (lot_size = 0.0, is_valid = False)
         result = calculate_lot_size(
-            balance=10000.0,
+            balance=200.0,
             entry_price=2000.00,
             sl_price=1994.00,
             risk_pct=0.005,
@@ -71,7 +71,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)
-        self.assertIn("Small-account protection", result.reason)
+        self.assertIn("Risk cap: min lot risks", result.reason)
 
     def test_max_lot_clamping(self):
         # Large account $500,000 with very small SL distance ($1.00)
@@ -190,7 +190,7 @@ class TestSMCRiskCalculator(unittest.TestCase):
 
     def test_zero_sl_distance(self):
         result = calculate_lot_size(
-            balance=10000.0, entry_price=2000.00, sl_price=2000.00, spread_buffer=0.0
+            balance=200.0, entry_price=2000.00, sl_price=2000.00, spread_buffer=0.0
         )
         self.assertFalse(result.is_valid)
         self.assertEqual(result.lot_size, 0.0)

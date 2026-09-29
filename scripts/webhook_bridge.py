@@ -24,7 +24,7 @@ def create_app(
     auth_token: str = "XAUUSD_DEFAULT_SECRET",
     dry_run: bool = True,
     db_path: str = "data/smc_trades.db",
-    account_balance: float = 10000.0,
+    account_balance: float = 200.0,
     risk_pct: float = 0.005,
     max_daily_losses: int = 2,
     rollover_hour_utc: int = 20,

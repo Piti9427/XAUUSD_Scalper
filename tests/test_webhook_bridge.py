@@ -68,9 +68,9 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         self.secret_token = "TEST_SECRET_TOKEN_456"
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_pct=0.01,
         )
         self.client = TestClient(self.app)
@@ -125,7 +125,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".rejected",
             notifier=notifier,
         )
@@ -184,9 +184,9 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live-risk",
-            account_balance=10000.0,
+            
             risk_pct=0.01,
             commission_per_lot=10.0,
             slippage_allowance=0.5,
@@ -238,7 +238,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".exposure",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -291,7 +291,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         def make_app():
             app = create_app(
                 auth_token=self.secret_token,
-                dry_run=True,
+                dry_run=True, account_balance=10000.0,
                 db_path=self.db_path + ".claims",
                 risk_pct=0.01,
                 commission_per_lot=10.0,
@@ -370,7 +370,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".release",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -444,7 +444,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_fill_reject",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -480,7 +480,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_fill_match",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -529,7 +529,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_trade_closed",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -572,7 +572,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         halt_path = self.db_path + ".halt_no_broker_pnl.json"
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_no_broker_pnl",
             risk_pct=0.01,
             risk_halt_path=halt_path,
@@ -613,7 +613,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_broker_reject",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -679,7 +679,7 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path + ".live_timeout",
             risk_pct=0.01,
             commission_per_lot=10.0,
@@ -769,9 +769,9 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         # Small account ($100 balance) with high SL distance ($20.00)
         small_app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=100.0,
             db_path=self.db_path,
-            account_balance=100.0,
+            
             risk_pct=0.01,
         )
         try:
@@ -812,9 +812,9 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         # Explicit opt-in: foundation defaults keep partial/BE off.
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_pct=0.01,
             partial_tp_enabled=True,
             be_enabled=True,
@@ -836,9 +836,9 @@ class TestWebhookBridgeScaleOutAndBE(unittest.TestCase):
         try:
             app = create_app(
                 auth_token=self.secret_token,
-                dry_run=True,
+                dry_run=True, account_balance=10000.0,
                 db_path=os.path.join(tmp.name, "foundation.db"),
-                account_balance=10000.0,
+                
                 # defaults: partial_tp_enabled=False, be_enabled=False
             )
             client = TestClient(app)
@@ -1054,9 +1054,9 @@ class TestWebhookBridgeCancellationAndClosing(unittest.TestCase):
         self.secret_token = "TEST_SECRET_TOKEN_999"
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_pct=0.01,
         )
         self.client = TestClient(self.app)
@@ -1177,9 +1177,9 @@ class TestWebhookBridgeRiskShield(unittest.TestCase):
         self.secret_token = "TEST_SECRET_TOKEN_SHIELD"
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_pct=0.01,
             max_daily_losses=2,
             rollover_hour_utc=20,
@@ -1287,9 +1287,9 @@ class TestWebhookBridgeAsyncPatterns(unittest.TestCase):
         self.secret_token = "ASYNC_TEST_TOKEN_789"
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=":memory:",
-            account_balance=10000.0,
+            
             risk_pct=0.01,
             notifier=self.mock_notifier,
         )
@@ -1381,7 +1381,7 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
         )
         try:
@@ -1421,7 +1421,7 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
         )
         try:
@@ -1463,9 +1463,9 @@ class TestCodeReviewHardeningFixes(unittest.TestCase):
 
         app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_pct=0.01,
             tp_r=3.5,
             partial_tp_r=1.5,
@@ -1536,7 +1536,7 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test_trades.db")
         self.halt_path = os.path.join(self.temp_dir.name, "risk_halt.json")
-        halted = new_risk_halt_state(500.0)
+        halted = new_risk_halt_state(10000.0)
         halted.drawdown_halt = True
         save_risk_halt_state(__import__("pathlib").Path(self.halt_path), halted)
         self.secret_token = "TEST_SECRET_FOUNDATION"
@@ -1551,9 +1551,9 @@ class TestWebhookFoundationGates(unittest.TestCase):
         )
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: self.failing_identity,
         )
@@ -1587,16 +1587,16 @@ class TestWebhookFoundationGates(unittest.TestCase):
         from scripts.smc.risk_halt import new_risk_halt_state, save_risk_halt_state
         from pathlib import Path
 
-        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
         # Recreate app so loaded halt is clear; keep failing identity.
         from scripts.webhook_bridge import create_app
 
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: self.failing_identity,
         )
@@ -1637,13 +1637,13 @@ class TestWebhookFoundationGates(unittest.TestCase):
             symbol="XAUUSD",
             reasons=(),
         )
-        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,  # isolate foundation halt from ADR-011 circuit
@@ -1731,7 +1731,7 @@ class TestWebhookFoundationGates(unittest.TestCase):
             symbol="XAUUSD",
             reasons=(),
         )
-        state = new_risk_halt_state(500.0)
+        state = new_risk_halt_state(10000.0)
         state.high_water_equity = 520.0
         state.net_losing_trades_today = 1
         save_risk_halt_state(Path(self.halt_path), state)
@@ -1739,9 +1739,9 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,
@@ -1791,13 +1791,13 @@ class TestWebhookFoundationGates(unittest.TestCase):
             symbol="XAUUSD",
             reasons=(),
         )
-        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,
@@ -1837,13 +1837,13 @@ class TestWebhookFoundationGates(unittest.TestCase):
             symbol="XAUUSD",
             reasons=(),
         )
-        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=500.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,
@@ -1852,11 +1852,11 @@ class TestWebhookFoundationGates(unittest.TestCase):
         )
         self.app.state.adapter.dry_run = False
         self.app.state.adapter.connected = True
-        self.app.state.adapter.get_account_equity = Mock(return_value=500.0)
+        self.app.state.adapter.get_account_equity = Mock(return_value=10000.0)
         self.app.state.adapter.get_risk_snapshot = Mock(
             return_value={
-                "balance": 500.0,
-                "equity": 500.0,
+                "balance": 10000.0,
+                "equity": 10000.0,
                 "min_lot": 0.01,
                 "max_lot": 5.0,
                 "lot_step": 0.01,
@@ -1911,9 +1911,9 @@ class TestWebhookFoundationGates(unittest.TestCase):
         fresh_db = os.path.join(self.temp_dir.name, "revive_trades.db")
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=fresh_db,
-            account_balance=10000.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,
@@ -1953,9 +1953,9 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             setup_registry_path=str(registry_path),
         )
         self.client = TestClient(self.app)
@@ -1976,9 +1976,9 @@ class TestWebhookFoundationGates(unittest.TestCase):
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=fresh_db,
-            account_balance=10000.0,
+            
             setup_registry_path=str(registry_path),
             max_daily_losses=99,
             commission_per_lot=10.0,
@@ -2027,13 +2027,13 @@ class TestWebhookFoundationGates(unittest.TestCase):
             symbol="XAUUSD",
             reasons=(),
         )
-        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(500.0))
+        save_risk_halt_state(Path(self.halt_path), new_risk_halt_state(10000.0))
         self.app.state.adapter.close()
         self.app = create_app(
             auth_token=self.secret_token,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db_path,
-            account_balance=10000.0,
+            
             risk_halt_path=self.halt_path,
             identity_gate=lambda: ok_identity,
             max_daily_losses=99,
@@ -2100,7 +2100,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         self.db.close()
         self.app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db.name,
             max_hold_bars=2,
             bar_minutes=5,
@@ -2149,7 +2149,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
 
         db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db.close()
-        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        app = create_app(auth_token=self.secret, dry_run=True, account_balance=10000.0, db_path=db.name)
         client = TestClient(app)
         try:
             adapter = app.state.adapter
@@ -2215,7 +2215,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
 
         db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db.close()
-        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        app = create_app(auth_token=self.secret, dry_run=True, account_balance=10000.0, db_path=db.name)
         client = TestClient(app)
         try:
             adapter = app.state.adapter
@@ -2253,7 +2253,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
 
         db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         db.close()
-        app = create_app(auth_token=self.secret, dry_run=True, db_path=db.name)
+        app = create_app(auth_token=self.secret, dry_run=True, account_balance=10000.0, db_path=db.name)
         client = TestClient(app)
         try:
             res = client.post(
@@ -2283,7 +2283,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         db.close()
         app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=db.name,
             # max_hold unset — rollover must still flatten
             rollover_hour_utc=20,
@@ -2337,7 +2337,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         db.close()
         app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=db.name,
             max_hold_bars=2,
             bar_minutes=5,
@@ -2389,7 +2389,7 @@ class TestWebhookClockTimeExit(unittest.TestCase):
         news.schedule_known = True
         app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=db.name,
             news_manager=news,
             # max_hold unset: news cancel must still run
@@ -2582,7 +2582,7 @@ class TestWebhookDryRunSetupInbox(unittest.TestCase):
         secret = "DRY_CLAIM_SECRET"
         app = create_app(
             auth_token=secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=db.name,
             commission_per_lot=0.0,
             slippage_allowance=0.0,
@@ -2647,7 +2647,7 @@ class TestWebhookH1BiasGate(unittest.TestCase):
         self.db.close()
         self.app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db.name,
             commission_per_lot=0.0,
             slippage_allowance=0.0,
@@ -2930,9 +2930,9 @@ class TestWebhookClockRiskHaltFlatten(unittest.TestCase):
         save_risk_halt_state(Path(self.halt_path.name), new_risk_halt_state(10000.0))
         self.app = create_app(
             auth_token=self.secret,
-            dry_run=True,
+            dry_run=True, account_balance=10000.0,
             db_path=self.db.name,
-            account_balance=10000.0,
+            
             risk_halt_path=self.halt_path.name,
             commission_per_lot=0.0,
             slippage_allowance=0.0,
