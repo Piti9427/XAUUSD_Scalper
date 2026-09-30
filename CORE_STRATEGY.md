@@ -167,3 +167,8 @@ Append-only research update; active frozen core remains unchanged and NO-GO.
 Public Exness XAUUSDm monthly ZIPs Sep2024-Sep2025 acquired. Discovery Sep2024-Jun2025:49,581,644 audited Bid/Ask ticks,19,050 complete Bid M15 bars; Jul-Sep2025 remains ZIP-only sealed holdout, coverage not yet verified. Public indicative ticks do not establish target Demo execution parity; historical broker specs are assumptions. Activation288 on new discovery tape found0 qualifiers.
 
 New research contract: risk_mode=drawdown_steps reduces cost-inclusive entry admission cap from configured10% to5% at equity DD>=10%, and2.5% at DD>=15%; restores on recovery, never exceeds configured cap. High-water mark includes all open-position tick equity. Fixed0.01 lot, isolated position, no recovery, protective exits continue.336 contracts defined before replay in docs/specs/2026-10-01-drawdown-admission-campaign.md. No DD guarantee or adoption claim.
+
+
+## 6.14 Drawdown admission actual verdict (2026-10-01)
+
+Four preserved public/admission runs:1,296 evaluations,0 qualifiers.336 new admission contracts; repeat datasets/screens are not new unique strategies. Strict protocol4 restores RR increase versus defined baselines; protocol3 kept separately. DD reduction alone did not satisfy combined profit/WR/RR/stress gates. No adoption; core remains NO-GO. [Detailed results](docs/reviews/2026-10-01-public-drawdown-results.md).

@@ -396,3 +396,10 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 **เดิม:**184วัน2026ถูกค้นซ้ำทั้งหมด; ไม่มี untouched holdout.
 **เพิ่ม:** publicXAUUSDm ZIP13เดือนSep2024-Sep2025; discovery10เดือนตรวจ49,581,644ticks/19,050M15; อีก3เดือนยังZIP-only sealed. Historical broker specs/costsยัง assumptions. [Data provenance](reviews/2026-10-01-public-tick-acquisition.md).
 **ผล:** activation288บนdiscoveryใหม่0ผ่าน; ไม่แทนcore. เพิ่ม researchrisk_mode=drawdown_steps ลดadmission10→5→2.5%ที่DD10/15%, fixed0.01ไม่เปลี่ยน.336contractsแยกตามspec; รอบใหม่บังคับRRสูงกว่าparentที่มีRR นอกเหนือจากfloor1. ผลแต่ละprotocolเก็บแยก ไม่เขียนทับเก่า. DemoยังBLOCKED.
+
+
+## LOG-20261001-18 — Admission results, no qualified strategy
+
+**เปลี่ยนวิจัย:** capรับriskตามDD10/15%, fixed0.01; RRstrictcomparisonในprotocol4. **ผล:** publicactivation288, oldtapefloor336, oldtapestrict336, publicstrict336 — รวม1,296evaluations/0ผ่าน. ไม่ใช่1,296uniqueconfigs. [Configs/metrics/protocols](reviews/2026-10-01-public-drawdown-results.md).
+
+**มติ:** rejected; ไม่แทนcore, ไม่เปิดDemo. Audited10เดือน+sealed3ZIP ไม่อ้างว่าverified12เดือนครบ. เก็บทุกprotocol/hash/resultแยก; historyเดิมไม่ถูกเขียนทับ. Full706tests/skipped2ผ่าน; focused45ผ่าน; Ruffผ่าน; mypyไม่มี.
