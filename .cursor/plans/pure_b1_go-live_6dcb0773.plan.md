@@ -4,16 +4,16 @@ overview: ตรึง contract และข้อมูล Exness บัญช�
 todos:
   - id: freeze-evidence
     content: ตรึง contract, reference data, cost policy และหลักฐานผล replay
-    status: pending
+    status: completed
   - id: broker-data-parity
     content: ดึง Exness M1/direct M15/Bid-Ask ticks แบบ read-only สร้าง canonical 15/15 M1 M15 แล้วเทียบ OHLC indicators signals และ risk decisions
-    status: pending
+    status: completed
   - id: decision-shadow
     content: ต่อ detector และ risk gate เดิมเข้าตัวตัดสินใจและ Wine shadow runner ที่ไม่มี order_send หรือ Telegram
     status: completed
   - id: verify-review
     content: เทสต์ end-to-end shadow seam, replay cost scenarios และออกมติ Demo แยก
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -22,6 +22,8 @@ isProject: false
 **ขอบเขต:** ทำ read-only capture, replay/decision parity และ Shadow เท่านั้น. แผนนี้ไม่อนุมัติ `order_send`, Demo strategy automation หรือเงินจริง. สถานะ Pure B1 ยังเป็น research target และ live execution NO-GO ตาม [CORE_STRATEGY.md](../../CORE_STRATEGY.md).
 
 **ผล implementation รอบนี้:** [broker-bar parity audit](../../docs/reviews/2026-09-29-pure-b1-broker-bar-parity.md) บันทึก bounded MT5 capture, 15/15 M1 canonical bar parity, Shadow หนึ่งรอบแบบ no-signal และ replay recheck. `broker-data-parity` ยังไม่ครบเพราะไม่มี per-bar SL/TP/risk parity กับ account/cost snapshot ย้อนหลัง. `freeze-evidence` ยังไม่ผ่านเพราะยังไม่มี measured slippage/historical swap ledger หรือ cost policy ที่ตรวจสำหรับ session ปัจจุบัน; `verify-review` ยังไม่ผ่าน Demo/forward validation. `decision-shadow` completed เฉพาะ code + fake-MT5 tests เท่านั้น.
+
+**Update 2026-09-30:** สถานะ `completed` ในรายการงานหมายถึงส่งมอบ implementation และเอกสารวิจัยแล้ว ไม่ใช่ผ่าน acceptance gates. ข้อความผลรอบก่อนด้านบนเก็บไว้เป็นประวัติ. รอบถัดมาเพิ่ม evidence pin, versioned cost policy และ per-bar parity ledger แล้ว; [Demo verdict](../../docs/reviews/2026-09-29-pure-b1-demo-verdict.md) ยังระบุ parity **BLOCKED**, `shadow_passed: false`, Demo orders และเงินจริง **NO-GO** เพราะยังขาด verified cost snapshot สำหรับแถวที่ต้องตรวจ รวมถึง quote/warmup บางแถว. ยังไม่มี forward Demo acceptance หรืออนุมัติส่ง orders.
 
 ## Contract และแหล่งอ้างอิงเดียว
 

@@ -2,6 +2,17 @@
 
 ยินดีต้อนรับสู่ศูนย์รวมเอกสารเชิงวิศวกรรมสำหรับโครงการ **XAUUSD Scalper & TradingView Copilot** จัดระเบียบเอกสารตามมาตรฐานความปลอดภัยทางการเงิน (Real-Money Financial Safety) และการแบ่งลำดับชั้นบริบท (Agent Context Architecture)
 
+## อำนาจปัจจุบัน (2026-09-29)
+
+| บทบาท | เอกสาร |
+|---|---|
+| ขอบเขตผลิตภัณฑ์และเกตเลื่อนขั้น | [`PRD.md`](PRD.md) |
+| กฎ Pure B1, risk, สถานะ live NO-GO | [`../CORE_STRATEGY.md`](../CORE_STRATEGY.md) |
+| แผนวิจัย / Shadow ที่กำลังทำ | [`../.cursor/plans/pure_b1_go-live_6dcb0773.plan.md`](../.cursor/plans/pure_b1_go-live_6dcb0773.plan.md) |
+| หลักฐาน replay | [`reviews/2026-09-29-pure-b1-target-replay-verdict.md`](reviews/2026-09-29-pure-b1-target-replay-verdict.md) |
+
+สารบัญด้านล่างเป็นบริบท SMC / Pine ที่มีอยู่แล้ว.
+
 ---
 
 ## 🏛️ โครงสร้างหมวดหมู่เอกสาร (Documentation Taxonomy)
@@ -44,6 +55,7 @@ docs/
 
 | หมวดหมู่ | วันที่ | เอกสาร | หัวข้อ / ขอบเขต | สถานะ |
 | :--- | :--- | :--- | :--- | :--- |
+| **Product** | 2026-09-29 | [`PRD.md`](PRD.md) | ขอบเขตผลิตภัณฑ์ BotTradeGold, บทบาทเครื่อง, เกตเลื่อนขั้น. กฎ Pure B1 อยู่ที่ `CORE_STRATEGY.md` | 🟢 **Product boundary. Live NO-GO** |
 | **Specs** | 2026-09-07 | [`specs/gold-playbook-foundation.md`](specs/gold-playbook-foundation.md) | SMC v2, Turtle Soup (TSS), Golden Zone (GSS), SMT, Judas Swing | 🟢 **In-Effect** |
 | **Specs** | 2026-09-12 | [`specs/2026-09-12-master-pro-v6-net-expectancy.md`](specs/2026-09-12-master-pro-v6-net-expectancy.md) | สเปกจำลองคำสั่งซื้อขายจริงด้วย Strategy & วัด Net Expectancy | 🟢 **In-Effect** |
 | **Plans** | 2026-09-12 | [`plans/2026-09-12-master-pro-v6-improvement-plan.md`](plans/2026-09-12-master-pro-v6-improvement-plan.md) | แผนปรับ `xauusd_master_pro_v6.pine` สู่ Strategy เดี่ยว | 🟡 **Pending Work** |
