@@ -11,6 +11,8 @@ from dataclasses import asdict, replace
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from scripts.strategy import pure_b1_bars
 from scripts.research.breakout_logic import Costs, Rules, replay
 from scripts.research.strategy_campaign import qualifies
@@ -23,8 +25,10 @@ from scripts.research.campaign_hypotheses import (
     pullback_candidates,
     trend_pullback_features,
     activation_candidates,
+    drawdown_candidates,
 )
 from scripts.research.tune_breakout_logic import START, TRAIN_END, END, load_data, sha256
+from scripts.research.public_exness_archive import load_discovery
 
 STRESS = Costs(extra_spread=0.20, slippage=0.10)
 WINDOWS = {"full": (START, END), "first_half": (START, TRAIN_END), "second_half": (TRAIN_END, END)}
@@ -108,6 +112,11 @@ def compact(result):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        help="verified public discovery dataset; sealed holdout never loaded",
+    )
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--screen",
@@ -124,6 +133,7 @@ def main():
             "sweep",
             "pullback",
             "activation",
+            "drawdown",
         ),
         default="original",
     )
@@ -143,7 +153,19 @@ def main():
     base_cost = Costs(commission_per_lot=args.commission_per_lot)
     stress_cost = replace(STRESS, commission_per_lot=args.commission_per_lot)
     print("Auditing raw ticks, canonical bars, broker specification and hashes...", flush=True)
-    frame, ticks, broker, audit = load_data()
+    if args.dataset:
+        frame, ticks, broker, audit = load_discovery(args.dataset)
+        start = pd.Timestamp(audit["start_utc"], tz="UTC")
+        end = pd.Timestamp(audit["end_utc"], tz="UTC")
+        middle = (start + (end - start) / 2).normalize()
+        windows = {
+            "full": (start, end),
+            "first_half": (start, middle),
+            "second_half": (middle, end),
+        }
+    else:
+        frame, ticks, broker, audit = load_data()
+        windows = WINDOWS
     core = pure_b1_bars(frame).rename(columns={"hh30": "hh", "ll30": "ll"})
     frames = {
         "core": core,
@@ -155,6 +177,7 @@ def main():
         "scripts/research/run_strategy_campaign.py",
         "scripts/research/strategy_campaign.py",
         "scripts/research/campaign_hypotheses.py",
+        "scripts/research/public_exness_archive.py",
         "scripts/research/breakout_logic.py",
         "scripts/research/tune_breakout_logic.py",
         "scripts/research/data.py",
@@ -168,6 +191,7 @@ def main():
         "sweep": sweep_candidates,
         "pullback": pullback_candidates,
         "activation": activation_candidates,
+        "drawdown": drawdown_candidates,
     }
     trials = factories[args.campaign]()
     if not 0 < len(trials) <= 384:
@@ -175,7 +199,7 @@ def main():
     if len({(p, r) for p, _, r in trials}) != len(trials):
         raise ValueError("duplicate hypothesis config")
     protocol = dict(
-        version=2,
+        version=4,
         campaign=args.campaign,
         stop_on_pass=args.stop_on_pass,
         short_circuit_screen=args.screen,
@@ -190,10 +214,10 @@ def main():
         max_trials=384,
         total_unique_trials=len(trials),
         batch_size=48,
-        windows={k: [s.isoformat(), e.isoformat()] for k, (s, e) in WINDOWS.items()},
+        windows={k: [s.isoformat(), e.isoformat()] for k, (s, e) in windows.items()},
         selection="discovery only: lower full DD, higher stress net, fewer changed rules, trial id",
-        gates="each full/half scenario: profit and WR above both parents, DD below both and <=20%, RR>=1; trades full>=60 halves>=20",
-        validation="requires verified >=12 months true Bid/Ask including >=3 months never selected; current184 days reused discovery only",
+        gates="each full/half scenario: profit and WR above both parents, DD below both and <=20%, RR>=1 and above each defined parent RR; trades full>=60 halves>=20",
+        validation="requires verified >=12 months true Bid/Ask including >=3 months never selected. Public dataset loads discovery only; sealed older historical holdout is not prospective 2026 validation. Default184 days reused discovery only",
         execution="completed UTC M15; first quote <=90s; buy Ask sell Bid; SL actual quote with adverse slippage, TP target; exit allowance in admission",
         logic={
             "depth": "originating breakout close minus crossed prior boundary, signed and divided by originating ATR; >=threshold",
@@ -201,6 +225,7 @@ def main():
             "retest": "within next4 completed bars low<=upper boundary (buy) or high>=lower (sell), close beyond; cancel on close inside",
             "failed_reverse": "within next2 completed bars close inside frozen [low,high], reverse originating direction; origin parent guards only; expiry cancels",
             "exit": "fixed parent SL2.5ATR/TP; failed1 close across original crossed boundary; stagnant8 bars net<=0; trail after net>=.5 initial cost-inclusiveR at close, low-tick/high+tick with cost-covering break-even, never widen; effective later quote",
+            "drawdown_admission": "flat equity vs all-tick peak: DD>=15% cap2.5%; else DD>=10% cap5%; else configured cap; never increase configured cap or change0.01lot",
             "protection_activation": "completed-bar executable net>=protect_after_r times initial cost-inclusive risk; default0.5, newresearch1/1.5/2; SL never widens, later quote effect",
             "trend_pullback": "EMA50 fixed with4bar slope. BUY prior candle red,current close>prior high and>EMA,risingEMA;SELL inverse; first50barswarmup; triggerSL, completedbarquoteentry",
             "wick_sweep": "prior48 range upper wick: high>hh, close<hh, low>=ll=>sell; lower wick: low<ll, close>ll, high<=hh=>buy. Ambiguous both-edge candle skipped; completedbar only, firstfreshquote, stop behindwick",
@@ -235,7 +260,7 @@ def main():
         else {}
     )
     baselines = {}
-    for window, (start, end) in WINDOWS.items():
+    for window, (start, end) in windows.items():
         path = output / f"baselines-{window}.json"
         if args.resume and path.exists():
             if baseline_hashes.get(path.name) != sha256(path):
@@ -278,9 +303,9 @@ def main():
                 raise ValueError("resume rejected: trial artifact changed")
             evaluated = list(completed["metrics"])
             if (
-                evaluated != list(WINDOWS)[: len(evaluated)]
+                evaluated != list(windows)[: len(evaluated)]
                 or not evaluated
-                or (not args.screen and len(evaluated) != len(WINDOWS))
+                or (not args.screen and len(evaluated) != len(windows))
             ):
                 raise ValueError("resume rejected: missing discovery windows")
             expected_names = {f"{w}-{c}.json" for w in evaluated for c in ("base", "stress")}
@@ -295,14 +320,20 @@ def main():
                         raise ValueError("resume rejected: rules differ from frozen protocol")
                     pair.append(compact(artifact))
                 recovered[window] = pair
-            if len(evaluated) < len(WINDOWS) and qualifies(
+            if len(evaluated) < len(windows) and qualifies(
                 *recovered[evaluated[-1]],
                 baselines[evaluated[-1]],
                 min_trades=60 if evaluated[-1] == "full" else 20,
+                require_rr_improvement=True,
             ):
                 raise ValueError("resume rejected: unjustified early screening")
-            recovered_pass = len(evaluated) == len(WINDOWS) and all(
-                qualifies(*pair, baselines[w], min_trades=60 if w == "full" else 20)
+            recovered_pass = len(evaluated) == len(windows) and all(
+                qualifies(
+                    *pair,
+                    baselines[w],
+                    min_trades=60 if w == "full" else 20,
+                    require_rr_improvement=True,
+                )
                 for w, pair in recovered.items()
             )
             if (
@@ -323,14 +354,19 @@ def main():
         directory.mkdir(exist_ok=True)
         metrics = {}
         passed = True
-        for window, (start, end) in WINDOWS.items():
+        for window, (start, end) in windows.items():
             pair = []
             for scenario, cost in (("base", base_cost), ("stress", stress_cost)):
                 result = replay(frames[parent], ticks, broker, rules, cost, start=start, end=end)
                 write_json(directory / f"{window}-{scenario}.json", result)
                 pair.append(compact(result))
             metrics[window] = pair
-            passed &= qualifies(*pair, baselines[window], min_trades=60 if window == "full" else 20)
+            passed &= qualifies(
+                *pair,
+                baselines[window],
+                min_trades=60 if window == "full" else 20,
+                require_rr_improvement=True,
+            )
             if args.screen and not passed:
                 break
         row = dict(

@@ -199,3 +199,35 @@ def activation_candidates():
         for activation in (1.0, 1.5, 2.0)
         for protect in ("runner", "candle_trail", "break_even")
     ]
+
+
+def drawdown_candidates():
+    """336 contracts with reversible drawdown-based admission, never lot changes."""
+    protection_states = [("off", 0.5)] + [
+        (mode, activation)
+        for mode in ("break_even", "candle_trail", "runner")
+        for activation in (0.5, 1.0)
+    ]
+    return [
+        (
+            parent,
+            "reduce_admission_budget_during_drawdown",
+            Rules(
+                risk_mode="drawdown_steps",
+                risk_cap=0.10,
+                daily_loss_limit=daily,
+                target_atr=target,
+                entry_guard=guard,
+                stop_mode=stop,
+                protect_mode=protect,
+                protect_after_r=activation,
+                reset_after_exit=reset,
+            ),
+        )
+        for parent, target in (("donchian48", 3.0), ("core", 6.25))
+        for guard in ("off", "sell_only", "buy_only")
+        for stop in ("atr", "boundary")
+        for daily in (0.05, 0.20)
+        for protect, activation in protection_states
+        for reset in (False, True)
+    ]

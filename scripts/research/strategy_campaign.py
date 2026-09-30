@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 
-def qualifies(base, stress, baselines, *, min_trades):
+def qualifies(base, stress, baselines, *, min_trades, require_rr_improvement=False):
     """Beat both parents under each cost scenario, with absolute safety floors."""
     for result, column in ((base, 0), (stress, 1)):
         required = (
@@ -28,6 +28,10 @@ def qualifies(base, stress, baselines, *, min_trades):
             return False
         for pair in baselines:
             parent = pair[column]
+            parent_rr = parent.get("realized_rr")
+            if require_rr_improvement and parent_rr is not None:
+                if not math.isfinite(parent_rr) or result["realized_rr"] <= parent_rr:
+                    return False
             if (
                 parent["win_rate"] is None
                 or not all(math.isfinite(parent[k]) for k in ("net_usd", "max_dd_pct", "win_rate"))

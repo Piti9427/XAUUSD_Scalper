@@ -158,3 +158,12 @@ Owner requested continued strategy research. [New research protocol](docs/specs/
 [Research protocol](docs/specs/2026-10-01-activation-strategy-campaign.md) adds `protect_after_r=1/1.5/2`; default remains0.5. Activation from closed-bar executable net versus initial cost-inclusive R; never widen stop, later quote only, runner removes TP only after valid stop update.288 predeclared configs; max384 per campaign; exhaustion derived from actual count. Existing core/baseline defaults unchanged; no adoption.
 
 Actual follow-up verdict: six campaigns /2,208 additional configs,0 passing all discovery gates; `NO_QUALIFIED_CANDIDATE`. Goal not achieved. [Append-only research history](docs/STRATEGY_EVOLUTION.md), [consolidated results](docs/reviews/2026-10-01-strategy-continuation.md). No adoption; independent history,broker costs,parity/Shadow evidence still missing.
+
+
+## 6.13 Public archive acquisition and drawdown admission research (2026-10-01)
+
+Append-only research update; active frozen core remains unchanged and NO-GO.
+
+Public Exness XAUUSDm monthly ZIPs Sep2024-Sep2025 acquired. Discovery Sep2024-Jun2025:49,581,644 audited Bid/Ask ticks,19,050 complete Bid M15 bars; Jul-Sep2025 remains ZIP-only sealed holdout, coverage not yet verified. Public indicative ticks do not establish target Demo execution parity; historical broker specs are assumptions. Activation288 on new discovery tape found0 qualifiers.
+
+New research contract: risk_mode=drawdown_steps reduces cost-inclusive entry admission cap from configured10% to5% at equity DD>=10%, and2.5% at DD>=15%; restores on recovery, never exceeds configured cap. High-water mark includes all open-position tick equity. Fixed0.01 lot, isolated position, no recovery, protective exits continue.336 contracts defined before replay in docs/specs/2026-10-01-drawdown-admission-campaign.md. No DD guarantee or adoption claim.

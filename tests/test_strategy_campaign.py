@@ -6,6 +6,37 @@ from scripts.research.strategy_campaign import qualifies
 
 
 class CampaignSelectionTests(unittest.TestCase):
+    def test_strict_rr_rejects_below_defined_parent_and_allows_undefined_core(self):
+        parent = dict(
+            trades=70,
+            net_usd=50,
+            max_dd_pct=25,
+            realized_rr=2.5,
+            win_rate=0.4,
+            max_admitted_risk_pct=10,
+        )
+        candidate = dict(parent, net_usd=60, max_dd_pct=15, realized_rr=1.1, win_rate=0.5)
+        undefined = dict(parent, realized_rr=None)
+        self.assertFalse(
+            qualifies(
+                candidate,
+                candidate,
+                [(parent, parent), (undefined, undefined)],
+                min_trades=60,
+                require_rr_improvement=True,
+            )
+        )
+        candidate["realized_rr"] = 2.6
+        self.assertTrue(
+            qualifies(
+                candidate,
+                candidate,
+                [(parent, parent), (undefined, undefined)],
+                min_trades=60,
+                require_rr_improvement=True,
+            )
+        )
+
     def test_rr_floor_does_not_require_beating_baseline_rr(self):
         baseline = dict(
             trades=70,
@@ -287,3 +318,30 @@ class ProfitActivationTests(unittest.TestCase):
         self.assertEqual(trade["stop_updates"], 0)
         self.assertAlmostEqual(trade["stop"], 97.7)
         self.assertEqual(trade["reason"], "END_OF_SAMPLE")
+
+
+class DrawdownAdmissionTests(unittest.TestCase):
+    def test_drawdown_steps_reject_high_risk_entry_after_two_losses(self):
+        import numpy as np
+        from tests.test_breakout_logic import sample, BROKER, START, END
+        from scripts.research.breakout_logic import replay, Rules, Costs
+
+        frame, _ = sample()
+        frame["direction"] = [1, 1, 1]
+        frame["atr"] = 5.0
+        times = START.value // 10**6 + np.array(
+            [900000, 960000, 1800000, 1860000, 2700000, 2760000]
+        )
+        bid = np.array([100.0, 87.7, 100.0, 87.7, 100.0, 87.7])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(risk_mode="drawdown_steps"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(result["trades"], 2)
+        self.assertEqual(result["rejections"]["risk_cap"], 1)
+        self.assertEqual([t["volume"] for t in result["ledger"]], [0.01, 0.01])

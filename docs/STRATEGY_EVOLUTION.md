@@ -389,3 +389,10 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial217, ne
 Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net$554.18, DD23.37%, WR55.15%, realized RR1.121. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
 
 **มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+
+## LOG-20261001-17 — Public tick archives and admission hypothesis
+
+**เดิม:**184วัน2026ถูกค้นซ้ำทั้งหมด; ไม่มี untouched holdout.
+**เพิ่ม:** publicXAUUSDm ZIP13เดือนSep2024-Sep2025; discovery10เดือนตรวจ49,581,644ticks/19,050M15; อีก3เดือนยังZIP-only sealed. Historical broker specs/costsยัง assumptions. [Data provenance](reviews/2026-10-01-public-tick-acquisition.md).
+**ผล:** activation288บนdiscoveryใหม่0ผ่าน; ไม่แทนcore. เพิ่ม researchrisk_mode=drawdown_steps ลดadmission10→5→2.5%ที่DD10/15%, fixed0.01ไม่เปลี่ยน.336contractsแยกตามspec; รอบใหม่บังคับRRสูงกว่าparentที่มีRR นอกเหนือจากfloor1. ผลแต่ละprotocolเก็บแยก ไม่เขียนทับเก่า. DemoยังBLOCKED.

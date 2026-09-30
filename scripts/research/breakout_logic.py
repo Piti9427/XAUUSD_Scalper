@@ -27,6 +27,7 @@ class Rules:
     entry_guard: str = "off"
     buy_pause_drawdown: float = 0.0
 
+    risk_mode: str = "static"
     risk_cap: float = 0.10
     daily_loss_limit: float = 0.40
     target_atr: float = 3.0
@@ -44,6 +45,8 @@ class Rules:
             raise ValueError("unsupported loss circuit")
         if self.session_mode not in ("all", "london_ny"):
             raise ValueError("unsupported UTC session")
+        if self.risk_mode not in ("static", "drawdown_steps"):
+            raise ValueError("unsupported risk mode")
         if self.risk_cap not in (0.025, 0.05, 0.10):
             raise ValueError("unsupported risk cap")
         if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
@@ -494,7 +497,14 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         )
         target = _level(entry + direction * target_distance, broker["trade_tick_size"], direction)
         risk = (abs(entry - stop) + costs.slippage) * factor + fee
-        if risk > balance * rules.risk_cap:
+        admission_cap = rules.risk_cap
+        if rules.risk_mode == "drawdown_steps":
+            drawdown = max(0.0, (peak - balance) / peak)
+            if drawdown >= 0.15:
+                admission_cap = min(admission_cap, 0.025)
+            elif drawdown >= 0.10:
+                admission_cap = min(admission_cap, 0.05)
+        if risk > balance * admission_cap:
             rejected["risk_cap"] += 1
             continue
         if balance - fee <= entry * factor / broker["leverage"]:
@@ -515,6 +525,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             entry_equity=balance,
             risk_usd=risk,
             risk_pct=risk / balance * 100,
+            admission_cap_pct=admission_cap * 100,
             range_high=float(row.hh),
             range_low=float(row.ll),
             boundary=float(row.entry_boundary),
