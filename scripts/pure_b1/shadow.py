@@ -9,14 +9,17 @@ import json
 import math
 from pathlib import Path
 
+import scripts.smc.risk as risk_module
+import scripts.strategy as strategy_module
+
 from scripts.pure_b1.broker_data import completed_m15_from_m1
+from scripts.pure_b1.cost_policy import validate_cost_policy
 from scripts.pure_b1.decision import decide
+from scripts.pure_b1.parity import prove_warmup
+from scripts.pure_b1.provenance import ROOT, module_sha256, sha256_file
+from scripts.pure_b1.quote_time import FRESH_QUOTE
 from scripts.smc.account_mode import verify_account_mode
 from scripts.strategy import pure_b1_bars
-
-
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _fingerprint(account) -> str:
@@ -28,18 +31,24 @@ def _day_start(
 ) -> tuple[float | None, str]:
     day = now.date().isoformat()
     if state_path.exists():
-        state = json.loads(state_path.read_text())
-        if state.get("account_fingerprint") != fingerprint:
-            raise ValueError("day-state account mismatch")
-        if state.get("day_utc") == day:
+        try:
+            state = json.loads(state_path.read_text())
             value = float(state["day_start_equity"])
-            if math.isfinite(value) and value > 0:
-                if not math.isclose(float(state["day_start_balance"]), balance, abs_tol=0.01):
-                    return None, "balance_changed"
-                return value, "captured_at_utc_boundary"
-            raise ValueError("invalid day-start equity")
-    # Equity cannot be reconstructed from later account snapshots. Missing boundary is unknown.
+            stored_balance = float(state["day_start_balance"])
+        except (OSError, UnicodeError, json.JSONDecodeError, RecursionError, KeyError, TypeError, ValueError):
+            return None, "day_start_unreadable"
+        if not isinstance(state, dict) or state.get("account_fingerprint") != fingerprint:
+            return None, "day_start_account_mismatch"
+        if state.get("day_utc") == day:
+            if not math.isfinite(value) or value <= 0 or not math.isfinite(stored_balance):
+                return None, "day_start_unreadable"
+            if not math.isclose(stored_balance, balance, abs_tol=0.01):
+                return None, "balance_changed"
+            return value, "captured_at_utc_boundary"
+    # Equity cannot be reconstructed from a later snapshot. Do not reset from current equity.
     if now.hour != 0 or now.minute != 0 or now.second != 0:
+        if math.isfinite(equity) and math.isfinite(balance) and equity + 0.01 < balance:
+            return None, "day_start_floating_unknown"
         return None, "day_start_unknown"
     state = {
         "day_utc": day,
@@ -63,46 +72,6 @@ def _last_bar(log_path: Path) -> str | None:
     if not last:
         return None
     return json.loads(last[0]).get("bar_open_utc")
-
-
-def _checked_policy(raw: dict | None, *, fingerprint: str, now: datetime) -> tuple[dict, str]:
-    if not isinstance(raw, dict):
-        return {}, "missing"
-    try:
-        reviewed = datetime.fromisoformat(str(raw["reviewed_utc"]).replace("Z", "+00:00"))
-        commission = float(raw["commission_per_lot"])
-        slippage = float(raw["slippage_allowance_price"])
-        valid = (
-            raw.get("version") == 1
-            and raw.get("account_fingerprint") == fingerprint
-            and raw.get("account_type") == "Standard Demo"
-            and raw.get("swap_free_qualified") is True
-            and raw.get("commission_unit") == "USD_per_lot_round_trip"
-            and len(str(raw.get("account_evidence_sha256") or "")) == 64
-            and all(c in "0123456789abcdef" for c in raw["account_evidence_sha256"])
-            and bool(str(raw.get("source") or "").strip())
-            and reviewed.tzinfo is not None
-            and reviewed.utcoffset() == timedelta(0)
-            and timedelta(0) <= now - reviewed <= timedelta(hours=24)
-            and math.isfinite(commission)
-            and commission >= 0
-            and math.isfinite(slippage)
-            and slippage > 0
-        )
-    except (KeyError, TypeError, ValueError, OverflowError):
-        return {}, "invalid_or_stale"
-    if not valid:
-        return {}, "invalid_or_stale"
-    return {
-        "version": 1,
-        "account_type": "Standard Demo",
-        "commission_per_lot": commission,
-        "commission_unit": "USD_per_lot_round_trip",
-        "account_evidence_sha256": raw["account_evidence_sha256"],
-        "slippage_allowance_price": slippage,
-        "swap_free_qualified": True,
-        "reviewed_utc": reviewed.isoformat(),
-    }, "operator_attested_for_shadow"
 
 
 def shadow_cycle(
@@ -152,16 +121,10 @@ def shadow_cycle(
     bars = completed_m15_from_m1(rates, now=now)
     if len(bars) < 1000:
         raise ValueError("M15 history warmup insufficient")
+    warmup = prove_warmup(bars)
+    if not warmup["proven"]:
+        raise ValueError("M15 indicator warmup parity unproven")
     full = pure_b1_bars(bars)
-    tail_bars = min(1500, len(bars) // 2)
-    tail = pure_b1_bars(bars.iloc[-tail_bars:])
-    for field in ("rsi", "ema50", "atr", "hh30", "ll30"):
-        if not math.isclose(
-            float(full[field].iloc[-1]), float(tail[field].iloc[-1]), abs_tol=1e-8, rel_tol=0
-        ):
-            raise ValueError("M15 indicator warmup parity unproven")
-    if int(full.direction.iloc[-1]) != int(tail.direction.iloc[-1]):
-        raise ValueError("M15 signal warmup parity unproven")
     bar_open = bars.index[-1].to_pydatetime().isoformat()
     if _last_bar(log_path) == bar_open:
         return {
@@ -172,7 +135,7 @@ def shadow_cycle(
         }
 
     fingerprint = _fingerprint(account)
-    policy, policy_status = _checked_policy(cost_policy, fingerprint=fingerprint, now=now)
+    policy, policy_status = validate_cost_policy(cost_policy, fingerprint=fingerprint, now=now)
     direction = int(full.direction.iloc[-1])
     entry = float(tick.ask if direction == 1 else tick.bid)
     margin = (
@@ -228,10 +191,12 @@ def shadow_cycle(
             decision["stop"],
         )
         if broker_stop_profit is None or not math.isfinite(float(broker_stop_profit)):
-            decision.update(admit=False, reason="broker_profit_unknown")
+            if decision["admit"]:
+                decision.update(admit=False, reason="broker_profit_unknown")
         elif float(broker_stop_profit) >= 0:
-            decision.update(admit=False, reason="broker_profit_invalid")
-        elif decision["risk_amount"] is not None:
+            if decision["admit"]:
+                decision.update(admit=False, reason="broker_profit_invalid")
+        elif decision["admit"] and decision["risk_amount"] is not None:
             modeled_cost = 0.01 * (
                 float(policy.get("slippage_allowance_price") or 0) * float(info.trade_contract_size)
                 + float(policy.get("commission_per_lot") or 0)
@@ -241,17 +206,26 @@ def shadow_cycle(
                 decision.update(admit=False, reason="broker_risk_cap")
             elif abs(broker_risk - float(decision["risk_amount"])) > 0.02:
                 decision.update(admit=False, reason="broker_profit_mismatch")
-    if direction and day_status == "balance_changed":
-        decision.update(admit=False, reason="balance_changed")
-    if direction and any(
-        getattr(position, "symbol", symbol) != symbol for position in all_positions
-    ):
+    if direction and day_status != "captured_at_utc_boundary" and decision["reason"] in {
+        "day_start_unknown",
+        "admit",
+    }:
+        decision.update(admit=False, reason=day_status)
+    if any(not hasattr(position, "symbol") for position in all_positions):
+        decision.update(admit=False, reason="exposure_symbol_unknown")
+    elif direction and any(position.symbol != symbol for position in all_positions):
         decision.update(admit=False, reason="foreign_exposure")
     record = {
         **decision,
         "schema": "pure-b1-shadow-v1",
         "bar_source": "complete 15/15 MT5 Bid M1 bars",
-        "warmup_tail_bars": tail_bars,
+        "quote_rule": FRESH_QUOTE.name,
+        "warmup": {
+            "proven": True,
+            "proven_from_utc": warmup.get("proven_from_utc"),
+            "dropped_prefix_bars": warmup.get("dropped_prefix_bars"),
+            "method": warmup.get("method"),
+        },
         "captured_utc": now.isoformat(),
         "account_fingerprint": fingerprint,
         "symbol": symbol,
@@ -286,14 +260,14 @@ def shadow_cycle(
         "bar_data_sha256": hashlib.sha256(
             bars.to_csv(index_label="bar_open_utc").encode()
         ).hexdigest(),
-        "contract_sha256": _sha256(Path("CORE_STRATEGY.md")),
+        "contract_sha256": sha256_file(ROOT / "CORE_STRATEGY.md"),
         "cost_policy": policy,
         "cost_policy_validation": policy_status,
         "cost_policy_sha256": hashlib.sha256(
             json.dumps(cost_policy or {}, sort_keys=True).encode()
         ).hexdigest(),
-        "strategy_sha256": _sha256(Path("scripts/strategy.py")),
-        "risk_sha256": _sha256(Path("scripts/smc/risk.py")),
+        "strategy_sha256": module_sha256(strategy_module),
+        "risk_sha256": module_sha256(risk_module),
         "order_api_called": False,
     }
     log_path.parent.mkdir(parents=True, exist_ok=True)

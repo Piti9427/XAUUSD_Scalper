@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from scripts.pure_b1.parity import compare_bars, compare_signals, ticks_to_m15
+from scripts.pure_b1.parity import build_parity_ledger, compare_bars, compare_signals, ticks_to_m15
 
 
 def _digest(path: Path) -> str:
@@ -56,7 +56,8 @@ def compare_capture(capture: Path, reference: Path) -> dict:
         terminal = _bars(capture / "m15_terminal.csv")
     broker = _bars(m15)
     with gzip.open(tick_file, "rt", encoding="utf-8") as handle:
-        tick_bars = ticks_to_m15(pd.read_csv(handle))
+        tick_frame = pd.read_csv(handle)
+    tick_bars = ticks_to_m15(tick_frame)
     # Tick capture may start/end within a candle; compare only fully bounded bars.
     start = pd.Timestamp(manifest["requested_start_utc"])
     end = pd.Timestamp(manifest["requested_end_utc"])
@@ -67,18 +68,39 @@ def compare_capture(capture: Path, reference: Path) -> dict:
     tick_result = compare_bars(broker, tick_bars, tolerance=0.001)
     reference_result = compare_bars(broker, reference_bars, tolerance=0.001)
     signal_result = compare_signals(broker, reference_bars)
+    ledger = build_parity_ledger(
+        broker, reference_bars, ticks=tick_frame, cost_policy_verified=False
+    )
+    ledger_summary = {
+        key: ledger[key]
+        for key in (
+            "gate",
+            "shadow_passed",
+            "counts",
+            "by_field",
+            "blocked_causes",
+            "unexplained_mismatches",
+            "quote_rule",
+            "order_api_called",
+        )
+    }
+    ledger_summary["warmup"] = ledger["warmup"]
     checks = (
         tick_result["status"],
         reference_result["status"],
         signal_result["status"],
+        ledger["gate"],
     )
     return {
         "status": "RESEARCH_ONLY",
         "parity_gate": "PASS"
         if all(check == "PASS" for check in checks)
+        else "BLOCKED"
+        if ledger["gate"] == "BLOCKED"
         else "FAIL"
         if "FAIL" in checks
         else "INCONCLUSIVE",
+        "shadow_passed": False if ledger["gate"] != "PASS" else True,
         "parity_code_sha256": _digest(
             Path(__file__).resolve().parents[1] / "pure_b1" / "parity.py"
         ),
@@ -89,8 +111,13 @@ def compare_capture(capture: Path, reference: Path) -> dict:
         "terminal_vs_canonical": compare_bars(terminal, broker, tolerance=0.001)
         if terminal is not None
         else None,
+        "terminal_only_causes": [
+            {"bar_open_utc": ts.isoformat(), "cause": "not_in_canonical_15_of_15"}
+            for ts in (terminal.index.difference(broker.index) if terminal is not None else [])
+        ],
         "broker_vs_reference": reference_result,
         "signal_parity": signal_result,
+        "parity_ledger": ledger_summary,
         "order_api_called": False,
     }
 
@@ -118,6 +145,9 @@ def main() -> None:
                 "broker_vs_ticks": result["broker_vs_ticks"]["status"],
                 "broker_vs_reference": result["broker_vs_reference"]["status"],
                 "signal_parity": result["signal_parity"]["status"],
+                "parity_ledger": result["parity_ledger"]["gate"],
+                "ledger_counts": result["parity_ledger"]["counts"],
+                "shadow_passed": result["shadow_passed"],
                 "order_api_called": False,
             }
         )

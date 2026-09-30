@@ -4,7 +4,13 @@ import unittest
 
 import pandas as pd
 
-from scripts.pure_b1.parity import compare_bars, compare_signals, ticks_to_m15
+from scripts.pure_b1.parity import (
+    build_parity_ledger,
+    compare_bars,
+    compare_signals,
+    prove_warmup,
+    ticks_to_m15,
+)
 
 
 class PureB1ParityTests(unittest.TestCase):
@@ -65,6 +71,75 @@ class PureB1ParityTests(unittest.TestCase):
         reference = broker.drop(opens[300])
         result = compare_signals(broker, reference)
         self.assertEqual(result["status"], "FAIL")
+
+    def test_warmup_comparison_failure_cannot_pass(self):
+        opens = pd.date_range("2026-01-01", periods=40, freq="15min", tz="UTC")
+        close = [100.0 + (0 if i == 0 else i % 2) for i in range(len(opens))]
+        close[0] = 180.0
+        bars = pd.DataFrame(
+            {
+                "open": close,
+                "high": [price + 1 for price in close],
+                "low": [price - 1 for price in close],
+                "close": close,
+            },
+            index=opens,
+        )
+        warmup = prove_warmup(bars)
+        self.assertFalse(warmup["proven"])
+        self.assertIn(warmup["cause"], {"warmup_comparison_absent", "warmup_comparison_failed"})
+        result = compare_signals(bars, bars.copy())
+        self.assertEqual(result["status"], "FAIL")
+        self.assertNotEqual(result["status"], "PASS")
+        self.assertNotIn("warmup_excluded_broker_bars", result)
+
+    def test_long_identical_history_passes_only_with_warmup_proof(self):
+        opens = pd.date_range("2026-01-01", periods=800, freq="15min", tz="UTC")
+        close = [100.0 + i % 2 for i in range(len(opens))]
+        bars = pd.DataFrame(
+            {
+                "open": close,
+                "high": [price + 1 for price in close],
+                "low": [price - 1 for price in close],
+                "close": close,
+            },
+            index=opens,
+        )
+        result = compare_signals(bars, bars.copy())
+        self.assertTrue(result["warmup"]["broker"]["proven"])
+        self.assertEqual(result["status"], "PASS")
+
+    def test_ledger_blocks_missing_equity_and_records_price_mismatch(self):
+        opens = pd.date_range("2026-01-01", periods=80, freq="15min", tz="UTC")
+        close = [100.0 + i % 2 for i in range(len(opens))]
+        bars = pd.DataFrame(
+            {
+                "open": close,
+                "high": [price + 1 for price in close],
+                "low": [price - 1 for price in close],
+                "close": close,
+            },
+            index=opens,
+        )
+        blocked = build_parity_ledger(bars, bars.copy(), cost_policy_verified=False)
+        self.assertFalse(blocked["shadow_passed"])
+        self.assertEqual(blocked["gate"], "BLOCKED")
+        self.assertGreater(blocked["counts"]["blocked"], 0)
+        self.assertIn("cost_snapshot_unverified", blocked["blocked_causes"])
+        changed = bars.copy()
+        changed.iloc[10, changed.columns.get_loc("close")] += 0.05
+        changed.iloc[10, changed.columns.get_loc("high")] += 0.05
+        mismatch = build_parity_ledger(changed, bars, cost_policy_verified=False)
+        price_rows = [
+            row["fields"]["close"]
+            for row in mismatch["rows"]
+            if row["fields"].get("close", {}).get("status") == "mismatch"
+        ]
+        self.assertTrue(price_rows)
+        self.assertEqual(price_rows[0]["cause"], "price_delta")
+        self.assertAlmostEqual(price_rows[0]["abs_diff"], 0.05)
+        self.assertFalse(mismatch["shadow_passed"])
+        self.assertEqual(mismatch["order_api_called"], False)
 
 
 if __name__ == "__main__":

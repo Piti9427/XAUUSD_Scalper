@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "account_type": "Standard Demo",
+  "account_fingerprint": "c4020d69b754dfb5",
+  "source": "docs/reviews/2026-09-29-xauusdm-broker-conditions-audit.md",
+  "reviewed_utc": "2026-09-29T12:00:00+00:00",
+  "commission_per_lot": 0.0,
+  "commission_unit": "USD_per_lot_round_trip",
+  "commission_source": "Exness published Standard tariff: no trading commission. Checked 2026-09-29. symbol_info does not provide the commission tariff before an order.",
+  "commission_from_symbol_info": false,
+  "account_evidence_sha256": "2c71944754dec1d49a62768e0759b11555b703264f172c926e6cc7e0baea3892",
+  "slippage_allowance_price": 0.1,
+  "slippage_basis": "declared_assumption",
+  "spread_stress_price": 0.2,
+  "spread_stress_basis": "declared_assumption_not_spread_buffer",
+  "spread_buffer": 0.0,
+  "swap_free_qualified": true,
+  "swap_free_scope": "current_policy_not_historical",
+  "historical_swap_entitlement": "missing",
+  "broker_fills": "missing",
+  "notes": "Zero commission is the published Standard tariff with a named source, not a symbol_info reading. Slippage and spread stress are declared assumptions. Swap-free is the current-policy label only and is not applied backwards as historical entitlement. This file does not authorize Demo orders or real money."
+}
