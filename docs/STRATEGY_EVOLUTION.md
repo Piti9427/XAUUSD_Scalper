@@ -313,3 +313,19 @@ Snapshot ของกฎที่เปลี่ยน. ค่าอื่นเ
 ทดสอบ: `test_buy_pause_blocks_buy_under_peak_and_still_admits_sell`. Suite ด้วย `.venv` รัน 688 tests, skipped 2, exit 0. Ruff ผ่านสองไฟล์ที่แตะ. Mypy ไม่ได้ติดตั้งใน `.venv`.
 
 **มติ: `rejected`.** ไม่รับใช้. Frozen core ไม่เปลี่ยน. Strict Improvement ยังไม่สำเร็จ.
+
+### LOG-20260930-10 — Both frozen parents → bounded logic/admission campaign
+
+**parent/from:** Frozen Pure B1 D30 / RSI30–70 / EMA50 / SL2.5ATR / TP6.25ATR, plus Donchian48 / no RSI/EMA / SL2.5ATR / TP3ATR. **to:** research trials only, no adoption.
+
+New research fields: `risk_cap=0.025/0.05/0.10`, `daily_loss_limit=0.05/0.10/0.20/0.40`, `min_depth_atr=0/0.15/0.20/0.25`, either parent's `target_atr`, and `entry_mode=failed_reverse` (close inside frozen originating range within2 completed bars). Existing confirmation, retest and protective exits tested alongside these rules. Fixed0.01 lot, no recovery, cost-inclusive cap<=10%. Frozen indicators and SL retained.
+
+Owner revised acceptance for this campaign: profit/WR higher and DD lower than **both** parents; absolute DD<=20%; realized RR>=1, including common cost stress. Full>=60 trades and each chronological half>=20. Existing184 days are reused discovery, not untouched validation.
+
+**Actual result:** 384 unique configs /8 batches, 0 passing all discovery gates; `NO_QUALIFIED_CANDIDATE`. Every trial stores config, full/half base+stress results, ledger, equity checkpoints, input/source hashes. [Result report](reviews/2026-09-30-strategy-campaign.md), [all config/metric results](reviews/2026-09-30-strategy-campaign-results.json), [protocol](specs/2026-09-30-strategy-campaign.md).
+
+ผล full net / DD / WR / realized RR: comparator **$333.62 /56.89% /48.50% /1.171**; diagnostic trial201 **$428.99 /34.60% /49.33% /1.199**. Trial201 ใช้ D48 เดิม, daily loss limit5%, risk cap10%, SL2.5/TP3ATR, entry immediate. Stress **$411.56 /38.09% /49.10% /1.201**. ยังตก DD20%; ไม่รับใช้. Lowest DD among >=60-trade trials: trial360 DD33.45%, net$187.39, WR43.30%, RR1.524; กำไร/WR ต่ำกว่า comparator.
+
+**Verification:** 695 tests, skipped2; focused34 tests; Ruff/compileall passed. Static type checker unavailable. Two-axis review findings fixed; re-review0 unresolved. Corrupted baseline and selection-metadata resume checks rejected as expected. Code commit `4f66709`.
+
+**มติ:** `NO_QUALIFIED_CANDIDATE`; no adoption, Demo BLOCKED. Need new nonempty tick coverage>=12 months with>=3 months untouched, sourced fees/swap, qualified winner, MQL5 parity and Shadow evidence before Demo review. Prior records retained.
