@@ -31,12 +31,25 @@ class Rules:
     daily_loss_limit: float = 0.40
     target_atr: float = 3.0
     min_depth_atr: float = 0.0
+    target_rr: float = 0.0
+    cooldown_bars: int = 0
+    session_mode: str = "all"
+    max_daily_losses: int = 0
+    protect_after_r: float = 0.5
 
     def __post_init__(self):
+        if self.protect_after_r not in (0.5, 1.0, 1.5, 2.0):
+            raise ValueError("unsupported protection activation")
+        if self.cooldown_bars not in (0, 1, 4) or self.max_daily_losses not in (0, 1, 2):
+            raise ValueError("unsupported loss circuit")
+        if self.session_mode not in ("all", "london_ny"):
+            raise ValueError("unsupported UTC session")
         if self.risk_cap not in (0.025, 0.05, 0.10):
             raise ValueError("unsupported risk cap")
         if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
             raise ValueError("unsupported daily limit")
+        if self.target_rr not in (0.0, 1.5, 2.0, 3.0):
+            raise ValueError("unsupported risk distance target")
         if self.target_atr not in (3.0, 6.25):
             raise ValueError("unsupported parent target")
         if self.min_depth_atr not in (0.0, 0.15, 0.20, 0.25):
@@ -45,7 +58,7 @@ class Rules:
             raise ValueError("unsupported research rule")
         if self.entry_mode not in ("immediate", "confirm", "retest", "failed_reverse"):
             raise ValueError("unsupported entry mode")
-        if self.stop_mode not in ("atr", "structure"):
+        if self.stop_mode not in ("atr", "structure", "trigger", "boundary"):
             raise ValueError("unsupported stop mode")
         if self.protect_mode not in ("off", "break_even", "candle_trail", "runner"):
             raise ValueError("unsupported profit protection")
@@ -207,9 +220,14 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             "invalid_stop",
             "entry_guard",
             "buy_pause",
+            "cooldown",
+            "session",
+            "daily_loss_count",
         )
     }
     day_start: dict[int, float] = {}
+    daily_losses: dict[int, int] = {}
+    cooldown_until_ms = 0
     flat_since: int | None = int(start.value // 10**6)
     reset_range = None
     previous = 0
@@ -247,13 +265,17 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                 day_start.setdefault(int(day), float(marks[idx]))
 
     def close(index, reason):
-        nonlocal balance, position, flat_since, reset_range
+        nonlocal balance, position, flat_since, reset_range, cooldown_until_ms
         p = position
         assert p is not None
         quote = bid[index] if p["direction"] == 1 else ask[index]
         price = p["target"] if reason == "TP" else quote - p["direction"] * costs.slippage
         gross = p["direction"] * (price - p["entry"]) * factor
         net = gross - fee
+        if net < 0:
+            loss_day = int(times[index] // 86400000)
+            daily_losses[loss_day] = daily_losses.get(loss_day, 0) + 1
+            cooldown_until_ms = int(times[index]) + rules.cooldown_bars * 900000
         balance += gross
         p.update(
             exit_time_utc=pd.Timestamp(int(times[index]), unit="ms", tz="UTC").isoformat(),
@@ -345,7 +367,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             net_now = (
                 p["direction"] * (executable - p["entry"]) * factor - fee - costs.slippage * factor
             )
-            if net_now >= 0.5 * p["risk_usd"]:
+            if net_now >= rules.protect_after_r * p["risk_usd"]:
                 p["protection_active"] = True
             if p["protection_active"]:
                 # Round toward protection to cover costs, then require executable clearance.
@@ -425,6 +447,16 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             rejected["buy_pause"] += 1
             continue
         day = int(times[index] // 86400000)
+        hour = (int(times[index]) % 86400000) / 3600000
+        if rules.session_mode == "london_ny" and not (7 <= hour < 11 or 12 <= hour < 17):
+            rejected["session"] += 1
+            continue
+        if int(times[index]) < cooldown_until_ms:
+            rejected["cooldown"] += 1
+            continue
+        if rules.max_daily_losses and daily_losses.get(day, 0) >= rules.max_daily_losses:
+            rejected["daily_loss_count"] += 1
+            continue
         if flat_since is not None and flat_since <= day * 86400000:
             day_start.setdefault(day, balance)
         if day not in day_start:
@@ -440,18 +472,27 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             continue
         entry = float(ask[index] if direction == 1 else bid[index]) + direction * costs.slippage
         stop = _level(entry - direction * row.atr * 2.5, broker["trade_tick_size"], direction)
-        if rules.stop_mode == "structure":
-            anchor = row.stop_low if direction == 1 else row.stop_high
+        if rules.stop_mode in ("structure", "trigger"):
+            anchor = (
+                (row.low if direction == 1 else row.high)
+                if rules.stop_mode == "trigger"
+                else (row.stop_low if direction == 1 else row.stop_high)
+            )
             stop = _level(
                 anchor - direction * broker["trade_tick_size"], broker["trade_tick_size"], direction
+            )
+        if rules.stop_mode == "boundary":
+            stop = _level(
+                row.entry_boundary - direction * 0.5 * row.atr, broker["trade_tick_size"], direction
             )
         executable = float(bid[index] if direction == 1 else ask[index])
         if not math.isfinite(stop) or direction * (executable - stop) <= 0:
             rejected["invalid_stop"] += 1
             continue
-        target = _level(
-            entry + direction * row.atr * rules.target_atr, broker["trade_tick_size"], direction
+        target_distance = (
+            abs(entry - stop) * rules.target_rr if rules.target_rr else row.atr * rules.target_atr
         )
+        target = _level(entry + direction * target_distance, broker["trade_tick_size"], direction)
         risk = (abs(entry - stop) + costs.slippage) * factor + fee
         if risk > balance * rules.risk_cap:
             rejected["risk_cap"] += 1

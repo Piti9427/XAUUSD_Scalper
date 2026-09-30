@@ -132,3 +132,27 @@ Research-only campaign follows [frozen protocol](docs/specs/2026-09-30-strategy-
 Owner's new research gate supersedes strict RR improvement **for this campaign only**: net profit and WR higher, DD lower than both parents; DD<=20%, realized RR>=1; same requirements under common cost stress. Campaign <=384 unique candidates, batches<=48. Existing184-day tape is discovery only. New logic is not adopted or connected to live execution. Result/history appended after the actual run.
 
 Actual campaign verdict: **NO_QUALIFIED_CANDIDATE**, 384 unique configs /8 batches, 0 passing all gates. No adoption. Evidence appended at [LOG-20260930-10](docs/STRATEGY_EVOLUTION.md) and [campaign report](docs/reviews/2026-09-30-strategy-campaign.md). Unseen validation, MQL5 parity and Demo remain blocked.
+
+### 6.7 Structural invalidation follow-up (2026-09-30)
+
+Owner requested continued strategy research. [New research protocol](docs/specs/2026-09-30-structural-strategy-campaign.md) replaces candidate SL2.5ATR with existing `stop_mode=structure`: BUY setup/trigger minimum low−tick; SELL maximum high+tick. Fixed0.01 lot, admission caps2.5/5/10%, daily limit5%, no recovery. Parent indicators and TP ATR distances retained; BUY/SELL/prior-day guards and closed-bar profit protection tested. **Frozen core and comparator baselines retain original ATR2.5 stops.** Exact384 candidates frozen before replay; first passing discovery candidate frozen by `--stop-on-pass`. No relaxation of profit, WR, DD<=20%, RR>=1 or cost-stress gates. No adoption or Demo qualification implied.
+
+### 6.8 Retest + trigger stop + risk-distance TP follow-up (2026-09-30)
+
+[New research contract](docs/specs/2026-09-30-risk-target-strategy-campaign.md): `stop_mode=trigger` uses confirming bar low−tick/high+tick, while `structure` retains setup+trigger extremes. `target_rr=1.5/2/3` sets TP from actual entry to initial rounded stop distance; `target_rr=0` preserves parent ATR target. Cost-inclusive admission still includes commission and adverse exit allowance; fixed0.01, cap2.5/5%, daily gate5%, no recovery. Nominal target RR never replaces realized net RR gate. Runner supports full-first short-circuit screening; skipped halves cannot qualify. Source snapshots preserve each campaign's exact code. Frozen core/comparator unaffected; no adoption.
+
+### 6.9 Boundary/session/loss-circuit research (2026-10-01)
+
+[New discovery protocol](docs/specs/2026-10-01-boundary-strategy-campaign.md): `stop_mode=boundary` uses frozen crossed Donchian edge−signed0.5ATR buffer, conservative tick rounding. `session_mode=london_ny` allows entries at UTC07–11 or12–17 only; all protective exits remain active. `cooldown_bars=0/1/4` starts after actual net losing exit; `max_daily_losses=0/1/2` counts exits in actual UTC exit day (0 disables count circuit). No clamp of lot/risk. Baseline defaults disable new gates and retain ATR SL. Tested cohort384 configs retains fixed0.01 and cap5/10%, daily admission loss gate5%. No adoption.
+
+### 6.10 Wick-sweep research (2026-10-01)
+
+[Separate logic family](docs/specs/2026-10-01-sweep-strategy-campaign.md): prior48 Donchian upper wick + close back below upper edge→SELL; lower wick + close back above lower edge→BUY; skip both-edge sweep candles. Completed-bar only; SL behind wick, optional risk-distance TP or3ATR, unchanged quote timing/cost-inclusive cap/fixed0.01/no recovery.384 predeclared configs; both frozen parents still comparison baselines. Full/half/stress metrics required for discovery pass; reused history cannot establish Demo readiness.
+
+### 6.11 Trend-pullback research (2026-10-01)
+
+[Separate research detection](docs/specs/2026-10-01-pullback-strategy-campaign.md): previous red candle + current close reclaim above prior high + above EMA50 with rising4-bar EMA50→BUY; inverse→SELL. Fixed EMA50 period, first50 bars warmup, completed M15, fresh quote only. Trigger stop/nominal risk-distance TP optional, fixed0.01/cap/no recovery unchanged.384 configs, no parent replacement.
+
+### 6.12 Later profit-protection activation research (2026-10-01)
+
+[Research protocol](docs/specs/2026-10-01-activation-strategy-campaign.md) adds `protect_after_r=1/1.5/2`; default remains0.5. Activation from closed-bar executable net versus initial cost-inclusive R; never widen stop, later quote only, runner removes TP only after valid stop update.288 predeclared configs; max384 per campaign; exhaustion derived from actual count. Existing core/baseline defaults unchanged; no adoption.

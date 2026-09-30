@@ -118,3 +118,172 @@ class CampaignProtocolTests(unittest.TestCase):
         configs = [(p, json.dumps(asdict(r), sort_keys=True)) for p, _, r in candidates()]
         self.assertEqual(len(configs), 384)
         self.assertEqual(len(set(configs)), 384)
+
+
+class StructuralCampaignTests(unittest.TestCase):
+    def test_structural_campaign_has_unique_configs_and_fixed_parent_targets(self):
+        from scripts.research.campaign_hypotheses import structure_candidates
+
+        configs = structure_candidates()
+        self.assertEqual(len(configs), 384)
+        self.assertEqual(len({(p, r) for p, _, r in configs}), 384)
+        for parent, _, rules in configs:
+            self.assertEqual(rules.stop_mode, "structure")
+            self.assertEqual(rules.target_atr, 6.25 if parent == "core" else 3.0)
+            self.assertLessEqual(rules.risk_cap, 0.10)
+
+
+class RiskDistanceTargetTests(unittest.TestCase):
+    def test_target_rr_anchors_to_rounded_trigger_stop_without_lot_clamp(self):
+        from tests.test_breakout_logic import sample, BROKER, START, END
+        from scripts.research.breakout_logic import replay, Rules, Costs
+
+        frame, ticks = sample()
+        result = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(stop_mode="trigger", target_rr=1.5),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertAlmostEqual(trade["initial_stop"], 98.999)
+        self.assertAlmostEqual(trade["target"], 102.001)
+        self.assertEqual(trade["volume"], 0.01)
+
+
+class BoundaryStopTests(unittest.TestCase):
+    def test_boundary_buffer_stop_is_behind_crossed_level(self):
+        from tests.test_breakout_logic import sample, BROKER, START, END
+        from scripts.research.breakout_logic import replay, Rules, Costs
+
+        frame, ticks = sample()
+        result = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(stop_mode="boundary", target_rr=2.0),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertAlmostEqual(trade["initial_stop"], 99.5)
+        self.assertAlmostEqual(trade["target"], 101.6)
+
+
+class LossCooldownTests(unittest.TestCase):
+    def test_loss_cooldown_blocks_fresh_signals_after_sl(self):
+        import numpy as np
+        from tests.test_breakout_logic import sample, BROKER, START, END
+        from scripts.research.breakout_logic import replay, Rules, Costs
+
+        frame, _ = sample()
+        frame["direction"] = [1, 1, 1]
+        times = START.value // 10**6 + np.array([900000, 960000, 1800000, 2700000])
+        bid = np.array([100.0, 97.0, 100.0, 100.0])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(cooldown_bars=4),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(result["trades"], 1)
+        self.assertEqual(result["rejections"]["cooldown"], 2)
+
+
+class WickSweepTests(unittest.TestCase):
+    def test_rejection_of_upper_range_trades_short_only_after_bar_close(self):
+        import numpy as np
+        import pandas as pd
+        from tests.test_breakout_logic import BROKER, START
+        from scripts.research.breakout_logic import replay, Rules, Costs
+        from scripts.research.campaign_hypotheses import wick_sweep_features
+
+        bars = pd.DataFrame(
+            dict(
+                open=[97.0] * 48 + [100.5],
+                high=[100.0] * 48 + [101.0],
+                low=[95.0] * 48 + [99.0],
+                close=[97.0] * 48 + [99.5],
+            ),
+            index=pd.date_range(START, periods=49, freq="15min"),
+        )
+        frame = wick_sweep_features(bars)
+        times = START.value // 10**6 + np.array([44100000, 45000000])
+        result = replay(
+            frame,
+            (times, np.array([99.6, 99.6]), np.array([99.8, 99.8])),
+            BROKER,
+            Rules(stop_mode="structure", target_rr=1.5),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=13),
+        )
+        self.assertEqual(result["trades"], 1)
+        trade = result["ledger"][0]
+        self.assertEqual(trade["direction"], -1)
+        self.assertEqual(trade["entry_time_utc"], "2026-04-01T12:15:00+00:00")
+        self.assertAlmostEqual(trade["initial_stop"], 101.001)
+
+
+class TrendPullbackTests(unittest.TestCase):
+    def test_bullish_reclaim_after_red_pullback_enters_only_after_close(self):
+        import numpy as np
+        import pandas as pd
+        from tests.test_breakout_logic import BROKER, START
+        from scripts.research.breakout_logic import replay, Rules, Costs
+        from scripts.research.campaign_hypotheses import trend_pullback_features
+
+        bars = pd.DataFrame(
+            dict(
+                open=[97.0] * 55 + [98.0, 97.0],
+                high=[98.0] * 55 + [98.5, 100.0],
+                low=[96.0] * 55 + [96.0, 96.5],
+                close=[97.0] * 56 + [99.5],
+            ),
+            index=pd.date_range(START, periods=57, freq="15min"),
+        )
+        frame = trend_pullback_features(bars)
+        times = START.value // 10**6 + np.array([51300000, 52200000])
+        result = replay(
+            frame,
+            (times, np.array([99.6, 99.6]), np.array([99.8, 99.8])),
+            BROKER,
+            Rules(stop_mode="trigger", target_rr=1.5),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=15),
+        )
+        self.assertEqual(result["trades"], 1)
+        self.assertEqual(result["ledger"][0]["direction"], 1)
+        self.assertEqual(result["ledger"][0]["entry_time_utc"], "2026-04-01T14:15:00+00:00")
+
+
+class ProfitActivationTests(unittest.TestCase):
+    def test_one_r_activation_does_not_move_stop_at_half_r(self):
+        import numpy as np
+        from tests.test_breakout_logic import sample, BROKER, START, END
+        from scripts.research.breakout_logic import replay, Rules, Costs
+
+        frame, _ = sample()
+        times = START.value // 10**6 + np.array([900000, 1800000, 1860000, 2700000])
+        bid = np.array([100.0, 101.7, 100.1, 100.1])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="break_even", protect_after_r=1.0),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertEqual(trade["stop_updates"], 0)
+        self.assertAlmostEqual(trade["stop"], 97.7)
+        self.assertEqual(trade["reason"], "END_OF_SAMPLE")

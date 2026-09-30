@@ -14,6 +14,16 @@ from pathlib import Path
 from scripts.strategy import pure_b1_bars
 from scripts.research.breakout_logic import Costs, Rules, replay
 from scripts.research.strategy_campaign import qualifies
+from scripts.research.campaign_hypotheses import (
+    structure_candidates,
+    risk_target_candidates,
+    boundary_candidates,
+    sweep_candidates,
+    wick_sweep_features,
+    pullback_candidates,
+    trend_pullback_features,
+    activation_candidates,
+)
 from scripts.research.tune_breakout_logic import START, TRAIN_END, END, load_data, sha256
 
 STRESS = Costs(extra_spread=0.20, slippage=0.10)
@@ -99,6 +109,29 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--screen",
+        action="store_true",
+        help="skip remaining discovery windows after a proven gate failure",
+    )
+    parser.add_argument(
+        "--campaign",
+        choices=(
+            "original",
+            "structure",
+            "risk_target",
+            "boundary",
+            "sweep",
+            "pullback",
+            "activation",
+        ),
+        default="original",
+    )
+    parser.add_argument(
+        "--stop-on-pass",
+        action="store_true",
+        help="freeze first discovery-qualified candidate, never read unseen data",
+    )
     parser.add_argument("--batches", type=int, default=8, help="1..8 batches, <=48 trials each")
     parser.add_argument("--commission-per-lot", type=float, default=0)
     parser.add_argument(
@@ -112,18 +145,40 @@ def main():
     print("Auditing raw ticks, canonical bars, broker specification and hashes...", flush=True)
     frame, ticks, broker, audit = load_data()
     core = pure_b1_bars(frame).rename(columns={"hh30": "hh", "ll30": "ll"})
-    frames = {"core": core, "donchian48": frame}
+    frames = {
+        "core": core,
+        "donchian48": frame,
+        "sweep": wick_sweep_features(frame),
+        "pullback": trend_pullback_features(frame),
+    }
     sources = [
         "scripts/research/run_strategy_campaign.py",
         "scripts/research/strategy_campaign.py",
+        "scripts/research/campaign_hypotheses.py",
         "scripts/research/breakout_logic.py",
         "scripts/research/tune_breakout_logic.py",
         "scripts/research/data.py",
         "scripts/strategy.py",
     ]
-    trials = candidates()
+    factories = {
+        "original": candidates,
+        "structure": structure_candidates,
+        "risk_target": risk_target_candidates,
+        "boundary": boundary_candidates,
+        "sweep": sweep_candidates,
+        "pullback": pullback_candidates,
+        "activation": activation_candidates,
+    }
+    trials = factories[args.campaign]()
+    if not 0 < len(trials) <= 384:
+        raise ValueError("campaign exceeds hypothesis budget")
+    if len({(p, r) for p, _, r in trials}) != len(trials):
+        raise ValueError("duplicate hypothesis config")
     protocol = dict(
-        version=1,
+        version=2,
+        campaign=args.campaign,
+        stop_on_pass=args.stop_on_pass,
+        short_circuit_screen=args.screen,
         audit=audit,
         source_hashes={p: sha256(p) for p in sources},
         costs={"base": asdict(base_cost), "stress": asdict(stress_cost)},
@@ -133,6 +188,7 @@ def main():
         lot=0.01,
         broker=broker,
         max_trials=384,
+        total_unique_trials=len(trials),
         batch_size=48,
         windows={k: [s.isoformat(), e.isoformat()] for k, (s, e) in WINDOWS.items()},
         selection="discovery only: lower full DD, higher stress net, fewer changed rules, trial id",
@@ -145,6 +201,12 @@ def main():
             "retest": "within next4 completed bars low<=upper boundary (buy) or high>=lower (sell), close beyond; cancel on close inside",
             "failed_reverse": "within next2 completed bars close inside frozen [low,high], reverse originating direction; origin parent guards only; expiry cancels",
             "exit": "fixed parent SL2.5ATR/TP; failed1 close across original crossed boundary; stagnant8 bars net<=0; trail after net>=.5 initial cost-inclusiveR at close, low-tick/high+tick with cost-covering break-even, never widen; effective later quote",
+            "protection_activation": "completed-bar executable net>=protect_after_r times initial cost-inclusive risk; default0.5, newresearch1/1.5/2; SL never widens, later quote effect",
+            "trend_pullback": "EMA50 fixed with4bar slope. BUY prior candle red,current close>prior high and>EMA,risingEMA;SELL inverse; first50barswarmup; triggerSL, completedbarquoteentry",
+            "wick_sweep": "prior48 range upper wick: high>hh, close<hh, low>=ll=>sell; lower wick: low<ll, close>ll, high<=hh=>buy. Ambiguous both-edge candle skipped; completedbar only, firstfreshquote, stop behindwick",
+            "boundary_stop": "crossed originating level minus signed0.5ATR buffer; fixed rule, not an ATR grid. Entries only during declared UTC sessions; net negative exits start cooldown and count toward UTC daily loss circuit; protection remains active outside sessions",
+            "risk_target": "when target_rr>0, TP distance=initial rounded stop distance times nominal RR; otherwise parent ATR target. Trigger stop uses confirming bar low/high only; all fees and exit allowances still counted in admission",
+            "structure_stop": "research contract only: setup/trigger minimum low-tick for buy, maximum high+tick for sell; reject wrong-side or over-cap SL; preserves parent target ATR",
             "daily": "block new entries after realized balance drop relative UTC day-start equity; missing midnight equity blocks admission",
         },
         candidates=[dict(parent=p, hypothesis=h, rules=asdict(r)) for p, h, r in trials],
@@ -156,6 +218,16 @@ def main():
     else:
         output.mkdir(parents=True, exist_ok=False)
         write_json(output / "protocol.json", protocol)
+    # Preserve exact code independently of later research changes.
+    for source, digest in protocol["source_hashes"].items():
+        content = Path(source).read_bytes()
+        if sha256(source) != digest:
+            raise ValueError("source changed during protocol freeze")
+        snapshot = output / "source_snapshot" / source
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        if snapshot.exists() and snapshot.read_bytes() != content:
+            raise ValueError("frozen source snapshot changed")
+        snapshot.write_bytes(content)
     baseline_hash_path = output / "baseline-hashes.json"
     baseline_hashes = (
         json.loads(baseline_hash_path.read_text())
@@ -204,11 +276,18 @@ def main():
                 for name, digest in completed["artifact_hashes"].items()
             ):
                 raise ValueError("resume rejected: trial artifact changed")
-            expected_names = {f"{w}-{c}.json" for w in WINDOWS for c in ("base", "stress")}
+            evaluated = list(completed["metrics"])
+            if (
+                evaluated != list(WINDOWS)[: len(evaluated)]
+                or not evaluated
+                or (not args.screen and len(evaluated) != len(WINDOWS))
+            ):
+                raise ValueError("resume rejected: missing discovery windows")
+            expected_names = {f"{w}-{c}.json" for w in evaluated for c in ("base", "stress")}
             if set(completed["artifact_hashes"]) != expected_names:
                 raise ValueError("resume rejected: incomplete scenario hashes")
             recovered = {}
-            for window in WINDOWS:
+            for window in evaluated:
                 pair = []
                 for scenario in ("base", "stress"):
                     artifact = json.loads((directory / f"{window}-{scenario}.json").read_text())
@@ -216,7 +295,13 @@ def main():
                         raise ValueError("resume rejected: rules differ from frozen protocol")
                     pair.append(compact(artifact))
                 recovered[window] = pair
-            recovered_pass = all(
+            if len(evaluated) < len(WINDOWS) and qualifies(
+                *recovered[evaluated[-1]],
+                baselines[evaluated[-1]],
+                min_trades=60 if evaluated[-1] == "full" else 20,
+            ):
+                raise ValueError("resume rejected: unjustified early screening")
+            recovered_pass = len(evaluated) == len(WINDOWS) and all(
                 qualifies(*pair, baselines[w], min_trades=60 if w == "full" else 20)
                 for w, pair in recovered.items()
             )
@@ -232,6 +317,8 @@ def main():
                     "resume rejected: selection metadata differs from verified artifacts"
                 )
             rows.append(completed)
+            if args.stop_on_pass and recovered_pass:
+                break
             continue
         directory.mkdir(exist_ok=True)
         metrics = {}
@@ -244,6 +331,8 @@ def main():
                 pair.append(compact(result))
             metrics[window] = pair
             passed &= qualifies(*pair, baselines[window], min_trades=60 if window == "full" else 20)
+            if args.screen and not passed:
+                break
         row = dict(
             trial=number,
             parent=parent,
@@ -259,11 +348,13 @@ def main():
         write_json(marker, row)
         rows.append(row)
         print(
-            f"Trial {number}/384 {parent} {hypothesis}: net={metrics['full'][0]['net_usd']:.2f} DD={metrics['full'][0]['max_dd_pct']:.2f} pass={passed}",
+            f"Trial {number}/{len(trials)} {parent} {hypothesis}: net={metrics['full'][0]['net_usd']:.2f} DD={metrics['full'][0]['max_dd_pct']:.2f} pass={passed}",
             flush=True,
         )
         if number % 48 == 0:
             write_json(output / f"batch-{number // 48:02d}.json", rows[-48:])
+        if args.stop_on_pass and passed:
+            break
     eligible = [r for r in rows if r["discovery_pass"]]
     winner = min(
         eligible,
@@ -280,13 +371,13 @@ def main():
     )
     verdict = dict(
         completed_trials=len(rows),
-        campaign_exhausted=len(rows) == 384,
+        campaign_exhausted=len(rows) == len(trials),
         qualified_discovery=len(eligible),
         frozen_discovery_winner=winner,
         status="AWAITING_UNSEEN_DATA"
         if winner
         else "NO_QUALIFIED_CANDIDATE"
-        if len(rows) == 384
+        if len(rows) == len(trials)
         else "DISCOVERY_INCOMPLETE",
         demo_status="BLOCKED",
         missing_evidence=[

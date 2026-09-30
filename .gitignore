@@ -76,3 +76,6 @@ scripts/test_tuning.py
 
 # Broker Demo exports and account metadata stay local
 data/exness-demo/
+
+# Immutable local strategy campaign evidence and source snapshots
+data/strategy_*campaign*/
