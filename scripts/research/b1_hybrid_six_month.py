@@ -28,10 +28,38 @@ class Leg:
 
 
 class Replay:
-    def __init__(self, times, bid, ask, broker, *, cost_scenario):
+    def __init__(
+        self,
+        times,
+        bid,
+        ask,
+        broker,
+        *,
+        cost_scenario,
+        apply_swap=None,
+        entry_fee_r=None,
+        entry_stress_price=0.0,
+        day_quota_limit=99,
+        signal_day_start=True,
+        boundary_day_start_only=False,
+        tick_rounder=None,
+        stop_atr=2.5,
+        target_atr=6.25,
+    ):
         self.times, self.bid, self.ask = times, bid, ask
         self.broker = broker
         self.cost_scenario = cost_scenario
+        self.swap_enabled = cost_scenario if apply_swap is None else bool(apply_swap)
+        self.entry_fee_r = (0.1 if cost_scenario else 0.0) if entry_fee_r is None else float(entry_fee_r)
+        self.entry_stress_price = float(entry_stress_price)
+        self.day_quota_limit = day_quota_limit
+        self.signal_day_start = signal_day_start
+        self.boundary_day_start_only = boundary_day_start_only
+        self.tick_rounder = tick_rounder
+        self.stop_atr = float(stop_atr)
+        self.target_atr = float(target_atr)
+        if self.stop_atr <= 0 or self.target_atr <= 0:
+            raise ValueError("stop and target ATR multipliers must be positive")
         self.balance = self.peak = 200.0
         self.max_dd = 0.0
         self.halted = False
@@ -50,6 +78,8 @@ class Replay:
             "margin_proxy": 0,
             "tick_gap": 0,
             "recovery_not_negative": 0,
+            "day_start_unknown": 0,
+            "late_quote": 0,
         }
         self.close_reasons = {}
         self.grid = broker["trade_tick_size"]
@@ -68,8 +98,13 @@ class Replay:
     def _rolls(self, times):
         return self.roll_acc[np.searchsorted(self.roll_millis, times, side="right")]
 
+    def _round(self, price, direction):
+        if self.tick_rounder is None:
+            return normalize_price(price, self.grid)
+        return self.tick_rounder(price, self.grid, direction)
+
     def _swaps(self, leg, times):
-        if not self.cost_scenario or self.broker["swap_mode"] != 1:
+        if not self.swap_enabled or self.broker["swap_mode"] != 1:
             return 0.0
         points = self.broker["swap_long"] if leg.direction == 1 else self.broker["swap_short"]
         return (
@@ -98,14 +133,19 @@ class Replay:
         days = ticks // 86400000
         firsts = np.r_[0, np.flatnonzero(np.diff(days)) + 1]
         for n in firsts:
-            self.day_start.setdefault(int(days[n]), float(marks[n]))
+            day = int(days[n])
+            if self.boundary_day_start_only:
+                stamp = pd.Timestamp(int(ticks[n]), unit="ms", tz="UTC")
+                if stamp.hour or stamp.minute or stamp.second:
+                    continue
+            self.day_start.setdefault(day, float(marks[n]))
 
     def _settle(self, leg, index, reason):
         bid_or_ask = float(self.bid[index] if leg.direction == 1 else self.ask[index])
         exit_price = leg.target if reason == "TP" else bid_or_ask
         gross = leg.direction * (exit_price - leg.entry) * self.contract * leg.volume
         swap = (
-            float(self._swaps(leg, self.times[index : index + 1])[0]) if self.cost_scenario else 0.0
+            float(self._swaps(leg, self.times[index : index + 1])[0]) if self.swap_enabled else 0.0
         )
         net_after_entry_fee = gross + swap - leg.fee
         self.balance += gross + swap
@@ -158,12 +198,13 @@ class Replay:
 
     def _open(self, index, direction, atr, volume, label):
         entry = float(self.ask[index] if direction == 1 else self.bid[index])
-        stop = normalize_price(entry - direction * atr * 2.5, self.grid)
+        entry += direction * self.entry_stress_price
+        stop = self._round(entry - direction * atr * self.stop_atr, direction)
         distance = abs(entry - stop)
         if not np.isfinite(distance) or distance <= 0:
             return False
-        target = normalize_price(entry + direction * atr * 6.25, self.grid)
-        fee = 0.1 * distance * self.contract * volume if self.cost_scenario else 0.0
+        target = self._round(entry + direction * atr * self.target_atr, direction)
+        fee = self.entry_fee_r * distance * self.contract * volume
         # --- 10% Risk Cap: reject if SL risk > 10% of current equity ---
         risk_usd = distance * self.contract * volume
         equity = self.equity_at(index)
@@ -201,7 +242,11 @@ class Replay:
     def on_signal(self, index, b1, recovery, atr):
         day = int(self.times[index] // 86400000)
         equity = self.equity_at(index)
-        self.day_start.setdefault(day, equity)
+        if self.signal_day_start:
+            self.day_start.setdefault(day, equity)
+        if day not in self.day_start:
+            self.rejections["day_start_unknown"] += 1
+            return
         if self.halted or equity <= self.peak * 0.0:
             self.halted = True
             self.rejections["hwm_halt"] += 1
@@ -212,7 +257,7 @@ class Replay:
             if self.day_start[day] - equity >= self.day_start[day] * 0.40:
                 self.rejections["daily_loss"] += 1
                 return
-            if self.day_quota.get(day, 0) >= 99:
+            if self.day_quota_limit is not None and self.day_quota.get(day, 0) >= self.day_quota_limit:
                 self.rejections["daily_quota"] += 1
                 return
             self.basket_start = self.balance
@@ -221,7 +266,8 @@ class Replay:
                 self.basket_count += 1
                 self.basket_open_index = index
                 self.basket_had_recovery = False
-                self.day_quota[day] = self.day_quota.get(day, 0) + 1
+                if self.day_quota_limit is not None:
+                    self.day_quota[day] = self.day_quota.get(day, 0) + 1
             else:
                 self.basket_start = self.basket_budget = None
             return
