@@ -129,7 +129,7 @@ def hypotheses(batch="original"):
 
 
 def metrics(result):
-    return {k: v for k, v in result.items() if k != "ledger"}
+    return {k: v for k, v in result.items() if k not in ("ledger", "equity")}
 
 
 def choose_training(rows):

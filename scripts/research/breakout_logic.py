@@ -27,10 +27,23 @@ class Rules:
     entry_guard: str = "off"
     buy_pause_drawdown: float = 0.0
 
+    risk_cap: float = 0.10
+    daily_loss_limit: float = 0.40
+    target_atr: float = 3.0
+    min_depth_atr: float = 0.0
+
     def __post_init__(self):
+        if self.risk_cap not in (0.025, 0.05, 0.10):
+            raise ValueError("unsupported risk cap")
+        if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
+            raise ValueError("unsupported daily limit")
+        if self.target_atr not in (3.0, 6.25):
+            raise ValueError("unsupported parent target")
+        if self.min_depth_atr not in (0.0, 0.15, 0.20, 0.25):
+            raise ValueError("unsupported breakout depth")
         if self.failed_closes not in (0, 1, 2) or self.stagnant_bars not in (0, 4, 8, 16):
             raise ValueError("unsupported research rule")
-        if self.entry_mode not in ("immediate", "confirm", "retest"):
+        if self.entry_mode not in ("immediate", "confirm", "retest", "failed_reverse"):
             raise ValueError("unsupported entry mode")
         if self.stop_mode not in ("atr", "structure"):
             raise ValueError("unsupported stop mode")
@@ -86,6 +99,7 @@ def _entry_signals(frame, mode):
     output = frame.copy()
     output["stop_low"] = frame.low
     output["stop_high"] = frame.high
+    output["entry_boundary"] = np.where(frame.direction == 1, frame.hh, frame.ll)
     if mode == "immediate":
         return output
     output["direction"] = 0
@@ -96,15 +110,20 @@ def _entry_signals(frame, mode):
             boundary = high if direction == 1 else low
             beyond = direction * (row.close - boundary) > 0
             touched = row.low <= boundary if direction == 1 else row.high >= boundary
-            if beyond and (mode == "confirm" or touched):
+            reverse = mode == "failed_reverse" and index - born <= 2 and low <= row.close <= high
+            if reverse or (mode != "failed_reverse" and beyond and (mode == "confirm" or touched)):
+                if reverse:
+                    direction = -direction
                 output.loc[row.Index, ["direction", "hh", "ll"]] = [direction, high, low]
+                output.loc[row.Index, "entry_boundary"] = boundary
                 output.loc[row.Index, ["stop_low", "stop_high"]] = [
                     min(candle_low, row.low),
                     max(candle_high, row.high),
                 ]
                 pending = None
                 continue
-            if not beyond or mode == "confirm" or index - born >= 4:
+            expired = index - born >= (2 if mode == "failed_reverse" else 4)
+            if (mode != "failed_reverse" and not beyond) or mode == "confirm" or expired:
                 pending = None
         if pending is None and row.direction:
             pending = (int(row.direction), row.hh, row.ll, index, row.low, row.high)
@@ -135,6 +154,11 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
     # Shift daily direction before mapping, so current/future day cannot influence admission.
     daily = frame.resample("1D").agg({"open": "first", "close": "last"})
     prior = np.sign(daily.close - daily.open).shift(1)
+    frame = frame.copy()
+    boundary = np.where(frame.direction == 1, frame.hh, frame.ll)
+    depth = frame.direction * (frame.close - boundary) / frame.atr
+    if rules.min_depth_atr:
+        frame.loc[depth < rules.min_depth_atr, "direction"] = 0
     frame = _entry_signals(frame, rules.entry_mode)
     frame["prior_day_direction"] = prior.reindex(
         (frame.index + pd.Timedelta(minutes=15)).normalize()
@@ -168,6 +192,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
     max_dd = 0.0
     position: dict[str, Any] | None = None
     ledger: list[dict[str, Any]] = []
+    equity: list[dict[str, Any]] = []
     rejected = {
         k: 0
         for k in (
@@ -194,6 +219,23 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         nonlocal peak, max_dd
         if not len(marks):
             return
+        # Keep segment endpoints/extrema plus UTC midnight marks; all-tick DD stays exact.
+        checkpoints = np.unique(
+            np.r_[
+                0,
+                len(marks) - 1,
+                np.argmin(marks),
+                np.argmax(marks),
+                np.flatnonzero(stamps % 86400000 < 1000),
+            ]
+        )
+        for idx in checkpoints:
+            equity.append(
+                dict(
+                    time_utc=pd.Timestamp(int(stamps[idx]), unit="ms", tz="UTC").isoformat(),
+                    equity_usd=float(marks[idx]),
+                )
+            )
         peaks = np.maximum.accumulate(np.r_[peak, marks])[1:]
         max_dd = max(max_dd, float(np.max((peaks - marks) / peaks)))
         peak = max(peak, float(np.max(marks)))
@@ -391,7 +433,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if balance <= 0:
             rejected["bankrupt"] += 1
             continue
-        if day_start[day] - balance >= day_start[day] * 0.40:
+        if day_start[day] - balance >= day_start[day] * rules.daily_loss_limit:
             rejected["daily_loss"] += 1
             continue
         if not all(math.isfinite(v) for v in (row.atr, row.hh, row.ll)) or row.atr <= 0:
@@ -407,9 +449,11 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if not math.isfinite(stop) or direction * (executable - stop) <= 0:
             rejected["invalid_stop"] += 1
             continue
-        target = _level(entry + direction * row.atr * 3, broker["trade_tick_size"], direction)
+        target = _level(
+            entry + direction * row.atr * rules.target_atr, broker["trade_tick_size"], direction
+        )
         risk = (abs(entry - stop) + costs.slippage) * factor + fee
-        if risk > balance * 0.10:
+        if risk > balance * rules.risk_cap:
             rejected["risk_cap"] += 1
             continue
         if balance - fee <= entry * factor / broker["leverage"]:
@@ -432,7 +476,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             risk_pct=risk / balance * 100,
             range_high=float(row.hh),
             range_low=float(row.ll),
-            boundary=float(row.hh if direction == 1 else row.ll),
+            boundary=float(row.entry_boundary),
             held_bars=0,
             failed_count=0,
             mfe_usd=0.0,
@@ -479,6 +523,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         signal_count=signal_count,
         rejections=rejected,
         ledger=ledger,
+        equity=equity,
     )
 
 
