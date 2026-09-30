@@ -5,7 +5,7 @@ import unittest
 
 import pandas as pd
 
-from scripts.pure_b1.broker_data import completed_m15, completed_m15_from_m1
+from scripts.pure_b1.broker_data import completed_m15, completed_m15_from_m1, m1_gap_events
 
 
 class PureB1BrokerDataTests(unittest.TestCase):
@@ -50,6 +50,35 @@ class PureB1BrokerDataTests(unittest.TestCase):
         ]
         bars = completed_m15_from_m1(rates, now=datetime(2026, 9, 29, 0, 31, tzinfo=timezone.utc))
         self.assertEqual(list(bars.index), [pd.Timestamp("2026-09-29 00:00Z")])
+        events = m1_gap_events(rates, now=datetime(2026, 9, 29, 0, 31, tzinfo=timezone.utc))
+        gaps = [event for event in events if event["type"] == "incomplete_m1_interval"]
+        self.assertEqual(len(gaps), 1)
+        self.assertEqual(gaps[0]["m1_count"], 14)
+        self.assertFalse(gaps[0]["late_entry"])
+        self.assertNotIn(gaps[0]["bar_open_utc"], {item.isoformat() for item in bars.index})
+
+    def test_forming_m1_is_an_event_and_not_a_closed_bar(self):
+        opens = pd.date_range("2026-09-29 00:00", periods=16, freq="min", tz="UTC")
+        rates = [
+            {
+                "time": int(ts.timestamp()),
+                "open": 3000.0,
+                "high": 3001.0,
+                "low": 2999.0,
+                "close": 3000.5,
+            }
+            for ts in opens
+        ]
+        now = datetime(2026, 9, 29, 0, 15, 30, tzinfo=timezone.utc)
+        bars = completed_m15_from_m1(rates, now=now)
+        self.assertEqual(list(bars.index), [pd.Timestamp("2026-09-29 00:00Z")])
+        forming = [
+            event
+            for event in m1_gap_events(rates, now=now)
+            if event["type"] == "forming_bar_excluded"
+        ]
+        self.assertTrue(forming)
+        self.assertFalse(any(event["late_entry"] for event in forming))
 
 
 if __name__ == "__main__":

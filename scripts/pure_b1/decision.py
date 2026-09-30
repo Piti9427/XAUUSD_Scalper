@@ -8,6 +8,7 @@ import math
 
 import pandas as pd
 
+from scripts.pure_b1.quote_time import FRESH_QUOTE, classify_quote
 from scripts.smc.risk import check_fixed_lot_risk
 from scripts.strategy import pure_b1_bars, pure_b1_levels
 
@@ -16,6 +17,13 @@ def _grid(price: float, tick_size: float, *, up: bool) -> float:
     units = Decimal(str(price)) / Decimal(str(tick_size))
     rounding = ROUND_CEILING if up else ROUND_FLOOR
     return float(units.to_integral_value(rounding=rounding) * Decimal(str(tick_size)))
+
+
+def round_level(price: float, tick_size: float, direction: int) -> float:
+    """BUY floors SL and TP; SELL ceils them. Same grid as Shadow admission."""
+    if direction not in (-1, 1):
+        raise ValueError("direction must be BUY=1 or SELL=-1")
+    return _grid(price, tick_size, up=direction == -1)
 
 
 def _utc(value: datetime) -> bool:
@@ -75,11 +83,14 @@ def decide(
     result["atr"] = float(row.atr)
     if not all(math.isfinite(v) and v > 0 for v in (bid, ask, equity, contract_size, tick_size)):
         return result
-    if ask < bid or quote_time > now or not bar_close <= quote_time:
+    if ask < bid:
         result["reason"] = "invalid_quote"
         return result
-    if (now - quote_time).total_seconds() > 60 or (quote_time - bar_close).total_seconds() > 90:
-        result["reason"] = "stale_quote"
+    quote_reason = classify_quote(
+        bar_close=bar_close, quote_time=quote_time, now=now, rule=FRESH_QUOTE
+    )
+    if quote_reason:
+        result["reason"] = quote_reason
         return result
     if open_positions < 0 or pending_orders < 0:
         result["reason"] = "broker_state_unknown"
@@ -115,8 +126,8 @@ def decide(
     direction = result["direction"]
     entry = ask if direction == 1 else bid
     stop, target = pure_b1_levels(entry, direction, float(row.atr))
-    stop = _grid(stop, tick_size, up=direction == -1)
-    target = _grid(target, tick_size, up=direction == -1)
+    stop = round_level(stop, tick_size, direction)
+    target = round_level(target, tick_size, direction)
     result.update(entry=entry, stop=stop, target=target)
     if not all(math.isfinite(v) and v >= 0 for v in (stops_level, freeze_level)) or not (
         math.isfinite(point) and point > 0

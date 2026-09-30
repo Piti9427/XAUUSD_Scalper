@@ -57,6 +57,7 @@ class PureB1DecisionTests(unittest.TestCase):
     def test_missing_cost_or_day_start_fails_closed(self):
         for overrides, reason in (
             ({"cost_policy_source": ""}, "cost_model_missing"),
+            ({"commission_per_lot": None}, "cost_model_missing"),
             ({"slippage_allowance": None}, "cost_model_missing"),
             ({"day_start_equity": None}, "day_start_unknown"),
         ):
@@ -83,6 +84,44 @@ class PureB1DecisionTests(unittest.TestCase):
         self.assertEqual(stale["reason"], "stale_quote")
         over_risk = decide(**(self.inputs | {"equity": 40.0, "day_start_equity": 40.0}))
         self.assertEqual(over_risk["reason"], "risk_cap")
+
+    def test_exact_quote_window_and_tick_rounding(self):
+        bar_close = datetime(2026, 9, 29, 0, 0, tzinfo=timezone.utc)
+        exact = decide(
+            **(
+                self.inputs
+                | {
+                    "quote_time": bar_close + pd.Timedelta(seconds=90),
+                    "now": bar_close + pd.Timedelta(seconds=90),
+                }
+            )
+        )
+        self.assertNotEqual(exact["reason"], "stale_quote")
+        late = decide(
+            **(
+                self.inputs
+                | {
+                    "quote_time": bar_close + pd.Timedelta(seconds=91),
+                    "now": bar_close + pd.Timedelta(seconds=91),
+                }
+            )
+        )
+        self.assertEqual(late["reason"], "stale_quote")
+        rounded = decide(**(self.inputs | {"tick_size": 1.0, "slippage_allowance": 0.0}))
+        self.assertTrue(rounded["admit"], rounded)
+        self.assertEqual(rounded["stop"], float(int(rounded["stop"])))
+        self.assertLessEqual(rounded["stop"], 103.2)
+
+    def test_zero_commission_with_source_admits_and_spread_buffer_stays_zero(self):
+        from unittest.mock import patch
+
+        from scripts.smc.risk import check_fixed_lot_risk
+
+        with patch("scripts.pure_b1.decision.check_fixed_lot_risk", wraps=check_fixed_lot_risk) as gate:
+            result = decide(**(self.inputs | {"commission_per_lot": 0.0}))
+        self.assertTrue(result["admit"], result)
+        self.assertEqual(gate.call_args.kwargs["spread_buffer"], 0.0)
+        self.assertEqual(gate.call_args.kwargs["commission_per_lot"], 0.0)
 
     def test_broker_mode_and_stop_distance_block_signal(self):
         for override, expected in (
