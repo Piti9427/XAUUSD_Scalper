@@ -156,3 +156,5 @@ Owner requested continued strategy research. [New research protocol](docs/specs/
 ### 6.12 Later profit-protection activation research (2026-10-01)
 
 [Research protocol](docs/specs/2026-10-01-activation-strategy-campaign.md) adds `protect_after_r=1/1.5/2`; default remains0.5. Activation from closed-bar executable net versus initial cost-inclusive R; never widen stop, later quote only, runner removes TP only after valid stop update.288 predeclared configs; max384 per campaign; exhaustion derived from actual count. Existing core/baseline defaults unchanged; no adoption.
+
+Actual follow-up verdict: six campaigns /2,208 additional configs,0 passing all discovery gates; `NO_QUALIFIED_CANDIDATE`. Goal not achieved. [Append-only research history](docs/STRATEGY_EVOLUTION.md), [consolidated results](docs/reviews/2026-10-01-strategy-continuation.md). No adoption; independent history,broker costs,parity/Shadow evidence still missing.

@@ -329,3 +329,63 @@ Owner revised acceptance for this campaign: profit/WR higher and DD lower than *
 **Verification:** 695 tests, skipped2; focused34 tests; Ruff/compileall passed. Static type checker unavailable. Two-axis review findings fixed; re-review0 unresolved. Corrupted baseline and selection-metadata resume checks rejected as expected. Code commit `4f66709`.
 
 **มติ:** `NO_QUALIFIED_CANDIDATE`; no adoption, Demo BLOCKED. Need new nonempty tick coverage>=12 months with>=3 months untouched, sourced fees/swap, qualified winner, MQL5 parity and Shadow evidence before Demo review. Prior records retained.
+
+### LOG-20261001-11 — continued research / structure
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-09-30-structural-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 384 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_structure_campaign_2026_09_30`, source snapshots verified against protocol SHA256 `ad198753d6e9eea88b522d5de1a254ab89c5db52c2ac665cc6e709fcaa9d61dd`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial249, net$293.16, DD49.87%, WR23.44%, realized RR5.130. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+### LOG-20261001-12 — continued research / risk_target
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-09-30-risk-target-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 384 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_risk_target_campaign_2026_09_30`, source snapshots verified against protocol SHA256 `91ebdd5ec6a4840bf41852b133a4c71f337d1b8f41205412b8f2e6b79c934eec`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial57, net$159.43, DD25.71%, WR27.23%, realized RR3.259. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+### LOG-20261001-13 — continued research / boundary
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-10-01-boundary-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 384 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_boundary_campaign_2026_09_30`, source snapshots verified against protocol SHA256 `69965c57e61b622b3410dd4f6c836fa54b29ce0b3fda066918ed18a7f52aae57`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial30, net$226.53, DD49.05%, WR36.22%, realized RR2.004. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+### LOG-20261001-14 — continued research / sweep
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-10-01-sweep-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 384 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_sweep_campaign_2026_10_01`, source snapshots verified against protocol SHA256 `8ecf38ce4e7d1d3f8f7970a7260f905d8b37ea80ce97b57f88fc6adc9e1a07f3`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial78, net$36.89, DD82.75%, WR11.71%, realized RR7.780. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+### LOG-20261001-15 — continued research / pullback
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-10-01-pullback-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 384 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_pullback_campaign_2026_10_01`, source snapshots verified against protocol SHA256 `9c2de40eee25e2a5a74864131df3d819e7ab1fcca51f95d01b60e4be90cf3c53`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial217, net$186.14, DD28.52%, WR31.91%, realized RR2.969. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
+
+### LOG-20261001-16 — continued research / activation
+
+**from:** LOG-20260930-10 and earlier failed discovery hypotheses. **to:** research contract only. Exact logic/config catalog: [protocol](specs/2026-10-01-activation-strategy-campaign.md); [all trial configs/metrics](reviews/2026-10-01-strategy-continuation-results.json).
+
+**Actual result:** 288 unique configs,0 passing all unchanged full/half/base/stress gates. `NO_QUALIFIED_CANDIDATE`. Local immutable evidence `data/strategy_activation_campaign_2026_10_01`, source snapshots verified against protocol SHA256 `c320c92acb41313dd9a58a63ff8b984661cafbeea0a50eabd4dbf9478c8ab6ad`.
+
+Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net$554.18, DD23.37%, WR55.15%, realized RR1.121. [Full evidence/report](reviews/2026-10-01-strategy-continuation.md).
+
+**มติ:** rejected for discovery; no adoption or Demo orders. Existing184 days reused. Skipped halves in screened trials mean not evaluated, never qualified. Source/protocol/ledger/equity/cost evidence kept separately; prior history retained.
