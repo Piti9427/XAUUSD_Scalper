@@ -116,3 +116,11 @@ Details and reproducible evidence: [follow-up](docs/reviews/2026-09-30-breakout-
 และมติรับใช้. LOG-20260930-00แก้ข้อสรุปV3เก่า;LOG-01ถึง06เก็บการเปลี่ยนแปลง
 และผลแต่ละรอบ. ข้อมูลเก่าคงไว้; correction/adoptionต้องเพิ่มรายการใหม่.
 Research implementationหรือผลtrialไม่ได้หมายถึงเปลี่ยนcontractใช้งาน.
+
+### 6.3 Adoption check (2026-09-30)
+
+ตรวจผล loop ที่จบแล้ว 191 ชุดอีกครั้ง. ไม่มีชุดผ่านเกณฑ์กำไร, DD, realized RR และ cost stress พร้อมกัน. กริด Donchian/TP ที่กำไรเต็มช่วงสูงกว่าก็ยังมี tick DD เกิน 40% และ walk-forward ไม่ยืนยัน. **ไม่มีการรับ strategy ใหม่.** Contract ด้านบนคงเดิม. บันทึกต่อท้ายอยู่ที่ LOG-20260930-07 ใน [Strategy Evolution](docs/STRATEGY_EVOLUTION.md). ข้อความในข้อ 1–6.2 ไม่ถูกแทนที่.
+
+### 6.4 Buy-pause trial (2026-09-30)
+
+ทดลอง `buy_pause_drawdown=0.20` บน comparator Donchian 48 / TP 3. กฎเริ่มต้นยังเป็น `0` จึงไม่เปลี่ยน baseline. Training และ full path ไม่ผ่าน Strict Improvement เพราะ realized RR ลด และช่วง training กำไรกับ stress net แย่ลง. ช่วงที่รันยาว 184 วัน ไม่ใช่กราฟ 1 ปี. **ไม่มีการรับ strategy ใหม่.** รายละเอียดอยู่ที่ LOG-20260930-08 ใน [Strategy Evolution](docs/STRATEGY_EVOLUTION.md).

@@ -25,6 +25,7 @@ class Rules:
     stop_mode: str = "atr"
     protect_mode: str = "off"
     entry_guard: str = "off"
+    buy_pause_drawdown: float = 0.0
 
     def __post_init__(self):
         if self.failed_closes not in (0, 1, 2) or self.stagnant_bars not in (0, 4, 8, 16):
@@ -44,6 +45,12 @@ class Rules:
             "prior_day",
         ):
             raise ValueError("unsupported entry guard")
+        if (
+            not math.isfinite(self.buy_pause_drawdown)
+            or self.buy_pause_drawdown < 0
+            or self.buy_pause_drawdown >= 1
+        ):
+            raise ValueError("unsupported buy pause")
 
 
 @dataclass(frozen=True)
@@ -174,6 +181,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             "bankrupt",
             "invalid_stop",
             "entry_guard",
+            "buy_pause",
         )
     }
     day_start: dict[int, float] = {}
@@ -365,6 +373,14 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         )
         if not guard_ok:
             rejected["entry_guard"] += 1
+            continue
+        if (
+            rules.buy_pause_drawdown
+            and direction == 1
+            and peak > 0
+            and (peak - balance) / peak >= rules.buy_pause_drawdown
+        ):
+            rejected["buy_pause"] += 1
             continue
         day = int(times[index] // 86400000)
         if flat_since is not None and flat_since <= day * 86400000:

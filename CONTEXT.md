@@ -2,6 +2,12 @@
 
 > **Scope note (2026-09-29):** เอกสารนี้อธิบายศัพท์และ ADR ของ SMC v2 เดิม. Contract ของ Pure B1 research target และสถานะ NO-GO อยู่ที่ [CORE_STRATEGY.md](CORE_STRATEGY.md); ผลย้อนหลังให้ยึด [target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md). SMC sizing, exits, sessions และ execution path ด้านล่างไม่ใช่กฎ Pure B1.
 
+## Language
+
+**Strict Improvement**:
+A **Research Candidate** beats its parent only when net profit, tick-equity drawdown, realized reward-to-risk, and cost-stressed net are all better together. More trades or a higher win rate does not qualify.
+_Avoid_: better performance, ดีขึ้น, win-rate improvement, profit-only selection
+
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
 > **Last Updated:** 2026-09-24

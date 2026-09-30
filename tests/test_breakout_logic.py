@@ -383,6 +383,26 @@ class BreakoutLogicTests(unittest.TestCase):
         self.assertAlmostEqual(trade["net"], 0.0)
         self.assertEqual(trade["stop_updates"], 1)
 
+    def test_buy_pause_blocks_buy_under_peak_and_still_admits_sell(self):
+        frame, _ = sample()
+        frame = pd.concat([frame, frame.iloc[[0]].copy()])
+        frame.index = pd.date_range(START, periods=4, freq="15min")
+        frame["direction"] = [1, 0, 1, -1]
+        frame["atr"] = 1.0
+        times = (START.value // 10**6) + np.array([900000, 960000, 2700000, 3600000])
+        bid = np.array([100.0, 50.0, 50.0, 50.0])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(buy_pause_drawdown=0.20),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=2),
+        )
+        self.assertEqual([trade["direction"] for trade in result["ledger"]], [1, -1])
+        self.assertEqual(result["rejections"]["buy_pause"], 1)
+
     def test_direction_control_rejects_buy_and_does_not_change_risk(self):
         frame, ticks = sample()
         result = replay(

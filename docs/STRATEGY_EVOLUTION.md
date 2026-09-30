@@ -237,3 +237,53 @@ SL2.5/TP3. Strategyใหม่มีโค้ดและผลทดลอง�
 
 รายละเอียดทุกtrialอยู่ในJSONที่linkไว้; logกลางเก็บสรุปและsnapshotตัวอย่าง
 ที่อ้างIDได้. การเพิ่มlogไม่แปลว่ารับstrategyนั้นไปใช้งานแล้ว.
+
+### LOG-20260930-07 — ตรวจว่า loop จบแล้วมีตัวที่ดีที่สุดให้รับใช้หรือไม่
+
+**parent/from:** LOG-20260930-06. ไม่มี `from → to`.
+**เหตุผล:** เจ้าของถามว่าการวนทดสอบจบและได้ strategy ที่ performance ดีที่สุดแล้วหรือยัง ถ้ามีให้ตั้งเป็น contract ใน `CORE_STRATEGY.md`.
+**เกณฑ์ที่เคยเลือก:** ต้องดีกว่า Donchian 48 / RSI off / EMA off / SL 2.5 ATR / TP 3 ATR พร้อมกันทั้งกำไรสุทธิ, tick DD, realized RR และ net หลัง cost stress. เกณฑ์นี้ไม่มีคะแนนถ่วง. `dominates()` ใน `scripts/research/breakout_logic.py` ยังบังคับจำนวนไม้ขั้นต่ำ, stress DD ไม่แย่ลง และความเสี่ยงที่รับไม่เกิน 10%.
+
+**สิ่งที่ตรวจ 2026-09-30 โดยไม่ค้นค่าใหม่:**
+
+| ชุด | จำนวน | `training_pass` | `selected` |
+| --- | ---: | --- | --- |
+| Logic tuning | 143 | ไม่มี | null |
+| Profit protection | 18 | ไม่มี | null |
+| Entry quality | 30 | ไม่มี | null |
+
+รวม 191. สถานะทั้งสามไฟล์คือ `NO_QUALIFIED_STRATEGY`.
+
+ตัวที่ใกล้สุดในรอบ entry quality คือ training trial 11: immediate, SELL-only, ATR SL 2.5, TP 3, `protect_mode=runner`. ช่วง training 28 มี.ค.–28 มิ.ย. 2026, ทุน $200:
+
+| Training | Comparator 48/TP3 | Trial 11 |
+| --- | ---: | ---: |
+| Net | $302.64 | $330.00 |
+| DD | 42.54% | 20.41% |
+| Realized RR | 1.189 | 0.832 |
+| Stress net | $294.00 | $290.11 |
+| Trades | 114 | 47 |
+
+กำไรและ DD ดีขึ้น. RR และ stress net ไม่ผ่าน. ไม่มีการส่งไป validation.
+
+กริด 15 ชุดเมื่อ 29 ก.ย. ให้กำไรเต็มช่วงสูงสุดที่ Donchian 56 / TP 3.5 = +233.15%, DD 42.10% และ DD ต่ำสุดของกริดที่ Donchian 48 / TP 3.5 = +207.74%, DD 40.58%. ทั้งคู่ยังเกิน research screen DD 40% และไม่ใช่ผลของ loop 191 ชุด. Walk-forward เลือก 48/TP 3.5 แค่ช่วงแรก แล้วสองช่วงหลังถือ cash.
+
+Replay ซ้ำของ comparator 48/TP 3 ในวันเดียวกันตรง archive: training สิ้น $502.64 / 114 ไม้ / DD 42.54%; full path สิ้น $533.62 / 266 ไม้ / DD 56.89%. ช่วง validation ที่เริ่ม $200 ใหม่ได้ +138.94% แต่ DD 47.00%. ช่วง diagnostic ได้ −16.76% จาก 11 ไม้. ตัวเลขนี้ไม่เลื่อน comparator ขึ้นเป็น core.
+
+**มติ: `rejected` / ไม่มี adoption.** Frozen core คงเป็น Donchian 30 + RSI 30–70 + EMA50, SL 2.5 / TP 6.25. Demo orders และเงินจริงยัง NO-GO. รายการ LOG-00 ถึง LOG-06 ไม่ถูกเขียนทับ.
+หลักฐาน: [logic results](reviews/2026-09-30-breakout-logic-results.json), [follow-up results](reviews/2026-09-30-breakout-followup-results.json), [walk-forward](reviews/2026-09-29-exness-walk-forward-tuning.md).
+
+### LOG-20260930-08 — Comparator48 → pause BUY while 20% under equity peak
+
+**parent/from:** LOG-20260930-07. ไม่มี `from → to`.
+**เหตุผล:** หลุม tick DD ของ comparator อยู่ที่ไม้ BUY ช่วง 15 มิ.ย.–21 ก.ค. 2026 และ daily halt 40% ไม่เคยทำงาน. ทดลองหยุดรับ BUY ชั่วคราวเมื่อ equity หลุดจากจุดสูงตั้งแต่ 20% และยังรับ SELL.
+**กฎที่เพิ่ม:** `Rules.buy_pause_drawdown=0.20`. ค่าเริ่มต้น `0` ปิดกฎนี้ จึงไม่เปลี่ยน baseline.
+
+| ช่วง $200 | Baseline net / DD / RR | Pause BUY net / DD / RR | Stress net |
+| --- | ---: | ---: | ---: |
+| Training 28 มี.ค.–28 มิ.ย. | $302.64 / 42.54% / 1.189 | $274.17 / 34.11% / 1.137 | $294.00 → $263.37 |
+| Full 28 มี.ค.–28 ก.ย. | $333.62 / 56.89% / 1.171 | $524.81 / 35.45% / 1.159 | $179.76 → $414.73 |
+
+เต็มช่วงกำไรและ DD ดีขึ้น แต่ realized RR ลดลง. Training กำไร, RR และ stress net แย่ลง. `dominates()` เป็น false ทั้งสองช่วง. หน้าต่างนี้ยาว 184 วัน ไม่ใช่ backtest 1 ปี. เทป `XAUUSDm` ที่ยาวสุดในเครื่องคือ 1 ม.ค.–25 ก.ย. 2026 ยังไม่ครบ 365 วัน.
+
+**มติ: `rejected`.** ไม่รับใช้. Frozen core ไม่เปลี่ยน. Strict Improvement ยังไม่สำเร็จ.
