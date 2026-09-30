@@ -58,3 +58,31 @@ Pure B1 ใช้ fixed 0.01 lot เท่านั้น ตรวจควา�
 2. **ผล archived Exness tick +341.99%:** ใช้ RSI BUY ≤75 / SELL ≥25 และ **ไม่มี EMA50**; ไม่ใช่ signal contract ในเอกสารนี้. เป็น Python replay ไม่ใช่ order ที่ broker รับและ fill.
 3. **ผล target บน Exness ticks ชุดเดียวกัน:** strict RSI 30–70 + EMA50 ได้ **-33.51%** ภายใต้ spread-only และ cost-inclusive 10% cap (4 trades). กรณีสมมติ fee 0.10R พร้อม current-spec swap ได้ **+150.31%** (49 trades) เพราะ fee เปลี่ยนการรับไม้และเส้นทาง equity; ไม่ใช่ค่าธรรมเนียม Standard ที่วัดจริง. ทั้งสองกรณียังไม่วัด broker slippage, margin approval และ historical swap entitlement. แหล่งตัวเลขและ hash ของ input/source: [target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md) กับ `data/b1_pure_target_replay_cost_gated_2026_09_29/contract.json`.
 4. **มติปัจจุบัน:** เลือก Donchian 30 + RSI 30–70 + EMA50, TP 6.25 ATR / SL 2.5 ATR, fixed 0.01 lot, 10% cap, daily 40% เป็น contract เป้าหมาย **เพื่อวิจัยต่อ**. ทำ data/replay parity และ read-only Shadow ได้ตาม [แผน](.cursor/plans/pure_b1_go-live_6dcb0773.plan.md); Demo orders และเงินจริงต้องผ่านเกตและมติแยก. `main.py` ยังรัน legacy wick strategy ไม่ใช่ Pure B1.
+
+
+## 6. Offline logic tuning loop (2026-09-30)
+
+Research implementation: `scripts/research/tune_breakout_logic.py` and
+`scripts/research/breakout_logic.py`; no order or notification API.
+Baseline remains Donchian 48 / ATR14 / SL 2.5 ATR / TP 3 ATR, RSI/EMA off,
+fixed 0.01 lot, 10% cost-inclusive equity cap, UTC daily admission halt 40%.
+This is an experimental comparator, not a replacement for the frozen target above.
+
+143 unique research combinations tested: immediate/confirm/retest entry,
+failed-breakout exit after one/two closes, reset after exit, 4/8/16-bar
+no-progress exit, and ATR versus structural SL. Structural SL uses original
+breakout and entry candle extremes plus one tick; invalid or over-cap entries
+are rejected, never clamped. Protective exits use first available quote after
+close even when entry-lateness gate would reject a new entry. Entry quote
+lateness remains <=90 seconds.
+
+Result: **NO_QUALIFIED_STRATEGY** under owner-selected strict improvement in
+net profit, DD, realized RR and cost-stressed net. All candidates earned less
+training net than baseline. Best candidate training net $173.49 versus $302.64;
+DD 23.09% versus 42.54%; realized RR 2.172 versus 1.189; stress net $129.33 versus
+$294.00. No candidate validation or promotion followed. Full baseline reproduced
+$533.621 / 266 trades / DD 56.8941%. Costs, search bias, tests and evidence:
+[logic tuning verdict](docs/reviews/2026-09-30-breakout-logic-tuning.md).
+
+The all-metric improvement objective remains unmet. Demo orders and real money
+remain NO-GO; existing frozen target and runtime configuration unchanged.
