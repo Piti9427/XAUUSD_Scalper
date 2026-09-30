@@ -277,13 +277,39 @@ Replay ซ้ำของ comparator 48/TP 3 ในวันเดียวก�
 
 **parent/from:** LOG-20260930-07. ไม่มี `from → to`.
 **เหตุผล:** หลุม tick DD ของ comparator อยู่ที่ไม้ BUY ช่วง 15 มิ.ย.–21 ก.ค. 2026 และ daily halt 40% ไม่เคยทำงาน. ทดลองหยุดรับ BUY ชั่วคราวเมื่อ equity หลุดจากจุดสูงตั้งแต่ 20% และยังรับ SELL.
-**กฎที่เพิ่ม:** `Rules.buy_pause_drawdown=0.20`. ค่าเริ่มต้น `0` ปิดกฎนี้ จึงไม่เปลี่ยน baseline.
 
-| ช่วง $200 | Baseline net / DD / RR | Pause BUY net / DD / RR | Stress net |
-| --- | ---: | ---: | ---: |
-| Training 28 มี.ค.–28 มิ.ย. | $302.64 / 42.54% / 1.189 | $274.17 / 34.11% / 1.137 | $294.00 → $263.37 |
-| Full 28 มี.ค.–28 ก.ย. | $333.62 / 56.89% / 1.171 | $524.81 / 35.45% / 1.159 | $179.76 → $414.73 |
+Snapshot ของกฎที่เปลี่ยน. ค่าอื่นเท่า comparator. Configured RR ยังเป็น 3.0/2.5 = 1.2.
 
-เต็มช่วงกำไรและ DD ดีขึ้น แต่ realized RR ลดลง. Training กำไร, RR และ stress net แย่ลง. `dominates()` เป็น false ทั้งสองช่วง. หน้าต่างนี้ยาว 184 วัน ไม่ใช่ backtest 1 ปี. เทป `XAUUSDm` ที่ยาวสุดในเครื่องคือ 1 ม.ค.–25 ก.ย. 2026 ยังไม่ครบ 365 วัน.
+```json
+{
+  "donchian": 48,
+  "rsi": "off",
+  "ema": "off",
+  "atr_period": 14,
+  "stop_atr": 2.5,
+  "target_atr": 3.0,
+  "entry_mode": "immediate",
+  "stop_mode": "atr",
+  "failed_closes": 0,
+  "reset_after_exit": false,
+  "stagnant_bars": 0,
+  "protect_mode": "off",
+  "entry_guard": "off",
+  "buy_pause_drawdown": 0.20
+}
+```
+
+ค่าเริ่มต้นของฟิลด์นี้คือ `0` ซึ่งปิดกฎ จึงไม่เปลี่ยน baseline. ทุน $200 ต่อช่วง. ต้นทุนฐานคือสเปรดใน Bid/Ask, commission 0, ไม่มี slippage หรือ swap ที่วัดได้. Stress คือ extra spread $0.20/oz และ adverse slippage $0.10/oz. เทปเดียวกับ LOG-03: `data/b1_hybrid_baseline_6mo_fixed_2026_09_28` กับ capture `data/b1_hybrid_exness_6mo_fixed_2026_09_28`. รอบนี้ไม่ได้คำนวณ hash ใหม่.
+
+| ช่วง | Arm | Net | Tick DD | Realized RR | Trades | Stress net | Stress DD | Stress trades |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Training 28 มี.ค.–28 มิ.ย. | Baseline | $302.64 | 42.54% | 1.189 | 114 | $294.00 | 44.87% | 110 |
+| Training | Pause BUY | $274.17 | 34.11% | 1.137 | 102 | $263.37 | 37.98% | 97 |
+| Full 28 มี.ค.–28 ก.ย. | Baseline | $333.62 | 56.89% | 1.171 | 266 | $179.76 | 58.65% | 263 |
+| Full | Pause BUY | $524.81 | 35.45% | 1.159 | 233 | $414.73 | 37.98% | 226 |
+
+เต็มช่วงกำไรสุทธิและ tick DD ดีขึ้น แต่ realized RR ของต้นทุนฐานลดจาก 1.171 เป็น 1.159. Training กำไร, realized RR และ stress net แย่ลง. `dominates()` เป็น false ทั้งสองช่วง. หน้าต่างนี้ยาว 184 วัน ไม่ใช่ backtest 1 ปี. เทป `XAUUSDm` ที่ยาวสุดในเครื่องคือ 1 ม.ค.–25 ก.ย. 2026 ยังไม่ครบ 365 วัน.
+
+ทดสอบ: `test_buy_pause_blocks_buy_under_peak_and_still_admits_sell`. Suite ด้วย `.venv` รัน 688 tests, skipped 2, exit 0. Ruff ผ่านสองไฟล์ที่แตะ. Mypy ไม่ได้ติดตั้งใน `.venv`.
 
 **มติ: `rejected`.** ไม่รับใช้. Frozen core ไม่เปลี่ยน. Strict Improvement ยังไม่สำเร็จ.
