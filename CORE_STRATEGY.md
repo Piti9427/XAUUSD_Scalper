@@ -102,3 +102,12 @@ net $330.00 versus baseline $302.64 and DD20.41% versus42.54%, but realized
 RR0.832 versus1.189 and stressed net$290.12 versus$294.00 fail owner criteria.
 No candidate validation or adoption. Full suite687 ran,685 passed,2 skipped.
 Details and reproducible evidence: [follow-up](docs/reviews/2026-09-30-breakout-followup.md).
+
+
+### 6.2 Central append-only strategy history (2026-09-30)
+
+ประวัติกลาง: [Strategy Evolution / Change Log](docs/STRATEGY_EVOLUTION.md#central-strategy-change-log--2026-09-30).
+บันทึกต่อท้ายด้วยID,from→trial,config snapshot,ช่วงข้อมูล,ผลbaseline/candidate,
+และมติรับใช้. LOG-20260930-00แก้ข้อสรุปV3เก่า;LOG-01ถึง06เก็บการเปลี่ยนแปลง
+และผลแต่ละรอบ. ข้อมูลเก่าคงไว้; correction/adoptionต้องเพิ่มรายการใหม่.
+Research implementationหรือผลtrialไม่ได้หมายถึงเปลี่ยนcontractใช้งาน.

@@ -25,3 +25,215 @@
 ### 3. ทำไม Win Rate แค่ 37.4% ถึงกำไรมหาศาล (+342%)?
 เพราะเราเปลี่ยน TP จาก 1.5 ATR เป็น **6.25 ATR** (Reward ใหญ่กว่า Risk 2.5 เท่า) 
 แม้จะแพ้บ่อย (Win Rate น้อย) แต่เวลาชนะ 1 ครั้ง จะครอบคลุมการแพ้ได้หลายครั้ง (Profit Factor 1.22) เหมาะกับพฤติกรรมราคาทองคำที่เวลาทะลุกรอบ (Breakout) มักจะวิ่งไปได้ไกล
+
+
+---
+
+## Central Strategy Change Log — 2026-09-30
+
+เอกสารนี้เป็นประวัติกลางแบบ **เพิ่มรายการต่อท้าย**. แต่ละรายการเก็บกฎเดิม,
+config ที่ทดลองเปลี่ยน, เหตุผล, ช่วงข้อมูล, ผลลัพธ์ และมติรับใช้.
+การทดลองใหม่ต้องมี ID ใหม่; ผลรันเดิมและ config เดิมต้องเก็บไว้.
+หากพบข้อมูลผิด ให้เพิ่ม correction ที่อ้าง ID เดิมและหลักฐานใหม่.
+หากรับ strategy ใหม่จริง ให้เพิ่ม adoption record ระบุ `from → to` และวันที่
+ก่อนปรับ contract ปัจจุบันใน `CORE_STRATEGY.md`. คำว่า implemented หมายถึง
+มีโค้ดทดลองแล้ว; คำว่า adopted หมายถึงเลือกแทนกฎเดิมแล้ว.
+
+### LOG-20260930-00 — Correction ของตาราง V3 ด้านบน
+
+**สถานะ: แก้ข้อสรุปย้อนหลัง; เก็บข้อความเดิมไว้เพื่อ audit.**
+
+ตาราง V3 เดิมที่เรียก +342% / $884 ว่าเป็นผล Donchian30 + RSI30–70 + EMA50
+และระบุ “Production Ready” ถูก supersede โดยบันทึกนี้.
+ผล +341.99% /190 trades /DD34.38% ใช้ archived RSI BUY≤75 /SELL≥25,
+ไม่มี EMA50 และมี hypothetical fee0.10R จึงไม่ใช่ผล frozen core.
+คำว่า “หัก Spread, Swap, Commission จริง” ในตารางเก่าไม่ใช่หลักฐานต้นทุน
+broker ที่วัดครบ; ผล target ที่ตรวจใหม่คือ -33.51% /4 trades.
+สถานะ Pure B1: **research only; Demo orders และ real money NO-GO**.
+
+หลักฐาน: [target replay verdict](reviews/2026-09-29-pure-b1-target-replay-verdict.md),
+[config search](reviews/2026-09-29-exness-demo-config-search.md).
+
+### กติกาข้อมูลร่วมของ LOG-01 ถึง LOG-05
+
+- Exness Demo `XAUUSDm`, UTC Bid/Ask ticks; M15 จาก M1 ครบ15/15 นาที.
+- Full window: `2026-03-28` inclusive → `2026-09-28` exclusive; ทุนเริ่ม$200.
+- Training: `2026-03-28` inclusive → `2026-06-28` exclusive; ทุนเริ่ม$200.
+  ห้ามนำผล training ไปเรียกผล full window หรือผล validation.
+- Base costs: spread ในราคา Bid/Ask, commission0 ตาม Standard assumption,
+  ไม่มี added slippage/swap. Historical swap entitlement และ actual fills ยังขาด.
+- Logic-loop stress: extra spread$0.20/oz + adverse slippage$0.10/oz ต่อ
+  market fill; scenario สมมติ ไม่ใช่ต้นทุนที่ broker วัดให้.
+- ทุกชุด fixed0.01 lot, cap10% ของ equity รวม modeled costs, daily admission
+  halt40% ของ UTC day-start equity, single position, recovery off.
+- Entry quote แรกหลังปิดแท่ง ภายใน90s; replay อายุ quote เป็น0s เมื่อเห็น tick.
+  Protective exit ของ logic loop ใช้ quote แรกที่มี แม้ late.
+- Realized RR = mean winning net USD / abs(mean losing net USD).
+  ไม่ใช่ configured TP/SL ratio. DD เป็น max tick-equity drawdown.
+- เทปนี้เคยถูกใช้ค้นค่าแล้ว; ไม่ใช่ untouched holdout.
+
+### LOG-20260930-01 — Frozen core → candidate config comparator
+
+**เดิม:** Donchian30, RSI14 strict30–70, EMA50 on, ATR14,
+SL2.5 ATR /TP6.25 ATR. Configured RR2.5.
+
+**ทดลองเปลี่ยน:** Donchian48, RSI off, EMA off, ATR14,
+SL2.5 ATR /TP3.0 ATR. Configured RR1.2. Immediate breakout entry,
+fixed SL/TP; ไม่มี break-even/trailing/reset/failed-breakout exit.
+
+| Full window / $200 | Frozen core | Candidate48 |
+| --- | ---: | ---: |
+| Final balance | $132.98 | $533.62 |
+| Return | -33.51% | +166.81% |
+| Trades | 4 | 266 |
+| DD | 36.12% | 56.89% |
+
+**มติ:** candidate เป็น comparator ของงานวิจัย ยังไม่ได้รับใช้แทน frozen core.
+กำไรเพิ่มแต่ DD สูงขึ้น. ผลต่างเกิดพร้อมกับ signal filters, TP และ equity path;
+ไม่สรุปว่าจำนวนไม้เพิ่มเพราะ TP สั้นลงเพียงอย่างเดียว.
+หลักฐาน: [config search](reviews/2026-09-29-exness-demo-config-search.md).
+
+### LOG-20260930-02 — Candidate48 → neighborhood / walk-forward
+
+**ฐาน:** Candidate48 ใน LOG-01.
+**เปลี่ยนเพื่อทดลอง:** Donchian40/48/56/64/72 ×TP3.0/3.25/3.5;
+SL2.5 ATR, RSI/EMA off. 15 configs.
+
+| Full window / $200 | Return | DD | Trades |
+| --- | ---: | ---: | ---: |
+| Donchian48 /TP3.5 | +207.74% | 40.58% | 220 |
+| Donchian56 /TP3.5 | +233.15% | 42.10% | 225 |
+| Donchian48 /TP3.25 | -26.21% | 58.75% | 74 |
+
+Walk-forward เลือก48/3.5 จาก training สำหรับ28มิ.ย.–28ก.ค.:
++52.70%,28 trades,DD43.79%. สองช่วงหลังไม่พบ training row ผ่านเกณฑ์
+research DD≤40%, จึงถือ cash. แต่ละช่วงเริ่ม$200 แยก ห้ามทบผลรวม.
+
+**มติ:** ยังไม่รับใช้; บริเวณค่าใกล้กันให้ผลไม่ทนทาน.
+หลักฐาน: [walk-forward review](reviews/2026-09-29-exness-walk-forward-tuning.md).
+
+### LOG-20260930-03 — Comparator48 → entry / invalidation / structural SL
+
+**ฐาน:** Candidate48 LOG-01; training net$302.64,DD42.54%,
+realized RR1.189,114 trades; stress net$294.00.
+
+**เปลี่ยนเพื่อทดลอง:** 143 configs จาก immediate/confirm/retest entry,
+failed-breakout exit1/2 closes, reset ก่อนรับไม้ใหม่, stagnant exit4/8/16 bars,
+ATR SL หรือ candle structural SL. TP3 ATR.
+
+ตัวอย่าง training trial55 — snapshot ของกฎทั้งหมดที่เปลี่ยน:
+
+```json
+{
+  "donchian": 48,
+  "rsi": "off",
+  "ema": "off",
+  "atr_period": 14,
+  "stop_atr": 2.5,
+  "target_atr": 3.0,
+  "entry_mode": "retest",
+  "stop_mode": "atr",
+  "failed_closes": 0,
+  "reset_after_exit": true,
+  "stagnant_bars": 16,
+  "protect_mode": "off",
+  "entry_guard": "off"
+}
+```
+
+Retest: ภายใน4 completed bars ต้องแตะขอบ breakout เดิมแล้วปิดกลับ
+ด้าน breakout; reset: หลังจบไม้ รอแท่งปิดกลับเข้ากรอบเดิมก่อนเข้าใหม่;
+stagnant: ถือ≥16 completed bars และ net executable profit≤0 จึงปิด.
+
+**ผล training:** net$173.49,DD23.09%,realized RR2.172,22 trades;
+stress net$129.33. DD/RRดีขึ้น แต่กำไรฐานและหลังstressต่ำกว่า comparator.
+**มติ:** ไม่ผ่าน; ไม่มี candidate ส่งไป validation; implemented research only.
+หลักฐาน: [logic tuning](reviews/2026-09-30-breakout-logic-tuning.md),
+[143 trial snapshots](reviews/2026-09-30-breakout-logic-results.json).
+Implementation commit: `994d55b`.
+
+### LOG-20260930-04 — Comparator48 → profit protection
+
+**ฐาน:** Candidate48 LOG-01.
+**เปลี่ยนเพื่อทดลอง:** 18 configs; break-even/candle-trail/runner ×
+immediate/confirm/retest ×ATR/structural SL.
+เปิด protection หลังแท่งปิดเมื่อ executable net profit≥0.5 initial admitted R.
+Break-even รวมcommissionและexit-slippage; trailing อิง candle low/high±1 tick,
+SLต้องแน่นขึ้นและมีผลกับtickถัดไป. Runner ยกเลิกTPหลังvalid stop updateเท่านั้น.
+
+ตัวอย่าง trial4: confirm entry, structural SL จาก extreme ของ breakout และ
+entry candle±1 tick, protect_mode=break_even; failed_closes=0,
+reset_after_exit=false,stagnant_bars=0,entry_guard=off. Donchian48,
+ATR14,RSI/EMA off,TP3 ATR; SLไม่ใช้2.5 ATRใน variant นี้.
+
+**ผล training:** net$94.99,DD56.88%,realized RR3.389,98 trades;
+stress net$48.77.
+**มติ:** 18ชุดไม่ผ่าน; ไม่รับใช้แทน comparator/core.
+หลักฐาน: [follow-up](reviews/2026-09-30-breakout-followup.md),
+[full config snapshots](reviews/2026-09-30-breakout-followup-results.json),
+run `data/breakout_protection_2026_09_30_v2/`.
+
+### LOG-20260930-05 — Comparator48 → direction / candle quality / runner
+
+**ฐาน:** Candidate48 LOG-01.
+**เปลี่ยนเพื่อทดลอง:** 30 configs; buy_only/sell_only/body_dominant/
+close_extreme/prior_day × immediate/confirm × off/break_even/runner.
+ATR SL2.5,TP3 ก่อนrunner activation.
+
+ตัวอย่าง training trial11 — snapshot ของกฎทั้งหมดที่เปลี่ยน:
+
+```json
+{
+  "donchian": 48,
+  "rsi": "off",
+  "ema": "off",
+  "atr_period": 14,
+  "stop_atr": 2.5,
+  "target_atr": 3.0,
+  "entry_mode": "immediate",
+  "stop_mode": "atr",
+  "failed_closes": 0,
+  "reset_after_exit": false,
+  "stagnant_bars": 0,
+  "protect_mode": "runner",
+  "entry_guard": "sell_only"
+}
+```
+
+SELL entry ที่Bid; protection rule ตามLOG-04. เมื่อactiveใช้stopต่ำกว่าเดิม
+ตามhighของแท่งปิด+1tickและbreak-evenที่รวมต้นทุน; ยกเลิกTPเมื่อstop updateผ่าน.
+
+| Training / $200 | Comparator48 | SELL-only runner |
+| --- | ---: | ---: |
+| Net profit | $302.64 | $330.00 |
+| Return | +151.32% | +165.00% |
+| DD | 42.54% | 20.41% |
+| Realized RR | 1.189 | 0.832 |
+| Trades | 114 | 47 |
+| Stress net profit | $294.00 | $290.11 |
+
+**มติ:** กำไร/DDดีขึ้น แต่RRและstress netไม่ผ่านเกณฑ์เจ้าของ;
+ไม่รับใช้,ไม่ส่งcandidateไปvalidation. Correction ของprior_dayที่00:00
+ให้อิงวันปิดแท่งบันทึกในreview;ผลรัน`_v2`supersedeผลก่อนแก้.
+หลักฐาน: [follow-up](reviews/2026-09-30-breakout-followup.md),
+[30 config snapshots](reviews/2026-09-30-breakout-followup-results.json),
+run `data/breakout_entry_quality_2026_09_30_v2/`.
+Implementation/fix commit: `bc05e27`.
+
+### LOG-20260930-06 — สถานะหลัง191 logic trials / กติกาบันทึกครั้งต่อไป
+
+**Adopted replacement: none.** Frozen research target ยังเป็นDonchian30+
+RSI30–70+EMA50,SL2.5/TP6.25. Research comparatorคือDonchian48,RSI/EMAoff,
+SL2.5/TP3. Strategyใหม่มีโค้ดและผลทดลองแล้ว แต่ยังไม่มีชุดได้รับมติรับใช้.
+
+การทดลองครั้งต่อไปต้องเพิ่มรายการใหม่ในเอกสารนี้ โดยเก็บ:
+
+1. ID/วันที่ และ `parent/from` ที่ใช้อ้างเทียบ.
+2. Full config/rules snapshot,สิ่งที่เปลี่ยนและเหตุผล.
+3. Input window,ทุน,risk/cost/fill assumptions,run path,source/input hashes.
+4. ผลbaseline→candidate:profit,DD,realized/configured RR,trades,cost stress.
+5. Tests/review,ข้อจำกัด และมติ `experimental/rejected/adopted/superseded`.
+6. ถ้าadopted:วันที่รับใช้,from→to,config/runtimeที่เปลี่ยนจริงและหลักฐาน.
+
+รายละเอียดทุกtrialอยู่ในJSONที่linkไว้; logกลางเก็บสรุปและsnapshotตัวอย่าง
+ที่อ้างIDได้. การเพิ่มlogไม่แปลว่ารับstrategyนั้นไปใช้งานแล้ว.
