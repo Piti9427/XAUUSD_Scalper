@@ -296,6 +296,172 @@ class BreakoutLogicTests(unittest.TestCase):
         self.assertAlmostEqual(result["final_balance"], 112.5)
         self.assertLessEqual(result["max_admitted_risk_pct"], 10.0)
 
+    def test_break_even_activates_after_closed_bar_and_covers_costs(self):
+        frame, _ = sample()
+        times = START.value // 10**6 + np.array([900000, 1800000, 1860000, 2700000])
+        bid = np.array([100.0, 101.7, 100.1, 100.1])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="break_even"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertEqual(trade["reason"], "SL")
+        self.assertAlmostEqual(trade["stop"], 100.2)
+        self.assertAlmostEqual(trade["initial_stop"], 97.7)
+        self.assertEqual(trade["stop_updates"], 1)
+        self.assertEqual(trade["exit_time_utc"], "2026-04-01T00:31:00+00:00")
+        self.assertAlmostEqual(trade["risk_usd"], 2.5)
+
+    def test_protection_does_not_apply_to_earlier_ticks_or_widen_stop(self):
+        frame, _ = sample()
+        frame["low"] = [99.0, 101.0, 98.0]
+        times = START.value // 10**6 + np.array([900000, 1200000, 1800000, 2700000, 2760000])
+        bid = np.array([100.0, 99.0, 101.7, 101.6, 100.9])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="candle_trail"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertAlmostEqual(trade["stop"], 100.999)
+        self.assertEqual(trade["stop_updates"], 1)
+        self.assertEqual(trade["exit_time_utc"], "2026-04-01T00:46:00+00:00")
+
+    def test_runner_disables_target_only_after_protection_and_retains_initial_risk(self):
+        frame, _ = sample()
+        times = START.value // 10**6 + np.array([900000, 1800000, 1860000, 2700000])
+        bid = np.array([100.0, 101.7, 105.0, 104.0])
+        runner = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="runner"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        fixed = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="break_even"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(runner["ledger"][0]["reason"], "END_OF_SAMPLE")
+        self.assertAlmostEqual(runner["net_usd"], 3.8)
+        self.assertEqual(fixed["ledger"][0]["reason"], "TP")
+        self.assertAlmostEqual(fixed["net_usd"], 3.0)
+        self.assertAlmostEqual(runner["ledger"][0]["risk_usd"], 2.5)
+
+    def test_sell_break_even_covers_commission_and_slippage(self):
+        frame, _ = sample()
+        frame["direction"] = [-1, 0, 0]
+        times = START.value // 10**6 + np.array([900000, 1800000, 1860000, 2700000])
+        bid = np.array([100.0, 98.0, 99.5, 99.5])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(protect_mode="break_even"),
+            Costs(slippage=0.1, commission_per_lot=10.0),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        self.assertAlmostEqual(trade["stop"], 99.7)
+        self.assertAlmostEqual(trade["net"], 0.0)
+        self.assertEqual(trade["stop_updates"], 1)
+
+    def test_direction_control_rejects_buy_and_does_not_change_risk(self):
+        frame, ticks = sample()
+        result = replay(
+            frame, ticks, BROKER, Rules(entry_guard="sell_only"), Costs(), start=START, end=END
+        )
+        self.assertEqual(result["trades"], 0)
+        self.assertEqual(result["rejections"]["entry_guard"], 1)
+
+    def test_body_guard_rejects_wick_dominated_breakout(self):
+        frame, ticks = sample()
+        frame.loc[frame.index[0], ["open", "close", "high", "low"]] = [100.4, 100.5, 101.0, 99.0]
+        result = replay(
+            frame, ticks, BROKER, Rules(entry_guard="body_dominant"), Costs(), start=START, end=END
+        )
+        self.assertEqual(result["trades"], 0)
+        self.assertEqual(result["rejections"]["entry_guard"], 1)
+
+    def test_prior_day_guard_uses_only_previous_calendar_day(self):
+        frame, ticks = sample()
+        prior = frame.iloc[[0]].copy()
+        prior.index = pd.DatetimeIndex([START - pd.Timedelta(minutes=15)])
+        prior["open"] = 99.0
+        prior["close"] = 100.0
+        data = pd.concat([prior, frame])
+        accepted = replay(
+            data, ticks, BROKER, Rules(entry_guard="prior_day"), Costs(), start=START, end=END
+        )
+        self.assertEqual(accepted["trades"], 1)
+        future = frame.iloc[[-1]].copy()
+        future.index = pd.DatetimeIndex([START + pd.Timedelta(hours=20)])
+        future["close"] = 1.0
+        unchanged = replay(
+            pd.concat([data, future]),
+            ticks,
+            BROKER,
+            Rules(entry_guard="prior_day"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(accepted, unchanged)
+        prior.index = pd.DatetimeIndex([START - pd.Timedelta(days=2)])
+        rejected = replay(
+            pd.concat([prior, frame]),
+            ticks,
+            BROKER,
+            Rules(entry_guard="prior_day"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(rejected["trades"], 0)
+        self.assertEqual(rejected["rejections"]["entry_guard"], 1)
+
+    def test_midnight_admission_uses_day_that_just_completed(self):
+        frame, _ = sample()
+        frame.index = pd.DatetimeIndex(
+            [START - pd.Timedelta(minutes=15), START, START + pd.Timedelta(minutes=15)]
+        )
+        frame["direction"] = [-1, 0, 0]
+        frame.loc[frame.index[0], ["open", "close"]] = [100.0, 99.0]
+        previous = frame.iloc[[0]].copy()
+        previous.index = pd.DatetimeIndex([START - pd.Timedelta(days=1, minutes=15)])
+        previous["open"] = 99.0
+        previous["close"] = 100.0
+        times = START.value // 10**6 + np.array([0, 900000, 1800000])
+        bid = np.array([99.0, 99.0, 99.0])
+        result = replay(
+            pd.concat([previous, frame]),
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(entry_guard="prior_day"),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(result["trades"], 1)
+        self.assertEqual(result["ledger"][0]["entry_time_utc"], "2026-04-01T00:00:00+00:00")
+
     def test_training_choice_ignores_validation_and_never_falls_back(self):
         rows = [
             dict(

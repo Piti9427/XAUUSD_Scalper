@@ -101,7 +101,21 @@ def load_data():
     return features(rebuilt), ticks, broker, audit
 
 
-def hypotheses():
+def hypotheses(batch="original"):
+    if batch == "entry_quality":
+        return [
+            Rules(entry_guard=guard, protect_mode=protect, entry_mode=entry)
+            for guard in ("buy_only", "sell_only", "body_dominant", "close_extreme", "prior_day")
+            for protect in ("off", "break_even", "runner")
+            for entry in ("immediate", "confirm")
+        ]
+    if batch == "protection":
+        return [
+            Rules(entry_mode=entry, protect_mode=protect, stop_mode=stop)
+            for protect in ("break_even", "candle_trail", "runner")
+            for entry in ("immediate", "confirm", "retest")
+            for stop in ("atr", "structure")
+        ]
     # Exhaustive predeclared rule combinations, not adaptive indicator optimization.
     return [
         Rules(failed, reset, stale, mode, stop_mode)
@@ -130,6 +144,9 @@ def choose_training(rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--batch", choices=("original", "protection", "entry_quality"), default="original"
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     sources = [
@@ -138,8 +155,9 @@ def main():
         Path("scripts/research/data.py"),
     ]
     source_hashes = {str(p): sha256(p) for p in sources}
-    candidates = hypotheses()
+    candidates = hypotheses(args.batch)
     protocol = dict(
+        batch=args.batch,
         baseline=asdict(Rules()),
         candidates=[asdict(r) for r in candidates],
         train=[str(START), str(TRAIN_END)],
@@ -151,7 +169,7 @@ def main():
         min_test_trades=10,
         untouched_holdout=False,
         order_api_called=False,
-        stop="Exhaust declared 143 candidates; evaluate at most one training winner; never retune on validation.",
+        stop=f"Exhaust declared {len(candidates)} candidates; evaluate at most one training winner; never retune on validation.",
         success="strict dominance on train, validation and final diagnostic",
         missing_cost_evidence=[
             "historical swap entitlement",

@@ -82,3 +82,44 @@ above 10% rejects entry. TP remains 3 ATR. Total universe now 143 configurations
 (71 original +72 structural). Additional search is disclosed; not independent
 validation. Freeze this universe before the next run. No further expansion
 based on validation or final diagnostic results.
+
+## Fourth training-only batch: profit protection (2026-09-30)
+
+User requested continuation after 143 failed trials. Training baseline ledger
+contains 56 losing trades, of which 19 first reached >=0.5 initial risk in MFE;
+those 19 eventually lost $443.705. This motivates, but does not validate, a
+profit-protection hypothesis. No candidate validation outcomes guided this batch.
+
+`--batch protection` predeclares 18 combinations: immediate/confirm/retest entry,
+ATR/structural initial stop, and break-even/candle-trail/runner protection.
+Disable prior failed-close, reset and stagnation experiments for this batch.
+After a completed bar, activate protection when currently executable net PnL
+(after reserved commission and exit slippage) >=0.5 initial admitted USD risk.
+Break-even stop covers commission plus declared exit slippage, rounded toward
+protection. Candle trail uses that floor plus just-closed candle low/high ±one
+tick, whichever tightens further. Never widen SL; only update if it remains on
+the protective side of current executable quote. Update takes effect on later
+ticks, never retroactively. Runner removes TP only after a valid protective
+stop update; ordinary modes retain 3 ATR TP. Gap fills can still lose money.
+Preserve initial stop/risk and stop-update count in ledger. All original
+admission controls, selection gates, split dates and cost scenarios unchanged.
+No eventual success is guaranteed. Record negative results and do not loosen
+the user's all-metric criteria.
+
+## Fifth training-only batch: entry quality and asymmetry
+
+Protection batch failed training, no validation opened. Training baseline BUY
+net -$44.185 (51 trades), SELL +$346.821 (63 trades). Test asymmetric exposure
+explicitly as a hypothesis, not a presumed permanent market property. Include
+both buy-only and sell-only controls, a breakout body >=half its range in trade
+direction, a close in the outer quarter in trade direction, and agreement with
+previous UTC calendar day's open-to-close direction. Previous-day bars must be
+available before current UTC midnight; missing calendar days reject rather
+than silently forward-fill. This is observed canonical-bar day direction,
+not an assertion of complete broker daily coverage.
+
+`--batch entry_quality`: 5 guards x immediate/confirm entry x off/break-even/
+runner protection =30 candidates. ATR SL 2.5 retained; fixed TP3 until runner
+activation. The guard examines the closed entry candle; direction controls
+are applied at admission. No RSI/EMA optimization. All-metric gates unchanged.
+Record this additional training-guided search; no validation-based retries.

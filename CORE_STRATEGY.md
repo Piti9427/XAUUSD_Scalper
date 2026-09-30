@@ -86,3 +86,19 @@ $533.621 / 266 trades / DD 56.8941%. Costs, search bias, tests and evidence:
 
 The all-metric improvement objective remains unmet. Demo orders and real money
 remain NO-GO; existing frozen target and runtime configuration unchanged.
+
+
+### 6.1 Profit protection and entry-quality follow-up (2026-09-30)
+
+Additional 48 research hypotheses (18 protection,30 entry quality),191 total
+including earlier143. Break-even/candle-trail/runner activate only after a
+closed bar shows >=0.5 initial risk in net executable profit; SL never widens.
+BUY/SELL controls, candle body/close quality, and prior UTC calendar-day
+direction tested. Prior-day guard uses bar-close date at midnight. All fixed
+lot, cost-inclusive10% cap and daily40% admission controls retained.
+
+Result remains **NO_QUALIFIED_STRATEGY**. Training SELL-only runner improves
+net $330.00 versus baseline $302.64 and DD20.41% versus42.54%, but realized
+RR0.832 versus1.189 and stressed net$290.12 versus$294.00 fail owner criteria.
+No candidate validation or adoption. Full suite687 ran,685 passed,2 skipped.
+Details and reproducible evidence: [follow-up](docs/reviews/2026-09-30-breakout-followup.md).

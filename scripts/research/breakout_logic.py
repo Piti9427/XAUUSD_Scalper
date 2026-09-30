@@ -23,6 +23,8 @@ class Rules:
     stagnant_bars: int = 0
     entry_mode: str = "immediate"
     stop_mode: str = "atr"
+    protect_mode: str = "off"
+    entry_guard: str = "off"
 
     def __post_init__(self):
         if self.failed_closes not in (0, 1, 2) or self.stagnant_bars not in (0, 4, 8, 16):
@@ -31,6 +33,17 @@ class Rules:
             raise ValueError("unsupported entry mode")
         if self.stop_mode not in ("atr", "structure"):
             raise ValueError("unsupported stop mode")
+        if self.protect_mode not in ("off", "break_even", "candle_trail", "runner"):
+            raise ValueError("unsupported profit protection")
+        if self.entry_guard not in (
+            "off",
+            "buy_only",
+            "sell_only",
+            "body_dominant",
+            "close_extreme",
+            "prior_day",
+        ):
+            raise ValueError("unsupported entry guard")
 
 
 @dataclass(frozen=True)
@@ -112,7 +125,13 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         raise ValueError("invalid window/frame timezone")
     if not frame.index.is_monotonic_increasing or frame.index.has_duplicates:
         raise ValueError("invalid bar chronology")
+    # Shift daily direction before mapping, so current/future day cannot influence admission.
+    daily = frame.resample("1D").agg({"open": "first", "close": "last"})
+    prior = np.sign(daily.close - daily.open).shift(1)
     frame = _entry_signals(frame, rules.entry_mode)
+    frame["prior_day_direction"] = prior.reindex(
+        (frame.index + pd.Timedelta(minutes=15)).normalize()
+    ).to_numpy()
     all_t, all_b, all_a = ticks
     if not (len(all_t) == len(all_b) == len(all_a)):
         raise ValueError("unequal tick arrays")
@@ -154,6 +173,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             "reset",
             "bankrupt",
             "invalid_stop",
+            "entry_guard",
         )
     }
     day_start: dict[int, float] = {}
@@ -218,7 +238,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             quote = bid[cursor:stop] if p["direction"] == 1 else ask[cursor:stop]
             pnl = p["direction"] * (quote - p["entry"]) * factor
             sl = p["direction"] * (quote - p["stop"]) <= 0
-            tp = p["direction"] * (quote - p["target"]) >= 0
+            tp = (p["direction"] * (quote - p["target"]) >= 0) & (not p["target_disabled"])
             hits = np.flatnonzero(sl | tp | (balance + pnl <= 0))
             used = int(hits[0]) + 1 if len(hits) else len(pnl)
             # Observe executable TP value, not a favorable tick overshoot that cannot fill.
@@ -269,6 +289,40 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                 elif rules.stagnant_bars and p["held_bars"] >= rules.stagnant_bars and net_now <= 0:
                     close(index, "STAGNANT")
                     closed_by_rule = True
+        if position is not None and stamp > position["entry_ms"] and rules.protect_mode != "off":
+            p = position
+            executable = float(bid[index] if p["direction"] == 1 else ask[index])
+            net_now = (
+                p["direction"] * (executable - p["entry"]) * factor - fee - costs.slippage * factor
+            )
+            if net_now >= 0.5 * p["risk_usd"]:
+                p["protection_active"] = True
+            if p["protection_active"]:
+                # Round toward protection to cover costs, then require executable clearance.
+                break_even = _level(
+                    p["entry"] + p["direction"] * (fee / factor + costs.slippage),
+                    broker["trade_tick_size"],
+                    -p["direction"],
+                )
+                candidate = break_even
+                if rules.protect_mode in ("candle_trail", "runner"):
+                    anchor = row.low if p["direction"] == 1 else row.high
+                    trail = _level(
+                        anchor - p["direction"] * broker["trade_tick_size"],
+                        broker["trade_tick_size"],
+                        p["direction"],
+                    )
+                    candidate = (
+                        max(break_even, trail) if p["direction"] == 1 else min(break_even, trail)
+                    )
+                if (
+                    p["direction"] * (candidate - p["stop"]) > 0
+                    and p["direction"] * (executable - candidate) > 0
+                ):
+                    p["stop"] = candidate
+                    p["stop_updates"] += 1
+                    if rules.protect_mode == "runner":
+                        p["target_disabled"] = True
         if (
             reset_range is not None
             and not closed_by_rule
@@ -287,6 +341,30 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             continue
         if reset_range is not None:
             rejected["reset"] += 1
+            continue
+        span = row.high - row.low
+        guard_ok = (
+            rules.entry_guard == "off"
+            or (rules.entry_guard == "buy_only" and direction == 1)
+            or (rules.entry_guard == "sell_only" and direction == -1)
+            or (
+                rules.entry_guard == "body_dominant"
+                and span > 0
+                and direction * (row.close - row.open) >= span / 2
+            )
+            or (
+                rules.entry_guard == "close_extreme"
+                and span > 0
+                and (
+                    (row.close - row.low >= 0.75 * span)
+                    if direction == 1
+                    else (row.high - row.close >= 0.75 * span)
+                )
+            )
+            or (rules.entry_guard == "prior_day" and row.prior_day_direction == direction)
+        )
+        if not guard_ok:
+            rejected["entry_guard"] += 1
             continue
         day = int(times[index] // 86400000)
         if flat_since is not None and flat_since <= day * 86400000:
@@ -325,6 +403,10 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             direction=direction,
             entry=entry,
             stop=stop,
+            initial_stop=stop,
+            stop_updates=0,
+            protection_active=False,
+            target_disabled=False,
             target=target,
             entry_ms=int(times[index]),
             entry_time_utc=pd.Timestamp(int(times[index]), unit="ms", tz="UTC").isoformat(),
