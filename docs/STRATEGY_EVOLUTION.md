@@ -314,6 +314,22 @@ Snapshot ของกฎที่เปลี่ยน. ค่าอื่นเ
 
 **มติ: `rejected`.** ไม่รับใช้. Frozen core ไม่เปลี่ยน. Strict Improvement ยังไม่สำเร็จ.
 
+### LOG-20260930-09 — Comparator48 → reject climax breakout candles
+
+**parent/from:** LOG-20260930-08. ไม่มี `from → to`.
+**เงื่อนไขที่วัดจากไม้ที่แพ้:** บน baseline Donchian 48 / TP 3 มีไม้แพ้ 137 ไม้ รวม −$3,243.81 จาก 266 ไม้. ไม้ที่เนื้อเทียนไปทาง breakout อย่างน้อย 80% ของ high−low มี 81 ไม้ รวม −$455.83. ในกลุ่มนั้น BUY 49 ไม้รวม −$471.37 ส่วน BUY ที่เนื้อเทียนต่ำกว่า 80% รวม +$212.24. เงื่อนไขนี้รู้ตอนแท่งสัญญาณปิด ก่อนเข้าไม้.
+
+**Backtest ที่ลองเขียนเป็นตัวกรอง:** ปฏิเสธทุกไม้ที่ body/range ≥ 0.80 ทั้ง BUY และ SELL. เทปเดิม 28 มี.ค.–28 ก.ย. 2026 (184 วัน) ไม่ใช่ 1 ปี.
+
+| ช่วง | Baseline net / DD / RR / stress net | Body ≥ 0.80 rejected |
+| --- | ---: | ---: |
+| Training | $302.64 / 42.54% / 1.189 / $294.00 | $547.08 / 27.61% / 1.206 / $520.31 |
+| Full | $333.62 / 56.89% / 1.171 / $179.76 | $974.72 / 27.61% / 1.205 / $872.26 |
+
+ที่เส้น 0.80 พอดี `dominates()` ผ่านทั้ง training และ full. เส้นข้างเคียงไม่ผ่าน: 0.75 และ 0.85 ทำให้ training กำไรหรือ stress net แย่ลง และ 0.70 ช่วง training ติดลบ. ตัวกรองเฉพาะ NY หรือเฉพาะ BUY climax ก็ไม่ผ่านครบสี่แกน.
+
+**มติ: `rejected`.** เส้น 0.80 ถูกเลือกหลังเห็นไม้บนเทปนี้ และขยับ 0.05 แล้วผลหาย จึงไม่เขียนเข้า `Rules` และไม่รับใช้. Frozen core ไม่เปลี่ยน.
+
 ### LOG-20260930-10 — Both frozen parents → bounded logic/admission campaign
 
 **parent/from:** Frozen Pure B1 D30 / RSI30–70 / EMA50 / SL2.5ATR / TP6.25ATR, plus Donchian48 / no RSI/EMA / SL2.5ATR / TP3ATR. **to:** research trials only, no adoption.

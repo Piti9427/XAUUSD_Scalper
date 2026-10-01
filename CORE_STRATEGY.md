@@ -125,6 +125,10 @@ Research implementationหรือผลtrialไม่ได้หมายถ�
 
 ทดลอง `buy_pause_drawdown=0.20` บน comparator Donchian 48 / TP 3. กฎเริ่มต้นยังเป็น `0` จึงไม่เปลี่ยน baseline. Training และ full path ไม่ผ่าน Strict Improvement เพราะ realized RR ลด และช่วง training กำไรกับ stress net แย่ลง. ช่วงที่รันยาว 184 วัน ไม่ใช่กราฟ 1 ปี. **ไม่มีการรับ strategy ใหม่.** รายละเอียดอยู่ที่ LOG-20260930-08 ใน [Strategy Evolution](docs/STRATEGY_EVOLUTION.md).
 
+### 6.5 Climax-candle trial (2026-09-30)
+
+ไม้ที่แพ้ของ comparator กองที่แท่งสัญญาณซึ่งเนื้อเทียนไปทาง breakout อย่างน้อย 80% ของช่วง high−low. ตัดไม้กลุ่มนั้นที่เส้น 0.80 แล้ว backtest ผ่านสี่แกนบนเทป 184 วัน แต่เส้น 0.75 และ 0.85 ไม่ผ่าน. **ไม่เขียนเข้า logic และไม่รับใช้.** รายละเอียดอยู่ที่ LOG-20260930-09 ใน [Strategy Evolution](docs/STRATEGY_EVOLUTION.md).
+
 ### 6.6 Bounded strategy campaign (2026-09-30)
 
 Research-only campaign follows [frozen protocol](docs/specs/2026-09-30-strategy-campaign.md). Frozen target remains D30 / strict RSI30–70 / EMA50 / SL2.5ATR / TP6.25ATR; comparator remains D48 / no RSI or EMA / SL2.5ATR / TP3ATR. New experimental `Rules` support lower admission caps2.5/5/10%, daily limits5/10/20/40%, minimum breakout depths0/.15/.20/.25ATR, failed-breakout reversal within2 completed bars and either parent's fixed target. Default rules retain prior comparator behavior. Existing confirm, retest, failed-close, stagnant and trailing rules share one replay engine across both parents. Lot0.01 fixed; recovery absent; cap never exceeds10%.
