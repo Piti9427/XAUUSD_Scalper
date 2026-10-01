@@ -8,6 +8,126 @@ from tests.test_breakout_logic import sample, BROKER, START, END
 
 
 class BidirectionalCampaignTests(unittest.TestCase):
+    def test_horizon_signals_execute_both_sides_without_future_bars(self):
+        import numpy as np
+        import pandas as pd
+        from scripts.research.breakout_logic import features
+
+        bars = pd.DataFrame(
+            dict(open=100.0, high=101.0, low=99.0, close=100.0),
+            index=pd.date_range(START, periods=18, freq="15min"),
+        )
+        # Only prior 12 bars set the channel; current extrema must not enter it.
+        bars.iloc[14] = [100.0, 103.0, 99.0, 102.0]
+        bars.iloc[16] = [100.0, 101.0, 97.0, 98.0]
+        frame = features(bars)
+        spec = dict(buy_lookback=12, sell_lookback=12, trend_span=0)
+        prepared = candidate_frame(frame, "off", 0.0, signal_spec=spec)
+        cut = candidate_frame(frame.iloc[:15], "off", 0.0, signal_spec=spec)
+        pd.testing.assert_frame_equal(prepared.iloc[:15], cut)
+        self.assertEqual(prepared.direction.tolist(), [0] * 14 + [1, 0, -1, 0])
+        self.assertEqual(prepared.hh.iloc[14], 101.0)
+        self.assertEqual(prepared.ll.iloc[16], 99.0)
+        times = START.value // 10**6 + np.array([13500000, 13560000, 15300000, 15360000])
+        bid = np.array([102.0, 113.0, 98.0, 87.0])
+        result = replay(
+            prepared,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=5),
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [1, -1])
+        self.assertTrue(all(p["volume"] == 0.01 and p["risk_pct"] <= 10 for p in result["ledger"]))
+
+    def test_horizon_trend_warmup_and_opposite_trend_block_replay_entries(self):
+        import numpy as np
+        import pandas as pd
+        from scripts.research.breakout_logic import features
+
+        for prior_price, span, expected in ((90.0, 50, [1]), (90.0, 200, []), (110.0, 50, [])):
+            with self.subTest(prior_price=prior_price, span=span):
+                bars = pd.DataFrame(
+                    dict(
+                        open=prior_price,
+                        high=prior_price + 1,
+                        low=prior_price - 1,
+                        close=prior_price,
+                    ),
+                    index=pd.date_range(START, periods=61, freq="15min"),
+                )
+                bars.iloc[48:60] = [100.0, 101.0, 99.0, 100.0]
+                bars.iloc[60] = [100.0, 103.0, 99.0, 102.0]
+                prepared = candidate_frame(
+                    features(bars),
+                    "off",
+                    0.0,
+                    signal_spec=dict(buy_lookback=12, sell_lookback=12, trend_span=span),
+                )
+                entry_time = START + pd.Timedelta(minutes=61 * 15)
+                ticks = (
+                    np.array([entry_time.value // 10**6]),
+                    np.array([102.0]),
+                    np.array([102.2]),
+                )
+                result = replay(
+                    prepared,
+                    ticks,
+                    BROKER,
+                    Rules(),
+                    Costs(),
+                    start=START,
+                    end=entry_time + pd.Timedelta(minutes=1),
+                )
+                self.assertEqual([p["direction"] for p in result["ledger"]], expected)
+
+    def test_compression_uses_prior_range_and_prior_atr_at_exact_boundary(self):
+        import numpy as np
+        import pandas as pd
+
+        frame = pd.DataFrame(
+            dict(
+                open=100.0,
+                high=105.0,
+                low=95.0,
+                close=100.0,
+                hh=105.0,
+                ll=95.0,
+                atr=1.0,
+                direction=0,
+            ),
+            index=pd.date_range(START, periods=18, freq="15min"),
+        )
+        frame.iloc[14, frame.columns.get_indexer(["high", "low", "close"])] = [107, 104, 106]
+        frame.iloc[16, frame.columns.get_indexer(["high", "low", "close"])] = [96, 93, 94]
+        times = START.value // 10**6 + np.array([13500000, 13560000, 15300000, 15360000])
+        bid = np.array([106.0, 110.0, 94.0, 90.0])
+        for maximum, expected in ((6.0, []), (9.0, []), (12.0, [1, -1])):
+            with self.subTest(maximum=maximum):
+                spec = dict(buy_lookback=12, sell_lookback=12, trend_span=0, max_range_atr=maximum)
+                prepared = candidate_frame(frame, "off", 0.0, signal_spec=spec)
+                cut = candidate_frame(frame.iloc[:15], "off", 0.0, signal_spec=spec)
+                pd.testing.assert_frame_equal(prepared.iloc[:15], cut)
+                result = replay(
+                    prepared,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(),
+                    Costs(),
+                    start=START,
+                    end=START + pd.Timedelta(hours=5),
+                )
+                self.assertEqual([p["direction"] for p in result["ledger"]], expected)
+                # Inflating current ATR cannot turn a rejected signal into admission.
+                changed = frame.copy()
+                changed.loc[changed.index[14], "atr"] = 100.0
+                self.assertEqual(
+                    candidate_frame(changed, "off", 0.0, signal_spec=spec).direction.iloc[14],
+                    prepared.direction.iloc[14],
+                )
+
     def test_geometry_targets_use_frozen_stop_distance_with_fixed_lot(self):
         for stop_mode, stop, target in (
             ("atr", 97.7, 103.95),
@@ -52,7 +172,13 @@ class BidirectionalCampaignTests(unittest.TestCase):
             patch("scripts.research.bidirectional_campaign.END", END),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            for catalog, budget in (("tuning", 288), ("admission", 96)):
+            for catalog, budget in (
+                ("tuning", 288),
+                ("admission", 96),
+                ("horizons", 384),
+                ("horizon_quality", 128),
+                ("compression", 216),
+            ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog
                     args = ["--output", str(output), "--catalog", catalog, "--limit", "1"]

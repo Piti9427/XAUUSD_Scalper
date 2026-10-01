@@ -19,14 +19,47 @@ from scripts.research.tune_breakout_logic import load_data, sha256, START, TRAIN
 from scripts.research.public_exness_archive import load_discovery
 
 
-def candidate_frame(frame, buy_filter, depth, buy_signal="breakout"):
-    """Completed-bar BUY quality filter; SELL retains D48 detector and ATR."""
+def candidate_frame(frame, buy_filter, depth, buy_signal="breakout", signal_spec=None):
+    """Causal completed-bar signals; default D48 or explicit directional horizons."""
     if buy_filter not in ("off", "ema50", "prior_day", "body", "extreme", "ema_prior"):
         raise ValueError("unknown BUY filter")
     if depth not in (0.0, 0.15):
         raise ValueError("unknown depth")
     if buy_signal not in ("breakout", "lower_wick", "trend_pullback"):
         raise ValueError("unknown BUY setup")
+    if signal_spec is not None:
+        if buy_signal != "breakout":
+            raise ValueError("horizon contract requires breakout setup")
+        if set(signal_spec) - {"max_range_atr"} != {"buy_lookback", "sell_lookback", "trend_span"}:
+            raise ValueError("unknown signal contract")
+        if any(signal_spec[k] not in (12, 24, 48, 96) for k in ("buy_lookback", "sell_lookback")):
+            raise ValueError("unsupported horizon")
+        if signal_spec["trend_span"] not in (0, 50, 200):
+            raise ValueError("unsupported trend span")
+        maximum = signal_spec.get("max_range_atr", 0.0)
+        if maximum not in (0.0, 6.0, 9.0, 12.0):
+            raise ValueError("unsupported range compression")
+        frame = frame.copy()
+        frame["hh"] = frame.high.rolling(signal_spec["buy_lookback"]).max().shift(1)
+        frame["ll"] = frame.low.rolling(signal_spec["sell_lookback"]).min().shift(1)
+        frame["direction"] = np.select([frame.close > frame.hh, frame.close < frame.ll], [1, -1], 0)
+        if maximum:
+            buy_low = frame.low.rolling(signal_spec["buy_lookback"]).min().shift(1)
+            sell_high = frame.high.rolling(signal_spec["sell_lookback"]).max().shift(1)
+            width = pd.Series(
+                np.where(frame.direction == 1, frame.hh - buy_low, sell_high - frame.ll),
+                index=frame.index,
+            )
+            prior_atr = frame.atr.shift(1)
+            compressed = (prior_atr > 0) & (width / prior_atr <= maximum)
+            frame.loc[~compressed.fillna(False), "direction"] = 0
+        if signal_spec["trend_span"]:
+            span = signal_spec["trend_span"]
+            average = frame.close.ewm(span=span, adjust=False, min_periods=span).mean()
+            aligned = (frame.direction * (frame.close - average) > 0) & (
+                frame.direction * (average - average.shift(4)) > 0
+            )
+            frame.loc[~aligned.fillna(False), "direction"] = 0
     result = frame.copy()
     ema = frame.close.ewm(span=50, adjust=False, min_periods=50).mean()
     trend = (frame.close > ema) & (ema > ema.shift(4))
@@ -109,7 +142,7 @@ def metrics(result):
 
 
 def contracts(catalog="quality"):
-    """96 frozen hypotheses; BUY quality, depth, reward and protection interactions."""
+    """Frozen catalogs; causal signals, admission, reward and protection interactions."""
 
     def rules(guard, target, protection, activation):
         return asdict(
@@ -121,6 +154,64 @@ def contracts(catalog="quality"):
                 protect_after_r=activation,
             )
         )
+
+    if catalog == "compression":
+        return [
+            dict(
+                hypothesis="prior_range_compression",
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(
+                    buy_lookback=buy, sell_lookback=sell, trend_span=trend, max_range_atr=maximum
+                ),
+                rules=rules(guard, 3.0, protection, 1.0),
+            )
+            for buy, sell, maximum, trend, guard, protection in product(
+                (24, 48, 96),
+                (24, 48, 96),
+                (6.0, 9.0, 12.0),
+                (0, 50),
+                ("off", "body_dominant"),
+                ("break_even", "candle_trail"),
+            )
+        ]
+
+    if catalog == "horizon_quality":
+        return [
+            dict(
+                hypothesis="horizon_candle_quality",
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(buy_lookback=buy, sell_lookback=sell, trend_span=0),
+                rules=rules(guard, 3.0, protection, activation),
+            )
+            for buy, sell, guard, protection, activation in product(
+                (12, 24, 48, 96),
+                (12, 24, 48, 96),
+                ("body_dominant", "close_extreme"),
+                ("break_even", "candle_trail"),
+                (1.0, 1.5),
+            )
+        ]
+
+    if catalog == "horizons":
+        return [
+            dict(
+                hypothesis="direction_horizons_and_trend",
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(buy_lookback=buy, sell_lookback=sell, trend_span=trend),
+                rules=rules("off", target, protection, activation),
+            )
+            for buy, sell, trend, target, protection, activation in product(
+                (12, 24, 48, 96),
+                (12, 24, 48, 96),
+                (0, 50, 200),
+                (3.0, 6.25),
+                ("break_even", "candle_trail"),
+                (1.0, 1.5),
+            )
+        ]
 
     if catalog == "admission":
         return [
@@ -294,7 +385,16 @@ def main(argv=None):
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--catalog",
-        choices=("quality", "buy_setups", "symmetric", "tuning", "admission"),
+        choices=(
+            "quality",
+            "buy_setups",
+            "symmetric",
+            "tuning",
+            "admission",
+            "horizons",
+            "horizon_quality",
+            "compression",
+        ),
         default="quality",
     )
     parser.add_argument("--limit", type=int)
@@ -381,6 +481,7 @@ def main(argv=None):
                 candidate["buy_filter"],
                 candidate["depth"],
                 candidate.get("buy_signal", "breakout"),
+                candidate.get("signal_spec"),
             )
         )
         if args.resume and marker.exists():
