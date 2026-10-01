@@ -236,6 +236,16 @@ def main(argv=None):
         directory.mkdir(exist_ok=True)
         marker = directory / "result.json"
         names = [f"{w}-{c}.json" for w in windows for c in costs]
+        prepared = (
+            frame
+            if candidate is None
+            else candidate_frame(
+                frame,
+                candidate["buy_filter"],
+                candidate["depth"],
+                candidate.get("buy_signal", "breakout"),
+            )
+        )
         if args.resume and marker.exists():
             previous = json.loads(marker.read_text())
             if set(previous["artifact_hashes"]) != set(names):
@@ -254,20 +264,21 @@ def main(argv=None):
                         or result["end_exclusive_utc"] != windows[w][1].isoformat()
                     ):
                         raise ValueError("resume artifact contract mismatch")
+                    fresh = replay(
+                        prepared,
+                        ticks,
+                        broker,
+                        rules,
+                        costs[c],
+                        start=windows[w][0],
+                        end=windows[w][1],
+                    )
+                    if fresh != result:
+                        raise ValueError("resume artifact differs from authoritative fresh replay")
                     summary[w].append(metrics(result))
             if previous["metrics"] != summary or previous["candidate"] != candidate:
                 raise ValueError("resume artifact selection metadata mismatch")
             return summary
-        prepared = (
-            frame
-            if candidate is None
-            else candidate_frame(
-                frame,
-                candidate["buy_filter"],
-                candidate["depth"],
-                candidate.get("buy_signal", "breakout"),
-            )
-        )
         summary = {}
         for w, (s, e) in windows.items():
             summary[w] = []
@@ -315,7 +326,7 @@ def main(argv=None):
         )
         write_json(output / "progress.json", dict(completed_trials=number, last=row))
     eligible = [r for r in rows if r["discovery_pass"]]
-    winner = min(
+    leader = min(
         eligible,
         key=lambda r: (
             max(pair[1]["max_dd_pct"] for pair in r["metrics"].values()),
@@ -324,15 +335,18 @@ def main(argv=None):
         ),
         default=None,
     )
+    exhausted = len(rows) == 96
+    winner = leader if exhausted else None
     verdict = dict(
         completed_trials=len(rows),
         qualified_discovery=len(eligible),
-        campaign_exhausted=len(rows) == 96,
+        campaign_exhausted=exhausted,
         frozen_discovery_winner=winner,
+        provisional_leader=leader if not exhausted else None,
         status="AWAITING_INDEPENDENT_VALIDATION"
         if winner
         else "NO_QUALIFIED_CANDIDATE"
-        if len(rows) == 96
+        if exhausted
         else "DISCOVERY_INCOMPLETE",
         deployment="UNCHANGED",
         rows=rows,

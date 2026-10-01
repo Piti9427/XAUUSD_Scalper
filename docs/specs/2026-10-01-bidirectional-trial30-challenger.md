@@ -25,3 +25,9 @@ If no contract qualifies, preserve running strategy and report failure. Do not c
 Round1 completed96, zero qualified. New96-contract catalog `--catalog buy_setups` frozen before its evaluation. SELL keeps D48 breakout; BUY replaces upward breakout with either lower-wick sweep (low<prior48low, close>prior48low, high<=prior48high; boundary lower channel), or EMA50 rising4bar pullback (previous candle red, currentclose>previoushigh and>EMA; boundary previoushigh). Only completed bars, SELL precedence on conflicts. BUY filters off/prior-day/body; signed boundary depth0/0.15ATR, TP3/6.25, BE/trail1/1.5R. ATR stops unchanged; no wick/trigger SL substitution. Both-side executed-count and all6 performance gates unchanged.
 
 Output `data/strategy_bidirectional_setups_trial30_campaign_2026_10_01`; separate source/protocol snapshot, no overwritten round1. Protocol2 supports setup catalogs; protocol1 resume requires its original source, never silently migrates source hashes. No holdout consumed by either round.
+
+## Review corrections
+
+Resume now replays each completed scenario from audited ticks and compares entire saved result (including all-tick DD, ledger and compressed equity) against fresh output. This intentionally spends replay time; compressed checkpoints alone cannot reconstruct authoritative all-tick DD. Matching artifact hash/marker metadata is insufficient. Source changes still reject ordinary resume. Already completed runs are independently verified using hashed original source snapshots before their results are published.
+
+`--limit` is an interruption/testing budget, not winner selection. Until all96 complete, verdict stays `DISCOVERY_INCOMPLETE`; qualifying prefix can only expose `provisional_leader`, never `frozen_discovery_winner`. Final winner is eligible only after complete frozen-catalog comparison.

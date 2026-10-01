@@ -128,11 +128,28 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 verdict = json.loads((output / "verdict.json").read_text())
                 self.assertEqual(verdict["completed_trials"], 1)
                 self.assertEqual(verdict["deployment"], "UNCHANGED")
+                with patch(
+                    "scripts.research.bidirectional_campaign.qualifies_trial30", return_value=True
+                ):
+                    partial = main(args + ["--resume"])
+                self.assertEqual(partial["status"], "DISCOVERY_INCOMPLETE")
+                self.assertIsNone(partial["frozen_discovery_winner"])
                 artifact = output / "trial-001" / "full-base.json"
                 data = json.loads(artifact.read_text())
                 data["net_usd"] = 999
                 artifact.write_text(json.dumps(data))
                 with self.assertRaisesRegex(ValueError, "artifact"):
+                    main(args + ["--resume"])
+                # A forged metric with matching hash/marker must still fail fresh replay.
+                import hashlib
+
+                completion = json.loads(marker.read_text())
+                completion["artifact_hashes"]["full-base.json"] = hashlib.sha256(
+                    artifact.read_bytes()
+                ).hexdigest()
+                completion["metrics"]["full"][0]["net_usd"] = 999
+                marker.write_text(json.dumps(completion))
+                with self.assertRaisesRegex(ValueError, "replay"):
                     main(args + ["--resume"])
 
     def test_buy_filter_keeps_sell_executable_and_future_bar_cannot_change_prefix(self):
