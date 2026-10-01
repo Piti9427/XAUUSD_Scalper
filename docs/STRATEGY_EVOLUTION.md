@@ -417,3 +417,10 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 **ผลจริง:** activation288+risk_multiple192สองเทป รวม672evaluations,0ผ่าน. Trial30full+$465.32/DD26.01/WR52.14/RR1.199; stress+$361.40/DD29.44/WR50.72/RR1.201 แต่firsthalfprofit/RRแพ้baseline. ไม่เลือกจากfullอย่างเดียว. [Configs/results](reviews/2026-10-01-dd30-results.md).
 
 **มติ:** noadoption/DemoBLOCKED. Positiveobservedequityไม่รับประกันfuture survival; actualswap/commission/parityยังขาด. Tests707/skipped2ผ่าน; scopedreviewsไม่มีblocking. เก็บDD20และDD30verdictคนละprotocol ไม่เขียนทับเก่า.
+
+
+## LOG-20261001-21 — Daily strategy log index
+
+[2026-10-01 — D48 SELL + Break-even 1R, trial30](strategy-logs/2026-10-01.md). Snapshot ID `RESEARCH-D48-SELL-BE1R-20261001-T030`: logic/config ครบ, ผล base/stress/full/first_half, provenance hashes และเหตุผลที่ยังไม่ผ่าน.
+
+**กติกาบันทึกต่อไป:** แยกไฟล์ `docs/strategy-logs/YYYY-MM-DD.md` ตามวันบันทึก; วันเดียวกันเพิ่ม entry พร้อม ID ใหม่, วันใหม่สร้างไฟล์ใหม่. Entry เดิมห้ามแก้/ลบ/แทนที่; corrections และผลเพิ่มเติมต้องเป็น entry ใหม่อ้าง ID เดิม. เอกสารกลางเพิ่มลิงก์รายวันโดยคง index/history เก่า.
