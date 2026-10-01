@@ -8,6 +8,64 @@ from tests.test_breakout_logic import sample, BROKER, START, END
 
 
 class BidirectionalCampaignTests(unittest.TestCase):
+    def test_geometry_targets_use_frozen_stop_distance_with_fixed_lot(self):
+        for stop_mode, stop, target in (
+            ("atr", 97.7, 103.95),
+            ("trigger", 98.999, 102.001),
+            ("boundary", 99.5, 101.25),
+        ):
+            with self.subTest(stop_mode=stop_mode):
+                frame, ticks = sample()
+                result = replay(
+                    candidate_frame(frame, "off", 0.0),
+                    ticks,
+                    BROKER,
+                    Rules(stop_mode=stop_mode, target_rr=1.5),
+                    Costs(),
+                    start=START,
+                    end=END,
+                )
+                trade = result["ledger"][0]
+                self.assertAlmostEqual(trade["initial_stop"], stop)
+                self.assertAlmostEqual(trade["target"], target)
+                self.assertEqual(trade["volume"], 0.01)
+                self.assertLessEqual(trade["risk_pct"], 10)
+
+    def test_tuning_cli_freezes_288_contracts_and_verifies_resumed_scenarios(self):
+        import contextlib
+        import io
+        import json
+        from pathlib import Path
+        import tempfile
+        from unittest.mock import patch
+        from scripts.research.bidirectional_campaign import main
+
+        frame, ticks = sample()
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch(
+                "scripts.research.bidirectional_campaign.load_data",
+                return_value=(frame, ticks, BROKER, {"synthetic": True}),
+            ),
+            patch("scripts.research.bidirectional_campaign.START", START),
+            patch("scripts.research.bidirectional_campaign.TRAIN_END", START + (END - START) / 2),
+            patch("scripts.research.bidirectional_campaign.END", END),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            args = ["--output", directory + "/run", "--catalog", "tuning", "--limit", "1"]
+            initial = main(args)
+            self.assertEqual(initial["verification"], "INITIAL_REPLAY")
+            resumed = main(args + ["--resume"])
+            self.assertEqual(resumed["verified_scenarios"], 12)
+            self.assertEqual(resumed["verification"], "FRESH_REPLAY_MATCH")
+            self.assertEqual(resumed["total_contracts"], 288)
+            self.assertEqual(resumed["status"], "DISCOVERY_INCOMPLETE")
+            protocol = json.loads((Path(directory) / "run/protocol.json").read_text())
+            self.assertEqual(len(protocol["candidates"]), 288)
+            self.assertEqual(
+                len({json.dumps(c, sort_keys=True) for c in protocol["candidates"]}), 288
+            )
+
     def test_symmetric_close_extreme_guard_accepts_both_edges_and_rejects_inside(self):
         import numpy as np
 

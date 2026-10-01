@@ -122,6 +122,90 @@ def contracts(catalog="quality"):
             )
         )
 
+    if catalog == "tuning":
+        result = []
+        for signal, guard, stop, rr, protection, activation in product(
+            ("breakout", "lower_wick"),
+            ("off", "body_dominant"),
+            ("atr", "trigger", "boundary"),
+            (1.5, 2.0),
+            ("break_even", "candle_trail"),
+            (0.5, 1.0),
+        ):
+            result.append(
+                dict(
+                    hypothesis="stop_geometry",
+                    buy_signal=signal,
+                    buy_filter="prior_day",
+                    depth=0.0,
+                    rules=asdict(
+                        Rules(
+                            entry_guard=guard,
+                            stop_mode=stop,
+                            target_rr=rr,
+                            daily_loss_limit=0.2,
+                            protect_mode=protection,
+                            protect_after_r=activation,
+                        )
+                    ),
+                )
+            )
+        for entry, stop, guard, rr, protection, buy_filter in product(
+            ("confirm", "retest"),
+            ("atr", "trigger", "boundary"),
+            ("off", "body_dominant"),
+            (1.5, 2.0),
+            ("break_even", "candle_trail"),
+            ("off", "prior_day"),
+        ):
+            result.append(
+                dict(
+                    hypothesis="entry_timing",
+                    buy_signal="breakout",
+                    buy_filter=buy_filter,
+                    depth=0.0,
+                    rules=asdict(
+                        Rules(
+                            entry_mode=entry,
+                            entry_guard=guard,
+                            stop_mode=stop,
+                            target_rr=rr,
+                            daily_loss_limit=0.2,
+                            protect_mode=protection,
+                            protect_after_r=1.0,
+                        )
+                    ),
+                )
+            )
+        for entry, failed, stagnant, target, protection, buy_filter in product(
+            ("immediate", "confirm"),
+            (0, 1, 2),
+            (0, 4),
+            (3.0, 6.25),
+            ("break_even", "candle_trail"),
+            ("off", "prior_day"),
+        ):
+            result.append(
+                dict(
+                    hypothesis="false_breakout_exit",
+                    buy_signal="breakout",
+                    buy_filter=buy_filter,
+                    depth=0.0,
+                    rules=asdict(
+                        Rules(
+                            entry_mode=entry,
+                            failed_closes=failed,
+                            stagnant_bars=stagnant,
+                            target_atr=target,
+                            daily_loss_limit=0.2,
+                            protect_mode=protection,
+                            protect_after_r=1.0,
+                        )
+                    ),
+                )
+            )
+        return result
+
     if catalog == "symmetric":
         return [
             dict(
@@ -180,12 +264,17 @@ def main(argv=None):
     parser.add_argument("--dataset", type=Path)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
-        "--catalog", choices=("quality", "buy_setups", "symmetric"), default="quality"
+        "--catalog", choices=("quality", "buy_setups", "symmetric", "tuning"), default="quality"
     )
-    parser.add_argument("--limit", type=int, default=96)
+    parser.add_argument("--limit", type=int)
     args = parser.parse_args(argv)
-    if not 1 <= args.limit <= 96:
-        parser.error("limit must be 1..96")
+    catalog = contracts(args.catalog)
+    total = len(catalog)
+    if len({json.dumps(c, sort_keys=True) for c in catalog}) != total:
+        raise ValueError("duplicate frozen contract")
+    limit = total if args.limit is None else args.limit
+    if not 1 <= limit <= total:
+        parser.error(f"limit must be 1..{total}")
     print("Auditing source and actual Bid/Ask inputs...", flush=True)
     if args.dataset:
         frame, ticks, broker, audit = load_discovery(args.dataset)
@@ -214,9 +303,8 @@ def main(argv=None):
         "scripts/research/run_strategy_campaign.py",
         "scripts/strategy.py",
     ]
-    catalog = contracts(args.catalog)
     protocol = dict(
-        version=2,
+        version=3,
         catalog=args.catalog,
         baseline_snapshot="RESEARCH-D48-SELL-BE1R-20261001-T030",
         baseline_rules=asdict(baseline),
@@ -247,7 +335,10 @@ def main(argv=None):
             raise ValueError("source snapshot mismatch")
         snapshot.write_bytes(content)
 
+    verified_scenarios = 0
+
     def evaluate(directory, rules, candidate):
+        nonlocal verified_scenarios
         directory.mkdir(exist_ok=True)
         marker = directory / "result.json"
         names = [f"{w}-{c}.json" for w in windows for c in costs]
@@ -290,6 +381,7 @@ def main(argv=None):
                     )
                     if fresh != result:
                         raise ValueError("resume artifact differs from authoritative fresh replay")
+                    verified_scenarios += 1
                     summary[w].append(metrics(result))
             if previous["metrics"] != summary or previous["candidate"] != candidate:
                 raise ValueError("resume artifact selection metadata mismatch")
@@ -320,7 +412,7 @@ def main(argv=None):
         flush=True,
     )
     rows = []
-    for number, candidate in enumerate(catalog[: args.limit], 1):
+    for number, candidate in enumerate(catalog[:limit], 1):
         summary = evaluate(output / f"trial-{number:03d}", Rules(**candidate["rules"]), candidate)
         passes = {
             w: qualifies_trial30(pair, reference[w], 60 if w == "full" else 20)
@@ -335,7 +427,7 @@ def main(argv=None):
         )
         rows.append(row)
         print(
-            f"Trial {number}/96 full net={summary['full'][0]['net_usd']:.2f} "
+            f"Trial {number}/{total} full net={summary['full'][0]['net_usd']:.2f} "
             f"DD={summary['full'][0]['max_dd_pct']:.2f} pass={row['discovery_pass']}",
             flush=True,
         )
@@ -350,10 +442,17 @@ def main(argv=None):
         ),
         default=None,
     )
-    exhausted = len(rows) == 96
+    exhausted = len(rows) == total
     winner = leader if exhausted else None
     verdict = dict(
         completed_trials=len(rows),
+        total_contracts=total,
+        verified_scenarios=verified_scenarios,
+        verification="FRESH_REPLAY_MATCH"
+        if verified_scenarios == 6 * (len(rows) + 1)
+        else "PARTIAL_FRESH_REPLAY"
+        if verified_scenarios
+        else "INITIAL_REPLAY",
         qualified_discovery=len(eligible),
         campaign_exhausted=exhausted,
         frozen_discovery_winner=winner,
