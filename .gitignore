@@ -82,3 +82,4 @@ data/strategy_*campaign*/
 
 # Trial30 single-writer SQLite lock database
 data/*.sqlite3.lock
+data/trial30-demo-watch.pid
