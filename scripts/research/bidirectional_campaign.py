@@ -110,21 +110,42 @@ def metrics(result):
 
 def contracts(catalog="quality"):
     """96 frozen hypotheses; BUY quality, depth, reward and protection interactions."""
+
+    def rules(guard, target, protection, activation):
+        return asdict(
+            Rules(
+                entry_guard=guard,
+                daily_loss_limit=0.2,
+                target_atr=target,
+                protect_mode=protection,
+                protect_after_r=activation,
+            )
+        )
+
+    if catalog == "symmetric":
+        return [
+            dict(
+                buy_signal=signal,
+                buy_filter=buy_filter,
+                depth=0.0,
+                rules=rules(guard, target, protection, activation),
+            )
+            for guard, signal, buy_filter, target, protection, activation in product(
+                ("body_dominant", "close_extreme", "prior_day"),
+                ("breakout", "lower_wick"),
+                ("off", "prior_day"),
+                (3.0, 6.25),
+                ("break_even", "candle_trail"),
+                (1.0, 1.5),
+            )
+        ]
     if catalog == "buy_setups":
         return [
             dict(
                 buy_signal=signal,
                 buy_filter=guard,
                 depth=depth,
-                rules=asdict(
-                    Rules(
-                        entry_guard="off",
-                        daily_loss_limit=0.2,
-                        target_atr=target,
-                        protect_mode=protection,
-                        protect_after_r=activation,
-                    )
-                ),
+                rules=rules("off", target, protection, activation),
             )
             for signal, guard, depth, target, protection, activation in product(
                 ("lower_wick", "trend_pullback"),
@@ -141,15 +162,7 @@ def contracts(catalog="quality"):
         dict(
             buy_filter=guard,
             depth=depth,
-            rules=asdict(
-                Rules(
-                    entry_guard="off",
-                    daily_loss_limit=0.2,
-                    target_atr=target,
-                    protect_mode=protection,
-                    protect_after_r=activation,
-                )
-            ),
+            rules=rules("off", target, protection, activation),
         )
         for guard, depth, target, protection, activation in product(
             ("off", "ema50", "prior_day", "body", "extreme", "ema_prior"),
@@ -166,7 +179,9 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dataset", type=Path)
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--catalog", choices=("quality", "buy_setups"), default="quality")
+    parser.add_argument(
+        "--catalog", choices=("quality", "buy_setups", "symmetric"), default="quality"
+    )
     parser.add_argument("--limit", type=int, default=96)
     args = parser.parse_args(argv)
     if not 1 <= args.limit <= 96:

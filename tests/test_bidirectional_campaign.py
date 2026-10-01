@@ -8,6 +8,32 @@ from tests.test_breakout_logic import sample, BROKER, START, END
 
 
 class BidirectionalCampaignTests(unittest.TestCase):
+    def test_symmetric_close_extreme_guard_accepts_both_edges_and_rejects_inside(self):
+        import numpy as np
+
+        for buy_close, sell_close, expected in (
+            (100.5, 99.25, [1, -1]),
+            (100.49, 99.25, [-1]),
+            (100.5, 99.26, [1]),
+        ):
+            with self.subTest(buy_close=buy_close, sell_close=sell_close):
+                frame, _ = sample()
+                frame.loc[frame.index[0], "close"] = buy_close
+                frame.loc[frame.index[1], ["direction", "close"]] = [-1, sell_close]
+                times = START.value // 10**6 + np.array([900000, 960000, 1800000, 1860000, 2700000])
+                bid = np.array([100.0, 104.0, 100.0, 96.0, 96.0])
+                result = replay(
+                    candidate_frame(frame, "off", 0.0),
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(entry_guard="close_extreme"),
+                    Costs(),
+                    start=START,
+                    end=END,
+                )
+                self.assertEqual([p["direction"] for p in result["ledger"]], expected)
+                self.assertTrue(all(p["volume"] == 0.01 for p in result["ledger"]))
+
     def test_trend_pullback_buy_reaches_replay_after_ema_warmup(self):
         import numpy as np
         import pandas as pd
