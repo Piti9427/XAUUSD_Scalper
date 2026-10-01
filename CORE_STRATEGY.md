@@ -191,3 +191,15 @@ Research192 contracts: immediate parent breakout, original2.5ATR SL, TP1.5/2/3 t
 ## 6.17 DD30 actual results (2026-10-01)
 
 Activation288 + risk_multiple192 on2026 +192 on public discovery =672 evaluations,0qualified. Trial30 passesfull but failsfirsthalf profit/RR afterstress. HardDD30 alone did not satisfy jointbenefit criteria. Core remainsNO-GO; noadoption. [Append-only results](docs/reviews/2026-10-01-dd30-results.md).
+
+## 6.18 Owner-authorized trial30 research Demo implementation (2026-10-01)
+
+Owner explicitly selected `RESEARCH-D48-SELL-BE1R-20261001-T030` for actual MT5 Demo testing through Wine. This is a separate research-Demo trial, not adoption/profitability qualification of frozen D30 core and not real-money authorization. Earlier D30 NO-GO verdicts remain valid for that target.
+
+Dedicated `scripts/ops/run_trial30_wine.py` → `scripts/ops/mt5_wine_trial30.py` → `scripts/trial30/runner.py` calls `scripts/strategy.py:trial30_bars`: prior48 Donchian SELL-only, ATR14 SMA, no RSI/EMA; canonical complete15/15 M1 Bid M15 UTC; first quote<=90s, current quote age<=60s; immediate market SELL fixed0.01. SL2.5ATR/TP3ATR; cost-inclusive admission<=10% actual broker equity, UTC daily20%. No recovery/partial/rollover liquidation. BE after subsequent closed M15 net executable profit>=initial cost-inclusive1R, cost-covered grid-rounded stop, never widen, preserve TP. Nominal TP/SL1.2 does not replace realized RR.
+
+Admission reserves adverse entry and stop-exit slippage allowance0.10USD/oz each plus published Standard round-trip commission0 with account-bound reviewed24h attestation; spread already included in Bid/Ask. These are assumptions/source-backed tariff, not measured forward fill guarantees. Actual broker swap/commission/fee is reconciled in PnL; no swap-free entitlement claim and no overnight swap admission model. Requested/observed/fill prices logged separately; post-fill cap/spec violation closes owned ticket and halts.
+
+Flat-midnight baseline reconstructs only from full reconciled deal cashflows and position volumes; held-at-midnight requires actual saved boundary equity. Deposits/unknown cashflows fail closed. Missing baseline blocks new risk but protective BE continues. Persistent single-writer journal claims intent before submission; UNKNOWN does not permit blind retry; confirmed broker events only. Demo/USD/hedging/exact identity verified before every mutation. Default Shadow; explicit execution flag plus Demo environment gate required.
+
+Initial verification: fresh Wine identity200USD, no exposure, trade permissions enabled; actual Shadow WAIT/no_sell_signal. Detector parity12,100 reference bars, zero signal/ATR mismatches. No forward fill/BE proof yet; independent history/research qualification remains unpassed. [Operational contract and run commands](docs/ops/trial30-demo.md). Read implementation review/runtime evidence before claiming Demo lifecycle passed.

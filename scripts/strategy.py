@@ -186,3 +186,22 @@ class XAUUSDSniperStrategy:
                 sl = entry_price + (self.sl_pips * pip_size)
 
         return round(tp, 2), round(sl, 2)
+
+
+def trial30_bars(completed):
+    """Pinned research-Demo trial30: D48 SELL-only, ATR14 SMA, no RSI/EMA.
+
+    Validate completed UTC Bid bars using existing canonical contract. Values
+    here match the preserved trial30 research detector, not frozen D30 target.
+    """
+    pure_b1_bars(completed)  # Shared UTC/grid/OHLC validation; no D30 signal used.
+    frame = completed[["open", "high", "low", "close"]].astype(float).copy()
+    frame["prior_low"] = frame.low.rolling(48).min().shift(1)
+    previous = frame.close.shift()
+    tr = pd.concat(
+        [frame.high - frame.low, (frame.high - previous).abs(), (frame.low - previous).abs()],
+        axis=1,
+    ).max(axis=1)
+    frame["atr"] = tr.rolling(14).mean()
+    frame["direction"] = np.where(frame.close < frame.prior_low, -1, 0)
+    return frame

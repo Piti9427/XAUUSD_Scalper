@@ -110,3 +110,7 @@ Stop: "stop caveman" or "normal mode"
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
+
+## Trial30 research Demo authorization (2026-10-01)
+
+Owner selected snapshot `RESEARCH-D48-SELL-BE1R-20261001-T030` for actual Demo testing via existing Wine host. Dedicated trial30 entrypoint/contract is documented in `CORE_STRATEGY.md` section6.18 and `docs/ops/trial30-demo.md`. Frozen D30 remains research-only/NO-GO; no profitability qualification or real-money approval follows from this Demo trial. Keep SELL-only/D48/TP3ATR/BE1R/daily20% and fixed0.01/10% cap intact; do not run legacy SMC/recovery as a substitute. Broker-confirmed lifecycle, persisted reconciliation and Demo identity gates remain mandatory.
