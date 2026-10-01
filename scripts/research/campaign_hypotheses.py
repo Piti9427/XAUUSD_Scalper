@@ -231,3 +231,29 @@ def drawdown_candidates():
         for protect, activation in protection_states
         for reset in (False, True)
     ]
+
+
+def risk_multiple_candidates():
+    """192 immediate-entry contracts: TP from immutable rounded initial risk distance."""
+    return [
+        (
+            parent,
+            "initial_stop_distance_profit_target",
+            Rules(
+                target_atr=target,
+                target_rr=rr,
+                entry_guard=guard,
+                daily_loss_limit=daily,
+                protect_mode=protect,
+                protect_after_r=activation,
+                reset_after_exit=reset,
+            ),
+        )
+        for parent, target in (("donchian48", 3.0), ("core", 6.25))
+        for guard in ("sell_only", "off")
+        for daily in (0.10, 0.20)
+        for rr in (1.5, 2.0, 3.0)
+        for protect in ("break_even", "candle_trail")
+        for activation in (1.0, 1.5)
+        for reset in (False, True)
+    ]

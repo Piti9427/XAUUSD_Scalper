@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 
 
-def qualifies(base, stress, baselines, *, min_trades, require_rr_improvement=False):
+def qualifies(base, stress, baselines, *, min_trades, require_rr_improvement=False, max_dd_pct=20):
     """Beat both parents under each cost scenario, with absolute safety floors."""
+    if max_dd_pct not in (20, 25, 30):
+        raise ValueError("unsupported drawdown ceiling")
     for result, column in ((base, 0), (stress, 1)):
         required = (
             "net_usd",
@@ -21,7 +23,7 @@ def qualifies(base, stress, baselines, *, min_trades, require_rr_improvement=Fal
         if (
             result["trades"] < min_trades
             or result["net_usd"] <= 0
-            or not 0 <= result["max_dd_pct"] <= 20
+            or not 0 <= result["max_dd_pct"] <= max_dd_pct
             or result["realized_rr"] < 1
             or not 0 <= result["max_admitted_risk_pct"] <= 10
         ):

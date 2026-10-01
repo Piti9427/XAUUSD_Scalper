@@ -26,6 +26,7 @@ from scripts.research.campaign_hypotheses import (
     trend_pullback_features,
     activation_candidates,
     drawdown_candidates,
+    risk_multiple_candidates,
 )
 from scripts.research.tune_breakout_logic import START, TRAIN_END, END, load_data, sha256
 from scripts.research.public_exness_archive import load_discovery
@@ -117,6 +118,7 @@ def main():
         type=Path,
         help="verified public discovery dataset; sealed holdout never loaded",
     )
+    parser.add_argument("--max-dd-pct", type=int, choices=(20, 25, 30), default=20)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--screen",
@@ -134,6 +136,7 @@ def main():
             "pullback",
             "activation",
             "drawdown",
+            "risk_multiple",
         ),
         default="original",
     )
@@ -192,6 +195,7 @@ def main():
         "pullback": pullback_candidates,
         "activation": activation_candidates,
         "drawdown": drawdown_candidates,
+        "risk_multiple": risk_multiple_candidates,
     }
     trials = factories[args.campaign]()
     if not 0 < len(trials) <= 384:
@@ -199,7 +203,9 @@ def main():
     if len({(p, r) for p, _, r in trials}) != len(trials):
         raise ValueError("duplicate hypothesis config")
     protocol = dict(
-        version=4,
+        version=5,
+        max_dd_pct=args.max_dd_pct,
+        preferred_dd_pct=min(25, args.max_dd_pct),
         campaign=args.campaign,
         stop_on_pass=args.stop_on_pass,
         short_circuit_screen=args.screen,
@@ -216,7 +222,7 @@ def main():
         batch_size=48,
         windows={k: [s.isoformat(), e.isoformat()] for k, (s, e) in windows.items()},
         selection="discovery only: lower full DD, higher stress net, fewer changed rules, trial id",
-        gates="each full/half scenario: profit and WR above both parents, DD below both and <=20%, RR>=1 and above each defined parent RR; trades full>=60 halves>=20",
+        gates=f"each full/half scenario: profit and WR above both parents, DD below both and <={args.max_dd_pct}%, RR>=1 and above each defined parent RR; trades full>=60 halves>=20",
         validation="requires verified >=12 months true Bid/Ask including >=3 months never selected. Public dataset loads discovery only; sealed older historical holdout is not prospective 2026 validation. Default184 days reused discovery only",
         execution="completed UTC M15; first quote <=90s; buy Ask sell Bid; SL actual quote with adverse slippage, TP target; exit allowance in admission",
         logic={
@@ -325,6 +331,7 @@ def main():
                 baselines[evaluated[-1]],
                 min_trades=60 if evaluated[-1] == "full" else 20,
                 require_rr_improvement=True,
+                max_dd_pct=args.max_dd_pct,
             ):
                 raise ValueError("resume rejected: unjustified early screening")
             recovered_pass = len(evaluated) == len(windows) and all(
@@ -333,6 +340,7 @@ def main():
                     baselines[w],
                     min_trades=60 if w == "full" else 20,
                     require_rr_improvement=True,
+                    max_dd_pct=args.max_dd_pct,
                 )
                 for w, pair in recovered.items()
             )
@@ -366,6 +374,7 @@ def main():
                 baselines[window],
                 min_trades=60 if window == "full" else 20,
                 require_rr_improvement=True,
+                max_dd_pct=args.max_dd_pct,
             )
             if args.screen and not passed:
                 break

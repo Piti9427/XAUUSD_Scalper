@@ -403,3 +403,10 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 **เปลี่ยนวิจัย:** capรับriskตามDD10/15%, fixed0.01; RRstrictcomparisonในprotocol4. **ผล:** publicactivation288, oldtapefloor336, oldtapestrict336, publicstrict336 — รวม1,296evaluations/0ผ่าน. ไม่ใช่1,296uniqueconfigs. [Configs/metrics/protocols](reviews/2026-10-01-public-drawdown-results.md).
 
 **มติ:** rejected; ไม่แทนcore, ไม่เปิดDemo. Audited10เดือน+sealed3ZIP ไม่อ้างว่าverified12เดือนครบ. เก็บทุกprotocol/hash/resultแยก; historyเดิมไม่ถูกเขียนทับ. Full706tests/skipped2ผ่าน; focused45ผ่าน; Ruffผ่าน; mypyไม่มี.
+
+
+## LOG-20261001-19 — Owner relaxes DD, strict benefit gates retained
+
+**คำสั่งใหม่:** DD25–30%ยอมรับได้; พอร์ตต้องอยู่รอดบนเทปทดสอบ, profit/WR/RRต้องสูงกว่าbaselineหลังcoststress. **เกณฑ์วิจัย:** hard30%, preferred25%, full/halves/base/stress; fixed0.01/risk<=10%/no recoveryเดิม. ไม่รับประกันfuture no-ruin.
+
+**เพิ่ม:** protocol5 --max-dd-pct; default20รักษาเกณฑ์เดิม, requalificationเป็นrunใหม่. Activation trial30ผ่านfullแต่ไม่ผ่านfirsthalf. Catalogrisk_multiple192แยก: immediateentry/ATRSLเดิม, TPผูกระยะinitialstopจริงRR1.5/2/3, BE/trail1/1.5R. [Spec DD30](specs/2026-10-01-dd30-requalification.md), [spec catalog](specs/2026-10-01-risk-multiple-dd30.md). Coreไม่ถูกแทนที่.

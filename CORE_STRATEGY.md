@@ -172,3 +172,13 @@ New research contract: risk_mode=drawdown_steps reduces cost-inclusive entry adm
 ## 6.14 Drawdown admission actual verdict (2026-10-01)
 
 Four preserved public/admission runs:1,296 evaluations,0 qualifiers.336 new admission contracts; repeat datasets/screens are not new unique strategies. Strict protocol4 restores RR increase versus defined baselines; protocol3 kept separately. DD reduction alone did not satisfy combined profit/WR/RR/stress gates. No adoption; core remains NO-GO. [Detailed results](docs/reviews/2026-10-01-public-drawdown-results.md).
+
+
+## 6.15 Owner DD25–30% research gate (2026-10-01)
+
+Owner revised research DD ceiling: preferred<=25%, absolute<=30% including stress. Profit/WR/realizedRR must beat both defined baselines on identical data, full and halves. No capital/lot/cap/recovery changes; core remains frozen NO-GO. New protocol5 exposes --max-dd-pct30; default20 preserves previous gate. Re-screen is separate evidence, not rewriting old verdicts. All-tick positive observed equity does not guarantee future no-ruin. Actual broker costs and parity still unverified. See docs/specs/2026-10-01-dd30-requalification.md.
+
+
+## 6.16 Risk-distance target catalog under DD30 (2026-10-01)
+
+Research192 contracts: immediate parent breakout, original2.5ATR SL, TP1.5/2/3 times rounded initial entry-to-stop distance instead of ATR target; BE/trail at1/1.5R, daily10/20%, off/sell guard, resetfalse/true. Fixed0.01/risk10/no recovery unchanged. Spec docs/specs/2026-10-01-risk-multiple-dd30.md frozen before replay. No adoption or Demo readiness.

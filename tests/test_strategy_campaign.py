@@ -37,6 +37,29 @@ class CampaignSelectionTests(unittest.TestCase):
             )
         )
 
+    def test_owner_dd30_allows_28_but_rejects_over30_and_risk_over10(self):
+        parent = dict(
+            trades=70,
+            net_usd=50,
+            max_dd_pct=40,
+            realized_rr=1.1,
+            win_rate=0.4,
+            max_admitted_risk_pct=10,
+        )
+        candidate = dict(parent, net_usd=60, max_dd_pct=28, realized_rr=1.3, win_rate=0.5)
+        options = dict(min_trades=60, require_rr_improvement=True, max_dd_pct=30)
+        self.assertTrue(qualifies(candidate, candidate, [(parent, parent)] * 2, **options))
+        for changed in (
+            dict(max_dd_pct=30.01),
+            dict(max_admitted_risk_pct=10.01),
+            dict(net_usd=-200),
+            dict(realized_rr=1.1),
+            dict(win_rate=0.4),
+        ):
+            self.assertFalse(
+                qualifies(candidate, dict(candidate, **changed), [(parent, parent)] * 2, **options)
+            )
+
     def test_rr_floor_does_not_require_beating_baseline_rr(self):
         baseline = dict(
             trades=70,
