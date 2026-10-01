@@ -110,14 +110,7 @@ class Trial30DemoRunner:
         if now < closed or now - closed > timedelta(seconds=90):
             self.journal.put("last_bar", bar)
             raise ValueError("entry_window_expired")
-        quotes = self.mt5.copy_ticks_range(self.symbol, closed, now, self.mt5.COPY_TICKS_ALL)
-        quote_frame = pd.DataFrame(quotes)
-        if quote_frame.empty or "time_msc" not in quote_frame:
-            raise ValueError("first_quote_unknown")
-        quote_frame = quote_frame[quote_frame.time_msc >= int(closed.timestamp() * 1000)]
-        if quote_frame.empty:
-            raise ValueError("first_quote_unknown")
-        first = quote_frame.sort_values("time_msc").iloc[0]
+        first = self._first_quote(closed, now)
         if int(first.time_msc) > int((closed + timedelta(seconds=90)).timestamp() * 1000):
             raise ValueError("first_quote_late")
         cost, status = validate_policy(self.policy, fingerprint=self.fingerprint, now=now)
@@ -238,7 +231,31 @@ class Trial30DemoRunner:
         active["status"] = "UNKNOWN"
         self.journal.put("active", active)
         positions, _ = self.broker._exposure()
-        return self._reconcile(positions, self.broker._history(now), tick, info, closed, now)
+        return self._reconcile(
+            positions, self.broker._history(now + timedelta(minutes=1)), tick, info, closed, now
+        )
+
+    def _first_quote(self, closed, now):
+        rows = self.mt5.copy_ticks_range(self.symbol, closed, now, self.mt5.COPY_TICKS_ALL)
+        frame = pd.DataFrame(rows)
+        if frame.empty or not {"time_msc", "bid", "ask"}.issubset(frame.columns):
+            raise ValueError("first_quote_unknown")
+        frame = frame[
+            (frame.time_msc >= int(closed.timestamp() * 1000))
+            & (frame.time_msc <= int(now.timestamp() * 1000))
+        ]
+        if frame.empty:
+            raise ValueError("first_quote_unknown")
+        first = frame.sort_values("time_msc", kind="stable").iloc[0]
+        if (
+            not all(_finite(first[k], positive=True) for k in ("bid", "ask"))
+            or first.ask < first.bid
+        ):
+            raise ValueError("first_quote_invalid")
+        return first
+
+    def _send_clock(self, now):
+        return now + timedelta(seconds=time.monotonic() - self._started)
 
     def _reconcile(self, positions, deals, tick, info, closed, now):
         active = self.journal.get("active")
@@ -293,6 +310,34 @@ class Trial30DemoRunner:
         if active.get("safety_close_pending"):
             return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
         if active["status"] != "FILLED":
+            opening = [
+                d
+                for d in deals
+                if int(d.position_id) == int(position.identifier)
+                and int(d.entry) == 0
+                and int(d.type) in (0, 1)
+            ]
+            if not opening:
+                return {"status": "UNKNOWN", "reason": "awaiting_fill_deal_costs"}
+            observed_cost = sum(
+                max(0.0, -float(d.commission) - float(d.fee) - float(d.swap)) for d in opening
+            )
+            if observed_cost > active["commission"] + 0.00000001:
+                return self._safety_close(position, active, info, now, "fill_cost_policy_violation")
+            active["observed_entry_cost"] = observed_cost
+            if (
+                not all(
+                    _finite(v, positive=True)
+                    for v in (position.price_open, position.sl, position.tp)
+                )
+                or abs(float(position.sl) - active["request"]["sl"])
+                > float(info.trade_tick_size) / 2
+                or abs(float(position.tp) - active["request"]["tp"])
+                > float(info.trade_tick_size) / 2
+            ):
+                return self._safety_close(
+                    position, active, info, now, "filled_stop_target_violation"
+                )
             broker_loss = self.mt5.order_calc_profit(
                 self.mt5.ORDER_TYPE_SELL,
                 self.symbol,
@@ -360,12 +405,16 @@ class Trial30DemoRunner:
         if active.get("be_done"):
             return {"status": "MANAGING", "ticket": int(position.ticket)}
         if bar != active["last_be_bar"] and int(closed.timestamp() * 1000) > active["entry_ms"]:
+            first = self._first_quote(closed, now)
+            active["be_activation_quote"] = dict(
+                time_msc=int(first.time_msc), bid=float(first.bid), ask=float(first.ask)
+            )
             profit = self.mt5.order_calc_profit(
                 self.mt5.ORDER_TYPE_SELL,
                 self.symbol,
                 0.01,
                 float(position.price_open),
-                float(tick.ask),
+                float(first.ask),
             )
             if profit is None or not _finite(profit):
                 raise ValueError("broker_profit_unknown")
@@ -403,6 +452,22 @@ class Trial30DemoRunner:
         if check is None or int(check.retcode) != 0:
             return {"status": "MANAGING", "reason": "be_check_rejected"}
         self.broker.identity()
+        positions, _ = self.broker._exposure()
+        matches = [
+            p
+            for p in positions
+            if int(p.ticket) == int(position.ticket)
+            and p.symbol == self.symbol
+            and int(p.magic) == MAGIC
+            and p.comment == active["comment"]
+        ]
+        if len(matches) != 1:
+            return {"status": "UNKNOWN", "reason": "be_position_changed"}
+        current = matches[0]
+        fresh_tick = self.broker._quote(self._send_clock(now))
+        if candidate >= float(current.sl) or candidate - float(fresh_tick.ask) <= distance:
+            return {"status": "MANAGING", "reason": "be_geometry_changed"}
+        request["tp"] = float(current.tp)
         active["be_pending"] = candidate
         self.journal.put("active", active)
         try:
@@ -436,14 +501,16 @@ class Trial30DemoRunner:
         if len(owned) != 1:
             return {"status": "UNKNOWN", "reason": "safety_close_position_changed"}
         position = owned[0]
-        tick = self.broker._quote(now)
+        tick = self.broker._quote(self._send_clock(now))
+        if int(position.type) not in (0, 1):
+            return {"status": "BLOCKED", "reason": "safety_position_type_unknown"}
         request = dict(
             action=self.mt5.TRADE_ACTION_DEAL,
             symbol=self.symbol,
             position=int(position.ticket),
             volume=float(position.volume),
-            type=self.mt5.ORDER_TYPE_BUY,
-            price=float(tick.ask),
+            type=self.mt5.ORDER_TYPE_BUY if int(position.type) == 1 else self.mt5.ORDER_TYPE_SELL,
+            price=float(tick.ask if int(position.type) == 1 else tick.bid),
             magic=MAGIC,
             comment="T30_SAFETY",
             deviation=max(0, int(active["slippage"] / info.point)),

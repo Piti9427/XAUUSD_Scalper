@@ -513,3 +513,121 @@ class Trial30DemoTests(unittest.TestCase):
         result = self.runner().cycle(now=NOW)
         self.assertEqual(result["reason"], "quote_changed_before_send")
         self.broker.order_send.assert_not_called()
+
+    def test_be_restart_uses_first_post_close_quote_not_later_profitable_quote(self):
+        runner = self.runner()
+        runner.cycle(now=NOW)
+        runner.close()
+        ts = pd.Timestamp("2026-10-01 12:00:00+00:00")
+        for minute in range(15):
+            self.broker.rates.append(
+                dict(
+                    time=int(ts.timestamp()) + minute * 60,
+                    open=94.0,
+                    high=94.5,
+                    low=93.5,
+                    close=94.0,
+                    tick_volume=1,
+                )
+            )
+        later = NOW + timedelta(minutes=20)
+        self.broker.tick.bid = 93.5
+        self.broker.tick.ask = 93.7
+        self.broker.tick.time_msc = int(later.timestamp() * 1000)
+        first = int((NOW + timedelta(minutes=15)).timestamp() * 1000)
+        self.broker.copy_ticks_range = lambda *args: [dict(time_msc=first, bid=96.9, ask=97.1)]
+        result = self.runner().cycle(now=later)
+        self.assertEqual(result["status"], "MANAGING")
+        self.assertEqual(self.broker.order_send.call_count, 1)
+
+    def test_be_rechecks_geometry_after_broker_check_price_change(self):
+        runner = self.runner()
+        runner.cycle(now=NOW)
+        ts = pd.Timestamp("2026-10-01 12:00:00+00:00")
+        for minute in range(15):
+            self.broker.rates.append(
+                dict(
+                    time=int(ts.timestamp()) + minute * 60,
+                    open=94.0,
+                    high=94.5,
+                    low=93.5,
+                    close=94.0,
+                    tick_volume=1,
+                )
+            )
+        later = NOW + timedelta(minutes=15)
+        self.broker.tick.bid = 93.5
+        self.broker.tick.ask = 93.7
+        self.broker.tick.time_msc = int(later.timestamp() * 1000) - 400
+
+        def check(req):
+            self.broker.tick.bid = 97.0
+            self.broker.tick.ask = 97.2
+            return NS(retcode=0)
+
+        self.broker.order_check.side_effect = check
+        result = runner.cycle(now=later)
+        self.assertEqual(result["reason"], "be_geometry_changed")
+        self.assertEqual(self.broker.order_send.call_count, 1)
+
+    def test_be_rechecks_quote_age_after_slow_broker_check(self):
+        from unittest.mock import patch
+
+        runner = self.runner()
+        runner.cycle(now=NOW)
+        ts = pd.Timestamp("2026-10-01 12:00:00+00:00")
+        for minute in range(15):
+            self.broker.rates.append(
+                dict(
+                    time=int(ts.timestamp()) + minute * 60,
+                    open=94.0,
+                    high=94.5,
+                    low=93.5,
+                    close=94.0,
+                    tick_volume=1,
+                )
+            )
+        later = NOW + timedelta(minutes=15)
+        self.broker.tick.bid = 93.5
+        self.broker.tick.ask = 93.7
+        self.broker.tick.time_msc = int(later.timestamp() * 1000) - 400
+        elapsed = [0.0]
+        self.broker.order_check.side_effect = lambda req: (
+            elapsed.__setitem__(0, 61.0) or NS(retcode=0)
+        )
+        with patch("scripts.trial30.runner.time.monotonic", side_effect=lambda: elapsed[0]):
+            result = runner.cycle(now=later)
+        self.assertEqual(result["reason"], "quote_stale")
+        self.assertEqual(self.broker.order_send.call_count, 1)
+
+    def test_broker_changed_initial_target_is_contained_before_fill_notification(self):
+        original = self.broker.send
+
+        def wrong_target(req):
+            result = original(req)
+            if not req.get("position"):
+                self.broker.positions[0].tp = 95.0
+            return result
+
+        self.broker.order_send.side_effect = wrong_target
+        result = self.runner().cycle(now=NOW)
+        self.assertNotEqual(result["status"], "FILLED")
+        self.assertEqual(self.broker.order_send.call_count, 2)
+        self.assertNotIn("FILLED", [e["kind"] for e in self.events])
+
+    def test_unexpected_entry_fee_is_contained_instead_of_claiming_zero_cost_fill(self):
+        original = self.broker.send
+
+        def costly(req):
+            result = original(req)
+            if not req.get("position"):
+                self.broker.deals[-1].commission = -25.0
+                self.broker.account.balance = 175.0
+                self.broker.account.equity = 175.0
+            return result
+
+        self.broker.order_send.side_effect = costly
+        result = self.runner().cycle(now=NOW)
+        self.assertNotEqual(result["status"], "FILLED")
+        self.assertEqual(self.broker.order_send.call_count, 2)
+        self.assertNotIn("FILLED", [e["kind"] for e in self.events])
