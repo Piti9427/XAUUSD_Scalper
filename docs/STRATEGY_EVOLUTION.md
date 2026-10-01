@@ -410,3 +410,10 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 **คำสั่งใหม่:** DD25–30%ยอมรับได้; พอร์ตต้องอยู่รอดบนเทปทดสอบ, profit/WR/RRต้องสูงกว่าbaselineหลังcoststress. **เกณฑ์วิจัย:** hard30%, preferred25%, full/halves/base/stress; fixed0.01/risk<=10%/no recoveryเดิม. ไม่รับประกันfuture no-ruin.
 
 **เพิ่ม:** protocol5 --max-dd-pct; default20รักษาเกณฑ์เดิม, requalificationเป็นrunใหม่. Activation trial30ผ่านfullแต่ไม่ผ่านfirsthalf. Catalogrisk_multiple192แยก: immediateentry/ATRSLเดิม, TPผูกระยะinitialstopจริงRR1.5/2/3, BE/trail1/1.5R. [Spec DD30](specs/2026-10-01-dd30-requalification.md), [spec catalog](specs/2026-10-01-risk-multiple-dd30.md). Coreไม่ถูกแทนที่.
+
+
+## LOG-20261001-20 — DD30 requalification results
+
+**ผลจริง:** activation288+risk_multiple192สองเทป รวม672evaluations,0ผ่าน. Trial30full+$465.32/DD26.01/WR52.14/RR1.199; stress+$361.40/DD29.44/WR50.72/RR1.201 แต่firsthalfprofit/RRแพ้baseline. ไม่เลือกจากfullอย่างเดียว. [Configs/results](reviews/2026-10-01-dd30-results.md).
+
+**มติ:** noadoption/DemoBLOCKED. Positiveobservedequityไม่รับประกันfuture survival; actualswap/commission/parityยังขาด. Tests707/skipped2ผ่าน; scopedreviewsไม่มีblocking. เก็บDD20และDD30verdictคนละprotocol ไม่เขียนทับเก่า.

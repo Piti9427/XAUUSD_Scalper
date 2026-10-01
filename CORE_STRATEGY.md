@@ -182,3 +182,8 @@ Owner revised research DD ceiling: preferred<=25%, absolute<=30% including stres
 ## 6.16 Risk-distance target catalog under DD30 (2026-10-01)
 
 Research192 contracts: immediate parent breakout, original2.5ATR SL, TP1.5/2/3 times rounded initial entry-to-stop distance instead of ATR target; BE/trail at1/1.5R, daily10/20%, off/sell guard, resetfalse/true. Fixed0.01/risk10/no recovery unchanged. Spec docs/specs/2026-10-01-risk-multiple-dd30.md frozen before replay. No adoption or Demo readiness.
+
+
+## 6.17 DD30 actual results (2026-10-01)
+
+Activation288 + risk_multiple192 on2026 +192 on public discovery =672 evaluations,0qualified. Trial30 passesfull but failsfirsthalf profit/RR afterstress. HardDD30 alone did not satisfy jointbenefit criteria. Core remainsNO-GO; noadoption. [Append-only results](docs/reviews/2026-10-01-dd30-results.md).
