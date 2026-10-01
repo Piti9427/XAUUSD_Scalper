@@ -429,3 +429,8 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 ## LOG-20261001-22 — Daily backtest setup/result index
 
 [2026-10-01 — trial30 setup, config origin, market dates and results](strategy-logs/2026-10-01.md#log-20261001-22--backtest-setup-config-origin-and-market-dates-trial30). Entry ID `RESEARCH-D48-SELL-BE1R-20261001-T030-SETUP`: เพิ่มรายละเอียดจากsnapshotเดิมโดยไม่แก้entryเก่า. ครอบคลุมช่วงข้อมูลUTC, configorigin, replaymethod, base/stresscosts, metricsfull/firsthalfและsecondhalfnot evaluated.
+
+
+## LOG-20261001-24 — Daily task result archive
+
+[2026-10-01 — tasksummary: strategy/setup/config-date/base-stress results](strategy-logs/2026-10-01.md#log-20261001-24--task-completion-archive-strategy-setup-and-backtest-results). บันทึกผลtaskเอกสารและcommits, เพิ่มentryใหม่เท่านั้น; snapshotเก่า/runtimeคงเดิม. Strategytrial30ยังresearch-only/ไม่พร้อมDemo.
