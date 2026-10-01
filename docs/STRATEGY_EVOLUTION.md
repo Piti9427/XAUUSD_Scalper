@@ -424,3 +424,8 @@ Highest full net among>=60-trade trials (diagnostic, not selected): trial28, net
 [2026-10-01 — D48 SELL + Break-even 1R, trial30](strategy-logs/2026-10-01.md). Snapshot ID `RESEARCH-D48-SELL-BE1R-20261001-T030`: logic/config ครบ, ผล base/stress/full/first_half, provenance hashes และเหตุผลที่ยังไม่ผ่าน.
 
 **กติกาบันทึกต่อไป:** แยกไฟล์ `docs/strategy-logs/YYYY-MM-DD.md` ตามวันบันทึก; วันเดียวกันเพิ่ม entry พร้อม ID ใหม่, วันใหม่สร้างไฟล์ใหม่. Entry เดิมห้ามแก้/ลบ/แทนที่; corrections และผลเพิ่มเติมต้องเป็น entry ใหม่อ้าง ID เดิม. เอกสารกลางเพิ่มลิงก์รายวันโดยคง index/history เก่า.
+
+
+## LOG-20261001-22 — Daily backtest setup/result index
+
+[2026-10-01 — trial30 setup, config origin, market dates and results](strategy-logs/2026-10-01.md#log-20261001-22--backtest-setup-config-origin-and-market-dates-trial30). Entry ID `RESEARCH-D48-SELL-BE1R-20261001-T030-SETUP`: เพิ่มรายละเอียดจากsnapshotเดิมโดยไม่แก้entryเก่า. ครอบคลุมช่วงข้อมูลUTC, configorigin, replaymethod, base/stresscosts, metricsfull/firsthalfและsecondhalfnot evaluated.
