@@ -31,7 +31,7 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 self.assertEqual(trade["volume"], 0.01)
                 self.assertLessEqual(trade["risk_pct"], 10)
 
-    def test_tuning_cli_freezes_288_contracts_and_verifies_resumed_scenarios(self):
+    def test_tuning_cli_freezes_catalog_budget_and_verifies_resumed_scenarios(self):
         import contextlib
         import io
         import json
@@ -52,19 +52,22 @@ class BidirectionalCampaignTests(unittest.TestCase):
             patch("scripts.research.bidirectional_campaign.END", END),
             contextlib.redirect_stdout(io.StringIO()),
         ):
-            args = ["--output", directory + "/run", "--catalog", "tuning", "--limit", "1"]
-            initial = main(args)
-            self.assertEqual(initial["verification"], "INITIAL_REPLAY")
-            resumed = main(args + ["--resume"])
-            self.assertEqual(resumed["verified_scenarios"], 12)
-            self.assertEqual(resumed["verification"], "FRESH_REPLAY_MATCH")
-            self.assertEqual(resumed["total_contracts"], 288)
-            self.assertEqual(resumed["status"], "DISCOVERY_INCOMPLETE")
-            protocol = json.loads((Path(directory) / "run/protocol.json").read_text())
-            self.assertEqual(len(protocol["candidates"]), 288)
-            self.assertEqual(
-                len({json.dumps(c, sort_keys=True) for c in protocol["candidates"]}), 288
-            )
+            for catalog, budget in (("tuning", 288), ("admission", 96)):
+                with self.subTest(catalog=catalog):
+                    output = Path(directory) / catalog
+                    args = ["--output", str(output), "--catalog", catalog, "--limit", "1"]
+                    initial = main(args)
+                    self.assertEqual(initial["verification"], "INITIAL_REPLAY")
+                    resumed = main(args + ["--resume"])
+                    self.assertEqual(resumed["verified_scenarios"], 12)
+                    self.assertEqual(resumed["verification"], "FRESH_REPLAY_MATCH")
+                    self.assertEqual(resumed["total_contracts"], budget)
+                    self.assertEqual(resumed["status"], "DISCOVERY_INCOMPLETE")
+                    protocol = json.loads((output / "protocol.json").read_text())
+                    self.assertEqual(len(protocol["candidates"]), budget)
+                    self.assertEqual(
+                        len({json.dumps(c, sort_keys=True) for c in protocol["candidates"]}), budget
+                    )
 
     def test_symmetric_close_extreme_guard_accepts_both_edges_and_rejects_inside(self):
         import numpy as np

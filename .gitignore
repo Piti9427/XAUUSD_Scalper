@@ -79,6 +79,8 @@ data/exness-demo/
 
 # Immutable local strategy campaign evidence and source snapshots
 data/strategy_*campaign*/
+data/strategy_bidirectional_geometry_tuning_*/
+data/strategy_bidirectional_admission_tuning_*/
 
 # Trial30 single-writer SQLite lock database
 data/*.sqlite3.lock

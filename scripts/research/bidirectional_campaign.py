@@ -122,6 +122,35 @@ def contracts(catalog="quality"):
             )
         )
 
+    if catalog == "admission":
+        return [
+            dict(
+                hypothesis="selective_buy_admission",
+                buy_signal="breakout",
+                buy_filter=buy_filter,
+                depth=0.0,
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        risk_mode=risk_mode,
+                        entry_guard=guard,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                        target_atr=target,
+                        daily_loss_limit=0.2,
+                    )
+                ),
+            )
+            for pause, risk_mode, guard, protection, target, buy_filter in product(
+                (0.025, 0.05, 0.10),
+                ("static", "drawdown_steps"),
+                ("off", "body_dominant"),
+                ("break_even", "candle_trail"),
+                (3.0, 6.25),
+                ("off", "prior_day"),
+            )
+        ]
+
     if catalog == "tuning":
         result = []
         for signal, guard, stop, rr, protection, activation in product(
@@ -264,7 +293,9 @@ def main(argv=None):
     parser.add_argument("--dataset", type=Path)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
-        "--catalog", choices=("quality", "buy_setups", "symmetric", "tuning"), default="quality"
+        "--catalog",
+        choices=("quality", "buy_setups", "symmetric", "tuning", "admission"),
+        default="quality",
     )
     parser.add_argument("--limit", type=int)
     args = parser.parse_args(argv)
