@@ -19,7 +19,9 @@ from scripts.research.tune_breakout_logic import load_data, sha256, START, TRAIN
 from scripts.research.public_exness_archive import load_discovery
 
 
-def candidate_frame(frame, buy_filter, depth, buy_signal="breakout", signal_spec=None):
+def candidate_frame(
+    frame, buy_filter, depth, buy_signal="breakout", signal_spec=None, oscillator_spec=None
+):
     """Causal completed-bar signals; default D48 or explicit directional horizons."""
     if buy_filter not in ("off", "ema50", "prior_day", "body", "extreme", "ema_prior"):
         raise ValueError("unknown BUY filter")
@@ -27,6 +29,39 @@ def candidate_frame(frame, buy_filter, depth, buy_signal="breakout", signal_spec
         raise ValueError("unknown depth")
     if buy_signal not in ("breakout", "lower_wick", "trend_pullback"):
         raise ValueError("unknown BUY setup")
+    if oscillator_spec is not None:
+        if signal_spec is not None or buy_signal != "breakout" or buy_filter != "off" or depth:
+            raise ValueError("oscillator contract cannot combine breakout transforms")
+        if set(oscillator_spec) != {"period", "threshold", "trend_span"}:
+            raise ValueError("unknown oscillator contract")
+        period, threshold, trend_span = (
+            oscillator_spec[k] for k in ("period", "threshold", "trend_span")
+        )
+        if period not in (7, 14, 21) or threshold not in (25, 30, 35) or trend_span not in (0, 50):
+            raise ValueError("unsupported oscillator contract")
+        frame = frame.copy()
+        delta = frame.close.diff()
+        gain = delta.clip(lower=0).rolling(period).mean()
+        loss = (-delta.clip(upper=0)).rolling(period).mean()
+        rsi = 100 - 100 / (1 + gain / loss)
+        rsi = rsi.mask((gain == 0) & (loss == 0), 50.0)
+        frame["direction"] = np.select(
+            [
+                (rsi.shift(1) < threshold) & (rsi >= threshold) & (delta > 0),
+                (rsi.shift(1) > 100 - threshold) & (rsi <= 100 - threshold) & (delta < 0),
+            ],
+            [1, -1],
+            0,
+        )
+        if trend_span:
+            average = frame.close.ewm(span=trend_span, adjust=False, min_periods=trend_span).mean()
+            aligned = (frame.direction * (frame.close - average) > 0) & (
+                frame.direction * (average - average.shift(4)) > 0
+            )
+            frame.loc[~aligned.fillna(False), "direction"] = 0
+        # ATR stop/target use trigger close only as a recorded setup anchor.
+        frame["hh"] = frame.close
+        frame["ll"] = frame.close
     if signal_spec is not None:
         if buy_signal != "breakout":
             raise ValueError("horizon contract requires breakout setup")
@@ -154,6 +189,24 @@ def contracts(catalog="quality"):
                 protect_after_r=activation,
             )
         )
+
+    if catalog == "oscillator":
+        return [
+            dict(
+                hypothesis="rolling_rsi_price_reversal",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(period=period, threshold=threshold, trend_span=trend),
+                rules=rules(guard, 3.0, protection, 1.0),
+            )
+            for period, threshold, trend, guard, protection in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0, 50),
+                ("off", "body_dominant"),
+                ("break_even", "candle_trail"),
+            )
+        ]
 
     if catalog == "compression":
         return [
@@ -394,6 +447,7 @@ def main(argv=None):
             "horizons",
             "horizon_quality",
             "compression",
+            "oscillator",
         ),
         default="quality",
     )
@@ -482,6 +536,7 @@ def main(argv=None):
                 candidate["depth"],
                 candidate.get("buy_signal", "breakout"),
                 candidate.get("signal_spec"),
+                candidate.get("oscillator_spec"),
             )
         )
         if args.resume and marker.exists():

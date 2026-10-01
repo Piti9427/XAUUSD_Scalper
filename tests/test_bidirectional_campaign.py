@@ -128,6 +128,80 @@ class BidirectionalCampaignTests(unittest.TestCase):
                     prepared.direction.iloc[14],
                 )
 
+    def test_rsi_recross_executes_both_sides_after_warmup_without_future_data(self):
+        import numpy as np
+        import pandas as pd
+
+        prices = np.array(list(range(100, 85, -1)) + list(range(92, 107)) + [100], dtype=float)
+        frame = pd.DataFrame(
+            dict(
+                open=prices,
+                high=prices + 0.1,
+                low=prices - 0.1,
+                close=prices,
+                hh=120.0,
+                ll=70.0,
+                atr=1.0,
+                direction=0,
+            ),
+            index=pd.date_range(START, periods=len(prices), freq="15min"),
+        )
+        spec = dict(period=14, threshold=30, trend_span=0)
+        prepared = candidate_frame(frame, "off", 0.0, oscillator_spec=spec)
+        self.assertEqual(list(np.flatnonzero(prepared.direction)), [15, 30])
+        self.assertEqual(prepared.direction.iloc[[15, 30]].tolist(), [1, -1])
+        pd.testing.assert_frame_equal(
+            prepared.iloc[:16], candidate_frame(frame.iloc[:16], "off", 0.0, oscillator_spec=spec)
+        )
+        times = START.value // 10**6 + np.array([14400000, 14460000, 27900000, 27960000])
+        bid = np.array([92.0, 100.0, 100.0, 92.0])
+        result = replay(
+            prepared,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=8),
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [1, -1])
+        self.assertEqual([p["volume"] for p in result["ledger"]], [0.01, 0.01])
+        self.assertTrue(all(p["risk_pct"] <= 10 for p in result["ledger"]))
+
+    def test_rsi_expiring_losses_without_price_reversal_cannot_open_trade(self):
+        import numpy as np
+        import pandas as pd
+
+        prices = np.array(list(range(100, 85, -1)) + [86] * 16, dtype=float)
+        frame = pd.DataFrame(
+            dict(
+                open=prices,
+                high=prices + 0.1,
+                low=prices - 0.1,
+                close=prices,
+                hh=120.0,
+                ll=70.0,
+                atr=1.0,
+                direction=0,
+            ),
+            index=pd.date_range(START, periods=len(prices), freq="15min"),
+        )
+        prepared = candidate_frame(
+            frame, "off", 0.0, oscillator_spec=dict(period=14, threshold=30, trend_span=0)
+        )
+        times = (frame.index.as_unit("ns").view("int64") // 1000000) + 900000
+        ticks = (times, prices, prices + 0.2)
+        result = replay(
+            prepared,
+            ticks,
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=8),
+        )
+        self.assertEqual(result["trades"], 0)
+
     def test_geometry_targets_use_frozen_stop_distance_with_fixed_lot(self):
         for stop_mode, stop, target in (
             ("atr", 97.7, 103.95),
@@ -178,6 +252,7 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 ("horizons", 384),
                 ("horizon_quality", 128),
                 ("compression", 216),
+                ("oscillator", 72),
             ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog
