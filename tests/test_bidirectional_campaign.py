@@ -202,6 +202,75 @@ class BidirectionalCampaignTests(unittest.TestCase):
         )
         self.assertEqual(result["trades"], 0)
 
+    def test_hybrid_rsi_buy_preserves_parent_sell_and_parent_wins_conflict(self):
+        import numpy as np
+        import pandas as pd
+
+        prices = np.array(list(range(100, 85, -1)) + list(range(92, 107)) + [100], dtype=float)
+        frame = pd.DataFrame(
+            dict(
+                open=prices,
+                high=prices + 0.1,
+                low=prices - 0.1,
+                close=prices,
+                hh=120.0,
+                ll=70.0,
+                atr=1.0,
+                direction=0,
+            ),
+            index=pd.date_range(START, periods=len(prices), freq="15min"),
+        )
+        frame.loc[frame.index[16], "direction"] = -1
+        spec = dict(period=14, threshold=30, trend_span=0, side="buy")
+        prepared = candidate_frame(frame, "off", 0.0, oscillator_spec=spec)
+        self.assertEqual(list(np.flatnonzero(prepared.direction)), [15, 16])
+        self.assertEqual(prepared.direction.iloc[[15, 16]].tolist(), [1, -1])
+        self.assertEqual(prepared.ll.iloc[16], 70.0)
+        self.assertEqual(prepared.hh.iloc[15], 92.0)
+        times = START.value // 10**6 + np.array([14400000, 14460000, 15300000, 15360000])
+        bid = np.array([92.0, 100.0, 100.0, 92.0])
+        result = replay(
+            prepared,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=8),
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [1, -1])
+        frame.loc[frame.index[15], "direction"] = -1
+        conflict = candidate_frame(frame, "off", 0.0, oscillator_spec=spec)
+        self.assertEqual(conflict.direction.iloc[15], -1)
+        self.assertEqual(conflict.ll.iloc[15], 70.0)
+
+        frame.loc[frame.index[15], "direction"] = 0
+        mirrored = frame.copy()
+        for key, inverse in (
+            ("open", "open"),
+            ("close", "close"),
+            ("high", "low"),
+            ("low", "high"),
+            ("hh", "ll"),
+            ("ll", "hh"),
+        ):
+            mirrored[key] = 200.0 - frame[inverse]
+        mirrored["direction"] = -frame.direction
+        spec["side"] = "sell"
+        prepared = candidate_frame(mirrored, "off", 0.0, oscillator_spec=spec)
+        self.assertEqual(prepared.direction.iloc[[15, 16]].tolist(), [-1, 1])
+        self.assertEqual(prepared.hh.iloc[16], 130.0)
+        result = replay(
+            prepared,
+            (times, 200.0 - bid, 200.2 - bid),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=8),
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [-1, 1])
+
     def test_geometry_targets_use_frozen_stop_distance_with_fixed_lot(self):
         for stop_mode, stop, target in (
             ("atr", 97.7, 103.95),
@@ -253,6 +322,9 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 ("horizon_quality", 128),
                 ("compression", 216),
                 ("oscillator", 72),
+                ("hybrid_oscillator", 144),
+                ("hybrid_admission", 108),
+                ("hybrid_invalidation", 108),
             ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog

@@ -32,13 +32,17 @@ def candidate_frame(
     if oscillator_spec is not None:
         if signal_spec is not None or buy_signal != "breakout" or buy_filter != "off" or depth:
             raise ValueError("oscillator contract cannot combine breakout transforms")
-        if set(oscillator_spec) != {"period", "threshold", "trend_span"}:
+        if set(oscillator_spec) - {"side"} != {"period", "threshold", "trend_span"}:
             raise ValueError("unknown oscillator contract")
         period, threshold, trend_span = (
             oscillator_spec[k] for k in ("period", "threshold", "trend_span")
         )
         if period not in (7, 14, 21) or threshold not in (25, 30, 35) or trend_span not in (0, 50):
             raise ValueError("unsupported oscillator contract")
+        side = oscillator_spec.get("side", "both")
+        if side not in ("both", "buy", "sell"):
+            raise ValueError("unsupported oscillator side")
+        parent_direction = frame.direction.copy()
         frame = frame.copy()
         delta = frame.close.diff()
         gain = delta.clip(lower=0).rolling(period).mean()
@@ -59,9 +63,16 @@ def candidate_frame(
                 frame.direction * (average - average.shift(4)) > 0
             )
             frame.loc[~aligned.fillna(False), "direction"] = 0
-        # ATR stop/target use trigger close only as a recorded setup anchor.
-        frame["hh"] = frame.close
-        frame["ll"] = frame.close
+        oscillator = frame.direction != 0
+        if side != "both":
+            selected = 1 if side == "buy" else -1
+            # Preserve the other D48 leg, including its priority on a conflict.
+            parent = parent_direction == -selected
+            oscillator = (frame.direction == selected) & ~parent
+            frame["direction"] = np.select([parent, oscillator], [-selected, selected], 0)
+        # Only oscillator setups use trigger close as recorded ATR-trade anchor.
+        frame.loc[oscillator, "hh"] = frame.close[oscillator]
+        frame.loc[oscillator, "ll"] = frame.close[oscillator]
     if signal_spec is not None:
         if buy_signal != "breakout":
             raise ValueError("horizon contract requires breakout setup")
@@ -189,6 +200,83 @@ def contracts(catalog="quality"):
                 protect_after_r=activation,
             )
         )
+
+    if catalog == "hybrid_invalidation":
+        return [
+            dict(
+                hypothesis="rsi_buy_setup_invalidation",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(period=period, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        target_atr=3.0,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                        failed_closes=failed,
+                        stagnant_bars=stagnant,
+                    )
+                ),
+            )
+            for period, threshold, pause, protection, (failed, stagnant) in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0.05, 0.10),
+                ("break_even", "candle_trail"),
+                ((1, 0), (0, 4), (1, 4)),
+            )
+        ]
+
+    if catalog == "hybrid_admission":
+        return [
+            dict(
+                hypothesis="rsi_buy_drawdown_admission",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(
+                    period=period, threshold=threshold, trend_span=trend, side="buy"
+                ),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        target_atr=3.0,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                    )
+                ),
+            )
+            for period, threshold, trend, pause, protection in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0, 50),
+                (0.025, 0.05, 0.10),
+                ("break_even", "candle_trail"),
+            )
+        ]
+
+    if catalog == "hybrid_oscillator":
+        return [
+            dict(
+                hypothesis="direction_specific_rsi_and_d48",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(
+                    period=period, threshold=threshold, trend_span=trend, side=side
+                ),
+                rules=rules("off", 3.0, protection, activation),
+            )
+            for period, threshold, trend, side, protection, activation in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0, 50),
+                ("buy", "sell"),
+                ("break_even", "candle_trail"),
+                (1.0, 1.5),
+            )
+        ]
 
     if catalog == "oscillator":
         return [
@@ -448,6 +536,9 @@ def main(argv=None):
             "horizon_quality",
             "compression",
             "oscillator",
+            "hybrid_oscillator",
+            "hybrid_admission",
+            "hybrid_invalidation",
         ),
         default="quality",
     )
