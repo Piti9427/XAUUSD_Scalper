@@ -271,6 +271,131 @@ class BidirectionalCampaignTests(unittest.TestCase):
         )
         self.assertEqual([p["direction"] for p in result["ledger"]], [-1, 1])
 
+    def test_daily_loss_count_blocks_both_sides_and_resets_at_utc_midnight(self):
+        import numpy as np
+        import pandas as pd
+
+        frame, _ = sample()
+        frame = pd.concat([frame, frame.iloc[:2]]).copy()
+        frame.index = pd.DatetimeIndex(
+            [
+                START,
+                START + pd.Timedelta(minutes=15),
+                START + pd.Timedelta(minutes=30),
+                START + pd.Timedelta(days=1),
+                START + pd.Timedelta(days=1, minutes=15),
+            ]
+        )
+        frame["direction"] = [1, -1, 1, 1, -1]
+        closes = frame.index.as_unit("ms").asi8 + 900000
+        times = np.column_stack([closes, closes + 60000]).ravel()
+        bid = np.array([100.0, 97.0, 100.0, 103.0, 100.0, 97.0, 100.0, 97.0, 100.0, 103.0])
+        for losses, expected in ((1, [1, 1]), (2, [1, -1, 1, -1])):
+            with self.subTest(losses=losses):
+                result = replay(
+                    frame,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(max_daily_losses=losses),
+                    Costs(),
+                    start=START,
+                    end=START + pd.Timedelta(days=1, hours=1),
+                )
+                self.assertEqual([t["direction"] for t in result["ledger"]], expected)
+                self.assertEqual(result["rejections"]["daily_loss_count"], 5 - len(expected))
+                self.assertEqual(result["ledger"][-1]["entry_time_utc"][:10], "2026-04-02")
+
+    def test_intermediate_reward_uses_rounded_stop_for_both_directions(self):
+        import numpy as np
+
+        for reward, expected_buy, expected_sell in (
+            (1.25, 103.325, 96.875),
+            (1.35, 103.575, 96.625),
+        ):
+            with self.subTest(reward=reward):
+                frame, _ = sample()
+                frame.loc[frame.index[1], "direction"] = -1
+                times = START.value // 10**6 + np.array([900000, 960000, 1800000, 1860000])
+                bid = np.array([100.0, 110.0, 100.0, 90.0])
+                result = replay(
+                    frame,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(target_rr=reward),
+                    Costs(),
+                    start=START,
+                    end=END,
+                )
+                self.assertEqual([t["direction"] for t in result["ledger"]], [1, -1])
+                self.assertAlmostEqual(result["ledger"][0]["target"], expected_buy)
+                self.assertAlmostEqual(result["ledger"][1]["target"], expected_sell)
+                self.assertTrue(
+                    all(t["volume"] == 0.01 and t["risk_pct"] <= 10 for t in result["ledger"])
+                )
+
+    def test_rollover_filter_blocks_utc_21_entry_and_keeps_next_day_sell(self):
+        import numpy as np
+        import pandas as pd
+
+        prices = np.array(list(range(100, 85, -1)) + list(range(92, 107)) + [100], dtype=float)
+        frame = pd.DataFrame(
+            dict(
+                open=prices,
+                high=prices + 0.1,
+                low=prices - 0.1,
+                close=prices,
+                hh=120.0,
+                ll=70.0,
+                atr=1.0,
+                direction=0,
+            ),
+            index=pd.date_range(START + pd.Timedelta(hours=17), periods=len(prices), freq="15min"),
+        )
+        ticks_ms = START.value // 10**6 + np.array([75600000, 75660000, 89100000, 89160000])
+        bid = np.array([92.0, 100.0, 100.0, 92.0])
+        for session, expected in (("all", [1, -1]), ("avoid_rollover", [-1])):
+            with self.subTest(session=session):
+                prepared = candidate_frame(
+                    frame,
+                    "off",
+                    0.0,
+                    oscillator_spec=dict(period=14, threshold=30, trend_span=0),
+                    entry_session=session,
+                )
+                result = replay(
+                    prepared,
+                    (ticks_ms, bid, bid + 0.2),
+                    BROKER,
+                    Rules(),
+                    Costs(),
+                    start=START,
+                    end=START + pd.Timedelta(hours=26),
+                )
+                self.assertEqual([p["direction"] for p in result["ledger"]], expected)
+                self.assertTrue(all(p["volume"] == 0.01 for p in result["ledger"]))
+
+        # Already-open trades still consume blocked-session quotes and broker TP.
+        frame.index = frame.index - pd.Timedelta(minutes=15)
+        ticks_ms = START.value // 10**6 + np.array([74700000, 75660000, 88200000, 88260000])
+        prepared = candidate_frame(
+            frame,
+            "off",
+            0.0,
+            oscillator_spec=dict(period=14, threshold=30, trend_span=0),
+            entry_session="avoid_rollover",
+        )
+        result = replay(
+            prepared,
+            (ticks_ms, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=26),
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [1, -1])
+        self.assertEqual(result["ledger"][0]["exit_time_utc"], "2026-04-01T21:01:00+00:00")
+
     def test_geometry_targets_use_frozen_stop_distance_with_fixed_lot(self):
         for stop_mode, stop, target in (
             ("atr", 97.7, 103.95),
@@ -325,6 +450,11 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 ("hybrid_oscillator", 144),
                 ("hybrid_admission", 108),
                 ("hybrid_invalidation", 108),
+                ("hybrid_reward", 594),
+                ("hybrid_reward_session", 108),
+                ("hybrid_reward_admission", 324),
+                ("hybrid_reward_quality", 108),
+                ("hybrid_reward_geometry", 216),
             ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog

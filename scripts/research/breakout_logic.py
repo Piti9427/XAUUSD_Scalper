@@ -51,7 +51,7 @@ class Rules:
             raise ValueError("unsupported risk cap")
         if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
             raise ValueError("unsupported daily limit")
-        if self.target_rr not in (0.0, 1.5, 2.0, 3.0):
+        if self.target_rr not in (0.0, 1.25, 1.35, 1.5, 2.0, 3.0):
             raise ValueError("unsupported risk distance target")
         if self.target_atr not in (3.0, 6.25):
             raise ValueError("unsupported parent target")

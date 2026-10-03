@@ -1,0 +1,7 @@
+# Rounded reward: loss-cluster admission research
+
+Preregister324 contracts before evaluation. Prior reward594 trial156 improves net/WR/realizedRR in every full/half base/stress scenario but fails four DD comparisons. This is hypothesis selection from reused discovery, not independent validation. Test whether stricter existing admission controls reduce clustered losses while retaining both directions and sufficient trades.
+
+RSI BUY7/threshold25,30,35/EMA50; parent D48 SELL, BUYpause5%, rounded initial stop reward1.35, protectionoff. Admission states: static10%, static5%, drawdown_steps10% (effective5% at peak drawdown10%,2.5% at15%). Daily10/20%, post-loss cooldown0/1/4 M15 durations, UTC daily losing-trade count0(disabled)/1/2, entry_sessionall/avoid_rollover. Count is cumulative daily losing trades, not consecutive losses. Cooldown starts actual losing exit tick. No lot resizing, forced exit or recovery;0.01 fixed and cap never exceeds10%. Existing replay equations unchanged.
+
+All324 contracts and source/input hashes frozen before replay. Baseline original trial30 unchanged. Each full/first_half/second_half base/stress must strictly exceed baseline net/WR/realizedRR; DD<=baseline and<=30%; actual BUY/SELL; trades>=60/20; risk<=10%. Evaluate all six cases without screening, then exact frozen-source full-result repeats. Prefix cannot qualify. No runtime replacement. Reused184-day discovery, declaredcommission0 and omittedswap remain limitations; untouched holdout remains sealed.

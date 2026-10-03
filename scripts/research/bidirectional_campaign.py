@@ -20,9 +20,17 @@ from scripts.research.public_exness_archive import load_discovery
 
 
 def candidate_frame(
-    frame, buy_filter, depth, buy_signal="breakout", signal_spec=None, oscillator_spec=None
+    frame,
+    buy_filter,
+    depth,
+    buy_signal="breakout",
+    signal_spec=None,
+    oscillator_spec=None,
+    entry_session="all",
 ):
     """Causal completed-bar signals; default D48 or explicit directional horizons."""
+    if entry_session not in ("all", "avoid_rollover"):
+        raise ValueError("unsupported entry session")
     if buy_filter not in ("off", "ema50", "prior_day", "body", "extreme", "ema_prior"):
         raise ValueError("unknown BUY filter")
     if depth not in (0.0, 0.15):
@@ -141,6 +149,8 @@ def candidate_frame(
         boundary = np.where(result.direction == 1, result.hh, result.ll)
         distance = result.direction * (result.close - boundary) / result.atr
         result.loc[distance < depth, "direction"] = 0
+    if entry_session == "avoid_rollover":
+        result.loc[(result.index + pd.Timedelta(minutes=15)).hour >= 21, "direction"] = 0
     return result
 
 
@@ -200,6 +210,154 @@ def contracts(catalog="quality"):
                 protect_after_r=activation,
             )
         )
+
+    if catalog == "hybrid_reward_geometry":
+        return [
+            dict(
+                hypothesis="rsi_buy_rounded_reward_trigger_boundary_stop",
+                buy_filter="off",
+                depth=0.0,
+                entry_session=session,
+                oscillator_spec=dict(period=7, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        stop_mode=stop,
+                        target_rr=reward,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                    )
+                ),
+            )
+            for threshold, pause, reward, stop, protection, session in product(
+                (25, 30, 35),
+                (0.025, 0.05, 0.10),
+                (1.35, 1.5, 2.0),
+                ("trigger", "boundary"),
+                ("off", "candle_trail"),
+                ("all", "avoid_rollover"),
+            )
+        ]
+
+    if catalog == "hybrid_reward_quality":
+        return [
+            dict(
+                hypothesis="rounded_reward_symmetric_candle_quality",
+                buy_filter="off",
+                depth=0.0,
+                entry_session=session,
+                oscillator_spec=dict(period=7, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        target_rr=reward,
+                        protect_mode="off",
+                        protect_after_r=1.0,
+                        entry_guard=guard,
+                    )
+                ),
+            )
+            for threshold, pause, reward, guard, session in product(
+                (25, 30, 35),
+                (0.025, 0.05, 0.10),
+                (1.35, 1.5),
+                ("body_dominant", "close_extreme", "prior_day"),
+                ("all", "avoid_rollover"),
+            )
+        ]
+
+    if catalog == "hybrid_reward_admission":
+        return [
+            dict(
+                hypothesis="rounded_reward_loss_cluster_admission",
+                buy_filter="off",
+                depth=0.0,
+                entry_session=session,
+                oscillator_spec=dict(period=7, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=0.05,
+                        risk_cap=cap,
+                        risk_mode=mode,
+                        daily_loss_limit=daily,
+                        target_rr=1.35,
+                        protect_mode="off",
+                        cooldown_bars=cooldown,
+                        max_daily_losses=losses,
+                    )
+                ),
+            )
+            for threshold, (cap, mode), daily, cooldown, losses, session in product(
+                (25, 30, 35),
+                ((0.10, "static"), (0.05, "static"), (0.10, "drawdown_steps")),
+                (0.10, 0.20),
+                (0, 1, 4),
+                (0, 1, 2),
+                ("all", "avoid_rollover"),
+            )
+        ]
+
+    if catalog == "hybrid_reward_session":
+        return [
+            dict(
+                hypothesis="rounded_reward_avoid_utc_rollover",
+                buy_filter="off",
+                depth=0.0,
+                entry_session="avoid_rollover",
+                oscillator_spec=dict(period=period, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        target_rr=reward,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                    )
+                ),
+            )
+            for period, threshold, pause, reward, protection in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0.05, 0.10),
+                (1.35, 1.5),
+                ("off", "break_even", "candle_trail"),
+            )
+        ]
+
+    if catalog == "hybrid_reward":
+        protection_states = [(reward, "off", 1.0) for reward in (1.25, 1.35, 1.5, 2.0)]
+        protection_states += [
+            (reward, protection, activation)
+            for reward, protection, activation in product(
+                (1.25, 1.35, 1.5, 2.0), ("break_even", "candle_trail"), (0.5, 1.0, 1.5)
+            )
+            if activation < reward
+        ]
+        return [
+            dict(
+                hypothesis="rsi_buy_rounded_stop_reward",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(period=period, threshold=threshold, trend_span=50, side="buy"),
+                rules=asdict(
+                    Rules(
+                        buy_pause_drawdown=pause,
+                        daily_loss_limit=0.2,
+                        target_rr=reward,
+                        protect_mode=protection,
+                        protect_after_r=activation,
+                    )
+                ),
+            )
+            for period, threshold, pause, (reward, protection, activation) in product(
+                (7, 14, 21),
+                (25, 30, 35),
+                (0.025, 0.05, 0.10),
+                protection_states,
+            )
+        ]
 
     if catalog == "hybrid_invalidation":
         return [
@@ -539,6 +697,11 @@ def main(argv=None):
             "hybrid_oscillator",
             "hybrid_admission",
             "hybrid_invalidation",
+            "hybrid_reward",
+            "hybrid_reward_session",
+            "hybrid_reward_admission",
+            "hybrid_reward_quality",
+            "hybrid_reward_geometry",
         ),
         default="quality",
     )
@@ -628,6 +791,7 @@ def main(argv=None):
                 candidate.get("buy_signal", "breakout"),
                 candidate.get("signal_spec"),
                 candidate.get("oscillator_spec"),
+                candidate.get("entry_session", "all"),
             )
         )
         if args.resume and marker.exists():
