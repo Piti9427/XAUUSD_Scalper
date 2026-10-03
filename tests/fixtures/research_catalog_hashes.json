@@ -1,0 +1,186 @@
+{
+  "admission": {
+    "count": 96,
+    "sha256": "8d20b0faa6b0c14d50434b62abc12a33d8a35aeec5533fee8e0bcc0b5d7f2c0c"
+  },
+  "annual_bidirectional": {
+    "count": 36,
+    "sha256": "d7d34945ffd93229ca5161db5f067036eeb08607b33cc97b859aec166ac62879"
+  },
+  "annual_confirmation": {
+    "count": 48,
+    "sha256": "45fb3783d6f130ecdf6c5a644b1f0402ff7313226ced834915967749b6c43534"
+  },
+  "annual_directional": {
+    "count": 48,
+    "sha256": "d5d0e7daef80c95f3b8704f1d780ab71c062cccb2d99108b21a75df90c1dbed1"
+  },
+  "annual_directional_circuit": {
+    "count": 24,
+    "sha256": "611faee7609dc25e915488c323ea1012bac92a7f8d7a36e073e75eb22aaddc0e"
+  },
+  "annual_directional_fine": {
+    "count": 24,
+    "sha256": "ca8ef51f54d14a7ca71093d0647b57e616915f13c26cf3b089765619c94b892c"
+  },
+  "annual_directional_trend": {
+    "count": 48,
+    "sha256": "76b68323cd69393a8dd5b80cafd0eb7d7665daad7bdba8ccec8fa0a2da80c9aa"
+  },
+  "annual_fast_quality": {
+    "count": 72,
+    "sha256": "8c2c4ed3a18e03181778ba2addce40f1fcf369291c844ee7b607edb38fa5ba56"
+  },
+  "annual_hybrid_unpaused": {
+    "count": 96,
+    "sha256": "fba252726f62a48cafee997346826b40f600d9d2a0e93e1fdaa4392b99aab8a7"
+  },
+  "annual_m5_atr_reward": {
+    "count": 64,
+    "sha256": "3908c4acdff4fdd24d0bd77ccf6baed5a44c198a59ccb78fbee6d8f5ebee863b"
+  },
+  "annual_m5_bounded24": {
+    "count": 64,
+    "sha256": "a741d0abbbbf83597af3a2d25c4bc3c889dfa6e3ab29e0a07f27d246984326da"
+  },
+  "annual_m5_directional_sizing": {
+    "count": 48,
+    "sha256": "9847b92f8a00c39bf5efa4d58c364dbedc4c20cefdafdaa114c81e93f2f1404e"
+  },
+  "annual_m5_hybrid": {
+    "count": 64,
+    "sha256": "3b8988486458009cec0ec0378c77517b64174c9b1af3efab145f5abef2facc3b"
+  },
+  "annual_m5_hybrid_quality": {
+    "count": 48,
+    "sha256": "b44e73df25d2c12eb15fc15ada6e554557a7436f4469402d1908e91c0f6721f2"
+  },
+  "annual_m5_intraday": {
+    "count": 64,
+    "sha256": "02aae2834d17040224cedda28f6240b3b6218b33f83db4791ddae37a3781aaf2"
+  },
+  "annual_risk": {
+    "count": 36,
+    "sha256": "c0705bfad550472f8bf3850c7fe0e35248049038e965a41e8361de743b4b4c8c"
+  },
+  "annual_sessions": {
+    "count": 36,
+    "sha256": "48d7341f0d3f9174d748969232e5abf88c152b8411f9ddd1648a9731b73b3114"
+  },
+  "annual_short_buy": {
+    "count": 32,
+    "sha256": "b1cf28d9e5cd4fb01bcaafdc4500209d12d0083861c8e27be7276fc94bec4071"
+  },
+  "annual_short_sell": {
+    "count": 24,
+    "sha256": "dd6d444f8e233663a5ad0d02e42efc2c698abab0d945c42d2bfb1830552227ee"
+  },
+  "annual_sizing": {
+    "count": 60,
+    "sha256": "30381312e7e544a49b9156b80d49cfe2dea2d4f643ee889a3f05e7a5e38cb815"
+  },
+  "buy_setups": {
+    "count": 96,
+    "sha256": "0020363c82f0bb691ba77f4e448c5c50bb35e3cde76ffe32419ecd2228346e1a"
+  },
+  "compression": {
+    "count": 216,
+    "sha256": "2330c3ed33e44f9e189e1bc40ffebc23946793752bbe50012aab1c00f44bcfb0"
+  },
+  "horizon_quality": {
+    "count": 128,
+    "sha256": "b428d795f3094565fd4fea0248affbb3df053c1eb7a7a87b711982961729e9a4"
+  },
+  "horizons": {
+    "count": 384,
+    "sha256": "46bdf3fa02b3330cb0fffa8b2e8aeb55e0c7c282adfef508cf3838b867a16522"
+  },
+  "hybrid_admission": {
+    "count": 108,
+    "sha256": "e0bf4ffc4ffa9f950b85cf359b8d356933f23f2164853b3891bb4539a5aa5e00"
+  },
+  "hybrid_atr_stop": {
+    "count": 432,
+    "sha256": "de0d3ff547c29c2849f8976e2bed46efded25d0f7bcfc7e646f2cc95035c1006"
+  },
+  "hybrid_invalidation": {
+    "count": 108,
+    "sha256": "13950ff5dfbdb5f7415e76cfd94d1b7031fe01bff138b06e9c82a4111b946812"
+  },
+  "hybrid_oscillator": {
+    "count": 144,
+    "sha256": "ad7955a88326023e5461fa3963ca1267aa33542a7f50e5559870ad6a2b15f2e1"
+  },
+  "hybrid_parent_atr": {
+    "count": 72,
+    "sha256": "42c00e1f6415f97eee420de66f3ba0505144c613655f28c09422d26782658f5a"
+  },
+  "hybrid_parent_horizon": {
+    "count": 192,
+    "sha256": "329c01eb95b6295a54c874fdf810d81c3ed00d2cade9e98dcc7368454186c3f7"
+  },
+  "hybrid_parent_invalidation": {
+    "count": 36,
+    "sha256": "28ad27e574d6113e222d114d3ed8910bc7fe99ec3abf0f7928244f837ff47fb7"
+  },
+  "hybrid_parent_protection": {
+    "count": 144,
+    "sha256": "1beca26b19da388c44c751a852aa760844b1a44f977cf2273af6cb256cc5b36b"
+  },
+  "hybrid_parent_quality": {
+    "count": 24,
+    "sha256": "9e305a077c93761ed2e1259bfdc3572857b8e0802849ca6c8031d3cc3b80ba3b"
+  },
+  "hybrid_parent_reward_fine": {
+    "count": 48,
+    "sha256": "f45bfe6c439d3f465b0db3d1f1a1e2ae5e1ec8efb298fec6d62ada4b0b0b4921"
+  },
+  "hybrid_parent_reward_pause": {
+    "count": 12,
+    "sha256": "9607fee8b962c676a347bbde47c5f51fdc786c83c176d27f1d6902b981d32d01"
+  },
+  "hybrid_parent_risk": {
+    "count": 36,
+    "sha256": "eabc669a94c01f95bc21481187300b099a73d531d54d9570e584cb2ef08179b3"
+  },
+  "hybrid_parent_trend": {
+    "count": 288,
+    "sha256": "babf27c7cc9709e82f67c684bc38934c566bb71b81835790f582593c0035b50c"
+  },
+  "hybrid_reward": {
+    "count": 594,
+    "sha256": "f4ccc4315fdaae2c5fde7d2558c663d6df3ee19675bb2f35ee8e0d92654787ee"
+  },
+  "hybrid_reward_admission": {
+    "count": 324,
+    "sha256": "346607259643bc2e78c63eede986d41e2e841590f50abf71ebcb0ceefd5f04cf"
+  },
+  "hybrid_reward_geometry": {
+    "count": 216,
+    "sha256": "36461f9581c4926c62726605b4830017e42753d021d1109f1ee46881081c6565"
+  },
+  "hybrid_reward_quality": {
+    "count": 108,
+    "sha256": "a9803bb3a3d33beb7fb1fbe51b5641dbfa1e0aa14644ae626b2f7d670aaae825"
+  },
+  "hybrid_reward_session": {
+    "count": 108,
+    "sha256": "9db14a7d7f841fdfcd78c214c73ee800304e68b2c2787691be23ab016d6d1085"
+  },
+  "oscillator": {
+    "count": 72,
+    "sha256": "a9e100880baac7ba03823841092b994bc43e1e33400565f3dbfb138e636b0c8e"
+  },
+  "quality": {
+    "count": 96,
+    "sha256": "8898ccc2ddb67048e7339909385b0c13280dc39ef6c8dc36af836f5e0f834875"
+  },
+  "symmetric": {
+    "count": 96,
+    "sha256": "fd7198ee6ee442b44f01a525677c0773f7e843f8d462047f95b6232bd6cb2cfc"
+  },
+  "tuning": {
+    "count": 288,
+    "sha256": "cb60edf272c278d192d8d8672ebe04151d5ae657838f39a59a4b72c458322a39"
+  }
+}

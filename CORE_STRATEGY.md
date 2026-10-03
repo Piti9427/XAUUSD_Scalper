@@ -342,6 +342,13 @@ Annual research checkpoint final:14completedcatalogs648parameter evaluations,0jo
 
 ### 6.28 Current-equity research sizing and profit_dd_v2 (2026-10-03)
 
+Behavior-preserving research module separation and bounded subprocess supervision:
+[refactor evidence](docs/reviews/2026-10-03-research-refactor.md). Public campaign/replay
+APIs remain compatible; new transitive implementation modules are source-hashed,
+so prior frozen campaigns/caches require their original sources or a fresh output.
+M5 preparation optimization preserves completed-bar causality, strict equality,
+UTC management and risk/admission math. Trial30 Demo contract remains unchanged.
+
 Owner authorizes research-only risk budgets through20%, current-equity lot sizing,
 and USD200 initial balance for each independent window with compounding/no top-ups.
 Demo trial30 remains fixed0.01/cap10%. New qualification policy `profit_dd_v2`

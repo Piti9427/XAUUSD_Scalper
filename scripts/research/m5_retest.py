@@ -80,14 +80,16 @@ def retest_frame(setups, m5, ttl, *, buy_only=False):
             or not frame.index.is_monotonic_increasing
         ):
             raise ValueError("M5/M15 bars require ordered unique UTC timestamps")
-    available = setups.index + pd.Timedelta(minutes=15)
+    available = list(setups.index + pd.Timedelta(minutes=15))
+    setup_rows = list(setups.itertuples())
     cursor, latest, pending = 0, None, None
     records = []
     management_times = set(available)
+    close_delta = pd.Timedelta(minutes=5)
     for candle in m5.itertuples():
-        stamp = candle.Index + pd.Timedelta(minutes=5)
+        stamp = candle.Index + close_delta
         while cursor < len(setups) and available[cursor] <= stamp:
-            setup = setups.iloc[cursor]
+            setup = setup_rows[cursor]
             latest = setup
             if setup.direction:
                 direction = int(setup.direction)

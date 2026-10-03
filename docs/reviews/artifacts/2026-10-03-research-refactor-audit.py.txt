@@ -1,0 +1,119 @@
+"""Exact whole-result parity and alternating M5 benchmark, discovery data only.
+
+Run from repository root: PYTHONPATH=. .venv/bin/python <this file>
+Frozen old source bytes are adjacent artifacts. No prior evidence overwritten.
+"""
+import hashlib
+import importlib.machinery
+import importlib.util
+import json
+from pathlib import Path
+import statistics
+import sys
+import time
+import tracemalloc
+
+import numpy as np
+import pandas as pd
+
+from scripts.research import bidirectional_campaign as campaign
+from scripts.research import breakout_logic as engine
+from scripts.research.m5_retest import retest_frame
+from scripts.research.tune_breakout_logic import sha256
+
+ARTIFACTS = Path('docs/reviews/artifacts')
+DATASET = Path('data/b1_public_exness_2025_10_2026_09')
+M5_PATH = Path('data/strategy_annual_m5_atr_reward_profit_dd_v2_2026_10_03/m5_input/bars.csv')
+OUTPUT = Path('docs/reviews/2026-10-03-research-refactor-evidence.json')
+
+
+def load_old(name, path):
+    loader = importlib.machinery.SourceFileLoader(name, str(path))
+    spec = importlib.util.spec_from_loader(name, loader)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    loader.exec_module(module)
+    return module
+
+
+def read_bars(path):
+    frame = pd.read_csv(path, float_precision='round_trip')
+    frame.index = pd.to_datetime(frame.pop('bar_open_utc'), utc=True)
+    return frame
+
+
+def digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+old = load_old('_before_engine', ARTIFACTS / '2026-10-03-refactor-before-breakout.py.txt')
+old_m5 = load_old('_before_m5', ARTIFACTS / '2026-10-03-refactor-before-m5.py.txt')
+old_campaign = load_old('_before_campaign', ARTIFACTS / '2026-10-03-refactor-before-campaign.py.txt')
+fixture = json.loads(Path('tests/fixtures/research_catalog_hashes.json').read_text())
+for name, expected in fixture.items():
+    assert old_campaign.contracts(name) == campaign.contracts(name)
+    assert digest(campaign.contracts(name)) == expected['sha256']
+meta = json.loads((DATASET / 'dataset.json').read_text())
+inputs = {}
+for relative in ('discovery/bars.csv', 'discovery/tape/time.npy', 'discovery/tape/bid.npy', 'discovery/tape/ask.npy'):
+    inputs[relative] = sha256(DATASET / relative)
+    assert inputs[relative] == meta['artifacts'][relative]
+inputs[str(M5_PATH)] = sha256(M5_PATH)
+m5_manifest = json.loads(M5_PATH.with_name('manifest.json').read_text())
+assert inputs[str(M5_PATH)] == m5_manifest['bars_sha256']
+assert m5_manifest['dataset_sha256'] == sha256(DATASET / 'dataset.json')
+raw = read_bars(DATASET / 'discovery/bars.csv')
+m5 = read_bars(M5_PATH)
+frame = engine.features(raw)
+pd.testing.assert_frame_equal(old.features(raw), frame, check_exact=True)
+setups = campaign.candidate_frame(frame, 'off', 0, signal_spec=dict(buy_lookback=24, sell_lookback=24, trend_span=50))
+pd.testing.assert_frame_equal(old_campaign.candidate_frame(frame, 'off', 0, signal_spec=dict(buy_lookback=24, sell_lookback=24, trend_span=50)), setups, check_exact=True)
+for ttl in (2, 4):
+    for buy_only in (False, True):
+        expected = old_m5.retest_frame(setups, m5, ttl, buy_only=buy_only)
+        actual = retest_frame(setups, m5, ttl, buy_only=buy_only)
+        pd.testing.assert_frame_equal(expected, actual, check_exact=True)
+        print('M5 exact frame parity', ttl, buy_only, len(actual), flush=True)
+timings = {'before': [], 'after': []}
+for repeat in range(5):
+    pairs = [('before', old_m5.retest_frame), ('after', retest_frame)]
+    if repeat % 2:
+        pairs.reverse()
+    for label, function in pairs:
+        began = time.perf_counter()
+        function(setups, m5, 4)
+        timings[label].append(time.perf_counter() - began)
+peaks = {}
+for label, function in (('before', old_m5.retest_frame), ('after', retest_frame)):
+    tracemalloc.start()
+    function(setups, m5, 4)
+    peaks[label] = tracemalloc.get_traced_memory()[1]
+    tracemalloc.stop()
+print('M5 benchmark', timings, peaks, flush=True)
+ticks = [np.load(DATASET / f'discovery/tape/{name}.npy', mmap_mode='r') for name in ('time', 'bid', 'ask')]
+start = pd.Timestamp(meta['discovery_start'], tz='UTC')
+end = pd.Timestamp(meta['discovery_end'], tz='UTC')
+middle = (start + (end - start) / 2).normalize()
+windows = {'full': (start, end), 'first_half': (start, middle), 'second_half': (middle, end)}
+cases = [
+    ('trial30', frame, dict(entry_guard='sell_only', daily_loss_limit=.2, protect_mode='break_even', protect_after_r=1), None),
+    ('equity_risk', campaign.candidate_frame(frame, 'off', 0, oscillator_spec=dict(period=14, threshold=25, trend_span=50, side='buy', parent_lookback=96, parent_trend_span=200)), dict(buy_stop_atr=1, buy_target_rr=2, sizing_mode='risk', risk_cap=.15, daily_loss_limit=.1, max_daily_losses=1, protect_mode='break_even', protect_after_r=1), None),
+    ('m5_trigger', setups, dict(buy_stop_mode='trigger', sell_stop_mode='trigger', buy_target_rr=2, protect_mode='break_even', protect_after_r=1, daily_loss_limit=.1, max_daily_losses=1, holding_mode='bounded24'), retest_frame(setups, m5, 4)),
+]
+scenarios = []
+for name, prepared, rules, entries in cases:
+    for window, (left, right) in windows.items():
+        for stress in (False, True):
+            cost = dict(extra_spread=.2, slippage=.1) if stress else {}
+            kwargs = dict(start=left, end=right)
+            if entries is not None:
+                kwargs['entry_frame'] = entries
+            before = old.replay(prepared, ticks, meta['broker'], old.Rules(**rules), old.Costs(**cost), **kwargs)
+            after = engine.replay(prepared, ticks, meta['broker'], engine.Rules(**rules), engine.Costs(**cost), **kwargs)
+            assert before == after, (name, window, stress)
+            scenarios.append(dict(case=name, window=window, stress=stress, result_sha256=digest(after), trades=after['trades']))
+            print('Exact annual replay', name, window, stress, after['trades'], flush=True)
+source_names = ['bidirectional_campaign', 'breakout_logic', 'breakout_models', 'breakout_signals', 'breakout_entry', 'breakout_replay', 'campaign_signals', 'campaign_qualification', 'campaign_catalogs', 'catalog_common', 'catalog_annual', 'catalog_basic', 'catalog_hybrid', 'catalog_m5', 'catalog_parent', 'm5_retest', 'supervision']
+proof = dict(status='EXACT_PARITY', catalog_families=len(fixture), contracts=sum(v['count'] for v in fixture.values()), m5_variants=4, annual_whole_result_scenarios=scenarios, discovery_ticks=len(ticks[0]), complete_m15=len(frame), complete_m5=len(m5), input_hashes=inputs, dataset_sha256=sha256(DATASET / 'dataset.json'), before_source_hashes={name: sha256(ARTIFACTS / f'2026-10-03-refactor-before-{name}.py.txt') for name in ('breakout', 'campaign', 'm5')}, after_source_hashes={name:sha256(Path('scripts/research') / f'{name}.py') for name in source_names}, benchmark_seconds=timings, benchmark_median_seconds={k:statistics.median(v) for k,v in timings.items()}, speedup=statistics.median(timings['before']) / statistics.median(timings['after']), traced_peak_bytes=peaks, benchmark_order='alternating old/new; five runs each; timings exclude tracemalloc', holdout_accessed=False, runtime_changed=False)
+OUTPUT.write_text(json.dumps(proof, indent=2)+'\n')
+print('COMPLETE', proof['speedup'], OUTPUT, flush=True)
