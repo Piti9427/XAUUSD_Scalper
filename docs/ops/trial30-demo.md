@@ -9,6 +9,17 @@ Contract: UTC Bid M15 from15 complete M1; prior48 Donchian SELL only; no RSI/EMA
 Credentials stay in ignored `.env` (`XAUUSD_MT5_LOGIN`, `XAUUSD_MT5_PASSWORD`, `XAUUSD_MT5_SERVER`). Existing Wine prefix and Windows Python are reused; no app/config copies or package upgrades. Mac sandbox may prevent Wine IPC; use authorized host execution when needed. Incomplete/real/netting/wrong-account/permission checks fail closed.
 
 ```bash
+make guide
+make bot-status
+make bot-once
+make bot-run
+make bot-start
+make bot-stop
+```
+
+`make guide` prints the operator sequence. `bot-once` is the read-only cycle. `bot-run` is the foreground Demo watcher. `bot-start` / `bot-stop` use `data/trial30-demo-watch.pid`. `bot-status` reads the journal and does not contact the broker. Equivalent raw entrypoints:
+
+```bash
 # Read-only shadow: no order_send.
 .venv/bin/python -m scripts.ops.run_trial30_wine --once
 
