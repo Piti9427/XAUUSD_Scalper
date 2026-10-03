@@ -8,6 +8,203 @@ from tests.test_breakout_logic import sample, BROKER, START, END
 
 
 class BidirectionalCampaignTests(unittest.TestCase):
+    def test_utc_sessions_filter_both_sides_at_completed_boundary_and_reject_local_time(self):
+        import pandas as pd
+
+        boundaries = pd.DatetimeIndex(
+            pd.to_datetime(
+                [
+                    "2026-04-01T00:00Z",
+                    "2026-04-01T06:45Z",
+                    "2026-04-01T07:00Z",
+                    "2026-04-01T12:45Z",
+                    "2026-04-01T13:00Z",
+                    "2026-04-01T19:45Z",
+                    "2026-04-01T20:00Z",
+                    "2026-04-01T23:45Z",
+                ]
+            )
+        )
+        frame, _ = sample()
+        frame = pd.concat([frame.iloc[:1]] * len(boundaries))
+        frame.index = boundaries - pd.Timedelta(minutes=15)
+        frame["direction"] = [1, -1, 1, -1, 1, -1, 1, -1]
+        expected = {
+            "utc_00_07": [1, -1, 0, 0, 0, 0, 0, 0],
+            "utc_07_13": [0, 0, 1, -1, 0, 0, 0, 0],
+            "utc_13_20": [0, 0, 0, 0, 1, -1, 0, 0],
+        }
+        for session, signals in expected.items():
+            result = candidate_frame(frame, "off", 0, entry_session=session)
+            self.assertEqual(result.direction.tolist(), signals)
+            pd.testing.assert_frame_equal(
+                result.iloc[:4], candidate_frame(frame.iloc[:4], "off", 0, entry_session=session)
+            )
+        for index in (frame.index.tz_localize(None), frame.index.tz_convert("Asia/Bangkok")):
+            changed = frame.copy()
+            changed.index = index
+            with self.assertRaisesRegex(ValueError, "aware UTC"):
+                candidate_frame(changed, "off", 0, entry_session="utc_00_07")
+
+    def test_all_loss_baseline_rr_floor_requires_ledger_loss_count_and_strict_candidate_rr(self):
+        from scripts.research.bidirectional_campaign import metrics
+
+        frame, ticks = sample()
+        actual = replay(frame, ticks, BROKER, Rules(), Costs(), start=START, end=END)
+        summary = metrics(actual)
+        self.assertEqual(summary["loss_trades"], sum(p["net"] < 0 for p in actual["ledger"]))
+        baseline = summary
+        self.assertEqual(baseline["trades"], 1)
+        self.assertIsNone(baseline["realized_rr"])
+        candidate = dict(
+            net_usd=100.0,
+            win_rate=0.6,
+            realized_rr=1.1,
+            max_dd_pct=0.1,
+            max_admitted_risk_pct=9.0,
+            trades=60,
+            buy_trades=30,
+            sell_trades=30,
+        )
+        self.assertTrue(qualifies_trial30([candidate] * 2, [baseline] * 2, 60))
+        self.assertIsNone(baseline["realized_rr"])
+        for changed in (
+            dict(loss_trades=0),
+            dict(trades=0, loss_trades=0),
+            dict(win_rate=1.0),
+            dict(net_usd=0.0),
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(
+                    qualifies_trial30([candidate] * 2, [dict(baseline, **changed)] * 2, 60)
+                )
+        missing = dict(baseline)
+        del missing["loss_trades"]
+        self.assertFalse(qualifies_trial30([candidate] * 2, [missing] * 2, 60))
+        for reward in (None, 0.9, 1.0):
+            self.assertFalse(
+                qualifies_trial30([dict(candidate, realized_rr=reward)] * 2, [baseline] * 2, 60)
+            )
+
+    def test_annual_catalog_freezes_explicit_one_r_protection(self):
+        from scripts.research.bidirectional_campaign import contracts
+
+        catalog = contracts("annual_bidirectional")
+        self.assertEqual(len(catalog), 36)
+        for candidate in catalog:
+            self.assertEqual(candidate["rules"]["protect_after_r"], 1.0)
+            self.assertEqual(candidate["rules"]["risk_cap"], 0.10)
+            self.assertEqual(candidate["rules"]["buy_pause_drawdown"], 0.0)
+
+    def test_directional_catalog_preserves_parent_sell_with_explicit_buy_exits(self):
+        from scripts.research.bidirectional_campaign import contracts
+
+        catalog = contracts("annual_directional")
+        self.assertEqual(len(catalog), 48)
+        for candidate in catalog:
+            rules = candidate["rules"]
+            self.assertEqual(candidate["oscillator_spec"]["parent_lookback"], 48)
+            self.assertEqual(candidate["oscillator_spec"]["parent_trend_span"], 0)
+            self.assertEqual(
+                (rules["stop_atr"], rules["target_atr"], rules["target_rr"]), (2.5, 3.0, 0.0)
+            )
+            self.assertEqual((rules["protect_mode"], rules["protect_after_r"]), ("break_even", 1.0))
+            self.assertEqual(
+                (rules["risk_cap"], rules["daily_loss_limit"], rules["max_daily_losses"]),
+                (0.1, 0.2, 0),
+            )
+            self.assertEqual(rules["buy_protect_mode"], "off")
+            self.assertIn(rules["buy_stop_atr"], (1.5, 2.0, 2.5))
+            self.assertIn(rules["buy_target_rr"], (1.25, 1.35, 1.5, 2.0))
+            self.assertEqual(candidate["rules"]["buy_pause_drawdown"], 0.0)
+
+    def test_one_year_requirement_rejects_short_archive_before_scenarios(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from scripts.research.bidirectional_campaign import main
+
+        frame, ticks = sample()
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "campaign"
+            with patch(
+                "scripts.research.bidirectional_campaign.load_data",
+                return_value=(frame, ticks, BROKER, {"synthetic": True}),
+            ):
+                with self.assertRaisesRegex(ValueError, "365 calendar days"):
+                    main(["--output", str(output), "--limit", "1", "--require-calendar-year"])
+            self.assertFalse(output.exists())
+
+    def test_one_year_cli_checks_actual_months_and_freezes_resume_requirement(self):
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        import numpy as np
+        import pandas as pd
+        from scripts.research.bidirectional_campaign import main
+        from scripts.research.tune_breakout_logic import sha256
+
+        start = pd.Timestamp("2025-10-01", tz="UTC")
+        end = pd.Timestamp("2026-10-01", tz="UTC")
+        dates = pd.date_range(start, end, freq="MS", inclusive="left")
+        frame, _ = sample()
+        frame = pd.concat([frame.iloc[:1]] * 12)
+        frame.index = dates
+        frame["direction"] = 0
+        ticks = (
+            np.array([d.value // 10**6 for d in dates]),
+            np.full(12, 100.0),
+            np.full(12, 100.2),
+        )
+        monthly = [dict(month=d.strftime("%Y-%m"), ticks=1, canonical_bars=1) for d in dates]
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
+            root = Path(directory)
+            metadata = root / "dataset.json"
+            output = root / "campaign"
+            metadata.write_text(json.dumps(dict(imported_months=monthly)))
+            audit = dict(
+                start_utc="2025-10-01",
+                end_utc="2026-10-01",
+                dataset_sha256=sha256(metadata),
+                synthetic=True,
+            )
+            args = [
+                "--output",
+                str(output),
+                "--dataset",
+                str(root),
+                "--limit",
+                "1",
+                "--require-calendar-year",
+            ]
+            with patch(
+                "scripts.research.bidirectional_campaign.load_discovery",
+                return_value=(frame, ticks, BROKER, audit),
+            ):
+                initial = main(args)
+                self.assertEqual(initial["verification"], "INITIAL_REPLAY")
+                self.assertEqual(main(args + ["--resume"])["verified_scenarios"], 12)
+                protocol = json.loads((output / "protocol.json").read_text())
+                self.assertEqual(protocol["annual_coverage"]["calendar_days"], 365)
+                self.assertEqual(len(protocol["annual_coverage"]["verified_months"]), 12)
+                with self.assertRaisesRegex(ValueError, "resume protocol"):
+                    main(args[:-1] + ["--resume"])
+                metadata.write_text(json.dumps(dict(imported_months=monthly[:-1])))
+                audit["dataset_sha256"] = sha256(metadata)
+                args[1] = str(root / "missing-month")
+                with self.assertRaisesRegex(ValueError, "every audited calendar month"):
+                    main(args)
+                self.assertFalse(Path(args[1]).exists())
+                monthly[0]["ticks"] = 2
+                metadata.write_text(json.dumps(dict(imported_months=monthly)))
+                audit["dataset_sha256"] = sha256(metadata)
+                with self.assertRaisesRegex(ValueError, "monthly tick/bar coverage mismatch"):
+                    main(args)
+                self.assertFalse(Path(args[1]).exists())
+
     def test_horizon_signals_execute_both_sides_without_future_bars(self):
         import numpy as np
         import pandas as pd
@@ -712,6 +909,17 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 ("hybrid_parent_atr", 72),
                 ("hybrid_parent_protection", 144),
                 ("hybrid_parent_invalidation", 36),
+                ("annual_bidirectional", 36),
+                ("annual_risk", 36),
+                ("annual_confirmation", 48),
+                ("annual_hybrid_unpaused", 96),
+                ("annual_sessions", 36),
+                ("annual_directional", 48),
+                ("annual_directional_trend", 48),
+                ("annual_directional_circuit", 24),
+                ("annual_directional_fine", 24),
+                ("annual_fast_quality", 72),
+                ("annual_short_sell", 24),
             ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog

@@ -40,6 +40,130 @@ def sample():
 
 
 class BreakoutLogicTests(unittest.TestCase):
+    def test_zero_spread_replay_bounds_allocation_and_checks_chunk_boundaries(self):
+        import tracemalloc
+
+        frame, _ = sample()
+        size = 1_000_005
+        times = START.value // 10**6 + 900000 + np.arange(size)
+        bid = np.full(size, 100.0)
+        ask = np.full(size, 100.2)
+        bid.flags.writeable = ask.flags.writeable = False
+        tracemalloc.start()
+        try:
+            result = replay(
+                frame, (times, bid, ask), BROKER, Rules(), Costs(), start=START, end=END
+            )
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertEqual(result["trades"], 1)
+        self.assertAlmostEqual(result["net_usd"], -0.2)
+        # Allow unchanged 100k-tick held-position buffers plus frame/ledger overhead.
+        self.assertLess(peak, 6 * 2**20, "zero-spread replay must not copy the full input tape")
+        self.assertTrue(np.all(bid == 100.0) and np.all(ask == 100.2))
+        # Reject out-of-order timestamp exactly across validation chunk boundary.
+        times[100000] = times[99999] - 1
+        with self.assertRaisesRegex(ValueError, "invalid ticks"):
+            replay(frame, (times, bid, ask), BROKER, Rules(), Costs(), start=START, end=END)
+        times[100000] = times[99999] + 1
+        corrupt = ask.copy()
+        corrupt[100000] = np.nan
+        with self.assertRaisesRegex(ValueError, "invalid ticks"):
+            replay(frame, (times, bid, corrupt), BROKER, Rules(), Costs(), start=START, end=END)
+        corrupt[100000] = 99.9
+        with self.assertRaisesRegex(ValueError, "invalid ticks"):
+            replay(frame, (times, bid, corrupt), BROKER, Rules(), Costs(), start=START, end=END)
+
+    def test_short_buy_stop_changes_admission_but_preserves_sell_and_cost_cap(self):
+        frame, ticks = sample()
+        frame["atr"] = 13.3
+        cost = Costs(commission_per_lot=10)
+        shared = replay(frame, ticks, BROKER, Rules(buy_stop_atr=1.5), cost, start=START, end=END)
+        rules = Rules(buy_stop_atr=1.0, buy_target_rr=2.0)
+        short = replay(frame, ticks, BROKER, rules, cost, start=START, end=END)
+        self.assertEqual(shared["trades"], 0)
+        self.assertEqual(short["trades"], 1)
+        trade = short["ledger"][0]
+        self.assertAlmostEqual(trade["initial_stop"], 86.9)
+        self.assertAlmostEqual(trade["target"], 126.8)
+        self.assertAlmostEqual(trade["risk_usd"], 13.4)
+        self.assertEqual(trade["volume"], 0.01)
+        frame["direction"] = [-1, 0, 0]
+        sell = replay(frame, ticks, BROKER, rules, cost, start=START, end=END)
+        self.assertEqual(sell["trades"], 0)
+        self.assertEqual(sell["rejections"]["risk_cap"], 1)
+        frame["direction"] = [1, 0, 0]
+        frame["atr"] = 20.0
+        rejected = replay(frame, ticks, BROKER, rules, cost, start=START, end=END)
+        self.assertEqual(rejected["trades"], 0)
+        self.assertEqual(rejected["rejections"]["risk_cap"], 1)
+
+    def test_buy_protection_off_keeps_sell_break_even_lifecycle_identical(self):
+        frame, _ = sample()
+        times = START.value // 10**6 + np.array([900000, 1800000, 1860000, 2700000])
+        buy_bid = np.array([100.0, 101.8, 100.1, 100.1])
+        profile = Rules(
+            protect_mode="break_even",
+            protect_after_r=1.0,
+            buy_stop_atr=1.5,
+            buy_target_rr=1.35,
+            buy_protect_mode="off",
+        )
+        result = replay(
+            frame, (times, buy_bid, buy_bid + 0.2), BROKER, profile, Costs(), start=START, end=END
+        )
+        trade = result["ledger"][0]
+        self.assertEqual(trade["stop_updates"], 0)
+        self.assertAlmostEqual(trade["stop"], 98.7)
+        self.assertEqual(trade["reason"], "END_OF_SAMPLE")
+        frame["direction"] = [-1, 0, 0]
+        sell_bid = np.array([100.0, 97.2, 100.0, 100.0])
+        ticks = (times, sell_bid, sell_bid + 0.2)
+        expected = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(protect_mode="break_even", protect_after_r=1.0),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        actual = replay(frame, ticks, BROKER, profile, Costs(), start=START, end=END)
+        self.assertEqual(actual["ledger"], expected["ledger"])
+        self.assertEqual(actual["ledger"][0]["stop_updates"], 1)
+        self.assertAlmostEqual(actual["ledger"][0]["stop"], 100.0)
+        self.assertEqual(actual["ledger"][0]["reason"], "SL")
+
+    def test_buy_exit_profile_preserves_sell_parent_and_cost_inclusive_cap(self):
+        frame, _ = sample()
+        frame.loc[frame.index[1], "direction"] = -1
+        times = START.value // 10**6 + np.array([900000, 960000, 1800000, 1860000])
+        bid = np.array([100.0, 110.0, 100.0, 90.0])
+        rules = Rules(buy_stop_atr=1.5, buy_target_rr=1.35)
+        result = replay(
+            frame, (times, bid, bid + 0.2), BROKER, rules, Costs(), start=START, end=END
+        )
+        self.assertEqual([p["direction"] for p in result["ledger"]], [1, -1])
+        buy, sell = result["ledger"]
+        self.assertAlmostEqual(buy["initial_stop"], 98.7)
+        self.assertAlmostEqual(buy["target"], 102.225)
+        self.assertAlmostEqual(sell["initial_stop"], 102.5)
+        self.assertAlmostEqual(sell["target"], 97.0)
+        self.assertTrue(all(p["volume"] == 0.01 for p in result["ledger"]))
+        frame, ticks = sample()
+        frame["atr"] = 13.3
+        accepted = replay(frame, ticks, BROKER, rules, Costs(), start=START, end=END)
+        rejected = replay(
+            frame, ticks, BROKER, rules, Costs(commission_per_lot=10), start=START, end=END
+        )
+        self.assertEqual(accepted["trades"], 1)
+        self.assertAlmostEqual(accepted["ledger"][0]["risk_usd"], 19.95)
+        self.assertEqual(rejected["trades"], 0)
+        self.assertEqual(rejected["rejections"]["risk_cap"], 1)
+        with self.assertRaises(ValueError):
+            Rules(buy_stop_atr=1.5, stop_mode="structure")
+
     def test_entry_spread_is_in_trade_mae_and_account_drawdown(self):
         frame, ticks = sample()
         # First quote has larger spread than any subsequent adverse movement.

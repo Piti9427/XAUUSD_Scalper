@@ -1,0 +1,58 @@
+"""Alternate old/new actual annual replays, compare entire result each timed run."""
+from dataclasses import asdict
+from importlib.machinery import SourceFileLoader
+import importlib.util
+import json
+from pathlib import Path
+import statistics
+import sys
+import time
+from scripts.research.public_exness_archive import load_discovery
+from scripts.research.bidirectional_campaign import candidate_frame
+from scripts.research import breakout_logic as after
+from scripts.research.tune_breakout_logic import sha256
+
+before_path = Path("docs/reviews/artifacts/2026-10-03-profile-baseline-400ee9e58cbe9b4d4c7882e88512aff92293a81359ca3778629e66a41478ee03.py.txt")
+spec = importlib.util.spec_from_file_location("profile_before", before_path, loader=SourceFileLoader("profile_before", str(before_path)))
+before = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = before
+spec.loader.exec_module(before)
+output_path = Path("docs/reviews/2026-10-03-replay-paired-benchmark.json")
+if output_path.exists(): raise ValueError("preserve executed timing evidence")
+frame, ticks, broker, audit = load_discovery(Path("data/b1_public_exness_2025_10_2026_09"))
+root = Path("data/strategy_annual_directional_circuit_approved_rr_2026_10_03")
+rows = []
+for directory, scenario in [("baseline", "full-base"), ("trial-022", "full-base"), ("trial-022", "full-stress")]:
+    marker = json.loads((root / directory / "result.json").read_text())
+    candidate = marker["candidate"]
+    saved = root / directory / (scenario + ".json")
+    assert sha256(saved) == marker["artifact_hashes"][saved.name]
+    expected = json.loads(saved.read_text())
+    prepared = frame if candidate is None else candidate_frame(frame, candidate["buy_filter"], candidate["depth"], oscillator_spec=candidate["oscillator_spec"])
+    expected["rules"] = asdict(after.Rules(**expected["rules"]))
+    def evaluate(engine):
+        result = engine.replay(prepared, ticks, broker, engine.Rules(**expected["rules"]), engine.Costs(**expected["costs"]),
+                               start=engine.pd.Timestamp(expected["start_utc"]), end=engine.pd.Timestamp(expected["end_exclusive_utc"]))
+        assert result == expected
+    for engine in (before, after): evaluate(engine)
+    samples = {"before": [], "after": []}
+    for iteration in range(5):
+        order = [("before", before), ("after", after)]
+        if iteration % 2: order.reverse()
+        for label, engine in order:
+            began = time.perf_counter()
+            evaluate(engine)
+            samples[label].append(time.perf_counter() - began)
+    medians = {label: statistics.median(values) for label, values in samples.items()}
+    row = dict(directory=directory, scenario=scenario, seconds=samples, median_seconds=medians,
+               speedup=medians["before"] / medians["after"], complete_result_match=True,
+               scenario_sha256=sha256(saved))
+    rows.append(row)
+    print(directory, scenario, medians, "speedup", row["speedup"], flush=True)
+output = dict(status="PAIRED_ACTUAL_ANNUAL_COMPLETE_RESULT_MATCH", ticks=audit["raw_ticks"], bars=audit["canonical_bars"],
+              dataset_sha256=audit["dataset_sha256"], before_engine_sha256=sha256(before_path),
+              after_engine_sha256=sha256("scripts/research/breakout_logic.py"), benchmark_sha256=sha256(__file__),
+              alternating_order=True, timed_repetitions_per_engine_per_case=5, cases=rows,
+              limitation="One host/warm input pages; microbenchmark replay excludes archive auditing, orchestration and serialization")
+output_path.write_text(json.dumps(output, indent=2) + "\n")
+print("PAIRED_COMPLETE", flush=True)

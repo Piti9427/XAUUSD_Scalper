@@ -38,8 +38,21 @@ class Rules:
     max_daily_losses: int = 0
     protect_after_r: float = 0.5
     stop_atr: float = 2.5
+    buy_stop_atr: float | None = None
+    buy_target_rr: float | None = None
+    buy_protect_mode: str | None = None
 
     def __post_init__(self):
+        if self.buy_protect_mode not in (None, "off", "break_even"):
+            raise ValueError("unsupported BUY protection")
+        if self.buy_stop_atr is not None and self.buy_stop_atr not in (1.0, 1.5, 2.0, 2.5):
+            raise ValueError("unsupported BUY ATR stop multiplier")
+        if self.buy_target_rr is not None and self.buy_target_rr not in (1.25, 1.35, 1.5, 2.0):
+            raise ValueError("unsupported BUY risk distance target")
+        if (
+            self.buy_stop_atr is not None or self.buy_target_rr is not None
+        ) and self.stop_mode != "atr":
+            raise ValueError("BUY exit profile requires ATR stop mode")
         if self.stop_atr not in (1.5, 2.0, 2.5):
             raise ValueError("unsupported ATR stop multiplier")
         if self.protect_after_r not in (0.5, 1.0, 1.5, 2.0):
@@ -187,17 +200,27 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         raise ValueError("unequal tick arrays")
     left, right = np.searchsorted(all_t, [start.value // 10**6, end.value // 10**6])
     times = all_t[left:right]
-    bid = all_b[left:right] - costs.extra_spread / 2
-    ask = all_a[left:right] + costs.extra_spread / 2
-    if (
-        not len(times)
-        or (np.diff(times) < 0).any()
-        or not np.isfinite(bid).all()
-        or not np.isfinite(ask).all()
-        or (bid <= 0).any()
-        or (ask < bid).any()
-    ):
+    # Read-only float tapes need no full-window copies for actual-spread replay.
+    bid = all_b[left:right]
+    ask = all_a[left:right]
+    if costs.extra_spread or not np.issubdtype(bid.dtype, np.floating):
+        bid = bid - costs.extra_spread / 2
+    if costs.extra_spread or not np.issubdtype(ask.dtype, np.floating):
+        ask = ask + costs.extra_spread / 2
+    if not len(times):
         raise ValueError("invalid ticks")
+    # Bound validation temporaries; overlap one timestamp across every chunk seam.
+    for cursor in range(0, len(times), 100000):
+        stop = cursor + 100000
+        b, a = bid[cursor:stop], ask[cursor:stop]
+        if (
+            (np.diff(times[max(0, cursor - 1) : stop]) < 0).any()
+            or not np.isfinite(b).all()
+            or not np.isfinite(a).all()
+            or (b <= 0).any()
+            or (a < b).any()
+        ):
+            raise ValueError("invalid ticks")
     for key in ("trade_contract_size", "trade_tick_size", "leverage", "volume_step"):
         if not math.isfinite(broker[key]) or broker[key] <= 0:
             raise ValueError("invalid broker specification")
@@ -334,12 +357,12 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                 )
             cursor += used
 
-    for row in frame.itertuples():
-        closed = row.Index + pd.Timedelta(minutes=15)
-        if not start <= closed < end:
-            continue
-        stamp = int(closed.value // 10**6)
-        index = int(np.searchsorted(times, stamp))
+    completed = frame.index + pd.Timedelta(minutes=15)
+    selected = (completed >= start) & (completed < end)
+    stamps = completed[selected].as_unit("ms").asi8
+    indices = np.searchsorted(times, stamps)
+    for row, stamp, index in zip(frame.loc[selected].itertuples(), stamps, indices):
+        stamp, index = int(stamp), int(index)
         if index >= len(times):
             continue
         advance(previous, index + 1)
@@ -367,7 +390,14 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                 elif rules.stagnant_bars and p["held_bars"] >= rules.stagnant_bars and net_now <= 0:
                     close(index, "STAGNANT")
                     closed_by_rule = True
-        if position is not None and stamp > position["entry_ms"] and rules.protect_mode != "off":
+        protect_mode = (
+            rules.buy_protect_mode
+            if position is not None
+            and position["direction"] == 1
+            and rules.buy_protect_mode is not None
+            else rules.protect_mode
+        )
+        if position is not None and stamp > position["entry_ms"] and protect_mode != "off":
             p = position
             executable = float(bid[index] if p["direction"] == 1 else ask[index])
             net_now = (
@@ -383,7 +413,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                     -p["direction"],
                 )
                 candidate = break_even
-                if rules.protect_mode in ("candle_trail", "runner"):
+                if protect_mode in ("candle_trail", "runner"):
                     anchor = row.low if p["direction"] == 1 else row.high
                     trail = _level(
                         anchor - p["direction"] * broker["trade_tick_size"],
@@ -399,7 +429,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
                 ):
                     p["stop"] = candidate
                     p["stop_updates"] += 1
-                    if rules.protect_mode == "runner":
+                    if protect_mode == "runner":
                         p["target_disabled"] = True
         if (
             reset_range is not None
@@ -477,9 +507,17 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if not all(math.isfinite(v) for v in (row.atr, row.hh, row.ll)) or row.atr <= 0:
             continue
         entry = float(ask[index] if direction == 1 else bid[index]) + direction * costs.slippage
-        stop = _level(
-            entry - direction * row.atr * rules.stop_atr, broker["trade_tick_size"], direction
+        stop_atr = (
+            rules.buy_stop_atr
+            if direction == 1 and rules.buy_stop_atr is not None
+            else rules.stop_atr
         )
+        target_rr = (
+            rules.buy_target_rr
+            if direction == 1 and rules.buy_target_rr is not None
+            else rules.target_rr
+        )
+        stop = _level(entry - direction * row.atr * stop_atr, broker["trade_tick_size"], direction)
         if rules.stop_mode in ("structure", "trigger"):
             anchor = (
                 (row.low if direction == 1 else row.high)
@@ -497,9 +535,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if not math.isfinite(stop) or direction * (executable - stop) <= 0:
             rejected["invalid_stop"] += 1
             continue
-        target_distance = (
-            abs(entry - stop) * rules.target_rr if rules.target_rr else row.atr * rules.target_atr
-        )
+        target_distance = abs(entry - stop) * target_rr if target_rr else row.atr * rules.target_atr
         target = _level(entry + direction * target_distance, broker["trade_tick_size"], direction)
         risk = (abs(entry - stop) + costs.slippage) * factor + fee
         admission_cap = rules.risk_cap

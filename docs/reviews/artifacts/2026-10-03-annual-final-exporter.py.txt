@@ -1,0 +1,76 @@
+"""Publish only measured, completed annual campaigns under owner-approved RR policy."""
+import json
+from pathlib import Path
+from scripts.research.bidirectional_campaign import qualifies_trial30
+from scripts.research.tune_breakout_logic import sha256
+
+families = ("risk", "confirmation", "hybrid_unpaused", "sessions", "directional", "directional_trend", "directional_circuit", "directional_fine", "fast_quality", "short_sell")
+legacy_path = Path("docs/reviews/2026-10-03-annual-results.json")
+requalification_path = Path("docs/reviews/2026-10-03-annual-approved-requalification.json")
+legacy = json.loads(legacy_path.read_text())
+requalification = json.loads(requalification_path.read_text())
+assert requalification["total_requalified"] == legacy["annual_evaluations"] == 192
+assert requalification["total_qualified"] == 0
+legacy_root = Path(legacy["campaigns"][0]["root"])
+legacy_baseline = {name: json.loads((legacy_root / "baseline" / name).read_text())
+                   for name in legacy["campaigns"][0]["rows"][0]["artifacts"]["scenario_hashes"]}
+published = []
+for family in families:
+    root = Path("data/strategy_annual_" + family + "_approved_rr_2026_10_03")
+    protocol = json.loads((root / "protocol.json").read_text())
+    verdict = json.loads((root / "verdict.json").read_text())
+    proof = json.loads((root / "fresh-verification.json").read_text())
+    assert proof["status"] == "FRESH_REPLAY_MATCH"
+    assert proof["protocol_sha256"] == sha256(root / "protocol.json")
+    assert proof["verdict_sha256"] == sha256(root / "verdict.json")
+    assert proof["verifier_sha256"] == sha256("docs/reviews/artifacts/2026-10-03-annual-verifier.py.txt")
+    assert protocol["audit"]["dataset_sha256"] == legacy["dataset_sha256"]
+    assert protocol["annual_coverage"]["calendar_days"] == 365
+    assert len(protocol["annual_coverage"]["verified_months"]) == 12
+    assert protocol["baseline_rr_policy"] == "zero_reference_only_when_all_executed_baseline_trades_are_losses; candidateRR>1; undefined_otherwise_reject"
+    assert verdict["campaign_exhausted"] and verdict["completed_trials"] == len(protocol["candidates"])
+    assert proof["verified_scenarios"] == 6 * (verdict["completed_trials"] + 1)
+    for source, digest in protocol["source_hashes"].items():
+        assert sha256(root / "source_snapshot" / source) == digest
+    for number, artifacts in proof["artifacts"].items():
+        directory = root / ("baseline" if number == "0" else f"trial-{int(number):03d}")
+        assert sha256(directory / "result.json") == artifacts["result_sha256"]
+        for name, digest in artifacts["scenario_hashes"].items():
+            assert sha256(directory / name) == digest
+    baseline = json.loads((root / "baseline/result.json").read_text())["metrics"]
+    for name, expected in legacy_baseline.items():
+        measured = json.loads((root / "baseline" / name).read_text())
+        for key in ("buy_stop_atr", "buy_target_rr", "buy_protect_mode"):
+            if key in measured["rules"]:
+                assert measured["rules"].pop(key) is None
+        assert measured == expected, (family, name, "baseline complete result parity")
+    rows = []
+    for row in verdict["rows"]:
+        passed = {w: qualifies_trial30(pair, baseline[w], 60 if w == "full" else 20)
+                  for w, pair in row["metrics"].items()}
+        assert passed == row["window_pass"] and row["discovery_pass"] == all(passed.values())
+        rows.append(dict(row, artifacts=proof["artifacts"][str(row["trial"])]))
+    assert verdict["qualified_discovery"] == sum(r["discovery_pass"] for r in rows)
+    published.append(dict(family=family, root=str(root), completed_trials=len(rows),
+                          exact_fresh_scenarios=proof["verified_scenarios"],
+                          qualified_discovery=verdict["qualified_discovery"],
+                          protocol=protocol, protocol_sha256=sha256(root / "protocol.json"),
+                          verdict_sha256=sha256(root / "verdict.json"),
+                          fresh_verification_sha256=sha256(root / "fresh-verification.json"),
+                          baseline=baseline, rows=rows))
+output = dict(status="ANNUAL_APPROVED_RR_RESEARCH_COMPLETE",
+              owner_approval=requalification["owner_approval"],
+              legacy_results_sha256=sha256(legacy_path),
+              legacy_requalification_sha256=sha256(requalification_path),
+              previous_evaluations=192, new_evaluations=sum(p["completed_trials"] for p in published),
+              total_annual_evaluations=192 + sum(p["completed_trials"] for p in published),
+              total_exact_fresh_scenarios=legacy["exact_fresh_scenario_comparisons"] + sum(p["exact_fresh_scenarios"] for p in published),
+              total_qualified=sum(p["qualified_discovery"] for p in published),
+              dataset_sha256=legacy["dataset_sha256"], campaigns=published,
+              qualifier_source_sha256=sha256("scripts/research/bidirectional_campaign.py"),
+              exporter_sha256=sha256(__file__),
+              baseline_complete_result_parity=True,
+              limitations="Adaptive/reused discovery, no independent annual validation or Demo parity; commission0 assumed, swap omitted; no guarantee future superiority",
+              demo_changed=False)
+Path("docs/reviews/2026-10-03-annual-final-results.json").write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n")
+print("EXPORTED", output["total_annual_evaluations"], "fresh", output["total_exact_fresh_scenarios"], "qualified", output["total_qualified"], flush=True)

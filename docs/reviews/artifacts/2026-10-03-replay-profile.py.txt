@@ -1,0 +1,83 @@
+"""Profile actual annual replay, assert complete saved results; no strategy scoring changes."""
+import argparse
+import cProfile
+from dataclasses import asdict
+import importlib.util
+from importlib.machinery import SourceFileLoader
+import io
+import json
+from pathlib import Path
+import platform
+import pstats
+import statistics
+import sys
+import time
+import tracemalloc
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--engine", type=Path, required=True)
+parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--repeats", type=int, default=3)
+args = parser.parse_args()
+if args.output.exists(): raise ValueError("preserve previous performance evidence")
+if not 1 <= args.repeats <= 10: raise ValueError("invalid repetitions")
+spec = importlib.util.spec_from_file_location("scripts.research.breakout_logic", args.engine, loader=SourceFileLoader("scripts.research.breakout_logic", str(args.engine)))
+engine = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = engine
+spec.loader.exec_module(engine)
+from scripts.research.public_exness_archive import load_discovery
+from scripts.research.bidirectional_campaign import candidate_frame
+from scripts.research.tune_breakout_logic import sha256
+
+began = time.perf_counter()
+frame, ticks, broker, audit = load_discovery(Path("data/b1_public_exness_2025_10_2026_09"))
+setup_seconds = time.perf_counter() - began
+cases = []
+root = Path("data/strategy_annual_directional_circuit_approved_rr_2026_10_03")
+for directory, scenario in [("baseline", "full-base"), ("trial-022", "full-base"), ("trial-022", "full-stress")]:
+    marker = json.loads((root / directory / "result.json").read_text())
+    candidate = marker["candidate"]
+    saved_path = root / directory / (scenario + ".json")
+    assert sha256(saved_path) == marker["artifact_hashes"][saved_path.name]
+    expected = json.loads(saved_path.read_text())
+    prepared = frame if candidate is None else candidate_frame(
+        frame, candidate["buy_filter"], candidate["depth"], oscillator_spec=candidate["oscillator_spec"])
+    rules = engine.Rules(**expected["rules"])
+    expected["rules"] = asdict(rules)
+    def evaluate():
+        actual = engine.replay(prepared, ticks, broker, rules, engine.Costs(**expected["costs"]),
+                               start=engine.pd.Timestamp(expected["start_utc"]),
+                               end=engine.pd.Timestamp(expected["end_exclusive_utc"]))
+        assert actual == expected, (directory, scenario, "complete frozen result changed")
+        return actual
+    # One unmeasured warmup followed by independent timed repetitions.
+    evaluate()
+    samples = []
+    for _ in range(args.repeats):
+        began = time.perf_counter()
+        evaluate()
+        samples.append(time.perf_counter() - began)
+    profile = cProfile.Profile()
+    profile.enable()
+    evaluate()
+    profile.disable()
+    stats_output = io.StringIO()
+    pstats.Stats(profile, stream=stats_output).strip_dirs().sort_stats("cumulative").print_stats(15)
+    tracemalloc.start()
+    evaluate()
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    print(directory, scenario, "median", statistics.median(samples), "peakMiB", peak / 2**20, flush=True)
+    print(stats_output.getvalue(), flush=True)
+    cases.append(dict(directory=directory, scenario=scenario, seconds=samples,
+                      median_seconds=statistics.median(samples), traced_peak_bytes=peak,
+                      traced_retained_bytes=current, profile=stats_output.getvalue(),
+                      complete_result_match=True, original_scenario_sha256=sha256(saved_path)))
+output = dict(status="ACTUAL_ANNUAL_PROFILE_COMPLETE_RESULT_MATCH", python=sys.version,
+              platform=platform.platform(), engine=str(args.engine), engine_sha256=sha256(args.engine),
+              profiler_sha256=sha256(__file__), dataset_sha256=audit["dataset_sha256"],
+              ticks=audit["raw_ticks"], bars=audit["canonical_bars"], setup_seconds=setup_seconds,
+              repeats=args.repeats, cases=cases,
+              limitation="Single host, warm filesystem, scheduling affects timings; tracemalloc allocation peak excludes file-backed mapping resident pages")
+args.output.write_text(json.dumps(output, indent=2) + "\n")
+print("PROFILE_COMPLETE", args.output, flush=True)

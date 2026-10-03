@@ -29,8 +29,11 @@ def candidate_frame(
     entry_session="all",
 ):
     """Causal completed-bar signals; default D48 or explicit directional horizons."""
-    if entry_session not in ("all", "avoid_rollover"):
+    utc_sessions = {"utc_00_07": (0, 7), "utc_07_13": (7, 13), "utc_13_20": (13, 20)}
+    if entry_session not in ("all", "avoid_rollover", *utc_sessions):
         raise ValueError("unsupported entry session")
+    if entry_session != "all" and (frame.index.tz is None or str(frame.index.tz) != "UTC"):
+        raise ValueError("session filters require aware UTC")
     if buy_filter not in ("off", "ema50", "prior_day", "body", "extreme", "ema_prior"):
         raise ValueError("unknown BUY filter")
     if depth not in (0.0, 0.15):
@@ -177,6 +180,10 @@ def candidate_frame(
         result.loc[distance < depth, "direction"] = 0
     if entry_session == "avoid_rollover":
         result.loc[(result.index + pd.Timedelta(minutes=15)).hour >= 21, "direction"] = 0
+    elif entry_session in utc_sessions:
+        lower, upper = utc_sessions[entry_session]
+        hour = (result.index + pd.Timedelta(minutes=15)).hour
+        result.loc[(hour < lower) | (hour >= upper), "direction"] = 0
     return result
 
 
@@ -197,7 +204,24 @@ def qualifies_trial30(pair, baseline, min_trades):
     for candidate, parent in zip(pair, baseline):
         if any(candidate.get(k) is None or not math.isfinite(candidate[k]) for k in keys):
             return False
-        if any(parent.get(k) is None or not math.isfinite(parent[k]) for k in keys[:4]):
+        if any(
+            parent.get(k) is None or not math.isfinite(parent[k])
+            for k in (keys[0], keys[1], keys[3])
+        ):
+            return False
+        parent_rr = parent.get("realized_rr")
+        if parent_rr is None:
+            if not (
+                type(parent.get("trades")) is int
+                and parent["trades"] > 0
+                and parent.get("loss_trades") == parent["trades"]
+                and parent["win_rate"] == 0
+                and parent["net_usd"] < 0
+            ):
+                return False
+            # Owner-approved all-loss reference floor, not a measured ratio.
+            parent_rr = 0.0
+        if not math.isfinite(parent_rr):
             return False
         if (
             candidate["trades"] < min_trades
@@ -208,7 +232,7 @@ def qualifies_trial30(pair, baseline, min_trades):
             or not 0 <= candidate["win_rate"] <= 1
             or candidate["net_usd"] <= max(0, parent["net_usd"])
             or candidate["win_rate"] <= parent["win_rate"]
-            or candidate["realized_rr"] <= max(1, parent["realized_rr"])
+            or candidate["realized_rr"] <= max(1, parent_rr)
         ):
             return False
     return True
@@ -218,6 +242,7 @@ def metrics(result):
     summary = {k: v for k, v in result.items() if k not in ("ledger", "equity")}
     summary["buy_trades"] = sum(p["direction"] == 1 for p in result["ledger"])
     summary["sell_trades"] = sum(p["direction"] == -1 for p in result["ledger"])
+    summary["loss_trades"] = sum(p["net"] < 0 for p in result["ledger"])
     if summary["buy_trades"] + summary["sell_trades"] != summary["trades"]:
         raise ValueError("ledger direction/count mismatch")
     return summary
@@ -237,6 +262,278 @@ def contracts(catalog="quality"):
             )
         )
 
+    if catalog == "annual_fast_quality":
+        return [
+            dict(
+                hypothesis="shorter_trend_breakout_with_causal_candle_quality",
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(buy_lookback=lookback, sell_lookback=lookback, trend_span=trend),
+                rules=asdict(
+                    Rules(
+                        stop_atr=1.5,
+                        target_rr=reward,
+                        entry_mode=entry,
+                        entry_guard=guard,
+                        protect_mode="off",
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                    )
+                ),
+            )
+            for lookback, trend, guard, reward, entry in product(
+                (12, 24, 48),
+                (50, 200),
+                ("off", "body_dominant", "close_extreme"),
+                (1.35, 1.5),
+                ("immediate", "confirm"),
+            )
+        ]
+    if catalog == "annual_short_sell":
+        return [
+            dict(
+                hypothesis="short_sell_stop_retains_three_atr_reward_with_directional_buy_exits",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(
+                    period=period,
+                    threshold=threshold,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=lookback,
+                    parent_trend_span=200,
+                ),
+                rules=asdict(
+                    Rules(
+                        stop_atr=1.5,
+                        target_atr=3.0,
+                        protect_mode=protection,
+                        protect_after_r=activation,
+                        buy_stop_atr=1.5,
+                        buy_target_rr=reward,
+                        buy_protect_mode="off",
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                    )
+                ),
+            )
+            for (period, threshold), lookback, reward, (protection, activation) in product(
+                ((7, 35), (14, 25)),
+                (48, 96),
+                (1.35, 2.0),
+                (("off", 1.0), ("break_even", 0.5), ("break_even", 1.0)),
+            )
+        ]
+    if catalog in (
+        "annual_directional",
+        "annual_directional_trend",
+        "annual_directional_circuit",
+        "annual_directional_fine",
+    ):
+        if catalog == "annual_directional":
+            choices = product(
+                (7, 14), (25, 35), (48,), (0,), (1.5, 2.0, 2.5), (1.25, 1.35, 1.5, 2.0), ("static",)
+            )
+        elif catalog == "annual_directional_trend":
+            choices = product(
+                (7,),
+                (35,),
+                (24, 48, 96),
+                (50, 200),
+                (1.5, 2.0),
+                (1.25, 1.35),
+                ("static", "drawdown_steps"),
+            )
+        elif catalog == "annual_directional_circuit":
+            choices = (
+                (period, threshold, lookback, trend, 1.5, reward, "static")
+                for (period, threshold), lookback, trend, reward in product(
+                    ((7, 35), (14, 25)), (24, 48, 96), (50, 200), (1.35, 2.0)
+                )
+            )
+        else:
+            choices = product(
+                (14,), (25, 30, 35), (96,), (50, 200), (1.0, 1.5), (1.5, 2.0), ("static",)
+            )
+        circuit = catalog in ("annual_directional_circuit", "annual_directional_fine")
+        hypotheses = {
+            "annual_directional": "buy_specific_exits_preserve_trial30_sell_contract",
+            "annual_directional_trend": "directional_exits_with_causal_sell_trend_and_admission",
+            "annual_directional_circuit": "directional_profiles_with_daily_loss_circuit",
+            "annual_directional_fine": "directional_full_pass_with_more_cost_admissible_buy_signals",
+        }
+        return [
+            dict(
+                hypothesis=hypotheses[catalog],
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(
+                    period=period,
+                    threshold=threshold,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=lookback,
+                    parent_trend_span=trend,
+                ),
+                rules=asdict(
+                    Rules(
+                        stop_atr=2.5,
+                        target_atr=3.0,
+                        target_rr=0.0,
+                        protect_mode="break_even",
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10 if circuit else 0.20,
+                        max_daily_losses=1 if circuit else 0,
+                        risk_cap=0.10,
+                        risk_mode=risk,
+                        buy_stop_atr=stop,
+                        buy_target_rr=reward,
+                        buy_protect_mode="off",
+                    )
+                ),
+            )
+            for period, threshold, lookback, trend, stop, reward, risk in choices
+        ]
+    if catalog == "annual_sessions":
+        return [
+            dict(
+                hypothesis="annual_immediate_signals_by_fixed_utc_session",
+                buy_filter="off",
+                depth=0.0,
+                entry_session=session,
+                **(
+                    dict(signal_spec=dict(buy_lookback=48, sell_lookback=48, trend_span=50))
+                    if signal == "symmetric"
+                    else dict(
+                        oscillator_spec=dict(
+                            period=7,
+                            threshold=35,
+                            trend_span=50,
+                            side="buy",
+                            parent_lookback=48,
+                            parent_trend_span=50,
+                        )
+                    )
+                ),
+                rules=asdict(
+                    Rules(
+                        stop_atr=stop,
+                        target_rr=reward,
+                        protect_mode="off",
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                        buy_pause_drawdown=0.0,
+                    )
+                ),
+            )
+            for signal, session, stop, reward in product(
+                ("symmetric", "hybrid"),
+                ("utc_00_07", "utc_07_13", "utc_13_20"),
+                (1.5, 2.5),
+                (1.25, 1.35, 2.0),
+            )
+        ]
+    if catalog == "annual_hybrid_unpaused":
+        return [
+            dict(
+                hypothesis="annual_shorter_stop_without_rsi_buy_drawdown_pause",
+                buy_filter="off",
+                depth=0.0,
+                oscillator_spec=dict(
+                    period=7,
+                    threshold=threshold,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=lookback,
+                    parent_trend_span=trend,
+                ),
+                rules=asdict(
+                    Rules(
+                        stop_atr=stop,
+                        target_rr=reward,
+                        risk_mode=risk,
+                        buy_pause_drawdown=0.0,
+                        protect_mode="off",
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                    )
+                ),
+            )
+            for lookback, trend, threshold, stop, reward, risk in product(
+                (24, 48, 96),
+                (50, 200),
+                (25, 35),
+                (1.5, 2.0),
+                (1.25, 1.35),
+                ("static", "drawdown_steps"),
+            )
+        ]
+    if catalog in ("annual_risk", "annual_confirmation"):
+        choices = (
+            [
+                (reward, 2.5, "immediate", risk, cap)
+                for reward, (risk, cap) in product(
+                    (1.35, 1.5, 2.0), (("static", 0.05), ("drawdown_steps", 0.10))
+                )
+            ]
+            if catalog == "annual_risk"
+            else [
+                (reward, stop, entry, "static", 0.10)
+                for reward, stop, entry in product((1.25, 1.35), (1.5, 2.5), ("confirm", "retest"))
+            ]
+        )
+        return [
+            dict(
+                hypothesis=(
+                    "annual_symmetric_tighter_risk"
+                    if catalog == "annual_risk"
+                    else "annual_symmetric_causal_confirmation_smaller_reward"
+                ),
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(buy_lookback=lookback, sell_lookback=lookback, trend_span=trend),
+                rules=asdict(
+                    Rules(
+                        target_rr=reward,
+                        stop_atr=stop,
+                        entry_mode=entry,
+                        risk_mode=risk,
+                        risk_cap=cap,
+                        protect_mode="off",
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                    )
+                ),
+            )
+            for lookback, trend, (reward, stop, entry, risk, cap) in product(
+                (24, 48, 96), (50, 200), choices
+            )
+        ]
+    if catalog == "annual_bidirectional":
+        return [
+            dict(
+                hypothesis="symmetric_trend_breakout_without_buy_pause_on_annual_archive",
+                buy_filter="off",
+                depth=0.0,
+                signal_spec=dict(buy_lookback=lookback, sell_lookback=lookback, trend_span=trend),
+                rules=asdict(
+                    Rules(
+                        target_rr=reward,
+                        protect_mode=protection,
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                    )
+                ),
+            )
+            for lookback, trend, reward, protection in product(
+                (24, 48, 96), (50, 200), (1.35, 1.5, 2.0), ("off", "break_even")
+            )
+        ]
     if catalog == "hybrid_parent_invalidation":
         # Freeze the measured parent-trend178 contract as the control origin.
         base = next(
@@ -1034,6 +1331,7 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--dataset", type=Path)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--require-calendar-year", action="store_true")
     parser.add_argument(
         "--catalog",
         choices=(
@@ -1064,6 +1362,17 @@ def main(argv=None):
             "hybrid_parent_atr",
             "hybrid_parent_protection",
             "hybrid_parent_invalidation",
+            "annual_bidirectional",
+            "annual_risk",
+            "annual_confirmation",
+            "annual_hybrid_unpaused",
+            "annual_sessions",
+            "annual_directional",
+            "annual_directional_trend",
+            "annual_directional_circuit",
+            "annual_directional_fine",
+            "annual_fast_quality",
+            "annual_short_sell",
         ),
         default="quality",
     )
@@ -1088,6 +1397,46 @@ def main(argv=None):
         windows = dict(
             full=(START, END), first_half=(START, TRAIN_END), second_half=(TRAIN_END, END)
         )
+    annual_coverage = None
+    if args.require_calendar_year:
+        start, end = windows["full"]
+        if end - start < pd.Timedelta(days=365):
+            raise ValueError("annual research requires at least 365 calendar days")
+        if args.dataset is None:
+            raise ValueError("annual research requires an audited monthly dataset")
+        metadata_path = args.dataset / "dataset.json"
+        if sha256(metadata_path) != audit["dataset_sha256"]:
+            raise ValueError("annual dataset metadata changed after loading")
+        metadata = json.loads(metadata_path.read_text())
+        expected = list(pd.date_range(start, end, freq="MS", inclusive="left"))
+        imported = metadata["imported_months"]
+        if (
+            start.day != 1
+            or end.day != 1
+            or len(expected) < 12
+            or [item["month"] for item in imported] != [m.strftime("%Y-%m") for m in expected]
+        ):
+            raise ValueError("annual research requires every audited calendar month in order")
+        for month, item in zip(expected, imported):
+            following = month + pd.offsets.MonthBegin(1)
+            low, high = np.searchsorted(ticks[0], [month.value // 10**6, following.value // 10**6])
+            bars = frame.loc[(frame.index >= month) & (frame.index < following)]
+            if (
+                high - low != item["ticks"]
+                or item["ticks"] <= 0
+                or len(bars) != item["canonical_bars"]
+                or len(bars) == 0
+            ):
+                raise ValueError("annual research monthly tick/bar coverage mismatch")
+        if sum(item["ticks"] for item in imported) != len(ticks[0]):
+            raise ValueError("annual research contains ticks outside declared months")
+        annual_coverage = dict(
+            minimum_calendar_days=365,
+            calendar_days=(end - start).days,
+            verified_months=[item["month"] for item in imported],
+            monthly_ticks=[item["ticks"] for item in imported],
+            monthly_canonical_bars=[item["canonical_bars"] for item in imported],
+        )
     costs = dict(base=Costs(), stress=Costs(extra_spread=0.2, slippage=0.1))
     baseline = Rules(
         entry_guard="sell_only",
@@ -1109,6 +1458,7 @@ def main(argv=None):
         catalog=args.catalog,
         baseline_snapshot="RESEARCH-D48-SELL-BE1R-20261001-T030",
         baseline_rules=asdict(baseline),
+        baseline_rr_policy="zero_reference_only_when_all_executed_baseline_trades_are_losses; candidateRR>1; undefined_otherwise_reject",
         candidates=catalog,
         windows={k: [s.isoformat(), e.isoformat()] for k, (s, e) in windows.items()},
         costs={k: asdict(v) for k, v in costs.items()},
@@ -1119,6 +1469,8 @@ def main(argv=None):
         selection="lowest worst-window stress DD, highest full stress net, trial id",
         limitations="Reused discovery, no untouched validation; commission0 assumed, swap not modeled; no MT5 or notification APIs; not runtime authorization",
     )
+    if annual_coverage is not None:
+        protocol["annual_coverage"] = annual_coverage
     output = args.output
     if args.resume:
         if json.loads((output / "protocol.json").read_text()) != protocol:
