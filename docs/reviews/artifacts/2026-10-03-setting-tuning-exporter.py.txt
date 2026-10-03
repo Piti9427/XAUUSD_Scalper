@@ -1,0 +1,251 @@
+import json
+from pathlib import Path
+from scripts.research.bidirectional_campaign import qualifies_trial30
+from scripts.research.tune_breakout_logic import sha256
+from scripts.research.run_strategy_campaign import write_json
+
+families = [
+    ("hybrid_atr_stop", "2026_10_03"),
+    ("hybrid_parent_horizon_corrected", "2026_10_03"),
+    ("hybrid_parent_trend", "2026_10_03"),
+    ("hybrid_parent_quality", "2026_10_03"),
+    ("hybrid_parent_reward_fine", "2026_10_03"),
+    ("hybrid_parent_reward_pause", "2026_10_03"),
+    ("hybrid_parent_risk", "2026_10_03"),
+    ("hybrid_parent_atr", "2026_10_03"),
+    ("hybrid_parent_protection", "2026_10_03"),
+    ("hybrid_parent_invalidation", "2026_10_03"),
+]
+prior = [
+    "strategy_bidirectional_trial30_campaign_2026_10_01",
+    "strategy_bidirectional_setups_trial30_campaign_2026_10_01",
+    "strategy_bidirectional_symmetric_trial30_campaign_2026_10_01",
+    "strategy_bidirectional_geometry_tuning_2026_10_01",
+    "strategy_bidirectional_admission_tuning_2026_10_01",
+]
+prior += [
+    f"strategy_bidirectional_{family}_campaign_{date}"
+    for family, date in [
+        ("horizons", "2026_10_01"),
+        ("horizon_quality", "2026_10_01"),
+        ("compression", "2026_10_01"),
+        ("oscillator", "2026_10_01"),
+        ("hybrid_oscillator", "2026_10_01"),
+        ("hybrid_admission", "2026_10_02"),
+        ("hybrid_invalidation", "2026_10_02"),
+        ("hybrid_reward", "2026_10_02"),
+        ("reward_session", "2026_10_02"),
+        ("hybrid_reward_admission", "2026_10_03"),
+        ("hybrid_reward_quality", "2026_10_03"),
+        ("hybrid_reward_geometry", "2026_10_03"),
+    ]
+]
+
+
+def canonical(c):
+    s = dict(buy_lookback=48, sell_lookback=48, trend_span=0, max_range_atr=0.0)
+    s.update(c.get("signal_spec") or {})
+    o = c.get("oscillator_spec")
+    if o:
+        o = dict(side="both", **o) if "side" not in o else o
+    if o and o.get("side") == "buy":
+        o = dict(o)
+        o.setdefault("parent_lookback", 48)
+        o.setdefault("parent_trend_span", 0)
+    rules = dict(c["rules"])
+    rules.setdefault("stop_atr", 2.5)
+    if rules["stop_mode"] != "atr":
+        rules["stop_atr"] = 2.5
+    if rules["protect_mode"] == "off":
+        rules["protect_after_r"] = 1.0
+    return json.dumps(
+        dict(
+            entry_session=c.get("entry_session", "all"),
+            buy_signal=c.get("buy_signal", "breakout"),
+            buy_filter=c["buy_filter"],
+            depth=c["depth"],
+            signal_spec=s if o is None else None,
+            oscillator_spec=o,
+            rules=rules,
+        ),
+        sort_keys=True,
+    )
+
+
+previous = {}
+for name in prior:
+    root = Path("data") / name
+    for n, c in enumerate(json.loads((root / "protocol.json").read_text())["candidates"], 1):
+        previous.setdefault(canonical(c), root / f"trial-{n:03d}")
+keys = [
+    "net_usd",
+    "max_dd_pct",
+    "win_rate",
+    "realized_rr",
+    "trades",
+    "buy_trades",
+    "sell_trades",
+    "max_admitted_risk_pct",
+]
+
+
+def trim(m):
+    return {w: [{k: x[k] for k in keys} for x in pair] for w, pair in m.items()}
+
+
+reports = []
+for family, date in families:
+    root = Path(f"data/strategy_bidirectional_{family}_campaign_{date}")
+    p = json.loads((root / "protocol.json").read_text())
+    v = json.loads((root / "verdict.json").read_text())
+    proof = json.loads((root / "fresh-verification.json").read_text())
+    n = len(p["candidates"])
+    assert v["campaign_exhausted"] and v["completed_trials"] == v["total_contracts"] == n
+    assert proof["status"] == "FRESH_REPLAY_MATCH" and proof["verified_scenarios"] == 6 * (n + 1)
+    assert proof["protocol_sha256"] == sha256(root / "protocol.json") and proof[
+        "verdict_sha256"
+    ] == sha256(root / "verdict.json")
+    assert proof["source_hashes"] == p["source_hashes"]
+    for source, digest in p["source_hashes"].items():
+        assert sha256(root / "source_snapshot" / source) == digest
+    assert proof["verifier_sha256"] == sha256(root / "verify_frozen.py")
+    b = json.loads((root / "baseline/result.json").read_text())["metrics"]
+    rows = []
+    controls = []
+    for number, c in enumerate([None] + p["candidates"]):
+        d = root / ("baseline" if number == 0 else f"trial-{number:03d}")
+        marker = json.loads((d / "result.json").read_text())
+        assert marker["candidate"] == c
+        assert set(marker["artifact_hashes"]) == {
+            f"{w}-{cost}.json" for w in p["windows"] for cost in p["costs"]
+        }
+        for name, digest in marker["artifact_hashes"].items():
+            assert sha256(d / name) == digest
+        if "artifacts" in proof:
+            assert proof["artifacts"][str(number)]["result_sha256"] == sha256(d / "result.json")
+            assert proof["artifacts"][str(number)]["scenario_hashes"] == marker["artifact_hashes"]
+        if c is None:
+            continue
+        row = v["rows"][number - 1]
+        assert marker["metrics"] == row["metrics"] and row["candidate"] == c
+        passes = {
+            w: qualifies_trial30(pair, b[w], 60 if w == "full" else 20)
+            for w, pair in row["metrics"].items()
+        }
+        assert passes == row["window_pass"] and all(passes.values()) == row["discovery_pass"]
+        key = canonical(c)
+        if key in previous:
+            old = previous[key]
+            for name in marker["artifact_hashes"]:
+                fresh = json.loads((d / name).read_text())
+                reference = json.loads((old / name).read_text())
+                fresh.pop("rules")
+                reference.pop("rules")
+                assert fresh == reference, (family, number, name)
+            controls.append(
+                dict(
+                    trial=number,
+                    source=str(old),
+                    comparison="EXACT_FULL_RESULT_EXCLUDING_RULE_METADATA",
+                )
+            )
+        else:
+            previous[key] = d
+        rows.append(
+            dict(
+                trial=number,
+                candidate=c,
+                metrics=trim(row["metrics"]),
+                window_pass=passes,
+                discovery_pass=row["discovery_pass"],
+                result_sha256=sha256(d / "result.json"),
+                artifact_hashes=marker["artifact_hashes"],
+            )
+        )
+    assert v["qualified_discovery"] == sum(r["discovery_pass"] for r in rows)
+    report = dict(
+        family=family,
+        run=str(root),
+        evaluations=n,
+        new_vs_prior_seventeen_and_preceding_cycles=n - len(controls),
+        controls=controls,
+        protocol_sha256=sha256(root / "protocol.json"),
+        verdict_sha256=sha256(root / "verdict.json"),
+        proof_sha256=sha256(root / "fresh-verification.json"),
+        source_hashes=p["source_hashes"],
+        audit=p["audit"],
+        broker=p["broker"],
+        costs=p["costs"],
+        windows=p["windows"],
+        verified_scenarios=proof["verified_scenarios"],
+        verification=proof["status"],
+        qualified_discovery=v["qualified_discovery"],
+        status=v["status"],
+        frozen_discovery_winner=v["frozen_discovery_winner"],
+        baseline=trim(b),
+        rows=rows,
+    )
+    output = Path(f"docs/reviews/2026-10-03-{family.replace('_', '-')}-results.json")
+    write_json(output, report)
+    reports.append(
+        dict(
+            family=family,
+            report=str(output),
+            sha256=sha256(output),
+            evaluations=n,
+            new_contracts=n - len(controls),
+            controls=len(controls),
+            qualified=v["qualified_discovery"],
+            verified_scenarios=proof["verified_scenarios"],
+            window_passes={w: sum(r["window_pass"][w] for r in rows) for w in b},
+        )
+    )
+    print(
+        family,
+        n,
+        "new",
+        n - len(controls),
+        "controls",
+        len(controls),
+        "exact",
+        proof["verified_scenarios"],
+        flush=True,
+    )
+reference = Path("data/strategy_bidirectional_hybrid_reward_geometry_campaign_2026_10_03/baseline")
+comparisons = 0
+for report in reports:
+    root = Path(json.loads(Path(report["report"]).read_text())["run"]) / "baseline"
+    for scenario in sorted(root.glob("*-*.json")):
+        fresh = json.loads(scenario.read_text())
+        old = json.loads((reference / scenario.name).read_text())
+        fresh.pop("rules")
+        old.pop("rules")
+        assert fresh == old, (report["family"], scenario.name)
+        comparisons += 1
+assert comparisons == 6 * len(reports)
+exporter = "docs/reviews/artifacts/2026-10-03-setting-tuning-exporter.py.txt"
+verifier = "docs/reviews/artifacts/2026-10-03-setting-tuning-verifier.py.txt"
+write_json(
+    Path("docs/reviews/2026-10-03-setting-tuning-index.json"),
+    dict(
+        previous_catalogs=prior,
+        runs=reports,
+        evaluations=sum(r["evaluations"] for r in reports),
+        new_contracts=sum(r["new_contracts"] for r in reports),
+        controls=sum(r["controls"] for r in reports),
+        verified_scenarios=sum(r["verified_scenarios"] for r in reports),
+        qualified=sum(r["qualified"] for r in reports),
+        baseline_reference=str(reference),
+        baseline_exact_full_result_comparisons_excluding_rule_metadata=comparisons,
+        superseded_initial_parent_run="docs/reviews/2026-10-03-parent-horizon-review-correction.json",
+        superseded_initial_parent_qualification_eligible=False,
+        exporter_artifact=exporter,
+        exporter_sha256=sha256(exporter),
+        verifier_artifact=verifier,
+        verifier_sha256=sha256(verifier),
+        initial_atr_verifier_artifact="docs/reviews/artifacts/2026-10-03-setting-tuning-atr-verifier.py.txt",
+        initial_atr_verifier_sha256=sha256(
+            "docs/reviews/artifacts/2026-10-03-setting-tuning-atr-verifier.py.txt"
+        ),
+    ),
+)

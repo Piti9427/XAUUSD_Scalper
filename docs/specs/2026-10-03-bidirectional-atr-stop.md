@@ -1,0 +1,9 @@
+# Intermediate ATR stop configuration campaign
+
+Preregister432 contracts before evaluation. Prior admission219 passes full/first-half paired gates but second-halfDD41.28/34.93 fails30%. Prior trigger/boundary geometry216 has0qualified and often larger drawdown; hypothesis: ATR1.5/2.0 intermediate stops can reduce fixed-lot loss risk without aggressive trigger/boundary stops. Nothing claims thinner stops automatically improve quality.
+
+RSI BUY7/lower25,30,35/EMA50; parent D48SELL. BUYpause2.5/5/10%, stop_atr1.5/2.0, nominal target_rr1.35/1.5/2.0, off/candle_trail1R, daily10/20%, max UTC daily losing-trade count0(disabled)/1. All-session immediate entries, firstquote<=90s, complete UTC M15 and actual Bid/Ask. Fixed0.01, staticcap10%, no resizing/recovery. Stops rounded toward executable entry conservatively; invalid geometry rejects. Cost-inclusive risk and protection activation unchanged; targetR geometric rounded stop distance, not cost-inclusiveR.
+
+Baseline unchanged trial30 SELL-only/D48/stop_atr2.5/TP3ATR/BE1R/daily20/cap10. New Rules field default2.5; historical outputs differ only added rule metadata if stop unchanged. Validate all six baseline scenarios exactly except rule metadata against pinned prior baseline. Freeze full source/input/contracts before all432*6 scenarios; no screening. Net/WR/realizedRR strictly above baseline each full/first_half/second_half base/stress, DD<=baseline and<=30%, actual BUY/SELL each, >=60/20 trades, risk<=10%. No winner from incomplete prefix; full frozen-source fresh repeats required.
+
+No runtime configuration promoted. Historical dataset reused, commission0 assumed, stress additionalspread0.20/slippage0.10, swap omitted. Sealed independent holdout remains unopened. Tests at owner-approved public replay/campaign qualification/resume seams. Demo no-order audit is separate from research performance.

@@ -1,0 +1,7 @@
+# Bearish D96 parent intermediate reward continuation
+
+Preregister48 contracts before evaluation. Parent-trend running prefix137 (not winner) RSI BUY7/30/EMA50, pause10%, SELL96/EMA200, target1.35R/off has full base net644.075/DD26.5353 versus trial30 net465.318/DD26.0086, and second-half DD28.9116/26.5561 but realizedRR1.1670/1.1776 below trial301.2075/1.2040. Nominal1.5R neighboring settings fail DD. Hypothesis intermediate1.40/1.45R and existing daily loss-count admission may improve realizedRR without loss-cluster increase. Reused discovery explicitly not independent validation.
+
+RSI BUY7/lower30,35/EMA50, pauseBUY5/10%; SELL prior-low96/bearish EMA200/four-bar slope. Nominal target1.40/1.45 times actual rounded initial stop distance; existing formula unchanged, research enum extended only. Daily10/20%, UTC losing-trade count0(disabled)/1/2, protectionoff, fixed0.01/SL2.5ATR/staticcap10/all-session/no recovery. Both anchors parent96 shifted1, independent BUY warmup and retained qualifying SELL precedence unchanged.
+
+Actual immutable Bid/Ask ticks/complete UTCM15 and all six original full/half base/stress comparisons, >=60/20 executed trades/both sides/risk<=10 remain mandatory. Full48 preregistered source/input/contracts freeze; whole-result fresh dual-frozen replay and control audit. No prefix winner, Demo promotion, sealed holdout access or gate relaxation. Commission0 assumption, omittedswap and reused discovery remain limitations. Public replay tests literal BUY/SELL target prices for added rewards plus unchanged sizing/risk.

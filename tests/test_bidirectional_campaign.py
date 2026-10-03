@@ -305,12 +305,259 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 self.assertEqual(result["rejections"]["daily_loss_count"], 5 - len(expected))
                 self.assertEqual(result["ledger"][-1]["entry_time_utc"][:10], "2026-04-02")
 
+    def test_parent_sell_trend_filters_countertrend_without_blocking_bearish_entry(self):
+        import numpy as np
+        import pandas as pd
+        from scripts.research.breakout_logic import features
+
+        for initial_price, expected in ((50.0, 0), (150.0, 1)):
+            with self.subTest(initial_price=initial_price):
+                prices = np.array([initial_price] * 30 + [100.0] * 24 + [98.0])
+                bars = pd.DataFrame(
+                    dict(open=prices, high=prices + 1, low=prices - 1, close=prices),
+                    index=pd.date_range(START, periods=55, freq="15min"),
+                )
+                prepared = candidate_frame(
+                    features(bars),
+                    "off",
+                    0.0,
+                    oscillator_spec=dict(
+                        period=7,
+                        threshold=30,
+                        trend_span=50,
+                        side="buy",
+                        parent_lookback=24,
+                        parent_trend_span=50,
+                    ),
+                )
+                times = START.value // 10**6 + np.array([49500000, 49560000])
+                bid = np.array([98.0, 90.0])
+                result = replay(
+                    prepared,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(),
+                    Costs(),
+                    start=START,
+                    end=START + pd.Timedelta(hours=14),
+                )
+                self.assertEqual(result["trades"], expected)
+                if expected:
+                    self.assertEqual(result["ledger"][0]["direction"], -1)
+                    self.assertEqual(result["ledger"][0]["boundary"], 99.0)
+                    self.assertEqual(result["ledger"][0]["volume"], 0.01)
+
+    def test_rsi_buy_executes_before_parent_ema200_and_horizon_warmup(self):
+        import numpy as np
+        import pandas as pd
+        from scripts.research.breakout_logic import features
+
+        prices = np.array(list(range(50, 131)) + list(range(129, 115, -1)) + [122.0])
+        bars = pd.DataFrame(
+            dict(open=prices, high=prices + 0.1, low=prices - 0.1, close=prices),
+            index=pd.date_range(START, periods=96, freq="15min"),
+        )
+        prepared = candidate_frame(
+            features(bars),
+            "off",
+            0.0,
+            oscillator_spec=dict(
+                period=14,
+                threshold=30,
+                trend_span=50,
+                side="buy",
+                parent_lookback=96,
+                parent_trend_span=200,
+            ),
+        )
+        times = START.value // 10**6 + np.array([86400000, 86460000])
+        bid = np.array([122.0, 135.0])
+        result = replay(
+            prepared,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(days=1, minutes=2),
+        )
+        self.assertEqual(result["trades"], 1)
+        trade = result["ledger"][0]
+        self.assertEqual(trade["direction"], 1)
+        self.assertEqual(trade["entry_time_utc"], "2026-04-02T00:00:00+00:00")
+        self.assertEqual(trade["volume"], 0.01)
+        self.assertLessEqual(result["max_admitted_risk_pct"], 10.0)
+
+    def test_parent_sell_24_executes_after_24_natural_bars_before_48(self):
+        import numpy as np
+        import pandas as pd
+        from scripts.research.breakout_logic import features
+
+        bars = pd.DataFrame(
+            dict(
+                open=[100.0] * 24 + [99.0],
+                high=[101.0] * 24 + [100.0],
+                low=[99.0] * 24 + [97.0],
+                close=[100.0] * 24 + [98.0],
+            ),
+            index=pd.date_range(START, periods=25, freq="15min"),
+        )
+        prepared = candidate_frame(
+            features(bars),
+            "off",
+            0.0,
+            oscillator_spec=dict(
+                period=7, threshold=30, trend_span=50, side="buy", parent_lookback=24
+            ),
+        )
+        times = START.value // 10**6 + np.array([22500000, 22560000])
+        bid = np.array([98.0, 90.0])
+        result = replay(
+            prepared,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(hours=7),
+        )
+        self.assertEqual(result["trades"], 1)
+        self.assertEqual(result["ledger"][0]["direction"], -1)
+        self.assertEqual(result["ledger"][0]["boundary"], 99.0)
+        self.assertEqual(result["ledger"][0]["entry_time_utc"], "2026-04-01T06:15:00+00:00")
+        self.assertEqual(result["ledger"][0]["volume"], 0.01)
+        self.assertEqual(result["rejections"]["risk_cap"], 0)
+
+    def test_rsi_buy_with_parent_horizon_uses_prior_lows_and_defers_sell(self):
+        import numpy as np
+        import pandas as pd
+
+        frame = pd.DataFrame(
+            dict(
+                open=[100.0] * 96 + [85.0, 79.0],
+                high=110.0,
+                low=[80.0] * 48 + [90.0] * 48 + [84.0, 78.0],
+                close=[100.0] * 96 + [85.0, 79.0],
+                hh=110.0,
+                ll=90.0,
+                atr=1.0,
+                direction=[0] * 96 + [-1, -1],
+            ),
+            index=pd.date_range(START, periods=98, freq="15min"),
+        )
+        closes = frame.index[-2:].as_unit("ms").asi8 + 900000
+        times = np.column_stack([closes, closes + 60000]).ravel()
+        bid = np.array([85.0, 80.0, 79.0, 74.0])
+        for lookback, expected_entries in ((48, [85.0, 79.0]), (96, [79.0])):
+            with self.subTest(lookback=lookback):
+                prepared = candidate_frame(
+                    frame,
+                    "off",
+                    0.0,
+                    oscillator_spec=dict(
+                        period=7, threshold=30, trend_span=0, side="buy", parent_lookback=lookback
+                    ),
+                )
+                result = replay(
+                    prepared,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(),
+                    Costs(),
+                    start=START,
+                    end=START + pd.Timedelta(hours=25),
+                )
+                self.assertEqual([t["entry"] for t in result["ledger"]], expected_entries)
+                self.assertTrue(all(t["direction"] == -1 for t in result["ledger"]))
+                # Current low84 would change D48 boundary if included prematurely.
+                self.assertEqual(result["ledger"][0]["boundary"], 90.0 if lookback == 48 else 80.0)
+                self.assertTrue(
+                    all(t["volume"] == 0.01 and t["risk_pct"] <= 10 for t in result["ledger"])
+                )
+
+    def test_existing_positional_rules_keep_default_atr_stop_and_target(self):
+        # Existing 18 constructor arguments retain their original meanings.
+        rules = Rules(
+            0,
+            False,
+            0,
+            "immediate",
+            "atr",
+            "off",
+            "off",
+            0.0,
+            "static",
+            0.10,
+            0.40,
+            3.0,
+            0.0,
+            1.5,
+            0,
+            "all",
+            0,
+            0.5,
+        )
+        frame, ticks = sample()
+        result = replay(frame, ticks, BROKER, rules, Costs(), start=START, end=END)
+        self.assertEqual(result["trades"], 1)
+        self.assertAlmostEqual(result["ledger"][0]["initial_stop"], 97.7)
+        self.assertAlmostEqual(result["ledger"][0]["target"], 103.95)
+        self.assertEqual(result["ledger"][0]["volume"], 0.01)
+
+    def test_configured_atr_stop_changes_both_orders_without_resizing_lot(self):
+        import numpy as np
+
+        for stop_atr, buy_stop, buy_target, sell_stop, sell_target in (
+            (1.5, 98.7, 102.225, 101.5, 97.975),
+            (2.0, 98.2, 102.9, 102.0, 97.3),
+            (2.5, 97.7, 103.575, 102.5, 96.625),
+        ):
+            with self.subTest(stop_atr=stop_atr):
+                frame, _ = sample()
+                frame.loc[frame.index[1], "direction"] = -1
+                times = START.value // 10**6 + np.array([900000, 960000, 1800000, 1860000])
+                bid = np.array([100.0, 110.0, 100.0, 90.0])
+                result = replay(
+                    frame,
+                    (times, bid, bid + 0.2),
+                    BROKER,
+                    Rules(stop_atr=stop_atr, target_rr=1.35),
+                    Costs(),
+                    start=START,
+                    end=END,
+                )
+                self.assertEqual([t["direction"] for t in result["ledger"]], [1, -1])
+                self.assertAlmostEqual(result["ledger"][0]["initial_stop"], buy_stop)
+                self.assertAlmostEqual(result["ledger"][0]["target"], buy_target)
+                self.assertAlmostEqual(result["ledger"][1]["initial_stop"], sell_stop)
+                self.assertAlmostEqual(result["ledger"][1]["target"], sell_target)
+                self.assertTrue(
+                    all(t["volume"] == 0.01 and t["risk_pct"] <= 10 for t in result["ledger"])
+                )
+
+    def test_tighter_atr_config_still_rejects_over_cap_without_lot_clamping(self):
+        frame, ticks = sample()
+        frame["atr"] = 9.0
+        old = replay(frame, ticks, BROKER, Rules(), Costs(), start=START, end=END)
+        tight = replay(frame, ticks, BROKER, Rules(stop_atr=1.5), Costs(), start=START, end=END)
+        self.assertEqual(old["trades"], 0)
+        self.assertEqual(old["rejections"]["risk_cap"], 1)
+        self.assertEqual(tight["ledger"][0]["volume"], 0.01)
+        self.assertAlmostEqual(tight["ledger"][0]["risk_usd"], 13.5)
+        frame["atr"] = 15.0
+        rejected = replay(frame, ticks, BROKER, Rules(stop_atr=1.5), Costs(), start=START, end=END)
+        self.assertEqual(rejected["trades"], 0)
+        self.assertEqual(rejected["rejections"]["risk_cap"], 1)
+        self.assertEqual(rejected["final_balance"], 200.0)
+
     def test_intermediate_reward_uses_rounded_stop_for_both_directions(self):
         import numpy as np
 
         for reward, expected_buy, expected_sell in (
             (1.25, 103.325, 96.875),
             (1.35, 103.575, 96.625),
+            (1.40, 103.7, 96.5),
+            (1.45, 103.825, 96.375),
         ):
             with self.subTest(reward=reward):
                 frame, _ = sample()
@@ -455,6 +702,16 @@ class BidirectionalCampaignTests(unittest.TestCase):
                 ("hybrid_reward_admission", 324),
                 ("hybrid_reward_quality", 108),
                 ("hybrid_reward_geometry", 216),
+                ("hybrid_atr_stop", 432),
+                ("hybrid_parent_horizon", 192),
+                ("hybrid_parent_trend", 288),
+                ("hybrid_parent_quality", 24),
+                ("hybrid_parent_reward_fine", 48),
+                ("hybrid_parent_reward_pause", 12),
+                ("hybrid_parent_risk", 36),
+                ("hybrid_parent_atr", 72),
+                ("hybrid_parent_protection", 144),
+                ("hybrid_parent_invalidation", 36),
             ):
                 with self.subTest(catalog=catalog):
                     output = Path(directory) / catalog

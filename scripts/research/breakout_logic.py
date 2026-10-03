@@ -37,8 +37,11 @@ class Rules:
     session_mode: str = "all"
     max_daily_losses: int = 0
     protect_after_r: float = 0.5
+    stop_atr: float = 2.5
 
     def __post_init__(self):
+        if self.stop_atr not in (1.5, 2.0, 2.5):
+            raise ValueError("unsupported ATR stop multiplier")
         if self.protect_after_r not in (0.5, 1.0, 1.5, 2.0):
             raise ValueError("unsupported protection activation")
         if self.cooldown_bars not in (0, 1, 4) or self.max_daily_losses not in (0, 1, 2):
@@ -51,7 +54,7 @@ class Rules:
             raise ValueError("unsupported risk cap")
         if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
             raise ValueError("unsupported daily limit")
-        if self.target_rr not in (0.0, 1.25, 1.35, 1.5, 2.0, 3.0):
+        if self.target_rr not in (0.0, 1.25, 1.35, 1.4, 1.45, 1.5, 2.0, 3.0):
             raise ValueError("unsupported risk distance target")
         if self.target_atr not in (3.0, 6.25):
             raise ValueError("unsupported parent target")
@@ -474,7 +477,9 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if not all(math.isfinite(v) for v in (row.atr, row.hh, row.ll)) or row.atr <= 0:
             continue
         entry = float(ask[index] if direction == 1 else bid[index]) + direction * costs.slippage
-        stop = _level(entry - direction * row.atr * 2.5, broker["trade_tick_size"], direction)
+        stop = _level(
+            entry - direction * row.atr * rules.stop_atr, broker["trade_tick_size"], direction
+        )
         if rules.stop_mode in ("structure", "trigger"):
             anchor = (
                 (row.low if direction == 1 else row.high)
