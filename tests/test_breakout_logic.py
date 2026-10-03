@@ -40,6 +40,349 @@ def sample():
 
 
 class BreakoutLogicTests(unittest.TestCase):
+    def test_m5_sell_trigger_stop_retains_atr_reward(self):
+        frame, ticks = sample()
+        entries = frame.copy()
+        entries.index += pd.Timedelta(minutes=10)
+        entries["direction"] = [-1, 0, 0]
+        entries["high"] = 100.5
+        entries["management_bar"] = True
+        r = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(sell_stop_mode="trigger", buy_stop_mode="trigger", buy_target_rr=2),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=entries,
+        )
+        self.assertEqual(r["trades"], 1)
+        self.assertAlmostEqual(r["ledger"][0]["risk_usd"], 0.701)
+        self.assertAlmostEqual(r["ledger"][0]["target"], 97.0)
+
+    def test_directional_buy_risk_sizing_keeps_sell_fixed_contract(self):
+        frame, ticks = sample()
+        frame["direction"] = [1, 0, -1]
+        r = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(failed_closes=1, buy_risk_cap=0.05, buy_sizing_mode="risk"),
+            Costs(commission_per_lot=10),
+            start=START,
+            end=END,
+        )
+        self.assertEqual([p["volume"] for p in r["ledger"]], [0.03, 0.01])
+        self.assertEqual([p["admission_cap_pct"] for p in r["ledger"]], [5.0, 10.0])
+        self.assertAlmostEqual(r["ledger"][0]["risk_usd"], 7.8)
+        self.assertAlmostEqual(r["ledger"][1]["risk_usd"], 2.6)
+
+    def test_m5_rejections_expose_side_reason_and_utc_time(self):
+        frame, ticks = sample()
+        entries = frame.copy()
+        entries.index += pd.Timedelta(minutes=10)
+        entries["management_bar"] = False
+        r = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(risk_cap=0.005),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=entries,
+        )
+        self.assertEqual(
+            r["rejection_events"],
+            [dict(direction=1, reason="risk_cap", time_utc="2026-04-01T00:15:00+00:00")],
+        )
+
+    def test_missing_minute_never_fabricates_m5_trigger_and_cache_replays_exactly(self):
+        import tempfile
+        from scripts.research.m5_retest import build_m5, retest_frame
+
+        frame, _ = sample()
+        for complete, expected in ((False, 0), (True, 1)):
+            minutes = [15, 16, 17, 19, 20, 21, 22, 23, 24]
+            if complete:
+                minutes.insert(3, 18)
+            times = START.value // 10**6 + np.array(minutes) * 60000
+            bid = np.array([99.9] + [100.4] * (len(minutes) - 1))
+            ticks = (times, bid, np.array([100.1] + [100.6] * (len(minutes) - 1)))
+            with tempfile.TemporaryDirectory() as root:
+                outcomes = []
+                for repeat in range(2):
+                    m5 = build_m5(ticks, root, "synthetic-fixture")
+                    r = replay(
+                        frame,
+                        ticks,
+                        BROKER,
+                        Rules(stop_mode="trigger"),
+                        Costs(),
+                        start=START,
+                        end=END,
+                        entry_frame=retest_frame(frame, m5, 2),
+                    )
+                    self.assertEqual(r["trades"], expected)
+                    outcomes.append(r)
+                self.assertEqual(outcomes[0], outcomes[1])
+
+    def test_hybrid_m5_buy_stop_retains_m15_sell_atr_geometry(self):
+        frame, _ = sample()
+        entries = frame.iloc[:2].copy()
+        entries.index = pd.date_range(START + pd.Timedelta(minutes=15), periods=2, freq="10min")
+        entries["direction"] = [1, -1]
+        entries["management_bar"] = [False, True]
+        times = START.value // 10**6 + np.array([1200000, 1500000, 1800000])
+        bid = np.array([100.0, 98.9, 100.0])
+        r = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(buy_stop_mode="trigger", buy_target_rr=2),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=entries,
+        )
+        self.assertEqual(r["trades"], 2)
+        self.assertAlmostEqual(r["ledger"][0]["initial_stop"], 98.999)
+        self.assertAlmostEqual(r["ledger"][1]["initial_stop"], 102.5)
+
+    def test_m5_prior_day_guard_does_not_read_future_midnight_bar(self):
+        idx = pd.to_datetime(
+            ["2026-04-01T00:00Z", "2026-04-01T23:50Z", "2026-04-01T23:55Z", "2026-04-02T00:00Z"]
+        )
+        frame = pd.DataFrame(
+            dict(
+                open=[100.0] * 4,
+                high=[102.0] * 4,
+                low=[99.0] * 4,
+                close=[100.0, 101.0, 102.0, 100.0],
+                hh=[100.0] * 4,
+                ll=[95.0] * 4,
+                atr=[1.0] * 4,
+                direction=[0, 1, 0, 0],
+                management_bar=[False] * 4,
+            ),
+            index=idx,
+        )
+        times = (
+            pd.to_datetime(
+                ["2026-04-01T00:00Z", "2026-04-01T23:55Z", "2026-04-02T00:00Z", "2026-04-02T00:05Z"]
+            )
+            .as_unit("ms")
+            .asi8
+        )
+        bid = np.array([101.0] * 4)
+        for future_close in (102.0, 99.0):
+            frame.loc[idx[2], "close"] = future_close
+            r = replay(
+                frame,
+                (times, bid, bid + 0.2),
+                BROKER,
+                Rules(entry_guard="prior_day"),
+                Costs(),
+                start=START,
+                end=START + pd.Timedelta(days=1, hours=1),
+                entry_frame=frame,
+            )
+            self.assertEqual(r["trades"], 0)
+
+    def test_m5_boundary_equality_keeps_pending_until_valid_trigger(self):
+        from scripts.research.m5_retest import retest_frame
+
+        frame, _ = sample()
+        m5 = pd.DataFrame(
+            dict(open=[100.0] * 2, high=[100.5] * 2, low=[99.9] * 2, close=[100.0, 100.4]),
+            index=pd.date_range(START + pd.Timedelta(minutes=15), periods=2, freq="5min"),
+        )
+        times = START.value // 10**6 + np.array([1200000, 1500000])
+        bid = np.array([100.0, 100.4])
+        r = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(stop_mode="trigger"),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=retest_frame(frame, m5, 2),
+        )
+        self.assertEqual(r["trades"], 1)
+        self.assertEqual(r["ledger"][0]["entry_ms"], times[1])
+
+    def test_m5_ttl_and_m15_only_break_even(self):
+        from scripts.research.m5_retest import retest_frame
+
+        frame, _ = sample()
+        m5 = pd.DataFrame(
+            dict(
+                open=[100.4] * 3,
+                high=[101.0, 102.0, 101.0],
+                low=[99.9, 100.4, 100.3],
+                close=[100.4, 102.0, 100.4],
+            ),
+            index=pd.date_range(START + pd.Timedelta(minutes=15), periods=3, freq="5min"),
+        )
+        times = START.value // 10**6 + np.array([1200000, 1500000, 1800000])
+        bid = np.array([100.4, 102.0, 100.4])
+        r = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(stop_mode="trigger", target_rr=3, protect_mode="break_even", protect_after_r=1),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=retest_frame(frame, m5, 2),
+        )
+        self.assertEqual(r["ledger"][0]["stop_updates"], 0)
+        m5["low"] = [100.3, 100.3, 99.9]
+        for ttl, expected in ((2, 0), (4, 1)):
+            r = replay(
+                frame,
+                (times, bid, bid + 0.2),
+                BROKER,
+                Rules(stop_mode="trigger"),
+                Costs(),
+                start=START,
+                end=END,
+                entry_frame=retest_frame(frame, m5, ttl),
+            )
+            self.assertEqual(r["trades"], expected)
+
+    def test_intraday_flattens_at_first_quote_after_cutoff(self):
+        frame, ticks = sample()
+        frame.index += pd.Timedelta(hours=20)
+        times, bid, ask = ticks
+        times = times + 20 * 3600000
+        result = replay(
+            frame,
+            (times, bid, ask),
+            BROKER,
+            Rules(holding_mode="intraday"),
+            Costs(slippage=0.1),
+            start=START,
+            end=START + pd.Timedelta(days=1),
+        )
+        self.assertEqual(result["ledger"][0]["reason"], "HOLD_LIMIT")
+        self.assertEqual(result["ledger"][0]["exit_time_utc"], "2026-04-01T20:45:00+00:00")
+        frame["direction"] = [0, 1, 0]
+        blocked = replay(
+            frame,
+            (times, bid, ask),
+            BROKER,
+            Rules(holding_mode="intraday"),
+            Costs(),
+            start=START,
+            end=START + pd.Timedelta(days=1),
+        )
+        self.assertEqual(blocked["trades"], 0)
+
+    def test_m5_retest_enters_after_setup_availability_and_uses_ask_sell_stop(self):
+        from scripts.research.m5_retest import retest_frame
+
+        frame, _ = sample()
+        frame["direction"] = [-1, 0, 0]
+        frame["ll"] = 100.0
+        m5 = pd.DataFrame(
+            dict(open=[100.0] * 3, high=[100.0] * 3, low=[99.0] * 3, close=[99.4] * 3),
+            index=pd.date_range(START + pd.Timedelta(minutes=10), periods=3, freq="5min"),
+        )
+        entries = retest_frame(frame, m5, 2)
+        times = START.value // 10**6 + np.array([900000, 1200000, 1500000])
+        bid = np.array([99.4] * 3)
+        ask = np.array([99.6] * 3)
+        result = replay(
+            frame,
+            (times, bid, ask),
+            BROKER,
+            Rules(stop_mode="trigger", target_rr=2),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=entries,
+        )
+        trade = result["ledger"][0]
+        self.assertEqual(trade["entry_ms"], times[1])
+        self.assertAlmostEqual(trade["initial_stop"], 100.201)
+        self.assertAlmostEqual(trade["risk_usd"], 0.801)
+        changed = frame.copy()
+        changed.loc[changed.index[-1], ["close", "direction"]] = [10000, 1]
+        repeat = replay(
+            changed,
+            (times, bid, ask),
+            BROKER,
+            Rules(stop_mode="trigger", target_rr=2),
+            Costs(),
+            start=START,
+            end=END,
+            entry_frame=retest_frame(changed, m5, 2),
+        )
+        self.assertEqual(repeat["ledger"], result["ledger"])
+
+    def test_short_buy_atr_profile_preserves_sell_stop_and_cost_risk(self):
+        frame, ticks = sample()
+        rules = Rules(buy_stop_atr=0.5, buy_target_rr=3.0)
+        buy = replay(frame, ticks, BROKER, rules, Costs(), start=START, end=END)
+        self.assertAlmostEqual(buy["ledger"][0]["risk_usd"], 0.5)
+        self.assertAlmostEqual(buy["ledger"][0]["target"], 101.7)
+        frame["direction"] = [-1, 0, 0]
+        sell = replay(frame, ticks, BROKER, rules, Costs(), start=START, end=END)
+        self.assertAlmostEqual(sell["ledger"][0]["risk_usd"], 2.5)
+        self.assertAlmostEqual(sell["ledger"][0]["target"], 97.0)
+
+    def test_risk_sizing_rejects_below_minimum_and_resizes_after_loss(self):
+        frame, ticks = sample()
+        tiny = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(sizing_mode="risk", risk_cap=0.005),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual(tiny["trades"], 0)
+        self.assertEqual(tiny["rejections"]["risk_cap"], 1)
+        frame.loc[frame.index[2], "direction"] = 1
+        # First trade stops out at 97.7; remaining equity $160 requires 0.12 lots.
+        times, bid, ask = ticks
+        bid = np.array([100.0, 97.7, 100.0])
+        result = replay(
+            frame,
+            (times, bid, bid + 0.2),
+            BROKER,
+            Rules(sizing_mode="risk", risk_cap=0.20),
+            Costs(),
+            start=START,
+            end=END,
+        )
+        self.assertEqual([p["volume"] for p in result["ledger"]], [0.16, 0.12])
+        self.assertAlmostEqual(result["ledger"][1]["entry_equity"], 160.0)
+        self.assertLessEqual(result["max_admitted_risk_pct"], 20.0)
+
+    def test_risk_sizing_floors_lot_and_scales_costs_and_realized_pnl(self):
+        frame, ticks = sample()
+        result = replay(
+            frame,
+            ticks,
+            BROKER,
+            Rules(sizing_mode="risk", risk_cap=0.20),
+            Costs(commission_per_lot=10),
+            start=START,
+            end=END,
+        )
+        trade = result["ledger"][0]
+        # $40 budget; $260 per lot including commission -> 0.15 lots, never 0.16.
+        self.assertEqual(trade["volume"], 0.15)
+        self.assertAlmostEqual(trade["risk_usd"], 39)
+        self.assertAlmostEqual(trade["commission_usd"], 1.5)
+        self.assertAlmostEqual(trade["net"], -13.5)
+        self.assertAlmostEqual(result["net_usd"], -13.5)
+
     def test_zero_spread_replay_bounds_allocation_and_checks_chunk_boundaries(self):
         import tracemalloc
 

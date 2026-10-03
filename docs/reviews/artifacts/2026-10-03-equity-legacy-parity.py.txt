@@ -1,0 +1,28 @@
+import json
+from pathlib import Path
+from scripts.research.public_exness_archive import load_discovery
+from scripts.research.bidirectional_campaign import contracts, candidate_frame
+from scripts.research.breakout_logic import Rules, Costs, replay
+from scripts.research.tune_breakout_logic import sha256
+import pandas as pd
+root=Path('data/strategy_annual_sizing_profit_dd_v2_2026_10_03')
+f,t,b,a=load_discovery('data/b1_public_exness_2025_10_2026_09')
+windows=json.loads((root/'protocol.json').read_text())['windows']
+checks=[]
+for family,n in [('directional_fine',7),('directional_circuit',22),('hybrid_unpaused',28)]:
+ c=contracts('annual_'+family)[n-1]
+ g=candidate_frame(f,c['buy_filter'],c['depth'],oscillator_spec=c['oscillator_spec'])
+ old=Path(f'data/strategy_annual_{family}_approved_rr_2026_10_03/trial-{n:03d}')
+ for w,(s,e) in windows.items():
+  for name,cost in [('base',Costs()),('stress',Costs(extra_spread=.2,slippage=.1))]:
+   previous=json.loads((old/f'{w}-{name}.json').read_text())
+   current=replay(g,t,b,Rules(**c['rules']),cost,start=pd.Timestamp(s),end=pd.Timestamp(e))
+   for key,default in [('sell_stop_mode',None),('buy_risk_cap',None),('buy_sizing_mode',None),('buy_stop_mode',None),('holding_mode','legacy'),('sizing_mode','fixed'),('buy_stop_atr',None),('buy_target_rr',None),('buy_protect_mode',None)]:
+    if key not in previous['rules']:
+     assert current['rules'][key]==default
+     current['rules'].pop(key)
+   assert current==previous,(family,w,name)
+   checks.append(dict(family=family,trial=n,window=w,cost=name,old_sha256=sha256(old/f'{w}-{name}.json'),complete_result_match=True))
+result=dict(dataset_sha256=a['dataset_sha256'],checks=checks,matched=len(checks),qualification='Legacy entire outcomes unchanged; additive default-only Rules metadata excluded explicitly: sizing_mode=fixed, holding_mode=legacy, buy_stop_mode/sell_stop_mode/buy_risk_cap/buy_sizing_mode=None, absent BUY exit overrides=None')
+Path('docs/reviews/2026-10-03-equity-sizing-legacy-parity.json').write_text(json.dumps(result,indent=2)+'\n')
+print('18 legacy whole-result matches; only declared default Rules metadata normalized')

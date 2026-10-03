@@ -339,3 +339,88 @@ Annual replay performance implementation (2026-10-03): actual frozen annual prof
 
 
 Annual research checkpoint final:14completedcatalogs648parameter evaluations,0joint qualifiers,3,972exact frozen whole-result repeats; additional optimizedcontrol24 adds0settings/150freshrepeats/150exactcross-version matches. Independent samefeed rawquote arithmetic90scenario evaluations match, not broker/signal oracle. Directionalcircuit22 annualbase533.916/DD24.49% andstress512.056/DD24.72% passfull; first12trades<20/net-12.561/-13.083 andsecondstress429.542<baseline452.366fail. Fine6 passsecond butfullDD37.44/33.18 andfirst12fail. Approvedall-lossRRdefinition/othergates preserved; no winner or Demo promotion. [Final report](docs/reviews/2026-10-03-annual-tuning.md), [hashed results](docs/reviews/2026-10-03-annual-final-results.json), [profile/paired performance](docs/reviews/2026-10-03-replay-performance.md). Pairedreplay1.43–6.15xspeedup with unchanged whole results; baseallocationpeak2486→9–10MiB, stress1599MiB, not residentRAM claim. Boundedasyncv2waitallsnapshotSHA fixes observedreadinessrace; timeout/error cleanup and actualtwochildexit0. Fullsuite776/774pass2skip; finite workerscomplete. Requested superiorstrategy remainsunmet, actualDemoselection unchangedtrial30SELLonly.
+
+### 6.28 Current-equity research sizing and profit_dd_v2 (2026-10-03)
+
+Owner authorizes research-only risk budgets through20%, current-equity lot sizing,
+and USD200 initial balance for each independent window with compounding/no top-ups.
+Demo trial30 remains fixed0.01/cap10%. New qualification policy `profit_dd_v2`
+requires positive net above trial30 and DD<=trial30/30% in all six annual scenarios,
+60full/20half trades and actual both-side fills. WR/RR reported without superiority
+or RR>1 gates. `strict_v1` preserved; older results never relabeled.
+
+[Stage1 spec](docs/specs/2026-10-03-equity-sizing.md):60 frozen variants across fine7,
+circuit22 and unpaused28 ×10 budgets ×fixed/risk sizing. Risk sizing floors to
+broker step and rejects below minimum or above cost-inclusive budget; every held
+position uses its volume for PnL/fees/BE/margin/cost attribution. Costs still commission0
+assumed/no swap in this experiment; COST_INCONCLUSIVE, no final qualification or
+runtime promotion. Actual full-year replay/fresh-repeat results pending.
+
+Stage1 completed60/0qualifiers with366 exact fresh full-result replays. Increased
+cap worsens DD, dynamic sizing alone does not solve qualification. Follow-up
+`annual_short_buy`32 predeclared in stage1 spec: RSI7/14 cross25/35EMA50 with
+BUY stop0.5/0.75ATR/TP2/3R/off or BE1R; SELL96EMA200 SL2.5ATR/TP3ATR/BE1R,
+fixed0.01/static10/daily10/one UTC loss. Optional BUY overrides expanded only;
+legacy/shared SELL multipliers unchanged. New-policy verdict explicitly records
+COST_INCONCLUSIVE for commission0 assumption and omitted swap, even if statistical
+discovery gates pass. No Demo change.
+
+Stage2 shortBUY32 completed0qualifiers/198fresh exact replays. Stage3 research-only
+M15/M5 causal retest128 variants (two64 intraday/bounded24 catalogs), specified in
+[research spec](docs/specs/2026-10-03-equity-sizing.md). Replay optional `entry_frame`
+uses completedM5 triggers, Bid-extreme one-tick stops with SELL Ask-spread conversion;
+BE management remains completedM15. Fixed0.01/cap10 controls. Intraday cutoff20:30UTC,
+first-quote flatten20:45UTC; bounded24 first-quote exit after24h. Legacy defaults retain
+holding_mode=legacy. No swap accrual/reserve implemented; COST_INCONCLUSIVE, no Demo
+promotion. Missing M1 prevents completeM5; pending TTL2/4 counts complete bars,
+opposite setup replaces, wrong-side close invalidates; all chronology awareUTC.
+
+M5 review fixed two public replay regressions: neutral boundary equality now keeps
+pending through remaining TTL; prior-day mapping uses M5+5/M15+15, preventing a
+future midnight bar from influencing prior_day guard. Both RED->GREEN exercised
+actual replay seam. Initial stage3 two64 artifacts preserved SUPERSEDED, corrected
+128 source-pinned campaigns and fresh whole-result repeats required. Review source
+[post-mortem](docs/post-mortem/2026-10-03-m5-retest-debug.md).
+
+Corrected stage3:128/0qualifiers,780 exact fresh whole-result replays, two bounded
+async repeat child exits0/0. Stage4 research `annual_m5_hybrid`64: BUY D24/48 EMA50
+M5retouchTTL2/4 triggerlow one-tick stop/TP1.5/2R/off or BE1R, SELL D48/96EMA200
+immediate completedM15/SL2.5ATR/TP3ATR/BE1R. Optional BUY stop override preserves
+shared SELL ATR. SELL priority cancels pending BUY; common intraday/bounded24,
+fixed0.01/static10/daily10/oneUTC loss. Public M5 replay records side/reason/UTC
+rejections for funnel audit. Cost validation and independent holdout still pending;
+no live adapter or Demo settings changed. Stage4 outcomes pending.
+
+Stage4 hybrid64 completed0qualifiers/390fresh exact replays. Stage5
+`annual_m5_hybrid_quality`48 preregistered: seeds14/15 ×riskcap5/7.5/10 ×SELLstop2/2.5
+×SELLguardoff/body_dominant ×BUYTP2/3R. SELL bearish completed body>=half positive
+range, BUY unchanged; other seededrules intact. Public candidate_frame optional
+SELL filter defaults off. M5 cache key includes filter; both horizons/TTL and
+mode remain pinned. Source replay search results explicitly arrays for strict
+scoped typechecking; no quote arithmetic or tick omission. Outcome pending;
+COST_INCONCLUSIVE/noDemochange remains.
+
+Stage5 quality48 completed0qualifiers/294 exact fresh replay scenarios. Shared low
+risk cap suppresses second-half SELL admission. Stage6 research
+`annual_m5_directional_sizing`48: seeds hybrid14/15 ×BUYcap2/2.5/5 ×BUYfixed/risk
+×BUYTP2/3R ×SELLstop2/2.5ATR. Optional BUY risk/sizing override defaultsNone/inherits
+shared; SELL fixed0.01/cap10 retained. Per-position lot/cost accounting unchanged,
+floor and minimum rejection mandatory. Research-only ceiling20 still enforced
+through shared allowed-cap values. Outcome pending; cost/holdout remain unverified.
+
+Stage6 directional sizing48 completed0qualifiers/294 fresh exact scenarios. Stage7
+`annual_m5_atr_reward`64 predeclared: eight M15profiles ×TTL2/4 ×BUYTP1.5/2R/off orBE1;
+bothM5triggerstops, SELLTP3ATR/BE1R, fixed0.01/cap10/daily10/one loss/bounded24.
+Optional sell_stop_mode None preserves legacy/shared; explicittrigger permits
+shorter SELL risk with independent ATRreward. Actual costs/holdout remain pending,
+no runtime promotion. Public SELL geometry RED->GREEN risk0.701USD vs3ATRtarget.
+
+Equity/M5 checkpoint:8completecatalogs444parameter evaluations,0joint qualifiers;
+2,712exact fresh full-result scenario repeats. Initial128M5runs preservedsuperseded,
+excluded authoritativecount. Finalpublicsuite792/790pass2skip; Ruff5/scopedstrictmypy3
+pass; legacy18whole-outcome matches with explicitly normalized defaultRules metadata.
+[Report](docs/reviews/2026-10-03-equity-tuning.md) and
+[hashed scenario/failure/funnel audit](docs/reviews/2026-10-03-equity-tuning-results.json).
+Risk/entry framework implemented and reviewed; requested superiorstrategygoal UNMET,
+commission/swapvalidation COST_INCONCLUSIVE, independentholdout sealedunaccessed,
+Demo contract unchanged. Every finite campaign/repeat process completed.

@@ -1,0 +1,79 @@
+"""Audit complete frozen campaigns and publish versioned evidence, no replay claims inferred."""
+import json
+from collections import Counter, defaultdict
+from pathlib import Path
+from scripts.research.tune_breakout_logic import sha256
+
+ROOTS = [
+ ('sizing', 'strategy_annual_sizing_profit_dd_v2_2026_10_03',60),
+ ('short_buy','strategy_annual_short_buy_profit_dd_v2_2026_10_03',32),
+ ('m5_intraday','strategy_annual_m5_intraday_corrected_profit_dd_v2_2026_10_03',64),
+ ('m5_bounded24','strategy_annual_m5_bounded24_corrected_profit_dd_v2_2026_10_03',64),
+ ('m5_hybrid','strategy_annual_m5_hybrid_profit_dd_v2_2026_10_03',64),
+ ('m5_quality','strategy_annual_m5_hybrid_quality_profit_dd_v2_2026_10_03',48),
+ ('m5_directional_sizing','strategy_annual_m5_directional_sizing_profit_dd_v2_2026_10_03',48),
+ ('m5_atr_reward','strategy_annual_m5_atr_reward_profit_dd_v2_2026_10_03',64),
+]
+results=[]
+for family,name,total in ROOTS:
+ root=Path('data')/name
+ protocol=json.loads((root/'protocol.json').read_text())
+ verdict=json.loads((root/'verdict.json').read_text())
+ assert verdict['completed_trials']==total and verdict['campaign_exhausted']
+ assert verdict['verification']=='FRESH_REPLAY_MATCH'
+ assert verdict['verified_scenarios']==6*(total+1)
+ for source,digest in protocol['source_hashes'].items():
+  assert sha256(root/'source_snapshot'/source)==digest
+ baseline=json.loads((root/'baseline/result.json').read_text())['metrics']
+ failures=Counter()
+ nearest=[]
+ for row in verdict['rows']:
+  trial=root/f"trial-{row['trial']:03d}"
+  recorded=json.loads((trial/'result.json').read_text())
+  assert row['metrics']==recorded['metrics']
+  for name,digest in recorded['artifact_hashes'].items():assert sha256(trial/name)==digest
+  missed=[]
+  for window,pair in row['metrics'].items():
+   for i,m in enumerate(pair):
+    parent=baseline[window][i]
+    checks=dict(profit=m['net_usd']>max(0,parent['net_usd']),
+                drawdown=0<=m['max_dd_pct']<=min(30,parent['max_dd_pct']),
+                trades=m['trades']>=(60 if window=='full' else 20),
+                both_sides=m['buy_trades']>0 and m['sell_trades']>0,
+                risk=0<=m['max_admitted_risk_pct']<=20+1e-9)
+    missed.extend(f'{window}-{["base","stress"][i]}:{k}' for k,passed in checks.items() if not passed)
+  failures.update(set(x.split(':')[1] for x in missed))
+  assert row['discovery_pass']==(not missed)
+  nearest.append(dict(trial=row['trial'],candidate=row['candidate'],failed_scenario_gates=missed,
+                      full_stress_net=row['metrics']['full'][1]['net_usd'],metrics=row['metrics']))
+ nearest.sort(key=lambda r:(len(r['failed_scenario_gates']),-r['full_stress_net'],r['trial']))
+ results.append(dict(family=family,root=str(root),completed_trials=total,
+                     fresh_scenarios=verdict['verified_scenarios'],qualified_discovery=verdict['qualified_discovery'],
+                     protocol_sha256=sha256(root/'protocol.json'),verdict_sha256=sha256(root/'verdict.json'),
+                     baseline=baseline,failure_candidates=dict(failures),nearest=nearest[:2]))
+# Monthly execution funnel derives actual raw rejection events and closed trades.
+funnel={}
+root=Path('data/strategy_annual_m5_hybrid_profit_dd_v2_2026_10_03/trial-014')
+for scenario in ('full-base','full-stress'):
+ r=json.loads((root/f'{scenario}.json').read_text());monthly=defaultdict(Counter)
+ for t in r['ledger']:
+  key=t['entry_time_utc'][:7];side='BUY' if t['direction']==1 else 'SELL'
+  monthly[key][side+'_fills']+=1
+  monthly[key][side+'_net_usd']+=t['net']
+  monthly[key][side+'_exit_'+t['reason']]+=1
+ for t in r['rejection_events']:
+  side='BUY' if t['direction']==1 else 'SELL'
+  monthly[t['time_utc'][:7]][side+'_reject_'+t['reason']]+=1
+ assert sum(v.get('BUY_fills',0)+v.get('SELL_fills',0) for v in monthly.values())==r['trades']
+ funnel[scenario]={k:dict(v) for k,v in sorted(monthly.items())}
+report=dict(qualification_policy='profit_dd_v2',initial_usd_each_window=200,
+            evaluations=sum(x['completed_trials'] for x in results),
+            exact_fresh_scenarios=sum(x['fresh_scenarios'] for x in results),
+            qualified_discovery=sum(x['qualified_discovery'] for x in results),
+            dataset_sha256=protocol['audit']['dataset_sha256'],
+            research_risk_ceiling_pct=20,demo_changed=False,goal='UNMET',
+            cost_validation='COST_INCONCLUSIVE: commission0 assumed; swap omitted',holdout='SEALED_UNACCESSED',
+            superseded_stage3_evaluations=128,campaigns=results,hybrid14_monthly_execution_funnel=funnel,
+            audit_source_sha256=sha256(__file__))
+Path('docs/reviews/2026-10-03-equity-tuning-results.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps({k:report[k] for k in ('evaluations','exact_fresh_scenarios','qualified_discovery','goal')}))

@@ -8,6 +8,14 @@
 A **Research Candidate** beats its parent only when net profit, tick-equity drawdown, realized reward-to-risk, and cost-stressed net are all better together. More trades or a higher win rate does not qualify.
 _Avoid_: better performance, ดีขึ้น, win-rate improvement, profit-only selection
 
+This definition describes legacy research policy. Annual trial30 `strict_v1` also
+requires WR/RR superiority. Owner-approved `profit_dd_v2` (2026-10-03) requires
+positive net above trial30, DD <= trial30 and <=30%, minimum actual trade counts
+and both executed sides across all six full/half base/stress scenarios. WR/RR are
+reported without superiority gates. Research-only risk ceiling20%; every window
+starts USD200 and sizes from current equity. Demo retains fixed0.01/cap10%.
+Qualification always names its policy version; no older result is relabeled.
+
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
 > **Last Updated:** 2026-09-24

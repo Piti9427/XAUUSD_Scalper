@@ -17,6 +17,7 @@ from scripts.research.breakout_logic import Rules, Costs, replay
 from scripts.research.run_strategy_campaign import write_json
 from scripts.research.tune_breakout_logic import load_data, sha256, START, TRAIN_END, END
 from scripts.research.public_exness_archive import load_discovery
+from scripts.research.m5_retest import build_m5, retest_frame
 
 
 def candidate_frame(
@@ -27,8 +28,11 @@ def candidate_frame(
     signal_spec=None,
     oscillator_spec=None,
     entry_session="all",
+    sell_filter="off",
 ):
     """Causal completed-bar signals; default D48 or explicit directional horizons."""
+    if sell_filter not in ("off", "body_dominant"):
+        raise ValueError("unsupported SELL candle filter")
     utc_sessions = {"utc_00_07": (0, 7), "utc_07_13": (7, 13), "utc_13_20": (13, 20)}
     if entry_session not in ("all", "avoid_rollover", *utc_sessions):
         raise ValueError("unsupported entry session")
@@ -184,13 +188,47 @@ def candidate_frame(
         lower, upper = utc_sessions[entry_session]
         hour = (result.index + pd.Timedelta(minutes=15)).hour
         result.loc[(hour < lower) | (hour >= upper), "direction"] = 0
+    if sell_filter == "body_dominant":
+        strong = (result.high > result.low) & (
+            (result.open - result.close) >= (result.high - result.low) / 2
+        )
+        result.loc[(result.direction == -1) & ~strong, "direction"] = 0
     return result
 
 
-def qualifies_trial30(pair, baseline, min_trades):
+def qualifies_trial30(pair, baseline, min_trades, *, policy="strict_v1"):
     """Require both executed sides, fixed-lot risk and improvement in each scenario."""
     if len(pair) != 2 or len(baseline) != 2:
         return False
+    if policy not in ("strict_v1", "profit_dd_v2"):
+        raise ValueError("unsupported qualification policy")
+    if policy == "profit_dd_v2":
+        for candidate, parent in zip(pair, baseline):
+            required = (
+                "net_usd",
+                "max_dd_pct",
+                "max_admitted_risk_pct",
+                "trades",
+                "buy_trades",
+                "sell_trades",
+            )
+            if any(candidate.get(k) is None or not math.isfinite(candidate[k]) for k in required):
+                return False
+            if any(
+                parent.get(k) is None or not math.isfinite(parent[k])
+                for k in ("net_usd", "max_dd_pct")
+            ):
+                return False
+            if (
+                candidate["net_usd"] <= max(0, parent["net_usd"])
+                or not 0 <= candidate["max_dd_pct"] <= min(30, parent["max_dd_pct"])
+                or not 0 <= candidate["max_admitted_risk_pct"] <= 20 + 1e-9
+                or candidate["trades"] < min_trades
+                or candidate["buy_trades"] < 1
+                or candidate["sell_trades"] < 1
+            ):
+                return False
+        return True
     keys = (
         "net_usd",
         "win_rate",
@@ -239,7 +277,7 @@ def qualifies_trial30(pair, baseline, min_trades):
 
 
 def metrics(result):
-    summary = {k: v for k, v in result.items() if k not in ("ledger", "equity")}
+    summary = {k: v for k, v in result.items() if k not in ("ledger", "equity", "rejection_events")}
     summary["buy_trades"] = sum(p["direction"] == 1 for p in result["ledger"])
     summary["sell_trades"] = sum(p["direction"] == -1 for p in result["ledger"])
     summary["loss_trades"] = sum(p["net"] < 0 for p in result["ledger"])
@@ -250,6 +288,195 @@ def metrics(result):
 
 def contracts(catalog="quality"):
     """Frozen catalogs; causal signals, admission, reward and protection interactions."""
+    if catalog == "annual_m5_atr_reward":
+        reward_profiles: list[dict[str, Any]] = [
+            dict(signal_spec=dict(buy_lookback=h, sell_lookback=h, trend_span=t))
+            for h, t in product((24, 48, 96), (50, 200))
+        ]
+        reward_profiles += [
+            dict(
+                oscillator_spec=dict(
+                    period=14,
+                    threshold=25,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=96,
+                    parent_trend_span=t,
+                )
+            )
+            for t in (50, 200)
+        ]
+        return [
+            dict(
+                profile,
+                hypothesis="M5_trigger_risk_with_parent_SELL_ATR_reward",
+                buy_filter="off",
+                depth=0.0,
+                m5_ttl=ttl,
+                rules=asdict(
+                    Rules(
+                        buy_stop_mode="trigger",
+                        sell_stop_mode="trigger",
+                        buy_target_rr=reward,
+                        protect_mode="break_even",
+                        protect_after_r=1,
+                        buy_protect_mode=protect,
+                        daily_loss_limit=0.1,
+                        max_daily_losses=1,
+                        holding_mode="bounded24",
+                    )
+                ),
+            )
+            for profile, ttl, reward, protect in product(
+                reward_profiles, (2, 4), (1.5, 2.0), ("off", "break_even")
+            )
+        ]
+    if catalog == "annual_m5_directional_sizing":
+        seeds = contracts("annual_m5_hybrid")
+        return [
+            dict(
+                seeds[n - 1],
+                hypothesis="lower_BUY_equity_risk_keeps_SELL_fixed_admission",
+                seed=f"annual_m5_hybrid:{n}",
+                rules=dict(
+                    seeds[n - 1]["rules"],
+                    buy_risk_cap=cap,
+                    buy_sizing_mode=sizing,
+                    buy_target_rr=reward,
+                    stop_atr=stop,
+                ),
+            )
+            for n, cap, sizing, reward, stop in product(
+                (14, 15), (0.02, 0.025, 0.05), ("fixed", "risk"), (2.0, 3.0), (2.0, 2.5)
+            )
+        ]
+    if catalog == "annual_m5_hybrid_quality":
+        seeds = contracts("annual_m5_hybrid")
+        return [
+            dict(
+                seeds[n - 1],
+                hypothesis="hybrid_sell_quality_stop_and_admission_profit_dd_v2",
+                seed=f"annual_m5_hybrid:{n}",
+                sell_filter=guard,
+                rules=dict(
+                    seeds[n - 1]["rules"], risk_cap=cap, stop_atr=stop, buy_target_rr=reward
+                ),
+            )
+            for n, cap, stop, guard, reward in product(
+                (14, 15), (0.05, 0.075, 0.10), (2.0, 2.5), ("off", "body_dominant"), (2.0, 3.0)
+            )
+        ]
+    if catalog == "annual_m5_hybrid":
+        return [
+            dict(
+                hypothesis="M5_buy_participation_preserves_M15_sell_ATR_edge",
+                buy_filter="off",
+                depth=0.0,
+                hybrid_buy_horizon=buy,
+                hybrid_sell_horizon=sell,
+                m5_ttl=ttl,
+                m5_buy_only=True,
+                rules=asdict(
+                    Rules(
+                        buy_stop_mode="trigger",
+                        buy_target_rr=reward,
+                        buy_protect_mode=protect,
+                        protect_mode="break_even",
+                        protect_after_r=1,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                        holding_mode=holding,
+                    )
+                ),
+            )
+            for buy, sell, ttl, reward, protect, holding in product(
+                (24, 48),
+                (48, 96),
+                (2, 4),
+                (1.5, 2.0),
+                ("off", "break_even"),
+                ("intraday", "bounded24"),
+            )
+        ]
+    if catalog in ("annual_m5_intraday", "annual_m5_bounded24"):
+        profiles: list[dict[str, Any]] = [
+            dict(signal_spec=dict(buy_lookback=h, sell_lookback=h, trend_span=t))
+            for h, t in product((24, 48, 96), (50, 200))
+        ]
+        profiles += [
+            dict(
+                oscillator_spec=dict(
+                    period=14,
+                    threshold=25,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=96,
+                    parent_trend_span=t,
+                )
+            )
+            for t in (50, 200)
+        ]
+        return [
+            dict(
+                profile,
+                hypothesis="M15_setup_M5_retest_trigger_stop_cost_admission",
+                buy_filter="off",
+                depth=0.0,
+                m5_ttl=ttl,
+                rules=asdict(
+                    Rules(
+                        stop_mode="trigger",
+                        target_rr=reward,
+                        protect_mode=protect,
+                        protect_after_r=1.0,
+                        daily_loss_limit=0.10,
+                        max_daily_losses=1,
+                        holding_mode=catalog.removeprefix("annual_m5_"),
+                    )
+                ),
+            )
+            for profile, ttl, reward, protect in product(
+                profiles, (2, 4), (1.5, 2.0), ("off", "break_even")
+            )
+        ]
+    if catalog == "annual_short_buy":
+        seed = contracts("annual_directional_fine")[6]
+        return [
+            dict(
+                seed,
+                hypothesis="more_causal_buy_setups_with_shorter_cost_admissible_stops",
+                oscillator_spec=dict(seed["oscillator_spec"], period=period, threshold=threshold),
+                rules=dict(
+                    seed["rules"], buy_stop_atr=stop, buy_target_rr=reward, buy_protect_mode=protect
+                ),
+            )
+            for period, threshold, stop, reward, protect in product(
+                (7, 14), (25, 35), (0.5, 0.75), (2.0, 3.0), ("off", "break_even")
+            )
+        ]
+    if catalog == "annual_sizing":
+        seeds = (
+            ("annual_directional_fine", 7),
+            ("annual_directional_circuit", 22),
+            ("annual_hybrid_unpaused", 28),
+        )
+        candidates = []
+        for family, trial in seeds:
+            seed = contracts(family)[trial - 1]
+            for cap, sizing in product(
+                (0.005, 0.01, 0.02, 0.025, 0.05, 0.075, 0.10, 0.125, 0.15, 0.20), ("fixed", "risk")
+            ):
+                candidates.append(
+                    dict(
+                        seed,
+                        hypothesis="current_equity_sizing_admission_under_profit_dd_v2",
+                        seed=f"{family}:{trial}",
+                        rules=dict(
+                            seed["rules"], risk_mode="static", risk_cap=cap, sizing_mode=sizing
+                        ),
+                    )
+                )
+        return candidates
 
     def rules(guard, target, protection, activation):
         return asdict(
@@ -332,7 +559,7 @@ def contracts(catalog="quality"):
         "annual_directional_fine",
     ):
         if catalog == "annual_directional":
-            choices = product(
+            choices: Any = product(
                 (7, 14), (25, 35), (48,), (0,), (1.5, 2.0, 2.5), (1.25, 1.35, 1.5, 2.0), ("static",)
             )
         elif catalog == "annual_directional_trend":
@@ -1333,6 +1560,9 @@ def main(argv=None):
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--require-calendar-year", action="store_true")
     parser.add_argument(
+        "--qualification-policy", choices=("strict_v1", "profit_dd_v2"), default="strict_v1"
+    )
+    parser.add_argument(
         "--catalog",
         choices=(
             "quality",
@@ -1373,6 +1603,14 @@ def main(argv=None):
             "annual_directional_fine",
             "annual_fast_quality",
             "annual_short_sell",
+            "annual_sizing",
+            "annual_short_buy",
+            "annual_m5_intraday",
+            "annual_m5_bounded24",
+            "annual_m5_hybrid",
+            "annual_m5_hybrid_quality",
+            "annual_m5_directional_sizing",
+            "annual_m5_atr_reward",
         ),
         default="quality",
     )
@@ -1419,7 +1657,12 @@ def main(argv=None):
             raise ValueError("annual research requires every audited calendar month in order")
         for month, item in zip(expected, imported):
             following = month + pd.offsets.MonthBegin(1)
-            low, high = np.searchsorted(ticks[0], [month.value // 10**6, following.value // 10**6])
+            low, high = np.asarray(
+                np.searchsorted(
+                    ticks[0],
+                    np.asarray([month.value // 10**6, following.value // 10**6], dtype=np.int64),
+                )
+            )
             bars = frame.loc[(frame.index >= month) & (frame.index < following)]
             if (
                 high - low != item["ticks"]
@@ -1438,6 +1681,10 @@ def main(argv=None):
             monthly_canonical_bars=[item["canonical_bars"] for item in imported],
         )
     costs = dict(base=Costs(), stress=Costs(extra_spread=0.2, slippage=0.1))
+    m5 = None
+    if args.catalog.startswith("annual_m5_"):
+        m5 = build_m5(ticks, args.output / "m5_input", audit["dataset_sha256"])
+        audit["m5_manifest"] = json.loads((args.output / "m5_input/manifest.json").read_text())
     baseline = Rules(
         entry_guard="sell_only",
         daily_loss_limit=0.2,
@@ -1453,6 +1700,8 @@ def main(argv=None):
         "scripts/research/run_strategy_campaign.py",
         "scripts/strategy.py",
     ]
+    if m5 is not None:
+        sources.append("scripts/research/m5_retest.py")
     protocol = dict(
         version=3,
         catalog=args.catalog,
@@ -1469,6 +1718,13 @@ def main(argv=None):
         selection="lowest worst-window stress DD, highest full stress net, trial id",
         limitations="Reused discovery, no untouched validation; commission0 assumed, swap not modeled; no MT5 or notification APIs; not runtime authorization",
     )
+    if args.qualification_policy == "profit_dd_v2":
+        protocol.update(
+            qualification_policy="profit_dd_v2",
+            baseline_rr_policy="reported_only; no RR or WR superiority gate",
+            gates="Each full/half base/stress: net>max(0,trial30); DD<=trial30 and<=30%; risk<=20%; both executed sides; trades>=60 full,>=20 halves",
+            selection="highest full stress net, lowest worst-scenario DD, trial id",
+        )
     if annual_coverage is not None:
         protocol["annual_coverage"] = annual_coverage
     output = args.output
@@ -1476,7 +1732,10 @@ def main(argv=None):
         if json.loads((output / "protocol.json").read_text()) != protocol:
             raise ValueError("resume protocol/source/input mismatch")
     else:
-        output.mkdir(parents=True, exist_ok=False)
+        if m5 is None:
+            output.mkdir(parents=True, exist_ok=False)
+        elif (output / "protocol.json").exists():
+            raise ValueError("campaign exists; use --resume")
         write_json(output / "protocol.json", protocol)
     for path, digest in protocol["source_hashes"].items():
         content = Path(path).read_bytes()
@@ -1489,6 +1748,7 @@ def main(argv=None):
         snapshot.write_bytes(content)
 
     verified_scenarios = 0
+    entry_cache = {}
 
     def evaluate(directory, rules, candidate):
         nonlocal verified_scenarios
@@ -1508,6 +1768,51 @@ def main(argv=None):
                 candidate.get("entry_session", "all"),
             )
         )
+        if candidate is not None and "hybrid_buy_horizon" in candidate:
+            h = candidate["hybrid_buy_horizon"]
+            buys = candidate_frame(
+                frame, "off", 0, signal_spec=dict(buy_lookback=h, sell_lookback=h, trend_span=50)
+            )
+            sells = candidate_frame(
+                frame,
+                "off",
+                0,
+                oscillator_spec=dict(
+                    period=14,
+                    threshold=25,
+                    trend_span=50,
+                    side="buy",
+                    parent_lookback=candidate["hybrid_sell_horizon"],
+                    parent_trend_span=200,
+                ),
+                sell_filter=candidate.get("sell_filter", "off"),
+            )
+            prepared = sells.copy()
+            long = (buys.direction == 1) & (sells.direction != -1)
+            prepared["direction"] = np.select([sells.direction == -1, long], [-1, 1], 0)
+            prepared.loc[long, ["hh", "ll"]] = buys.loc[long, ["hh", "ll"]]
+        entry_kwargs = {}
+        if candidate is not None and "m5_ttl" in candidate:
+            cache_key = json.dumps(
+                {
+                    k: candidate.get(k)
+                    for k in (
+                        "signal_spec",
+                        "oscillator_spec",
+                        "m5_ttl",
+                        "m5_buy_only",
+                        "hybrid_buy_horizon",
+                        "hybrid_sell_horizon",
+                        "sell_filter",
+                    )
+                },
+                sort_keys=True,
+            )
+            if cache_key not in entry_cache:
+                entry_cache[cache_key] = retest_frame(
+                    prepared, m5, candidate["m5_ttl"], buy_only=candidate.get("m5_buy_only", False)
+                )
+            entry_kwargs["entry_frame"] = entry_cache[cache_key]
         if args.resume and marker.exists():
             previous = json.loads(marker.read_text())
             if set(previous["artifact_hashes"]) != set(names):
@@ -1534,6 +1839,7 @@ def main(argv=None):
                         costs[c],
                         start=windows[w][0],
                         end=windows[w][1],
+                        **entry_kwargs,
                     )
                     if fresh != result:
                         raise ValueError("resume artifact differs from authoritative fresh replay")
@@ -1546,7 +1852,9 @@ def main(argv=None):
         for w, (s, e) in windows.items():
             summary[w] = []
             for c, cost in costs.items():
-                result = replay(prepared, ticks, broker, rules, cost, start=s, end=e)
+                result = replay(
+                    prepared, ticks, broker, rules, cost, start=s, end=e, **entry_kwargs
+                )
                 write_json(directory / f"{w}-{c}.json", result)
                 summary[w].append(metrics(result))
         write_json(
@@ -1571,7 +1879,16 @@ def main(argv=None):
     for number, candidate in enumerate(catalog[:limit], 1):
         summary = evaluate(output / f"trial-{number:03d}", Rules(**candidate["rules"]), candidate)
         passes = {
-            w: qualifies_trial30(pair, reference[w], 60 if w == "full" else 20)
+            w: qualifies_trial30(
+                pair,
+                reference[w],
+                60 if w == "full" else 20,
+                **(
+                    {"policy": args.qualification_policy}
+                    if args.qualification_policy != "strict_v1"
+                    else {}
+                ),
+            )
             for w, pair in summary.items()
         }
         row = dict(
@@ -1592,9 +1909,17 @@ def main(argv=None):
     leader = min(
         eligible,
         key=lambda r: (
-            max(pair[1]["max_dd_pct"] for pair in r["metrics"].values()),
-            -r["metrics"]["full"][1]["net_usd"],
-            r["trial"],
+            (
+                -r["metrics"]["full"][1]["net_usd"],
+                max(m["max_dd_pct"] for pair in r["metrics"].values() for m in pair),
+                r["trial"],
+            )
+            if args.qualification_policy == "profit_dd_v2"
+            else (
+                max(pair[1]["max_dd_pct"] for pair in r["metrics"].values()),
+                -r["metrics"]["full"][1]["net_usd"],
+                r["trial"],
+            )
         ),
         default=None,
     )
@@ -1621,6 +1946,13 @@ def main(argv=None):
         deployment="UNCHANGED",
         rows=rows,
     )
+    if args.qualification_policy == "profit_dd_v2":
+        verdict["qualification_policy"] = args.qualification_policy
+        verdict["cost_validation"] = (
+            "COST_INCONCLUSIVE: historical commission0 assumed; swap omitted"
+        )
+        if winner:
+            verdict["status"] = "COST_INCONCLUSIVE"
     write_json(output / "verdict.json", verdict)
     print(
         json.dumps(

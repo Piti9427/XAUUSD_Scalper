@@ -8,6 +8,81 @@ from tests.test_breakout_logic import sample, BROKER, START, END
 
 
 class BidirectionalCampaignTests(unittest.TestCase):
+    def test_research_catalogs_are_complete_unique_and_replay_valid(self):
+        from scripts.research.bidirectional_campaign import contracts
+        import json
+
+        counts = dict(
+            annual_sizing=60,
+            annual_short_buy=32,
+            annual_m5_intraday=64,
+            annual_m5_bounded24=64,
+            annual_m5_hybrid=64,
+            annual_m5_hybrid_quality=48,
+            annual_m5_directional_sizing=48,
+            annual_m5_atr_reward=64,
+        )
+        frame, ticks = sample()
+        frame["management_bar"] = True
+        for name, count in counts.items():
+            candidates = contracts(name)
+            self.assertEqual(len(candidates), count)
+            self.assertEqual(len({json.dumps(c, sort_keys=True) for c in candidates}), count)
+            for c in candidates:
+                result = replay(
+                    frame,
+                    ticks,
+                    BROKER,
+                    Rules(**c["rules"]),
+                    Costs(),
+                    start=START,
+                    end=END,
+                    **({"entry_frame": frame} if "m5_ttl" in c else {}),
+                )
+                self.assertEqual(result["initial_balance"], 200.0)
+
+    def test_sell_candle_quality_keeps_buy_and_rejects_weak_sell_before_replay(self):
+        frame, ticks = sample()
+        frame["direction"] = [1, -1, -1]
+        frame["open"] = [100.0, 100.0, 100.0]
+        frame["close"] = [100.5, 99.8, 98.9]
+        frame["high"] = [101.0, 101.0, 100.5]
+        frame["low"] = [99.0, 99.0, 98.5]
+        prepared = candidate_frame(frame, "off", 0, sell_filter="body_dominant")
+        r = replay(
+            prepared, ticks, BROKER, Rules(entry_guard="sell_only"), Costs(), start=START, end=END
+        )
+        self.assertEqual(r["signal_count"], 2)
+        self.assertEqual(r["trades"], 1)
+        self.assertEqual(r["ledger"][0]["entry_ms"], ticks[0][2])
+
+    def test_profit_dd_v2_reports_rr_without_requiring_superiority(self):
+        parent = dict(net_usd=100, max_dd_pct=26, win_rate=0.8, realized_rr=2)
+        candidate = dict(
+            net_usd=110,
+            max_dd_pct=25,
+            win_rate=0.4,
+            realized_rr=0.9,
+            max_admitted_risk_pct=20,
+            trades=60,
+            buy_trades=5,
+            sell_trades=55,
+        )
+        self.assertTrue(qualifies_trial30([candidate] * 2, [parent] * 2, 60, policy="profit_dd_v2"))
+        for changed in (
+            dict(net_usd=100),
+            dict(max_dd_pct=26.1),
+            dict(trades=59),
+            dict(buy_trades=0),
+            dict(max_admitted_risk_pct=20.01),
+        ):
+            self.assertFalse(
+                qualifies_trial30(
+                    [candidate, dict(candidate, **changed)], [parent] * 2, 60, policy="profit_dd_v2"
+                )
+            )
+        self.assertFalse(qualifies_trial30([candidate] * 2, [parent] * 2, 60))
+
     def test_utc_sessions_filter_both_sides_at_completed_boundary_and_reject_local_time(self):
         import pandas as pd
 

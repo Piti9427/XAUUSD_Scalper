@@ -16,6 +16,9 @@ import numpy as np
 import pandas as pd
 
 
+RESEARCH_RISK_CAPS = (0.005, 0.01, 0.02, 0.025, 0.05, 0.075, 0.10, 0.125, 0.15, 0.20)
+
+
 @dataclass(frozen=True)
 class Rules:
     failed_closes: int = 0
@@ -41,13 +44,36 @@ class Rules:
     buy_stop_atr: float | None = None
     buy_target_rr: float | None = None
     buy_protect_mode: str | None = None
+    sizing_mode: str = "fixed"
+    holding_mode: str = "legacy"
+    buy_stop_mode: str | None = None
+    buy_risk_cap: float | None = None
+    buy_sizing_mode: str | None = None
+    sell_stop_mode: str | None = None
 
     def __post_init__(self):
+        if self.sell_stop_mode not in (None, "atr", "trigger"):
+            raise ValueError("unsupported SELL stop mode")
+        if self.buy_sizing_mode not in (None, "fixed", "risk"):
+            raise ValueError("unsupported BUY sizing mode")
+        if self.buy_risk_cap is not None and self.buy_risk_cap not in RESEARCH_RISK_CAPS:
+            raise ValueError("unsupported BUY risk cap")
+        if self.buy_stop_mode not in (None, "atr", "trigger"):
+            raise ValueError("unsupported BUY stop mode")
+        if self.holding_mode not in ("legacy", "intraday", "bounded24"):
+            raise ValueError("unsupported holding mode")
         if self.buy_protect_mode not in (None, "off", "break_even"):
             raise ValueError("unsupported BUY protection")
-        if self.buy_stop_atr is not None and self.buy_stop_atr not in (1.0, 1.5, 2.0, 2.5):
+        if self.buy_stop_atr is not None and self.buy_stop_atr not in (
+            0.5,
+            0.75,
+            1.0,
+            1.5,
+            2.0,
+            2.5,
+        ):
             raise ValueError("unsupported BUY ATR stop multiplier")
-        if self.buy_target_rr is not None and self.buy_target_rr not in (1.25, 1.35, 1.5, 2.0):
+        if self.buy_target_rr is not None and self.buy_target_rr not in (1.25, 1.35, 1.5, 2.0, 3.0):
             raise ValueError("unsupported BUY risk distance target")
         if (
             self.buy_stop_atr is not None or self.buy_target_rr is not None
@@ -63,7 +89,9 @@ class Rules:
             raise ValueError("unsupported UTC session")
         if self.risk_mode not in ("static", "drawdown_steps"):
             raise ValueError("unsupported risk mode")
-        if self.risk_cap not in (0.025, 0.05, 0.10):
+        if self.sizing_mode not in ("fixed", "risk"):
+            raise ValueError("unsupported sizing mode")
+        if self.risk_cap not in RESEARCH_RISK_CAPS:
             raise ValueError("unsupported risk cap")
         if self.daily_loss_limit not in (0.05, 0.10, 0.20, 0.40):
             raise ValueError("unsupported daily limit")
@@ -170,15 +198,24 @@ def _level(price, grid, direction):
     )
 
 
-def replay(frame, ticks, broker, rules, costs, *, start, end):
+def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
     """Return account metrics and closed trades for one independent $200 window.
 
     Input frame includes completed OHLC, prior hh/ll, atr and direction.
-    No dynamic lot sizing. Quote age is zero at observation; lateness <=90s.
+    Fixed0.01 by default; optional current-equity risk sizing floors broker steps.
+    Quote age is zero at observation; lateness <=90s.
     SL is a trigger, not a guaranteed maximum loss across a price gap.
     """
     if any(x.tzinfo is None or x.utcoffset() != pd.Timedelta(0) for x in (start, end)):
         raise ValueError("window must be aware UTC")
+    minutes = 15
+    if entry_frame is not None:
+        if rules.entry_mode != "immediate" or "management_bar" not in entry_frame:
+            raise ValueError(
+                "M5 entries require immediate prepared triggers and M15 management flags"
+            )
+        frame = entry_frame
+        minutes = 5
     if start >= end or frame.index.tz is None or str(frame.index.tz) != "UTC":
         raise ValueError("invalid window/frame timezone")
     if not frame.index.is_monotonic_increasing or frame.index.has_duplicates:
@@ -193,12 +230,16 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         frame.loc[depth < rules.min_depth_atr, "direction"] = 0
     frame = _entry_signals(frame, rules.entry_mode)
     frame["prior_day_direction"] = prior.reindex(
-        (frame.index + pd.Timedelta(minutes=15)).normalize()
+        (frame.index + pd.Timedelta(minutes=minutes)).normalize()
     ).to_numpy()
     all_t, all_b, all_a = ticks
     if not (len(all_t) == len(all_b) == len(all_a)):
         raise ValueError("unequal tick arrays")
-    left, right = np.searchsorted(all_t, [start.value // 10**6, end.value // 10**6])
+    left, right = np.asarray(
+        np.searchsorted(
+            all_t, np.asarray([start.value // 10**6, end.value // 10**6], dtype=np.int64)
+        )
+    )
     times = all_t[left:right]
     # Read-only float tapes need no full-window copies for actual-spread replay.
     bid = all_b[left:right]
@@ -221,15 +262,23 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             or (a < b).any()
         ):
             raise ValueError("invalid ticks")
-    for key in ("trade_contract_size", "trade_tick_size", "leverage", "volume_step"):
+    for key in (
+        "trade_contract_size",
+        "trade_tick_size",
+        "leverage",
+        "volume_step",
+        "volume_min",
+        "volume_max",
+    ):
         if not math.isfinite(broker[key]) or broker[key] <= 0:
             raise ValueError("invalid broker specification")
-    if not (broker["volume_min"] <= 0.01 <= broker["volume_max"]) or not np.isclose(
-        0.01 / broker["volume_step"], round(0.01 / broker["volume_step"])
+    if broker["volume_min"] > broker["volume_max"]:
+        raise ValueError("invalid broker volume bounds")
+    if (rules.sizing_mode == "fixed" or rules.buy_sizing_mode == "fixed") and (
+        not (broker["volume_min"] <= 0.01 <= broker["volume_max"])
+        or not np.isclose(0.01 / broker["volume_step"], round(0.01 / broker["volume_step"]))
     ):
         raise ValueError("fixed lot is not broker-admissible")
-    factor = broker["trade_contract_size"] * 0.01
-    fee = costs.commission_per_lot * 0.01
     balance = peak = 200.0
     max_dd = 0.0
     position: dict[str, Any] | None = None
@@ -254,6 +303,19 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             "daily_loss_count",
         )
     }
+    rejection_events = []
+
+    def reject(reason, direction, stamp):
+        rejected[reason] += 1
+        if entry_frame is not None:
+            rejection_events.append(
+                dict(
+                    direction=direction,
+                    reason=reason,
+                    time_utc=pd.Timestamp(stamp, unit="ms", tz="UTC").isoformat(),
+                )
+            )
+
     day_start: dict[int, float] = {}
     daily_losses: dict[int, int] = {}
     cooldown_until_ms = 0
@@ -297,6 +359,8 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         nonlocal balance, position, flat_since, reset_range, cooldown_until_ms
         p = position
         assert p is not None
+        factor = broker["trade_contract_size"] * p["volume"]
+        fee = costs.commission_per_lot * p["volume"]
         quote = bid[index] if p["direction"] == 1 else ask[index]
         price = p["target"] if reason == "TP" else quote - p["direction"] * costs.slippage
         gross = p["direction"] * (price - p["entry"]) * factor
@@ -336,11 +400,15 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         while position is not None and cursor < finish:
             stop = min(cursor + 100000, finish)
             p = position
+            factor = broker["trade_contract_size"] * p["volume"]
             quote = bid[cursor:stop] if p["direction"] == 1 else ask[cursor:stop]
             pnl = p["direction"] * (quote - p["entry"]) * factor
             sl = p["direction"] * (quote - p["stop"]) <= 0
             tp = (p["direction"] * (quote - p["target"]) >= 0) & (not p["target_disabled"])
             hits = np.flatnonzero(sl | tp | (balance + pnl <= 0))
+            deadline = p.get("deadline_index")
+            if deadline is not None and cursor <= deadline < stop:
+                hits = np.unique(np.r_[hits, deadline - cursor])
             used = int(hits[0]) + 1 if len(hits) else len(pnl)
             # Observe executable TP value, not a favorable tick overshoot that cannot fill.
             marks = balance + pnl[:used]
@@ -353,14 +421,20 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             if len(hits):
                 close(
                     cursor + used - 1,
-                    "SL" if sl[used - 1] else "TP" if tp[used - 1] else "BANKRUPT",
+                    "SL"
+                    if sl[used - 1]
+                    else "TP"
+                    if tp[used - 1]
+                    else "HOLD_LIMIT"
+                    if deadline == cursor + used - 1
+                    else "BANKRUPT",
                 )
             cursor += used
 
-    completed = frame.index + pd.Timedelta(minutes=15)
+    completed = frame.index + pd.Timedelta(minutes=minutes)
     selected = (completed >= start) & (completed < end)
     stamps = completed[selected].as_unit("ms").asi8
-    indices = np.searchsorted(times, stamps)
+    indices = np.asarray(np.searchsorted(times, np.asarray(stamps, dtype=np.int64)))
     for row, stamp, index in zip(frame.loc[selected].itertuples(), stamps, indices):
         stamp, index = int(stamp), int(index)
         if index >= len(times):
@@ -371,10 +445,13 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         direction = int(row.direction)
         signal_count += bool(direction)
         closed_by_rule = False
+        management_bar = entry_frame is None or row.management_bar
         if position is not None:
             p = position
+            factor = broker["trade_contract_size"] * p["volume"]
+            fee = costs.commission_per_lot * p["volume"]
             # Signal bar precedes entry; never count it as a held bar.
-            if stamp > p["entry_ms"]:
+            if management_bar and stamp > p["entry_ms"]:
                 p["held_bars"] += 1
                 failed = p["direction"] * (row.close - p["boundary"]) < 0
                 p["failed_count"] = p["failed_count"] + 1 if failed else 0
@@ -397,7 +474,12 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             and rules.buy_protect_mode is not None
             else rules.protect_mode
         )
-        if position is not None and stamp > position["entry_ms"] and protect_mode != "off":
+        if (
+            position is not None
+            and management_bar
+            and stamp > position["entry_ms"]
+            and protect_mode != "off"
+        ):
             p = position
             executable = float(bid[index] if p["direction"] == 1 else ask[index])
             net_now = (
@@ -442,13 +524,13 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         if not direction or closed_by_rule:
             continue
         if not fresh:
-            rejected["late_quote"] += 1
+            reject("late_quote", direction, int(times[index]))
             continue
         if position is not None:
-            rejected["busy"] += 1
+            reject("busy", direction, int(times[index]))
             continue
         if reset_range is not None:
-            rejected["reset"] += 1
+            reject("reset", direction, int(times[index]))
             continue
         span = row.high - row.low
         guard_ok = (
@@ -472,7 +554,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             or (rules.entry_guard == "prior_day" and row.prior_day_direction == direction)
         )
         if not guard_ok:
-            rejected["entry_guard"] += 1
+            reject("entry_guard", direction, int(times[index]))
             continue
         if (
             rules.buy_pause_drawdown
@@ -480,29 +562,32 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             and peak > 0
             and (peak - balance) / peak >= rules.buy_pause_drawdown
         ):
-            rejected["buy_pause"] += 1
+            reject("buy_pause", direction, int(times[index]))
             continue
         day = int(times[index] // 86400000)
         hour = (int(times[index]) % 86400000) / 3600000
+        if rules.holding_mode == "intraday" and hour >= 20.5:
+            reject("session", direction, int(times[index]))
+            continue
         if rules.session_mode == "london_ny" and not (7 <= hour < 11 or 12 <= hour < 17):
-            rejected["session"] += 1
+            reject("session", direction, int(times[index]))
             continue
         if int(times[index]) < cooldown_until_ms:
-            rejected["cooldown"] += 1
+            reject("cooldown", direction, int(times[index]))
             continue
         if rules.max_daily_losses and daily_losses.get(day, 0) >= rules.max_daily_losses:
-            rejected["daily_loss_count"] += 1
+            reject("daily_loss_count", direction, int(times[index]))
             continue
         if flat_since is not None and flat_since <= day * 86400000:
             day_start.setdefault(day, balance)
         if day not in day_start:
-            rejected["day_start_unknown"] += 1
+            reject("day_start_unknown", direction, int(times[index]))
             continue
         if balance <= 0:
-            rejected["bankrupt"] += 1
+            reject("bankrupt", direction, int(times[index]))
             continue
         if day_start[day] - balance >= day_start[day] * rules.daily_loss_limit:
-            rejected["daily_loss"] += 1
+            reject("daily_loss", direction, int(times[index]))
             continue
         if not all(math.isfinite(v) for v in (row.atr, row.hh, row.ll)) or row.atr <= 0:
             continue
@@ -517,39 +602,82 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             if direction == 1 and rules.buy_target_rr is not None
             else rules.target_rr
         )
+        stop_mode = (
+            rules.buy_stop_mode
+            if direction == 1 and rules.buy_stop_mode is not None
+            else rules.stop_mode
+        )
+        if direction == -1 and rules.sell_stop_mode is not None:
+            stop_mode = rules.sell_stop_mode
         stop = _level(entry - direction * row.atr * stop_atr, broker["trade_tick_size"], direction)
-        if rules.stop_mode in ("structure", "trigger"):
+        if stop_mode in ("structure", "trigger"):
             anchor = (
                 (row.low if direction == 1 else row.high)
-                if rules.stop_mode == "trigger"
+                if stop_mode == "trigger"
                 else (row.stop_low if direction == 1 else row.stop_high)
             )
-            stop = _level(
-                anchor - direction * broker["trade_tick_size"], broker["trade_tick_size"], direction
-            )
-        if rules.stop_mode == "boundary":
+            if entry_frame is not None:
+                # Bid candles -> Ask SELL stop, with decimal tick-grid geometry.
+                anchor_price = Decimal(str(anchor))
+                if direction == -1:
+                    anchor_price += Decimal(str(float(ask[index]))) - Decimal(
+                        str(float(bid[index]))
+                    )
+                price = anchor_price - direction * Decimal(str(broker["trade_tick_size"]))
+                stop = _level(float(price), broker["trade_tick_size"], direction)
+            else:
+                stop = _level(
+                    anchor - direction * broker["trade_tick_size"],
+                    broker["trade_tick_size"],
+                    direction,
+                )
+        if stop_mode == "boundary":
             stop = _level(
                 row.entry_boundary - direction * 0.5 * row.atr, broker["trade_tick_size"], direction
             )
         executable = float(bid[index] if direction == 1 else ask[index])
         if not math.isfinite(stop) or direction * (executable - stop) <= 0:
-            rejected["invalid_stop"] += 1
+            reject("invalid_stop", direction, int(times[index]))
             continue
         target_distance = abs(entry - stop) * target_rr if target_rr else row.atr * rules.target_atr
         target = _level(entry + direction * target_distance, broker["trade_tick_size"], direction)
-        risk = (abs(entry - stop) + costs.slippage) * factor + fee
-        admission_cap = rules.risk_cap
+        admission_cap = (
+            rules.buy_risk_cap
+            if direction == 1 and rules.buy_risk_cap is not None
+            else rules.risk_cap
+        )
         if rules.risk_mode == "drawdown_steps":
             drawdown = max(0.0, (peak - balance) / peak)
             if drawdown >= 0.15:
                 admission_cap = min(admission_cap, 0.025)
             elif drawdown >= 0.10:
                 admission_cap = min(admission_cap, 0.05)
+        volume = 0.01
+        sizing_mode = (
+            rules.buy_sizing_mode
+            if direction == 1 and rules.buy_sizing_mode is not None
+            else rules.sizing_mode
+        )
+        if sizing_mode == "risk":
+            per_lot = (abs(entry - stop) + costs.slippage) * broker[
+                "trade_contract_size"
+            ] + costs.commission_per_lot
+            step = Decimal(str(broker["volume_step"]))
+            available = min(balance * admission_cap / per_lot, broker["volume_max"])
+            volume = float(
+                (Decimal(str(available)) / step).to_integral_value(rounding=ROUND_FLOOR) * step
+            )
+            if volume < broker["volume_min"]:
+                reject("risk_cap", direction, int(times[index]))
+                continue
+        factor = broker["trade_contract_size"] * volume
+        fee = costs.commission_per_lot * volume
+        risk = (abs(entry - stop) + costs.slippage) * factor + fee
         if risk > balance * admission_cap:
-            rejected["risk_cap"] += 1
+            reject("risk_cap", direction, int(times[index]))
             continue
         if balance - fee <= entry * factor / broker["leverage"]:
-            rejected["margin"] += 1
+            reject("margin", direction, int(times[index]))
             continue
         position = dict(
             direction=direction,
@@ -574,8 +702,15 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
             failed_count=0,
             mfe_usd=0.0,
             mae_usd=0.0,
-            volume=0.01,
+            volume=volume,
         )
+        if rules.holding_mode != "legacy":
+            deadline_ms = (
+                day * 86400000 + 74700000
+                if rules.holding_mode == "intraday"
+                else int(times[index]) + 86400000
+            )
+            position["deadline_index"] = int(np.searchsorted(times, deadline_ms))
         balance -= fee
         flat_since = None
         # Record spread at entry immediately; exits start with subsequent ticks.
@@ -591,7 +726,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
     profits = np.array([p["net"] for p in ledger])
     wins, losses = profits[profits > 0], profits[profits < 0]
     rr = float(wins.mean() / -losses.mean()) if len(wins) and len(losses) else None
-    return dict(
+    result = dict(
         rules=asdict(rules),
         costs=asdict(costs),
         start_utc=start.isoformat(),
@@ -618,6 +753,10 @@ def replay(frame, ticks, broker, rules, costs, *, start, end):
         ledger=ledger,
         equity=equity,
     )
+
+    if entry_frame is not None:
+        result["rejection_events"] = rejection_events
+    return result
 
 
 def dominates(candidate, baseline, stressed, stressed_baseline, *, min_trades):
