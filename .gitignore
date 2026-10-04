@@ -67,6 +67,7 @@ data/*.png
 .idea/
 .scratch/
 .codegraph/
+graphify-out/
 
 # Deployment Artefacts
 deploy/swapfile

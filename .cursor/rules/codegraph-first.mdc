@@ -1,0 +1,33 @@
+---
+description: Prefer Codegraph over cat, grep, and full-file reads when looking up code
+alwaysApply: true
+---
+
+# Code lookup: Codegraph first
+
+For how code works, where a symbol lives, who calls it, or what a change breaks, query Codegraph before `cat`, `rg`, `grep`, or reading whole files.
+
+Cursor (MCP namespace `user-codegraph`):
+
+- One `codegraph_explore` call first. Returned source is Read-equivalent. Do not reopen those files.
+- Symbol location only: `codegraph_search`.
+- Callers, callees, blast radius: `codegraph_callers`, `codegraph_callees`, `codegraph_impact`.
+- Directory listing: `codegraph_files`.
+
+Shell-only agents:
+
+- `codegraph query <symbol>`
+- `codegraph callers <symbol>`
+- `codegraph callees <symbol>`
+- `codegraph impact <symbol>`
+- `codegraph files`
+
+Do not re-grep a hit Codegraph already returned.
+
+Use Read or grep only when:
+
+- Codegraph omitted the exact line, or its staleness banner names that file.
+- The target is not indexed code: docs, plans, CSV, logs, lockfiles, secret templates.
+- The index is missing: run `codegraph init -i` once, then query. If the CLI and MCP are both unavailable, fall back to Read or grep.
+
+Do not use graphify for symbol lookup. Tests and runtime checks still prove behavior.

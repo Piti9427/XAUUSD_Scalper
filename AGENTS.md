@@ -71,6 +71,10 @@ python3 test_mt5.py
 
 There is no formal build step. Treat dependency install, unit tests, and MT5 smoke test as the readiness check.
 
+## Code Lookup
+
+Query Codegraph before `cat`, `rg`, `grep`, or reading whole files. Cursor: one `codegraph_explore` call first; its source is Read-equivalent. Then `codegraph_search`, `codegraph_callers`, `codegraph_callees`, `codegraph_impact`, or `codegraph_files` as needed. Shell-only agents use `codegraph query|callers|callees|impact|files`. Do not re-grep a hit already returned. Read or grep only for a line Codegraph omitted, a file named in its staleness banner, or non-code (docs, plans, CSV, logs, lockfiles). If `.codegraph/` is missing, run `codegraph init -i` once. If Codegraph itself is unavailable, fall back to Read or grep. Do not use graphify for symbol lookup. Full rule: `.cursor/rules/codegraph-first.mdc`.
+
 ## Coding Style & Naming Conventions
 
 Use Python 3, four-space indentation, and clear module boundaries. Keep trading rules in `scripts/strategy.py`, platform access in connector/fetcher modules, and side effects such as Telegram or Google logging in separate modules. Use `snake_case` for functions, variables, and files; use `PascalCase` for classes.
