@@ -42,8 +42,8 @@ todos:
     content: Cancelled — no qualifier; Jul-Sep2025 remains unopened
     status: cancelled
   - id: v2-verdict-review
-    content: Record truthful verdict, update CORE_STRATEGY, run full tests and parallel code-review, commit scoped work
-    status: pending
+    content: Completed — truthful verdict/CORE update, 831-test suite, zero remaining Standards/Spec findings; scoped implementation committed 3e532a6
+    status: completed
 isProject: false
 ---
 

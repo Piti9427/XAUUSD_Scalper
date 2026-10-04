@@ -48,7 +48,7 @@ Behavior names below are exact unittest methods; existing replay tests intention
 | Narrow tests, full suite, changed-Python lint/syntax | Narrow65 tests passed; `.venv/bin/python -m unittest discover -s tests`:831tests/21.448s/OK(skipped2), exit0; hash-bound `checks.json`/`unittest.log`, readable `test-results.txt`; Ruff and compileall exit0. No configured static typechecker. |
 | Two-axis final review | `../2026-10-04-reward156-profit-survival-code-review.md`: Standards0 remaining, Spec0 remaining; discovered checkpoint/dedup/lock/parity/serialization/audit gaps fixed and re-reviewed. |
 | Independent full-artifact verification | `verify_campaign.py` exit0; `validation.json`:584 cells,64 matches,51,010 ledger trades, full metrics/gates/adaptive catalog/finalist selection recomputed,48 v1 parity matches. `-O` rejected before verification/publication. |
-| Current branch scoped commit; unrelated owner work preserved | Branch `feature/smc-v2-hardening`; implementation/evidence commit pending final scoped staging. Follow-up completion record adds observed commit SHA. |
+| Current branch scoped commit; unrelated owner work preserved | Observed implementation/evidence commit `3e532a67ee34be5e1b4cd0977cd13d246a9885d8`, branch `feature/smc-v2-hardening`,59 scoped files/~1.88MB curated namespace files. Actual commit inspected: owner's `.gitignore`, webhook test, deleted entry_exit plan and unrelated review/scratch files excluded; raw dumps excluded. Final todo now completed from observed commit; this follow-up records completion. |
 
 ## Reproduction
 
@@ -65,3 +65,5 @@ Default output resumes only the exact frozen source/config/input/runtime contrac
 `unittest.log` is retained locally; test-results excerpt and checks record observed summary plus full log SHA. Archived tapes remain under ignored data directory and their hashes under contract/manifests. Source snapshots retain exact bytes, including pre-existing whitespace.
 
 Completion scope is implementation plus finite experiment, not a claim that superior production strategy was found. No prospective test, actual broker fee/fill validation or Demo transition occurred.
+
+Final scoped diff check passed for active/curated files. Frozen `source_snapshot/scripts/strategy.py` retains an existing trailing blank line for byte-exact source provenance; excluded from whitespace normalization. Final completion edits change only plan frontmatter and this audit, leaving frozen plan-body/research-source/config/input hashes unchanged.
