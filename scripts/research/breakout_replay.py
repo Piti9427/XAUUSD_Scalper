@@ -23,6 +23,7 @@ def replay(
     entry_frame=None,
     swap_policy=None,
     capture_events=False,
+    capture_context=False,
 ):
     """Return account metrics and closed trades for one independent $200 window.
 
@@ -131,8 +132,20 @@ def replay(
     }
     rejection_events = []
     admission_events = []
+    context_events = []
+    context_dd_witnesses = []
+    signal_stamp = None
 
     def event(reason, direction, stamp):
+        if capture_context:
+            context_events.append(
+                dict(
+                    direction=direction,
+                    reason=reason,
+                    signal_close_utc=pd.Timestamp(signal_stamp, unit="ms", tz="UTC").isoformat(),
+                    time_utc=pd.Timestamp(stamp, unit="ms", tz="UTC").isoformat(),
+                )
+            )
         if capture_events:
             admission_events.append(
                 dict(
@@ -192,7 +205,17 @@ def replay(
                 )
             )
         peaks = np.maximum.accumulate(np.r_[peak, marks])[1:]
-        max_dd = max(max_dd, float(np.max((peaks - marks) / peaks)))
+        segment_dd = float(np.max((peaks - marks) / peaks))
+        if capture_context and segment_dd > max_dd:
+            trough = int(np.argmax((peaks - marks) / peaks))
+            context_dd_witnesses.append(
+                dict(
+                    peak=float(peaks[trough]),
+                    trough=float(marks[trough]),
+                    time_utc=pd.Timestamp(int(stamps[trough]), unit="ms", tz="UTC").isoformat(),
+                )
+            )
+        max_dd = max(max_dd, segment_dd)
         peak = max(peak, float(np.max(marks)))
         # Only actual first-second midnight marks establish an open-position baseline.
         midnight = np.flatnonzero(stamps % 86400000 < 1000)
@@ -290,6 +313,7 @@ def replay(
     indices = np.asarray(np.searchsorted(times, np.asarray(stamps, dtype=np.int64)))
     for row, stamp, index in zip(frame.loc[selected].itertuples(), stamps, indices):
         stamp, index = int(stamp), int(index)
+        signal_stamp = stamp
         if index >= len(times):
             continue
         advance(previous, index + 1)
@@ -546,6 +570,9 @@ def replay(
         result["rejection_events"] = rejection_events
     if capture_events:
         result["admission_events"] = admission_events
+    if capture_context:
+        result["context_events"] = context_events
+        result["context_dd_witnesses"] = context_dd_witnesses
     if swap_schedule is not None:
         result["swap_policy"] = asdict(swap_policy)
         result["swap_usd"] = sum(p["swap_usd"] for p in ledger)
