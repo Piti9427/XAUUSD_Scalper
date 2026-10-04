@@ -8,8 +8,17 @@ This is a Python trading-alert and backtesting project for XAUUSD.
 - `scripts/` contains the application modules: MT5 access, data fetching, strategy logic, backtesting, notifications, news filtering, and logging.
 - `config/settings.yaml` holds runtime configuration for MT5, Telegram, strategy parameters, news filtering, and Google Workspace IDs.
 - `data/` stores historical CSV data such as `XAUUSD_M15.csv` and `XAUUSD_H1.csv`.
+- `runs/` stores machine-generated experiment runs, simulation checkpoints, and large backtest output dumps. 100% gitignored.
+- `docs/reviews/` stores human-readable review reports, verdicts, and audit summaries (*.md). Never write raw multi-file run dumps here.
 - `test_mt5.py` is a manual MT5 connectivity smoke test.
 - `README.md` and `SYSTEM_REPORT.md` provide context.
+
+## Machine Experiment Outputs & Documentation Boundaries
+
+- **`docs/reviews/` is STRICTLY for human-authored markdown reports (`*.md`)**. Never write multi-file simulation dumps, JSON cells, execution logs, or CSV tables directly into `docs/reviews/`.
+- **All machine-generated test outputs, simulation runs, parameter tuning dumps, and checkpoints MUST be written to `runs/<campaign-name>/`** (or `data/research_output/`).
+- The `runs/` directory is 100% ignored in `.gitignore` and must never be tracked or committed to Git.
+- When an experiment or campaign concludes, author a synthesized summary markdown document in `docs/reviews/YYYY-MM-DD-<title>.md` citing the run metrics.
 
 ## Codex and Antigravity Collaboration
 

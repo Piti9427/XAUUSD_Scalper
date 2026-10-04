@@ -88,7 +88,8 @@ data/*.sqlite3.lock
 data/trial30-demo-watch.pid
 data/trial30-demo-watch.log
 
-# Test execution logs, backtest dumps & test campaign output folders
+# Test execution logs, backtest dumps & experiment run output folders
+runs/
 test-results/
 test_results/
 test_reports/

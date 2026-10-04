@@ -1,8 +1,0 @@
-.venv/bin/python -m unittest discover -s tests
-Observed exit_code: 0
-----------------------------------------------------------------------
-Ran 831 tests in 21.448s
-
-OK (skipped=2)
-
-Full local log SHA256: f8363d0c99b56af2015b11d201498a1889f425f0850b1b053d2dd4c0f5608694

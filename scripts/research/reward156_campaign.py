@@ -30,7 +30,7 @@ from scripts.research.reward156_tuning import SOURCES, atomic_json, summary
 from scripts.research.tune_breakout_logic import sha256
 
 CONFIG = Path("config/reward156-profit-survival.json")
-OUTPUT = Path("docs/reviews/reward156-profit-survival-2026-10-04")
+OUTPUT = Path("runs/reward156-profit-survival-2026-10-04")
 PLAN = Path(".cursor/plans/long-term_macro_gate_99f085f3.plan.md")
 CONTROLS = [
     dict(name="trial30", strategy="trial30", macro_span=0, buy_pause_drawdown=0.0),
