@@ -254,3 +254,19 @@ def reward156_bars(completed):
     )
     return frame
 
+
+def reward156_levels(entry_price: float, direction: int, atr: float) -> tuple[float, float]:
+    """Return stop loss and take profit for Reward156 before broker tick-size normalization.
+
+    - Stop distance: 2.5 * ATR
+    - Target distance: 1.35 * initial stop distance (1.35 * 2.5 * ATR = 3.375 * ATR)
+    """
+    if direction not in (-1, 1) or not all(
+        math.isfinite(value) and value > 0 for value in (entry_price, atr)
+    ):
+        raise ValueError("Invalid Reward156 entry, direction, or ATR")
+    stop_distance = atr * 2.5
+    target_distance = stop_distance * 1.35
+    return entry_price - direction * stop_distance, entry_price + direction * target_distance
+
+

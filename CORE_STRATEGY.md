@@ -445,6 +445,12 @@ Audit of ~4,000+ evaluated parameter contracts (`docs/reviews/artifacts/rescreen
 - **Exit Geometry:** SL 2.5 ATR, TP 1.35x initial rounded stop distance, protection off.
 - **Risk Circuits:** Fixed 0.01 lot, 10% equity risk cap, 20% daily limit, BUY pause at $\ge 5\%$ equity drawdown.
 - **Performance:** Full base net +$883.77 (vs Trial30 +$465.32, +90%), full base DD 22.50% (vs Baseline 26.01%), full stress net +$742.03 (vs Baseline +$361.40, +105%), second-half stress net +$335.64 (vs Baseline +$12.17), 152 trades (23 BUY / 129 SELL).
-- **Seam Implementation:** `scripts/strategy.py:reward156_bars` verified with 100% signal parity against research frame (`tests/test_reward156_strategy.py`).
-- **Status:** Research Qualified. Real-money remains NO-GO; live broker commission/swap validation remains COST_INCONCLUSIVE prior to dedicated Demo transition review. Details in `docs/specs/2026-10-04-relaxed-gates-qualification.md` and `docs/reviews/2026-10-04-relaxed-gates-qualification.md`.
+- **Seam Implementation:** `scripts/strategy.py:reward156_bars` and `reward156_levels(entry, direction, atr)` verified with 100% signal parity against research frame (`tests/test_reward156_strategy.py`).
+- **1-Year Annual Archive Replay (2025-10 to 2026-10):**
+  - Second-half (Apr–Oct 2026): Net +$981.95 (Base) / +$933.21 (Stress), DD 22.50% / 22.97%, WR 56.41%, RR 1.2310, 156 trades (21 BUY / 135 SELL).
+  - First-half (Oct 2025–Apr 2026): Net -$89.96 / DD 68.74%, consistent with baseline Trial30 (-$90.71 / DD 47.78% / 0% WR). 10% risk cap halted subsequent trades, preserving remaining capital.
+  - Session37 alternative (avoid rollover > 21:00 UTC) yielded second-half net +$1,047.49 with DD 26.75% and zero overnight BUY swap exposure.
+- **Demo Runner Readiness:** `scripts/reward156/runner.py:Reward156DemoRunner` implemented with bidirectional execution, peak equity tracking with 5% BUY-pause drawdown circuit, and pinned in `config/reward156-demo.json`. Tested via `tests/test_reward156_demo.py`.
+- **Status:** Research Qualified & Demo Runner Ready. Real-money remains NO-GO; live broker commission/swap validation remains COST_INCONCLUSIVE prior to dedicated Demo transition review. Details in `docs/specs/2026-10-04-relaxed-gates-qualification.md`, `docs/reviews/2026-10-04-relaxed-gates-qualification.md`, and `docs/reviews/2026-10-04-annual-holdout-validation.md`.
+
 

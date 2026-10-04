@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from scripts.strategy import reward156_bars
+from scripts.strategy import reward156_bars, reward156_levels
 
 
 class Reward156StrategyTests(unittest.TestCase):
@@ -97,3 +97,25 @@ class Reward156StrategyTests(unittest.TestCase):
         )
         strat_frame = reward156_bars(df)
         self.assertTrue((res_frame["direction"] == strat_frame["direction"]).all())
+
+    def test_levels_calculation(self):
+        # Entry 2000.0, direction 1 (BUY), ATR 2.0
+        # Stop distance: 2.0 * 2.5 = 5.0 -> SL = 1995.0
+        # Target distance: 5.0 * 1.35 = 6.75 -> TP = 2006.75
+        sl, tp = reward156_levels(2000.0, 1, 2.0)
+        self.assertAlmostEqual(sl, 1995.0)
+        self.assertAlmostEqual(tp, 2006.75)
+
+        # Entry 2000.0, direction -1 (SELL), ATR 2.0
+        # SL = 2005.0, TP = 1993.25
+        sl_s, tp_s = reward156_levels(2000.0, -1, 2.0)
+        self.assertAlmostEqual(sl_s, 2005.0)
+        self.assertAlmostEqual(tp_s, 1993.25)
+
+    def test_levels_invalid_inputs_fail_closed(self):
+        with self.assertRaises(ValueError):
+            reward156_levels(2000.0, 0, 2.0)
+        with self.assertRaises(ValueError):
+            reward156_levels(-100.0, 1, 2.0)
+        with self.assertRaises(ValueError):
+            reward156_levels(2000.0, 1, -1.0)
