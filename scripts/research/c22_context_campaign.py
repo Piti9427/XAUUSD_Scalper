@@ -1,4 +1,4 @@
-"""Hash-bound, resumable four-view C22 context diagnostics. No broker access."""
+"""Hash-bound, resumable swap-inclusive C22 context diagnostics. No broker access."""
 
 import argparse
 from dataclasses import asdict
@@ -23,7 +23,7 @@ REPO = Path(__file__).resolve().parents[2]
 BASELINE = REPO / "data/research_output_four_strategy_full_history_2026_10_04"
 NAME = "variant_1af968e9ac6a26ea"
 SNAPSHOT = "RESEARCH-C22-H4EMA200-20261004"
-VIEWS = ("base-no_swap", "base-swap", "stress-no_swap", "stress-swap")
+VIEWS = ("base-swap", "stress-swap")
 
 
 def read(path):
@@ -194,7 +194,7 @@ def write_checkpoint(path, value):
 def completion(protocol_path, coverage):
     return dict(
         status="COMPLETE",
-        cells=4,
+        cells=len(VIEWS),
         baseline_parity=True,
         fresh_full_result_match=True,
         conclusion="INCONCLUSIVE_FOR_FILTER_SELECTION",
@@ -223,7 +223,7 @@ def campaign_lock(output):
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def campaign(baseline, output, *, coverage_path=None, max_cells=4):
+def campaign(baseline, output, *, coverage_path=None, max_cells=len(VIEWS)):
     baseline, output = Path(baseline).resolve(), Path(output).resolve()
     require(
         output.is_relative_to(REPO / "runs") and output != REPO / "runs",
@@ -250,7 +250,9 @@ def _campaign_locked(baseline, output, *, coverage_path, max_cells):
             str(p.relative_to(REPO)): digest(p) for p in sorted((REPO / "scripts").rglob("*.py"))
         }
         protocol = dict(
-            schema=1,
+            schema=2,
+            cost_views=list(VIEWS),
+            swap_required=True,
             snapshot=SNAPSHOT,
             variant=NAME,
             baseline=str(baseline),
@@ -350,7 +352,7 @@ def _campaign_locked(baseline, output, *, coverage_path, max_cells):
         if complete_path.exists() and "COMPLETE.json" not in checkpoint["artifacts"]:
             expected = completion(path, coverage)
             require(
-                len(checkpoint["cells"]) == 4
+                len(checkpoint["cells"]) == len(VIEWS)
                 and complete_path.read_bytes()
                 == (json.dumps(expected, indent=2, allow_nan=False) + "\n").encode(),
                 "uncommitted completion mismatch",
@@ -363,7 +365,7 @@ def _campaign_locked(baseline, output, *, coverage_path, max_cells):
             for kind in ("diagnostics", "coverage", "validation")
         }
         if "COMPLETE.json" in checkpoint["artifacts"]:
-            require(len(checkpoint["cells"]) == 4, "premature completion marker")
+            require(len(checkpoint["cells"]) == len(VIEWS), "premature completion marker")
             required_artifacts.add("COMPLETE.json")
         require(
             set(checkpoint["artifacts"]) == required_artifacts,
@@ -399,11 +401,11 @@ def _campaign_locked(baseline, output, *, coverage_path, max_cells):
                 continue
             if count >= max_cells:
                 break
-            cost, swap = view.split("-")
+            cost = view.split("-")[0]
             expected = read(baseline / "cells" / (view + "-" + NAME + ".json"))
             options = Costs(**original["costs"][cost])
             require(expected["rules"] == asdict(rules), "frozen C22 rules mismatch")
-            policy = SwapPolicy.from_broker(manifest["broker"]) if swap == "swap" else None
+            policy = SwapPolicy.from_broker(manifest["broker"])
             observed = replay(
                 frame,
                 ticks,
@@ -491,7 +493,7 @@ def _campaign_locked(baseline, output, *, coverage_path, max_cells):
                 trading["trades"],
                 flush=True,
             )
-        if len(checkpoint["cells"]) == 4:
+        if len(checkpoint["cells"]) == len(VIEWS):
             # Recheck all source/input bindings after expensive replay, before completion.
             _, _, final_hashes = verify_baseline(baseline)
             if coverage_path:
@@ -517,7 +519,9 @@ def main():
     parser.add_argument("--baseline", type=Path, default=BASELINE)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--coverage", type=Path)
-    parser.add_argument("--max-cells", type=int, choices=range(1, 5), default=4)
+    parser.add_argument(
+        "--max-cells", type=int, choices=range(1, len(VIEWS) + 1), default=len(VIEWS)
+    )
     args = parser.parse_args()
     try:
         result = campaign(

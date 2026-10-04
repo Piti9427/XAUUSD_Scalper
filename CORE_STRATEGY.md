@@ -508,3 +508,17 @@ Daily UTC equity loss limit 10%, max **one losing completed position per exit UT
 Shared lifecycle has trial30 default hooks and candidate hooks; 27 existing trial30 lifecycle tests remain unchanged. Local account fingerprint writer guard is acquired before MT5 initialization and excludes simultaneous trial30/c22h4 writers with separate journals. CLI uses same canonical account-guard directory even for journal overrides. Candidate journal `data/c22h4-demo.sqlite3`; trial30 journal/config/targets retained for rollback. Config pins contract plus research/detector/bar-assembly SHA256; `source_drift` blocks admission while existing trades continue reconciliation/protection. Cost policy reused, owner attestation <=24 hours; stale policy blocks entries.
 
 **Implementation readiness differs from operational readiness:** offline code/test review can proceed, but initial Wine broker probe failed `wine: cannot find the server port: 0x0000044c`. Broker depth/latency/maximum and archive parity remain unverified. No fallback selected, no shadow qualification, no Demo cutover, no orders sent by this implementation session. Required next gates: read-only history/parity, >=96 completed-M15 shadow bars spanning UTC midnight with exact exported-cache replay, fresh owner cost attestation, flat trial30/empty outbox/stopped watcher/no trial30 trade that UTC day, then owner cutover approval. First broker close must record closing magic/comment. Ops: `docs/ops/c22h4-demo.md`; evidence/status: `docs/reviews/2026-10-04-c22h4-implementation.md`.
+
+
+### 6.34 Mandatory swap-inclusive new research runs (2026-10-05)
+
+Owner requires swap in every new economic backtest. Active C22 context diagnostics
+now runs only base/current-spec-swap and stress/current-spec-swap; both must match
+their original full baseline and fresh repeat before COMPLETE. Protocol schema2
+pins two views and mandatory swap. Swap rates/calendar remain the existing modeled
+`SwapPolicy.from_broker` assumptions; missing/unsupported metadata blocks without
+no-swap fallback. Archived four-view results remain historical evidence and are
+not rewritten. All future economic comparisons/filter campaigns follow this
+policy; pure unit/accounting regressions do not change trading rules. C22 Demo
+entry/exit/risk/cutover contract in6.33 remains intact. No new profitability or
+historical broker-cost parity claim. Ops: `docs/ops/c22-context-diagnostics.md`.

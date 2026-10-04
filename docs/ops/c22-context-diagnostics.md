@@ -11,7 +11,7 @@ From repository root, with original ignored archive artifacts available:
 
 ```bash
 .venv/bin/python -m scripts.research.c22_context_campaign \
-  --output runs/c22-context-diagnostics-2026-10-05-final
+  --output runs/c22-context-diagnostics-2026-10-05-swap-only
 ```
 
 On macOS/Linux, one process owns the campaign through a nonblocking OS advisory
@@ -28,7 +28,13 @@ contender does not perform this cleanup because it does not own the campaign.
 
 Repeat the same command to resume. `--max-cells 1` bounds a session to one new
 cost-view cell; each cell still performs a fresh full replay and full-result repeat.
-All four views are mandatory for `COMPLETE`. A changed source, input, protocol or
+Owner policy2026-10-05: new backtests always include modeled swap. Only
+`base-swap` and `stress-swap` run; both are mandatory for `COMPLETE`.
+Protocol schema2 explicitly pins these two views and `swap_required=true`.
+Missing/unsupported broker swap data blocks the run; there is no no-swap fallback.
+Older four-view directories are immutable historical evidence; use a new directory
+for this protocol. Shared replay unit regressions retain their mathematical/API
+coverage; no-swap outcomes are excluded from new economic comparisons. A changed source, input, protocol or
 published artifact returns `BLOCKED`; use a new campaign directory after reviewing
 the change. Original evidence is never overwritten. Do not manually repair digests.
 

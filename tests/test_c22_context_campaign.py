@@ -185,9 +185,9 @@ class CampaignTests(unittest.TestCase):
             self.baseline / "source_snapshot/scripts/research/reward156_search.py",
             self.output / "protocol.json",
             self.output / "checkpoint.json",
-            self.output / "base-no_swap/diagnostics.json",
-            self.output / "base-no_swap/coverage.json",
-            self.output / "base-no_swap/validation.json",
+            self.output / "base-swap/diagnostics.json",
+            self.output / "base-swap/coverage.json",
+            self.output / "base-swap/validation.json",
             self.output / "COMPLETE.json",
         ]
         for path in cases:
@@ -380,3 +380,71 @@ c.campaign(baseline,output)
             if first.poll() is None:
                 first.kill()
             first.communicate(timeout=10)
+
+    def test_new_backtests_include_swap_in_every_cost_view(self):
+        result = self.cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        complete = json.loads((self.output / "COMPLETE.json").read_text())
+        self.assertEqual(complete["cells"], 2)
+        protocol = json.loads((self.output / "protocol.json").read_text())
+        self.assertEqual(protocol["cost_views"], ["base-swap", "stress-swap"])
+        self.assertTrue(protocol["swap_required"])
+        for view in ("base-swap", "stress-swap"):
+            raw = json.loads((self.baseline / "cells" / (view + "-" + NAME + ".json")).read_text())
+            self.assertIn("swap_policy", raw)
+            self.assertIn("swap_usd", raw)
+            proof = json.loads((self.output / view / "validation.json").read_text())
+            self.assertTrue(proof["baseline_parity"])
+        self.assertFalse((self.output / "base-no_swap").exists())
+        self.assertFalse((self.output / "stress-no_swap").exists())
+
+    def test_missing_swap_metadata_blocks_without_fallback(self):
+        manifest_path = self.baseline / "input/continuous-manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["broker"].pop("swap_long")
+        write(manifest_path, manifest)
+        protocol_path = self.baseline / "protocol.json"
+        protocol = json.loads(protocol_path.read_text())
+        protocol["input_manifest_sha256"] = digest(manifest_path)
+        protocol.pop("behavior_sha256")
+        protocol["behavior_sha256"] = hashlib.sha256(
+            json.dumps(protocol, sort_keys=True).encode()
+        ).hexdigest()
+        write(protocol_path, protocol)
+        write(
+            self.baseline / "results.json",
+            dict(input=manifest, protocol_sha256=digest(protocol_path)),
+        )
+        write(
+            self.baseline / "COMPLETE.json",
+            dict(
+                protocol_sha256=digest(protocol_path),
+                results_sha256=digest(self.baseline / "results.json"),
+            ),
+        )
+        for view in VIEWS:
+            path = self.baseline / "integrity" / (view + "-" + NAME + ".json")
+            proof = json.loads(path.read_text())
+            proof["behavior_sha256"] = protocol["behavior_sha256"]
+            write(path, proof)
+        result = self.cli()
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn('"status": "BLOCKED"', result.stderr)
+        self.assertIn("swap_long", result.stderr)
+        self.assertFalse((self.output / "COMPLETE.json").exists())
+        self.assertFalse(any(self.output.glob("*/diagnostics.json")))
+
+    def test_old_cost_view_protocol_cannot_resume_as_swap_only(self):
+        result = self.cli("--max-cells", "1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        path = self.output / "protocol.json"
+        protocol = json.loads(path.read_text())
+        protocol["cost_views"] = ["base-no_swap", "base-swap", "stress-no_swap", "stress-swap"]
+        protocol["swap_required"] = False
+        protocol["schema"] = 1
+        write(path, protocol)
+        result = self.cli()
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("resume protocol/source/input mismatch", result.stderr)
+        self.assertFalse((self.output / "COMPLETE.json").exists())
+        self.assertFalse((self.output / "base-no_swap").exists())

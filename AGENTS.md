@@ -129,3 +129,18 @@ Boundaries: code/commits/PRs written normal.
 Owner selected `variant_1af968e9ac6a26ea` / snapshot `RESEARCH-C22-H4EMA200-20261004` to replace trial30 on the same existing Exness Demo account. Dedicated contract: `CORE_STRATEGY.md` section6.33, `config/c22h4-demo.json`, `docs/ops/c22h4-demo.md`. Keep archived RSI14cross25 BUY/96-bar SELL/EMA50/closed H4 EMA200, BUY SL1.5ATR/TP2 rounded R/no protection, SELL SL2.5ATR/TP3ATR/BE1R, daily10%/one losing exit per UTC day/fixed0.01/cost-inclusive10% cap intact. No recovery baskets; real money PROHIBITED; no research or profitability qualification inferred.
 
 Implementation and read-only preparation authorized by replacement plan. Actual cutover requires owner approval at execution time after broker history/parity, 96-bar shadow spanning UTC midnight, fresh <=24h cost attestation, flat trial30/empty outbox/stopped watcher and no trial30 trade on cutover UTC day. Never run both strategies on same account concurrently. Broker-confirmed lifecycle, persisted reconciliation and Demo identity gates mandatory. Trial30 snapshot `RESEARCH-D48-SELL-BE1R-20261001-T030` remains retained rollback path with its original SELL-only/D48/TP3ATR/BE1R/daily20% contract. Do not substitute retired Reward156 runner or legacy SMC/recovery.
+
+
+## Mandatory swap-inclusive research policy (2026-10-05)
+
+Owner: "ตัดส่วน test ที่ไม่รวม swap ออกไปเลยทุกครั้งต่อไปให้ test แบบรวม swap ทุกครั้ง".
+All new economic strategy backtests, comparisons, rankings and filter campaigns
+MUST include modeled swap in every scenario. Run base+swap and stress+swap;
+no new no-swap cell or economic qualification. Missing/unsupported swap metadata
+blocks the run; never substitute zero or omit swap silently. Name rate/calendar
+assumptions and retain costs-inconclusive status when broker history is unverified.
+Archived frozen no-swap artifacts may be read to reproduce historical evidence,
+but must not be rerun as a new economic evaluation or used for current selection.
+Unit regressions of price/accounting/API behavior are not economic comparisons.
+Do not rewrite frozen strategy/source pins or Demo contracts to alter archives.
+Current active C22 diagnostics CLI follows this policy with two mandatory views.
