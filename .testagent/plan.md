@@ -24,3 +24,15 @@
 - test_comparison_rejects_loss_and_missing_metrics: no negative profit winner or null RR qualification.
 - test_risk_blocked_days_require_all_signals_and_no_position: distinguish no-signal/mixed rejection days.
 Run narrow tests, then repository unittest discovery. Review assertions and complete status artifact.
+
+## Profit/survival v2 test map
+- Owner policy45%/$50/-$20, undefinedRR, trade/risk/terminal/survival: test_policy_boundaries_and_undefined_rr.
+- <=27onefactor/seed, <=4combinations, dedup/risk invariants: test_finite_catalog_single_factor_and_dedup.
+- Frozen detector and archived oscillator parity, future invariance: test_frozen_default_and_archived_seed_parity.
+- New cooldown2 interface: test_cooldown_two_bars_is_supported; execution test to verify elapsed boundary.
+- Full-result repeat and altered-result rejection: test_checkpoint_integrity_repeat_and_corruption.
+- Source/config/input resume drift: test_config_and_source_drift_rejected.
+- Stable ranking and holdout locked before price reads: test_deterministic_rank_and_holdout_requires_lock.
+- Existing closedH4/swap equity-path/cost-inclusive cap/directional exits/BE tests remain required; run narrow then full suite after changes.
+- Fresh/resumed actual replay result matrix JSON seam: test_fresh_and_resumed_replay_matrix_serializes_native_boolean_gates (red reproduced campaign failure; nativebool fix preserves policy).
+- BE price-zero plus swap loss counted before circuit admission/day reset: test_break_even_swap_loss_counts_for_daily_circuit_before_next_admission.

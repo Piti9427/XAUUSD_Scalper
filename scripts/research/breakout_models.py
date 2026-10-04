@@ -71,7 +71,7 @@ class Rules:
             raise ValueError("unsupported ATR stop multiplier")
         if self.protect_after_r not in (0.5, 1.0, 1.5, 2.0):
             raise ValueError("unsupported protection activation")
-        if self.cooldown_bars not in (0, 1, 4) or self.max_daily_losses not in (0, 1, 2):
+        if self.cooldown_bars not in (0, 1, 2, 4) or self.max_daily_losses not in (0, 1, 2):
             raise ValueError("unsupported loss circuit")
         if self.session_mode not in ("all", "london_ny"):
             raise ValueError("unsupported UTC session")

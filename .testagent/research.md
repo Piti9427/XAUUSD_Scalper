@@ -20,3 +20,6 @@ Bounded sources: breakout_replay.py, new rollover model, new paired research har
 Existing convention: unittest, synthetic UTC M15 and Bid/Ask arrays; no MT5 calls.
 Requirements: identical data/account/costs for independent contracts; preserve trial30 and Reward156 logic; swap affects equity/admission; causal H4; reproducible outputs; unchanged defaults.
 Existing tests: test_breakout_logic.py and test_reward156_strategy.py. Archived optional discovery helper exists; no installed generator agent available. Inline workflow.
+
+## Profit/survival v2 (2026-10-04)
+Focused extension targets: reward156_search policy/catalog/causal adapter, reward156_campaign checkpoints/rank/finalists, reward156_holdout pre-read lock; existing breakout replay covered by test_breakout_logic/test_reward156_tuning. New tests use deterministic UTC synthetic bars and temporary checkpoint directories. No external orders/notifiers in research imports.

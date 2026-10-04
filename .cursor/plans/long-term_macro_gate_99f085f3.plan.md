@@ -1,6 +1,6 @@
 ---
-name: Reward156 paired config tuning
-overview: Compare frozen trial30, original Reward156 and three research-only Reward156 candidates on identical archived market/account/cost environments; no Demo cutover.
+name: Reward156 paired config tuning — profit/survival v2
+overview: Preserve completed v1 evidence; tune five registered Reward156 seeds with bounded entry/exit/filter variants under profit_survival_v2 using paired environments and unchanged trial30 Demo.
 todos:
   - id: scrutinize-contract
     content: Freeze paired environment, candidates, matrix, costs and decision rules after end-to-end review
@@ -23,6 +23,27 @@ todos:
   - id: review-and-commit
     content: Run repository tests and code-review, fix findings, commit only this work on current branch
     status: completed
+  - id: v2-protocol
+    content: Freeze profit_survival_v2 policy and finite search before candidate evaluation
+    status: completed
+  - id: v2-implementation
+    content: Implement configurable signals, side exits, finite search, checkpoint integrity and seam tests
+    status: completed
+  - id: v2-baselines-seeds
+    content: Replay controls and five registered seeds on identical environments
+    status: completed
+  - id: v2-search
+    content: Completed — 52 one-factor plus 8 combination configs; 65 total candidates and 584 cells
+    status: completed
+  - id: v2-final-validation
+    content: Cancelled — no continuous qualifier; no candidate eligible for reset-half or extra swap validation
+    status: cancelled
+  - id: v2-holdout
+    content: Cancelled — no qualifier; Jul-Sep2025 remains unopened
+    status: cancelled
+  - id: v2-verdict-review
+    content: Record truthful verdict, update CORE_STRATEGY, run full tests and parallel code-review, commit scoped work
+    status: pending
 isProject: false
 ---
 
@@ -105,3 +126,41 @@ A/B already reused for selection: in-sample. Jul-Sep2025 stays sealed unless can
 7. Run narrow tests during development, full `python3 -m unittest discover -s tests` once at end; lint changed Python. No configured typechecker currently found: syntax compilation is reported separately, never called typechecking.
 8. Use code-review against starting HEAD, resolve standards/spec findings; commit scoped files only on current branch. Do not include owner's unrelated webhook test or existing scratch/root-cause artifacts.
 9. Mark todos completed only after observed artifacts/checks. Conditional holdout gets cancelled with reason if no candidate qualifies; never tick unexecuted work as passed.
+
+
+# Profit/survival v2 — owner-approved replacement policy (2026-10-04)
+
+This section supersedes v1 selection/search policy only for a NEW campaign. V1 artifacts and verdict remain immutable. Goal: tune Reward156 entry, exits and filters for profit and survival using paired environments. Research-only; authorized trial30 Demo remains frozen.
+
+## Acceptance policy: profit_survival_v2
+
+- USD200; fixed0.01; single position; maximum cost-inclusive admission risk10%; no recovery or upward lot clamp.
+- Every continuous full cell (A/B × base/stress × no_swap/current-spec swap): net >= USD50 (+25%), strictly greater than BOTH trial30 and original Reward156 in same cell.
+- Every full/reset-half cell: quoted-tick DD <=45%, no bankruptcy/nonpositive equity, no observed terminal risk-only blockage.
+- Full >=60 trades and actual BUY and SELL; each reset half >=10 trades and net >= -USD20 (-10%). Halves need not outperform controls or contain both sides.
+- WR/RR are report-only. Preserve undefined measured values. EMA100 is tradeoff benchmark, not mandatory profit comparator.
+- Preserve v1 market windows, input hashes, base/stress costs, swap calendar, causal H4, independent full/half accounts and uniform final liquidation. Candidate daily circuits may differ (explicit strategy logic); capital/quotes/costs/lot/risk ceiling stay paired.
+
+## Architecture and finite experiment
+
+Research adapter defaults reproduce frozen Reward156 signals including its zero-loss RSI semantics. Archived seeds retain archived formula via campaign_signals. Reuse breakout replay and existing risk/exit calculations. BE retains price/commission/slippage semantics; report residual swap PnL. Allow existing cooldown interface to accept2 bars in addition to legacy values.
+
+Seed catalog: Reward156 H4EMA100, H4EMA200, archived circuit22, fine6, unpaused28. Controls: trial30 and original Reward156. Replay every seed fresh under both datasets and all environments. Diagnose side attribution, loss clusters, MAE/MFE and cost-path divergence. Archived prior results are discovery evidence only.
+
+If any seed passes final validation, stop expansion and lock winner. Otherwise choose top2 seeds by passing continuous cell count, highest worst continuous net, lowest worst DD, then stable config ID.
+
+For each chosen seed change exactly one factor, deduplicate BEFORE execution:
+- Signal: RSI7/14, threshold25/30/35, BUY EMA50 fixed, SELL Donchian24/48/96, SELL EMA0/50/200, H4EMA0/100/200.
+- Exit: BUY SL1/1.5/2/2.5ATR, SELL SL1.5/2/2.5ATR, BUY TP1.35/1.5/2R, SELL TP3ATR/1.35R/2R, BUY/SELL protectionoff/BE1R.
+- Circuits: daily10/20%, max daily losses0/1/2, cooldown0/2/4bars, all/avoid_rollover session, static/drawdown_steps risk (ceiling10%). New candidates BUYpause0.
+- At most27 one-factor variants per seed. Pick best single factor per signal/exit/circuit group using same rank. Combine three pairs and one triple per seed. At most62 new configs (54 one-factor +8 combinations). No result-dependent catalog truncation or expansion.
+
+Screen all candidates on8 continuous cells. Validate up to6 passing finalists on24 full/half cells with fresh full-result repeats. Additionally evaluate continuous A/B base/stress at0.5x and1.5x current-spec swap (8 extra cells) using same profit/DD/risk/survival gates. Rank passing finalists highest worst continuous net, lowest worst DD, config ID. Never add reset-account profits.
+
+Persist selected config/source/input hashes BEFORE opening sealed Jul-Sep2025. One winner plus both controls; four main cost views. Holdout requires net>0 and>both controls, DD<=45%, >=10trades, risk/survival gates. Failure stops; no retuning. No finalist means holdout cancelled and profit goal unachieved, not passed by relaxing more rules.
+
+## Evidence and completion
+
+Version/hash sources, runtime, config, plan body and input manifests. Atomic checkpoint hashes; resume rejects drift. Baselines saved before seed/search results. Candidate catalog saved before execution. Controls and finalists fresh repeats must match COMPLETE result objects; reconcile ledger, final balance, swap and risk invariants.
+
+Tests: frozen/default/archived parity; causal H4 inherited tests; side exit/rounded RR/BE/swap/circuit ordering; cap rejection without lot clamp; boundaries45/50/-20, undefined RR, zero trades and terminal block; dedup/rank/resume integrity. Run narrow tests during changes, full repository suite and changed-Python lint before commit. Review Standards and Spec in parallel against starting HEAD88bd849. Update CORE_STRATEGY and todos only from observed evidence. Demo/real-money transition needs separate owner instruction.
