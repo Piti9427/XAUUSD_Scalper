@@ -86,3 +86,28 @@ data/strategy_*/
 data/*.sqlite3.lock
 data/trial30-demo-watch.pid
 data/trial30-demo-watch.log
+
+# Test execution logs, backtest dumps & test campaign output folders
+test-results/
+test_results/
+test_reports/
+reports/
+.pytest_cache/
+coverage/
+htmlcov/
+.coverage
+*.traceback.txt
+*.traceback
+*.out
+*.dump
+
+# Research review campaign folders and test artifacts
+docs/reviews/artifacts/
+docs/reviews/reward156-*/
+docs/reviews/*-results*/
+docs/reviews/*-campaign*/
+docs/reviews/**/*.json
+docs/reviews/*.json
+docs/reviews/**/*.csv
+docs/reviews/*.csv
+config/reward156-profit-survival.json

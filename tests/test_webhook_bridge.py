@@ -336,10 +336,11 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
                 "tp2": 4062.5,
             }
 
+        initial_claim = payload("CLAIM_A")
         first = make_app()
         try:
             first_response = TestClient(first).post(
-                "/webhook/tradingview", json=payload("CLAIM_A"), headers=self.headers
+                "/webhook/tradingview", json=initial_claim, headers=self.headers
             )
             self.assertEqual(first_response.json()["status"], "success")
             receipt_id = first_response.json()["receipt_id"]
@@ -349,11 +350,11 @@ class TestWebhookBridgeLimitExecution(unittest.TestCase):
         second = make_app()
         try:
             duplicate_response = TestClient(second).post(
-                "/webhook/tradingview", json=payload("CLAIM_A"), headers=self.headers
+                "/webhook/tradingview", json=dict(initial_claim), headers=self.headers
             )
             self.assertEqual(duplicate_response.json()["status"], "ignored_duplicate")
             self.assertEqual(duplicate_response.json()["receipt_id"], receipt_id)
-            changed = payload("CLAIM_A")
+            changed = dict(initial_claim)
             changed["sl"] = 4044.0
             conflict_response = TestClient(second).post(
                 "/webhook/tradingview", json=changed, headers=self.headers
