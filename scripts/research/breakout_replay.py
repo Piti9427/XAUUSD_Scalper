@@ -11,7 +11,19 @@ from .breakout_entry import _level, prepare_entry
 from .breakout_signals import _entry_signals
 
 
-def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
+def replay(
+    frame,
+    ticks,
+    broker,
+    rules,
+    costs,
+    *,
+    start,
+    end,
+    entry_frame=None,
+    swap_policy=None,
+    capture_events=False,
+):
     """Return account metrics and closed trades for one independent $200 window.
 
     Input frame includes completed OHLC, prior hh/ll, atr and direction.
@@ -92,6 +104,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
         or not np.isclose(0.01 / broker["volume_step"], round(0.01 / broker["volume_step"]))
     ):
         raise ValueError("fixed lot is not broker-admissible")
+    swap_schedule = swap_policy.schedule(start, end) if swap_policy is not None else None
     balance = peak = 200.0
     max_dd = 0.0
     position: dict[str, Any] | None = None
@@ -117,9 +130,29 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
         )
     }
     rejection_events = []
+    admission_events = []
+
+    def event(reason, direction, stamp):
+        if capture_events:
+            admission_events.append(
+                dict(
+                    direction=direction,
+                    reason=reason,
+                    time_utc=pd.Timestamp(stamp, unit="ms", tz="UTC").isoformat(),
+                    position_open=position is not None,
+                )
+            )
+
+    def swap_at(p, stamps):
+        if swap_schedule is None:
+            return 0.0
+        return swap_schedule.amount(
+            p["entry_ms"], stamps, p["direction"], broker["trade_contract_size"] * p["volume"]
+        )
 
     def reject(reason, direction, stamp):
         rejected[reason] += 1
+        event(reason, direction, stamp)
         if entry_frame is not None:
             rejection_events.append(
                 dict(
@@ -177,12 +210,13 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
         quote = bid[index] if p["direction"] == 1 else ask[index]
         price = p["target"] if reason == "TP" else quote - p["direction"] * costs.slippage
         gross = p["direction"] * (price - p["entry"]) * factor
-        net = gross - fee
+        swap = float(swap_at(p, times[index]))
+        net = gross - fee + swap
         if net < 0:
             loss_day = int(times[index] // 86400000)
             daily_losses[loss_day] = daily_losses.get(loss_day, 0) + 1
             cooldown_until_ms = int(times[index]) + rules.cooldown_bars * 900000
-        balance += gross
+        balance += gross + swap
         p.update(
             exit_time_utc=pd.Timestamp(int(times[index]), unit="ms", tz="UTC").isoformat(),
             exit=float(price),
@@ -193,6 +227,9 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
             modeled_slippage_usd=costs.slippage * factor * (1 if reason == "TP" else 2),
         )
         p["mfe_usd"] = max(p["mfe_usd"], net)
+        if swap_schedule is not None:
+            p["swap_usd"] = swap
+            p["net_before_swap_usd"] = gross - fee
         p["mae_usd"] = min(p["mae_usd"], net)
         p["quoted_spread_proxy_usd"] = (
             (p["entry_spread"] + float(ask[index] - bid[index])) / 2 * factor
@@ -215,7 +252,8 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
             p = position
             factor = broker["trade_contract_size"] * p["volume"]
             quote = bid[cursor:stop] if p["direction"] == 1 else ask[cursor:stop]
-            pnl = p["direction"] * (quote - p["entry"]) * factor
+            swaps = swap_at(p, times[cursor:stop])
+            pnl = p["direction"] * (quote - p["entry"]) * factor + swaps
             sl = p["direction"] * (quote - p["stop"]) <= 0
             tp = (p["direction"] * (quote - p["target"]) >= 0) & (not p["target_disabled"])
             hits = np.flatnonzero(sl | tp | (balance + pnl <= 0))
@@ -227,6 +265,8 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
             marks = balance + pnl[:used]
             if len(hits) and tp[used - 1] and not sl[used - 1]:
                 marks[-1] = balance + p["direction"] * (p["target"] - p["entry"]) * factor
+                if swap_schedule is not None:
+                    marks[-1] += swaps[used - 1]
             excursions = marks - p["entry_equity"]
             p["mfe_usd"] = max(p["mfe_usd"], float(np.max(excursions)))
             p["mae_usd"] = min(p["mae_usd"], float(np.min(excursions)))
@@ -426,6 +466,7 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
         factor = plan.factor
         fee = plan.fee
         risk = plan.risk
+        event("admitted", direction, int(times[index]))
         position = dict(
             direction=direction,
             entry=entry,
@@ -503,4 +544,10 @@ def replay(frame, ticks, broker, rules, costs, *, start, end, entry_frame=None):
 
     if entry_frame is not None:
         result["rejection_events"] = rejection_events
+    if capture_events:
+        result["admission_events"] = admission_events
+    if swap_schedule is not None:
+        result["swap_policy"] = asdict(swap_policy)
+        result["swap_usd"] = sum(p["swap_usd"] for p in ledger)
+        result["net_before_swap_usd"] = sum(p["net_before_swap_usd"] for p in ledger)
     return result

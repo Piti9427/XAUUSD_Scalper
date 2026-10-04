@@ -12,3 +12,11 @@
 - Pre-agreed seam from the approved plan: fake MT5 rates/ticks -> UTC adapter -> `pure_b1_bars` -> `check_fixed_lot_risk` -> JSONL; assert no `order_send` or Telegram.
 - Existing helpers: `scripts/smc/broker_rates.py` returns RangeIndex; `scripts/strategy.py` requires UTC DatetimeIndex. `scripts/research/shadow_capture.py` captures bounded ticks with manifest. `scripts/ops/run_b1_d_wine.py` runs read-only scripts under Wine.
 - Data contract: `CORE_STRATEGY.md`; archived input/source hashes in `data/b1_pure_target_replay_cost_gated_2026_09_29/contract.json`. Broker costs/fills remain unobserved.
+
+## 2026-10-04 Reward156 paired tuning
+
+# Reward156 paired tuning test research
+Bounded sources: breakout_replay.py, new rollover model, new paired research harness.
+Existing convention: unittest, synthetic UTC M15 and Bid/Ask arrays; no MT5 calls.
+Requirements: identical data/account/costs for independent contracts; preserve trial30 and Reward156 logic; swap affects equity/admission; causal H4; reproducible outputs; unchanged defaults.
+Existing tests: test_breakout_logic.py and test_reward156_strategy.py. Archived optional discovery helper exists; no installed generator agent available. Inline workflow.

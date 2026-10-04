@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "research_only": true,
+  "initial_equity": 200.0,
+  "volume": 0.01,
+  "risk_cap": 0.10,
+  "daily_loss_limit": 0.20,
+  "costs": {"base": {}, "stress": {"extra_spread": 0.20, "slippage": 0.10}},
+  "datasets": {
+    "A": {"path": "data/b1_public_exness_2024_09_2025_09", "start": "2024-09-01", "split": "2025-02-01", "end": "2025-07-01"},
+    "B": {"path": "data/b1_public_exness_2025_10_2026_09", "start": "2025-10-01", "split": "2026-04-01", "end": "2026-10-01"}
+  },
+  "contracts": [
+    {"name": "trial30", "strategy": "trial30", "buy_pause_drawdown": 0.0, "macro_span": 0},
+    {"name": "reward156_original", "strategy": "reward156", "buy_pause_drawdown": 0.05, "macro_span": 0},
+    {"name": "reward156_no_pause", "strategy": "reward156", "buy_pause_drawdown": 0.0, "macro_span": 0},
+    {"name": "reward156_h4_ema100", "strategy": "reward156", "buy_pause_drawdown": 0.0, "macro_span": 100},
+    {"name": "reward156_h4_ema200", "strategy": "reward156", "buy_pause_drawdown": 0.0, "macro_span": 200}
+  ]
+}
