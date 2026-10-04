@@ -14,6 +14,18 @@ From repository root, with original ignored archive artifacts available:
   --output runs/c22-context-diagnostics-2026-10-05-final
 ```
 
+On macOS/Linux, one process owns the campaign through a nonblocking OS advisory
+lock held for the entire validation/recovery/write operation. A competing CLI
+returns `BLOCKED: campaign already running` before changing evidence, including
+an existing completion marker. Process death releases the OS lock automatically.
+The empty `.campaign.lock` file remains as a stable inode; never delete it while
+writers could be active. It is synchronization state, not a research artifact.
+
+Decoded protocol/checkpoint/baseline JSON must be objects. Invalid object/container
+shapes return structured `BLOCKED` and invalidate stale completion under the owner
+lock. Unexpected failures also invalidate completion before propagating. A lock
+contender does not perform this cleanup because it does not own the campaign.
+
 Repeat the same command to resume. `--max-cells 1` bounds a session to one new
 cost-view cell; each cell still performs a fresh full replay and full-result repeat.
 All four views are mandatory for `COMPLETE`. A changed source, input, protocol or

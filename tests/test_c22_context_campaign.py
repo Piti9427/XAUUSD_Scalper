@@ -238,3 +238,145 @@ campaign.campaign(Path(__import__('sys').argv[1]), Path(__import__('sys').argv[2
         self.assertEqual(resumed.returncode, 0, resumed.stderr)
         self.assertIn("COMPLETE", resumed.stdout)
         self.assertIsNone(json.loads((self.output / "checkpoint.json").read_text())["pending"])
+
+    def test_invalid_checkpoint_type_blocks_and_invalidates_completion(self):
+        result = self.cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        (self.output / "checkpoint.json").write_text("null\n")
+        result = self.cli()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('"status": "BLOCKED"', result.stderr)
+        self.assertFalse((self.output / "COMPLETE.json").exists())
+
+    def test_second_writer_rejected_without_mutating_active_campaign(self):
+        import time
+
+        gate, release = self.root / "paused", self.root / "release"
+        code = """
+import sys,time
+from pathlib import Path
+import scripts.research.c22_context_campaign as c
+baseline,output,gate,release=map(Path,sys.argv[1:])
+original=c.atomic_json
+paused=False
+def writer(path,value):
+    global paused
+    original(path,value)
+    if path.name=='checkpoint.json' and value.get('pending') and not paused:
+        paused=True
+        gate.write_text('paused')
+        while not release.exists(): time.sleep(.01)
+c.atomic_json=writer
+print(c.campaign(baseline,output,max_cells=1))
+"""
+        first = subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                code,
+                str(self.baseline),
+                str(self.output),
+                str(gate),
+                str(release),
+            ],
+            cwd=REPO,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 20
+            while not gate.exists() and first.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(gate.exists(), "writer did not reach publication boundary")
+            before = {str(p): digest(p) for p in self.output.rglob("*") if p.is_file()}
+            second = self.cli()
+            after = {str(p): digest(p) for p in self.output.rglob("*") if p.is_file()}
+            self.assertNotEqual(second.returncode, 0, second.stdout)
+            self.assertIn("campaign already running", second.stderr)
+            self.assertEqual(before, after, "rejected writer mutated active evidence")
+            release.write_text("resume")
+            stdout, stderr = first.communicate(timeout=20)
+            self.assertEqual(first.returncode, 0, stderr)
+            resumed = self.cli()
+            self.assertEqual(resumed.returncode, 0, resumed.stderr)
+            self.assertIn('"status": "COMPLETE"', resumed.stdout)
+        finally:
+            if first.poll() is None:
+                first.kill()
+            first.communicate(timeout=10)
+
+    def test_malformed_persisted_types_all_block_and_invalidate_completion(self):
+        import copy
+        from scripts.research.c22_context_campaign import write_checkpoint
+
+        result = self.cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        saved = {p: p.read_bytes() for p in self.output.rglob("*") if p.is_file()}
+        valid = json.loads((self.output / "checkpoint.json").read_text())
+        cases = [("null", None), ("list", []), ("string", "checkpoint")]
+        for field, value in (("cells", None), ("artifacts", []), ("pending", [])):
+            changed = copy.deepcopy(valid)
+            changed[field] = value
+            cases.append((field, changed))
+        for name, value in cases:
+            with self.subTest(name=name):
+                for path, content in saved.items():
+                    path.write_bytes(content)
+                if isinstance(value, dict):
+                    write_checkpoint(self.output / "checkpoint.json", value)
+                else:
+                    (self.output / "checkpoint.json").write_text(json.dumps(value))
+                result = self.cli()
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn('"status": "BLOCKED"', result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertFalse((self.output / "COMPLETE.json").exists())
+
+    def test_lock_released_on_process_death_and_contender_keeps_completion(self):
+        import time
+
+        result = self.cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        gate = self.root / "lock-held"
+        code = """
+import sys,time
+from pathlib import Path
+import scripts.research.c22_context_campaign as c
+baseline,output,gate=map(Path,sys.argv[1:])
+original=c.verify_baseline
+def pause(root):
+    gate.write_text('owner holds lock')
+    while True: time.sleep(.01)
+c.verify_baseline=pause
+c.campaign(baseline,output)
+"""
+        first = subprocess.Popen(
+            [sys.executable, "-c", code, str(self.baseline), str(self.output), str(gate)],
+            cwd=REPO,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 20
+            while not gate.exists() and first.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(gate.exists())
+            before = {str(p): digest(p) for p in self.output.rglob("*") if p.is_file()}
+            second = self.cli()
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("campaign already running", second.stderr)
+            self.assertTrue((self.output / "COMPLETE.json").exists())
+            self.assertEqual(
+                before, {str(p): digest(p) for p in self.output.rglob("*") if p.is_file()}
+            )
+            first.kill()
+            first.communicate(timeout=10)
+            resumed = self.cli()
+            self.assertEqual(resumed.returncode, 0, resumed.stderr)
+            self.assertIn('"status": "COMPLETE"', resumed.stdout)
+        finally:
+            if first.poll() is None:
+                first.kill()
+            first.communicate(timeout=10)

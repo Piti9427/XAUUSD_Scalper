@@ -2,6 +2,8 @@
 
 import argparse
 from dataclasses import asdict
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import json
 import math
@@ -25,7 +27,9 @@ VIEWS = ("base-no_swap", "base-swap", "stress-no_swap", "stress-swap")
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    value = json.loads(Path(path).read_text())
+    require(isinstance(value, dict), "JSON object required: " + str(path))
+    return value
 
 
 def digest(path):
@@ -201,6 +205,24 @@ def completion(protocol_path, coverage):
     )
 
 
+@contextmanager
+def campaign_lock(output):
+    """Persistent inode + OS lock: process death releases ownership, never unlink.
+
+    Failed contenders must leave the active writer's artifacts and completion
+    marker alone. Acquire before any validation/recovery/publication mutates them.
+    """
+    with (output / ".campaign.lock").open("a+b") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError("campaign already running: " + str(output)) from error
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 def campaign(baseline, output, *, coverage_path=None, max_cells=4):
     baseline, output = Path(baseline).resolve(), Path(output).resolve()
     require(
@@ -212,6 +234,11 @@ def campaign(baseline, output, *, coverage_path=None, max_cells=4):
         "output overlaps original evidence",
     )
     output.mkdir(parents=True, exist_ok=True)
+    with campaign_lock(output):
+        return _campaign_locked(baseline, output, coverage_path=coverage_path, max_cells=max_cells)
+
+
+def _campaign_locked(baseline, output, *, coverage_path, max_cells):
     complete_path = output / "COMPLETE.json"
     try:
         original, manifest, hashes = verify_baseline(baseline)
@@ -242,11 +269,12 @@ def campaign(baseline, output, *, coverage_path=None, max_cells=4):
         else:
             leftovers = list(output.iterdir())
             require(
-                all(p.name == "protocol.pending" for p in leftovers),
+                all(p.name in ("protocol.pending", ".campaign.lock") for p in leftovers),
                 "unrecognized campaign artifacts",
             )
             for temporary in leftovers:
-                temporary.unlink()
+                if temporary.name == "protocol.pending":
+                    temporary.unlink()
             atomic_json(path, protocol)
         checkpoint_path = output / "checkpoint.json"
         checkpoint = (
@@ -342,7 +370,12 @@ def campaign(baseline, output, *, coverage_path=None, max_cells=4):
             "checkpoint artifact accounting mismatch",
         )
         # Verify every artifact before reuse, including summaries and COMPLETE.
-        expected_files = {"protocol.json", "checkpoint.json", *checkpoint["artifacts"]}
+        expected_files = {
+            "protocol.json",
+            "checkpoint.json",
+            ".campaign.lock",
+            *checkpoint["artifacts"],
+        }
         require(
             not {str(p.relative_to(output)) for p in output.rglob("*") if p.is_file()}
             - expected_files,
@@ -473,7 +506,7 @@ def campaign(baseline, output, *, coverage_path=None, max_cells=4):
             write_checkpoint(checkpoint_path, checkpoint)
             return completed
         return dict(status="PARTIAL", cells=len(checkpoint["cells"]))
-    except (ValueError, OSError, KeyError, StopIteration):
+    except Exception:
         # A stale completion marker must never survive failed validation.
         complete_path.unlink(missing_ok=True)
         raise
@@ -490,7 +523,16 @@ def main():
         result = campaign(
             args.baseline, args.output, coverage_path=args.coverage, max_cells=args.max_cells
         )
-    except (ValueError, OSError, KeyError, StopIteration) as error:
+    except (
+        ValueError,
+        OSError,
+        KeyError,
+        StopIteration,
+        TypeError,
+        AttributeError,
+        IndexError,
+        OverflowError,
+    ) as error:
         print(json.dumps(dict(status="BLOCKED", reason=str(error))), file=sys.stderr)
         return 1
     print(json.dumps(result))
