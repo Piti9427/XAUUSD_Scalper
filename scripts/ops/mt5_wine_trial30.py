@@ -19,7 +19,9 @@ def clock_now():
     return datetime.now(timezone.utc)
 
 
-def main(argv=None, *, mt5: Any = None) -> int:
+def main(
+    argv=None, *, mt5: Any = None, runner_class=None, name="trial30", expected_config=None
+) -> int:
     from scripts.trial30.runner import Trial30DemoRunner
     from scripts.smc.mt5_init import resolve_mt5_account_kwargs
 
@@ -28,11 +30,13 @@ def main(argv=None, *, mt5: Any = None) -> int:
     mode.add_argument("--once", action="store_true")
     mode.add_argument("--watch", action="store_true")
     parser.add_argument("--execute", action="store_true")
-    parser.add_argument("--config", type=Path, default=ROOT / "config/trial30-demo.json")
-    parser.add_argument("--journal", type=Path, default=ROOT / "data/trial30-demo.sqlite3")
+    parser.add_argument("--config", type=Path, default=ROOT / f"config/{name}-demo.json")
+    parser.add_argument("--journal", type=Path, default=ROOT / f"data/{name}-demo.sqlite3")
     parser.add_argument(
         "--cost-policy", type=Path, default=ROOT / "data/trial30-demo-cost-policy.json"
     )
+    if name == "c22h4":
+        parser.add_argument("--cache-output", type=Path)
     parser.add_argument("--poll", type=float, default=1.0)
     parser.add_argument("--max-cycles", type=int, default=0)
     args = parser.parse_args(argv)
@@ -56,6 +60,8 @@ def main(argv=None, *, mt5: Any = None) -> int:
         real_money="PROHIBITED",
         commission_unit="USD_per_lot_round_trip",
     )
+    if expected_config is not None:
+        expected = expected_config
     try:
         config = json.loads(args.config.read_text())
         if not isinstance(config, dict) or any(config.get(k) != v for k, v in expected.items()):
@@ -87,24 +93,31 @@ def main(argv=None, *, mt5: Any = None) -> int:
 
         mt5 = broker_module
     terminal = os.environ.get("MT5_TERMINAL_PATH", r"C:\Program Files\MetaTrader 5\terminal64.exe")
-    if not mt5.initialize(path=terminal, timeout=10000, **credentials):
-        error = mt5.last_error()
-        emit(
-            dict(
-                status="BLOCKED", reason="initialize_failed", error_code=error[0] if error else None
-            )
-        )
-        return 1
     runner = None
+    initialize_attempted = False
     try:
-        runner = Trial30DemoRunner(
+        options = {"config": config} if name != "trial30" else {}
+        runner = (runner_class or Trial30DemoRunner)(
             mt5=mt5,
             expected_login=credentials["login"],
             expected_server=credentials["server"],
             journal_path=args.journal,
             cost_policy=policy,
             execute=args.execute,
+            account_guard_dir=ROOT / "data",
+            **options,
         )
+        initialize_attempted = True
+        if not mt5.initialize(path=terminal, timeout=10000, **credentials):
+            error = mt5.last_error()
+            emit(
+                dict(
+                    status="BLOCKED",
+                    reason="initialize_failed",
+                    error_code=error[0] if error else None,
+                )
+            )
+            return 1
         # No notifier enabled implicitly; durable broker-confirmed events remain in journal.
         count = 0
         prior = None
@@ -117,6 +130,8 @@ def main(argv=None, *, mt5: Any = None) -> int:
             except (OSError, ValueError):
                 runner.policy = {}
             result = runner.cycle(now=now)
+            if name == "c22h4" and args.cache_output is not None:
+                runner.export_cache(args.cache_output)
             key = json.dumps(
                 {k: v for k, v in result.items() if k != "captured_utc"}, sort_keys=True
             )
@@ -137,7 +152,8 @@ def main(argv=None, *, mt5: Any = None) -> int:
     finally:
         if runner is not None:
             runner.close()
-        mt5.shutdown()
+        if initialize_attempted:
+            mt5.shutdown()
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 
-def main(argv=None) -> int:
+def main(argv=None, *, entrypoint="mt5_wine_trial30.py") -> int:
     root = Path(__file__).resolve().parents[2]
     env = os.environ.copy()
     for line in (root / ".env").read_text().splitlines():
@@ -25,7 +25,7 @@ def main(argv=None) -> int:
         "/Applications/MetaTrader 5.app/Contents/SharedSupport/wine/bin/wine",
         r"C:\tools\python312\python.exe",
         "-u",
-        "Z:" + str(root / "scripts/ops/mt5_wine_trial30.py").replace("/", "\\"),
+        "Z:" + str(root / "scripts/ops" / entrypoint).replace("/", "\\"),
         *args,
     ]
     # CLI relative paths resolve to repository; use Z:\ absolute paths for overrides.

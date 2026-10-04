@@ -42,8 +42,7 @@ def load_report(conn: sqlite3.Connection) -> dict:
         heartbeat_age_seconds=age,
         day=values.get("day"),
         active={
-            k: active.get(k)
-            for k in ("status", "ticket", "position_id", "fill", "risk", "be_done")
+            k: active.get(k) for k in ("status", "ticket", "position_id", "fill", "risk", "be_done")
         }
         if active
         else None,
@@ -55,10 +54,10 @@ def load_report(conn: sqlite3.Connection) -> dict:
     )
 
 
-def watcher_processes() -> list[tuple[str, str]] | None:
+def watcher_processes(name="trial30") -> list[tuple[str, str]] | None:
     try:
         found = subprocess.run(
-            ["pgrep", "-fl", "run_trial30_wine|mt5_wine_trial30"],
+            ["pgrep", "-fl", f"run_{name}_wine|mt5_wine_{name}"],
             capture_output=True,
             text=True,
             check=False,
@@ -74,7 +73,7 @@ def watcher_processes() -> list[tuple[str, str]] | None:
         pid, _, command = line.partition(" ")
         if not pid.isdigit() or not command:
             continue
-        role = "wine" if "mt5_wine_trial30" in command else "watcher"
+        role = "wine" if f"mt5_wine_{name}" in command else "watcher"
         rows.append((role, pid))
     return rows
 
@@ -147,22 +146,26 @@ def format_brief(report: dict, processes: list[tuple[str, str]] | None) -> str:
     )
 
 
-def main():
+def main(argv=None, *, name="trial30"):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--journal",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "data/trial30-demo.sqlite3",
+        default=Path(__file__).resolve().parents[2] / f"data/{name}-demo.sqlite3",
     )
     parser.add_argument("--brief", action="store_true", help="print a short operator summary")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if not args.journal.exists():
+        report = dict(last_result=dict(status="UNKNOWN", reason="journal_missing"), active=None)
+        print(format_brief(report, watcher_processes(name)) if args.brief else json.dumps(report))
+        return
     conn = sqlite3.connect(args.journal.resolve().as_uri() + "?mode=ro", uri=True)
     try:
         report = load_report(conn)
     finally:
         conn.close()
     if args.brief:
-        print(format_brief(report, watcher_processes()))
+        print(format_brief(report, watcher_processes(name)))
         return
     print(json.dumps(report, indent=2))
 

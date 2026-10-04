@@ -15,7 +15,7 @@ from scripts.trial30.costs import validate_policy
 from scripts.pure_b1.decision import round_level
 from scripts.smc.mt5_filling import resolve_type_filling
 from scripts.smc.risk import check_fixed_lot_risk
-from scripts.strategy import trial30_bars
+from scripts.trial30.strategy import Trial30Strategy
 from scripts.trial30.journal import Journal
 from scripts.trial30.broker import BrokerView, _finite, _cash
 
@@ -35,9 +35,12 @@ class Trial30DemoRunner:
         execute: bool = False,
         notify: Callable[[dict], None] | None = None,
         symbol: str = "XAUUSDm",
+        strategy=None,
+        account_guard_dir: Path | None = None,
     ):
         if expected_login <= 0 or not expected_server or symbol != "XAUUSDm":
             raise ValueError("explicit target Demo identity and XAUUSDm required")
+        self.strategy = strategy or Trial30Strategy()
         self.mt5 = mt5
         self.login = expected_login
         self.server = expected_server
@@ -50,12 +53,34 @@ class Trial30DemoRunner:
             f"{expected_server}:{expected_login}".encode()
         ).hexdigest()[:16]
 
+        # Same-account runners share a local single-writer guard, even with
+        # separate strategy journals. Journal implementation stays unchanged.
+        try:
+            recorded = self.journal.get("strategy_snapshot")
+            active = self.journal.get("active")
+            if recorded not in (None, self.strategy.snapshot) or (
+                active and int(active["request"]["magic"]) != self.strategy.magic
+            ):
+                raise ValueError("journal_strategy_mismatch")
+            self.account_guard = Journal(
+                (account_guard_dir or journal_path.parent)
+                / f"demo-account-{self.fingerprint}.sqlite3"
+            )
+            self.journal.put("strategy_snapshot", self.strategy.snapshot)
+        except Exception:
+            guard = getattr(self, "account_guard", None)
+            if guard is not None:
+                guard.close()
+            self.journal.close()
+            raise
+
         self.broker = BrokerView(
             mt5, expected_login, expected_server, symbol, self.fingerprint, self.journal
         )
 
     def close(self):
         self.journal.close()
+        self.account_guard.close()
 
     def cycle(self, *, now: datetime) -> dict:
         if now.tzinfo is None or now.utcoffset() != timedelta(0):
@@ -67,7 +92,10 @@ class Trial30DemoRunner:
             result = {"status": "BLOCKED", "reason": str(exc)}
         except Exception as exc:
             result = {"status": "BLOCKED", "reason": type(exc).__name__}
-        result.update(snapshot=SNAPSHOT, execute=self.execute, captured_utc=now.isoformat())
+        result.update(
+            snapshot=self.strategy.snapshot, execute=self.execute, captured_utc=now.isoformat()
+        )
+        result.update(self.strategy.diagnostics())
         self.journal.put("last_result", result)
         try:
             self.journal.flush(self.notify)
@@ -81,22 +109,31 @@ class Trial30DemoRunner:
         deals = self.broker._history(now)
         info = self.broker._spec()
         tick = self.broker._quote(now)
-        bars = completed_m15_from_m1(
-            self.mt5.copy_rates_from_pos(self.symbol, self.mt5.TIMEFRAME_M1, 0, 5000), now=now
-        )
-        frame = trial30_bars(bars)
-        if len(frame) < 49:
-            raise ValueError("warmup_insufficient")
-        row = frame.iloc[-1]
-        closed = frame.index[-1].to_pydatetime() + timedelta(minutes=15)
-        bar = closed.isoformat()
         if self.journal.get("active"):
-            # Admission baselines never suppress protection of an existing trade.
+            # Source/cache warmup gates apply only to admission. Reconcile on restart
+            # even if detector/history bootstrap fails; retain last BE bar then.
+            active = self.journal.get("active")
+            closed = datetime.fromisoformat(active["last_be_bar"])
+            try:
+                bars = completed_m15_from_m1(
+                    self.mt5.copy_rates_from_pos(self.symbol, self.mt5.TIMEFRAME_M1, 0, 5000),
+                    now=now,
+                )
+                closed = bars.index[-1].to_pydatetime() + timedelta(minutes=15)
+            except ValueError:
+                pass
             try:
                 self.broker._baseline(account, positions, deals, now)
             except ValueError:
                 pass
             return self._reconcile(positions, deals, tick, info, closed, now)
+        bars = completed_m15_from_m1(
+            self.mt5.copy_rates_from_pos(self.symbol, self.mt5.TIMEFRAME_M1, 0, 5000), now=now
+        )
+        frame = self.strategy.frame(bars, self.mt5, self.symbol, now)
+        row = frame.iloc[-1]
+        closed = frame.index[-1].to_pydatetime() + timedelta(minutes=15)
+        bar = closed.isoformat()
         if self.journal.get("safety_halt"):
             raise ValueError("safety_halt")
         baseline = self.broker._baseline(account, positions, deals, now)
@@ -104,9 +141,17 @@ class Trial30DemoRunner:
             raise ValueError("foreign_exposure")
         if self.journal.get("last_bar") == bar:
             return {"status": "WAIT", "reason": "duplicate_bar"}
-        if int(row.direction) != -1:
+        if int(row.direction) not in self.strategy.allowed_sides:
             self.journal.put("last_bar", bar)
-            return {"status": "WAIT", "reason": "no_sell_signal", "bar": bar}
+            return {"status": "WAIT", "reason": self.strategy.no_signal_reason, "bar": bar}
+        direction = int(row.direction)
+        order_type = self.mt5.ORDER_TYPE_BUY if direction == 1 else self.mt5.ORDER_TYPE_SELL
+        if (
+            self.strategy.max_daily_losses
+            and self._daily_losses(deals, now) >= self.strategy.max_daily_losses
+        ):
+            self.journal.put("last_bar", bar)
+            raise ValueError("max_daily_losses")
         if now < closed or now - closed > timedelta(seconds=90):
             self.journal.put("last_bar", bar)
             raise ValueError("entry_window_expired")
@@ -116,16 +161,15 @@ class Trial30DemoRunner:
         cost, status = validate_policy(self.policy, fingerprint=self.fingerprint, now=now)
         if not cost:
             raise ValueError("cost_policy_" + status)
-        if baseline - float(account.equity) >= baseline * 0.20:
+        if baseline - float(account.equity) >= baseline * self.strategy.daily_loss_limit:
             self.journal.put("last_bar", bar)
             raise ValueError("daily_loss_limit")
-        entry = float(tick.bid)
-        sl = round_level(entry + float(row.atr) * 2.5, float(info.trade_tick_size), -1)
-        tp = round_level(entry - float(row.atr) * 3.0, float(info.trade_tick_size), -1)
+        entry = float(tick.ask if direction == 1 else tick.bid)
+        risk_entry, sl, tp = self.strategy.levels(row, tick, info, cost, account)
         allowance = float(cost["slippage_allowance_price"])
         risk = check_fixed_lot_risk(
             equity=float(account.equity),
-            entry_price=entry - allowance,
+            entry_price=risk_entry,
             sl_price=sl,
             contract_size=float(info.trade_contract_size),
             commission_per_lot=float(cost["commission_per_lot"]),
@@ -134,13 +178,12 @@ class Trial30DemoRunner:
             max_lot=float(info.volume_max),
             lot_step=float(info.volume_step),
             require_cost_model=True,
+            max_risk_cap_pct=self.strategy.risk_cap,
         )
         if not risk.is_valid:
             self.journal.put("last_bar", bar)
             raise ValueError("risk_cap_or_volume")
-        profit = self.mt5.order_calc_profit(
-            self.mt5.ORDER_TYPE_SELL, self.symbol, 0.01, entry - allowance, sl
-        )
+        profit = self.mt5.order_calc_profit(order_type, self.symbol, 0.01, risk_entry, sl)
         commission = 0.01 * float(cost["commission_per_lot"])
         risk_amount = (
             -float(profit) + allowance * 0.01 * info.trade_contract_size + commission
@@ -150,29 +193,30 @@ class Trial30DemoRunner:
         if (
             risk_amount is None
             or not _finite(risk_amount, positive=True)
-            or risk_amount > account.equity * 0.10
+            or risk_amount > account.equity * self.strategy.risk_cap
         ):
             raise ValueError("broker_risk_invalid")
         distance = max(info.trade_stops_level, info.trade_freeze_level) * info.point
-        if sl - tick.ask <= distance or tick.ask - tp <= distance:
+        executable = float(tick.bid if direction == 1 else tick.ask)
+        if direction * (executable - sl) <= distance or direction * (tp - executable) <= distance:
             raise ValueError("stop_geometry")
-        margin = self.mt5.order_calc_margin(self.mt5.ORDER_TYPE_SELL, self.symbol, 0.01, entry)
+        margin = self.mt5.order_calc_margin(order_type, self.symbol, 0.01, entry)
         if margin is None or not _finite(margin) or margin < 0 or margin > account.margin_free:
             raise ValueError("insufficient_margin")
         filling = resolve_type_filling(int(info.filling_mode), for_pending=False, mt5_mod=self.mt5)
         if int(info.filling_mode) & 1:
             filling = self.mt5.ORDER_FILLING_FOK
-        comment = "T30_" + format(int(closed.timestamp()), "x")
+        comment = self.strategy.prefix + format(int(closed.timestamp()), "x")
         request = dict(
             action=self.mt5.TRADE_ACTION_DEAL,
             symbol=self.symbol,
             volume=0.01,
-            type=self.mt5.ORDER_TYPE_SELL,
+            type=order_type,
             price=entry,
             sl=sl,
             tp=tp,
             deviation=max(0, int(allowance / info.point)),
-            magic=MAGIC,
+            magic=self.strategy.magic,
             comment=comment,
             type_time=self.mt5.ORDER_TIME_GTC,
             type_filling=filling,
@@ -194,17 +238,18 @@ class Trial30DemoRunner:
         fresh_tick = self.broker._quote(send_now)
         if send_now - closed > timedelta(seconds=90):
             raise ValueError("entry_window_expired")
-        if abs(float(fresh_tick.bid) - entry) > allowance:
+        if abs(float(fresh_tick.ask if direction == 1 else fresh_tick.bid) - entry) > allowance:
             raise ValueError("quote_changed_before_send")
         if (
-            risk_amount > float(fresh_account.equity) * 0.10
-            or baseline - float(fresh_account.equity) >= baseline * 0.20
+            risk_amount > float(fresh_account.equity) * self.strategy.risk_cap
+            or baseline - float(fresh_account.equity) >= baseline * self.strategy.daily_loss_limit
         ):
             raise ValueError("capital_changed_before_send")
         current_positions, current_orders = self.broker._exposure()
         if current_positions or current_orders:
             raise ValueError("exposure_changed")
         active = dict(
+            direction=direction,
             comment=comment,
             bar=bar,
             status="SENDING",
@@ -212,7 +257,7 @@ class Trial30DemoRunner:
             risk=risk_amount,
             commission=commission,
             slippage=allowance,
-            entry_equity=float(account.equity),
+            entry_equity=float(fresh_account.equity),
             first_quote=dict(
                 time_msc=int(first.time_msc), bid=float(first.bid), ask=float(first.ask)
             ),
@@ -234,6 +279,27 @@ class Trial30DemoRunner:
         return self._reconcile(
             positions, self.broker._history(now + timedelta(minutes=1)), tick, info, closed, now
         )
+
+    def _daily_losses(self, deals, now):
+        """Route exits through owned opening position IDs, never closing magic."""
+        ids = {
+            int(d.position_id)
+            for d in deals
+            if int(d.entry) == 0
+            and int(d.type) in (0, 1)
+            and int(d.magic) == self.strategy.magic
+            and str(d.comment).startswith(self.strategy.prefix)
+        }
+        losses = 0
+        for ident in ids:
+            ledger = [d for d in deals if int(d.position_id) == ident and int(d.type) in (0, 1)]
+            exits = [d for d in ledger if int(d.entry) in (1, 3)]
+            volume = sum(float(d.volume) * (1 if int(d.type) == 0 else -1) for d in ledger)
+            if exits and abs(volume) < 1e-8 and sum(_cash(d) for d in ledger) < 0:
+                last = max(int(d.time_msc) for d in exits)
+                if datetime.fromtimestamp(last / 1000, now.tzinfo).date() == now.date():
+                    losses += 1
+        return losses
 
     def _first_quote(self, closed, now):
         rows = self.mt5.copy_ticks_range(self.symbol, closed, now, self.mt5.COPY_TICKS_ALL)
@@ -262,7 +328,9 @@ class Trial30DemoRunner:
         matches = [
             p
             for p in positions
-            if p.symbol == self.symbol and int(p.magic) == MAGIC and p.comment == active["comment"]
+            if p.symbol == self.symbol
+            and int(p.magic) == self.strategy.magic
+            and p.comment == active["comment"]
         ]
         if not matches:
             ident = active.get("position_id")
@@ -270,7 +338,7 @@ class Trial30DemoRunner:
                 opened = [
                     d
                     for d in deals
-                    if int(d.magic) == MAGIC
+                    if int(d.magic) == self.strategy.magic
                     and d.comment == active["comment"]
                     and int(d.entry) == 0
                 ]
@@ -286,7 +354,9 @@ class Trial30DemoRunner:
                     and any(int(d.entry) in (1, 3) for d in ledger)
                 ):
                     net = sum(_cash(d) for d in ledger)
-                    event = dict(kind="CLOSED", position_id=ident, net=net, snapshot=SNAPSHOT)
+                    event = dict(
+                        kind="CLOSED", position_id=ident, net=net, snapshot=self.strategy.snapshot
+                    )
                     self.journal.transition("active", None, event)
                     baseline = self.journal.get("day")
                     return {
@@ -300,7 +370,7 @@ class Trial30DemoRunner:
         position = matches[0]
         if (
             float(position.volume) != 0.01
-            or int(position.type) != 1
+            or int(position.type) != (0 if active.get("direction", -1) == 1 else 1)
             or position.sl <= 0
             or position.tp <= 0
         ):
@@ -339,7 +409,9 @@ class Trial30DemoRunner:
                     position, active, info, now, "filled_stop_target_violation"
                 )
             broker_loss = self.mt5.order_calc_profit(
-                self.mt5.ORDER_TYPE_SELL,
+                self.mt5.ORDER_TYPE_BUY
+                if active.get("direction", -1) == 1
+                else self.mt5.ORDER_TYPE_SELL,
                 self.symbol,
                 0.01,
                 float(position.price_open),
@@ -357,7 +429,7 @@ class Trial30DemoRunner:
             if (
                 actual_risk is None
                 or not _finite(actual_risk, positive=True)
-                or actual_risk > active["entry_equity"] * 0.10
+                or actual_risk > active["entry_equity"] * self.strategy.risk_cap
             ):
                 return self._safety_close(position, active, info, now, "filled_risk_violation")
             active["risk"] = actual_risk
@@ -379,14 +451,17 @@ class Trial30DemoRunner:
                     entry=float(position.price_open),
                     sl=float(position.sl),
                     tp=float(position.tp),
-                    snapshot=SNAPSHOT,
+                    snapshot=self.strategy.snapshot,
                 ),
             )
             return {"status": "FILLED", "ticket": int(position.ticket)}
+        direction = active.get("direction", -1)
+        if not self.strategy.protects(direction):
+            return {"status": "MANAGING", "ticket": int(position.ticket)}
         bar = closed.isoformat()
         if active.get("be_pending") is not None:
             candidate = float(active["be_pending"])
-            if float(position.sl) <= candidate + float(info.trade_tick_size) / 2:
+            if direction * (float(position.sl) - candidate) >= -float(info.trade_tick_size) / 2:
                 active.pop("be_pending")
                 active["be_done"] = True
                 self.journal.transition(
@@ -397,7 +472,7 @@ class Trial30DemoRunner:
                         ticket=int(position.ticket),
                         sl=float(position.sl),
                         tp=float(position.tp),
-                        snapshot=SNAPSHOT,
+                        snapshot=self.strategy.snapshot,
                     ),
                 )
                 return {"status": "BE_MOVED", "ticket": int(position.ticket)}
@@ -410,11 +485,13 @@ class Trial30DemoRunner:
                 time_msc=int(first.time_msc), bid=float(first.bid), ask=float(first.ask)
             )
             profit = self.mt5.order_calc_profit(
-                self.mt5.ORDER_TYPE_SELL,
+                self.mt5.ORDER_TYPE_BUY
+                if active.get("direction", -1) == 1
+                else self.mt5.ORDER_TYPE_SELL,
                 self.symbol,
                 0.01,
                 float(position.price_open),
-                float(first.ask),
+                float(first.bid if direction == 1 else first.ask),
             )
             if profit is None or not _finite(profit):
                 raise ValueError("broker_profit_unknown")
@@ -431,12 +508,17 @@ class Trial30DemoRunner:
             return {"status": "MANAGING", "ticket": int(position.ticket)}
         candidate = round_level(
             float(position.price_open)
-            - (active["commission"] / (0.01 * info.trade_contract_size) + active["slippage"]),
+            + direction
+            * (active["commission"] / (0.01 * info.trade_contract_size) + active["slippage"]),
             float(info.trade_tick_size),
-            1,
+            -direction,
         )
         distance = max(info.trade_stops_level, info.trade_freeze_level) * info.point
-        if candidate >= float(position.sl) or candidate - float(tick.ask) <= distance:
+        executable = float(tick.bid if direction == 1 else tick.ask)
+        if (
+            direction * (candidate - float(position.sl)) <= 0
+            or direction * (executable - candidate) <= distance
+        ):
             return {"status": "MANAGING", "reason": "be_geometry", "ticket": int(position.ticket)}
         if not self.execute:
             return {"status": "SHADOW_BE", "sl": candidate, "ticket": int(position.ticket)}
@@ -446,7 +528,7 @@ class Trial30DemoRunner:
             position=int(position.ticket),
             sl=candidate,
             tp=float(position.tp),
-            magic=MAGIC,
+            magic=self.strategy.magic,
         )
         check = self.mt5.order_check(request)
         if check is None or int(check.retcode) != 0:
@@ -458,14 +540,18 @@ class Trial30DemoRunner:
             for p in positions
             if int(p.ticket) == int(position.ticket)
             and p.symbol == self.symbol
-            and int(p.magic) == MAGIC
+            and int(p.magic) == self.strategy.magic
             and p.comment == active["comment"]
         ]
         if len(matches) != 1:
             return {"status": "UNKNOWN", "reason": "be_position_changed"}
         current = matches[0]
         fresh_tick = self.broker._quote(self._send_clock(now))
-        if candidate >= float(current.sl) or candidate - float(fresh_tick.ask) <= distance:
+        executable = float(fresh_tick.bid if direction == 1 else fresh_tick.ask)
+        if (
+            direction * (candidate - float(current.sl)) <= 0
+            or direction * (executable - candidate) <= distance
+        ):
             return {"status": "MANAGING", "reason": "be_geometry_changed"}
         request["tp"] = float(current.tp)
         active["be_pending"] = candidate
@@ -495,7 +581,7 @@ class Trial30DemoRunner:
             for p in fresh
             if int(p.ticket) == int(position.ticket)
             and p.symbol == self.symbol
-            and int(p.magic) == MAGIC
+            and int(p.magic) == self.strategy.magic
             and p.comment == active["comment"]
         ]
         if len(owned) != 1:
@@ -511,8 +597,8 @@ class Trial30DemoRunner:
             volume=float(position.volume),
             type=self.mt5.ORDER_TYPE_BUY if int(position.type) == 1 else self.mt5.ORDER_TYPE_SELL,
             price=float(tick.ask if int(position.type) == 1 else tick.bid),
-            magic=MAGIC,
-            comment="T30_SAFETY",
+            magic=self.strategy.magic,
+            comment=self.strategy.prefix + "SAFETY",
             deviation=max(0, int(active["slippage"] / info.point)),
             type_filling=resolve_type_filling(
                 int(info.filling_mode), for_pending=False, mt5_mod=self.mt5
@@ -542,7 +628,7 @@ class Trial30DemoRunner:
                 ticket=int(position.ticket),
                 reason=reason,
                 net=sum(_cash(d) for d in ledger),
-                snapshot=SNAPSHOT,
+                snapshot=self.strategy.snapshot,
             )
             self.journal.transition("active", None, event)
             return {"status": "SAFETY_CLOSED", "reason": reason}

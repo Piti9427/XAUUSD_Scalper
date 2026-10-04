@@ -110,3 +110,27 @@ bot-stop:
 	@pkill -TERM -f '[m]t5_wine_trial30.py --watch' 2>/dev/null || true
 	@rm -f $(BOT_PID)
 	@echo "watcher stop requested"
+
+# Candidate defaults are shadow-only. Execution requires operator cutover gates
+# and explicit MT5_ENABLE_DEMO_ORDER_SEND=1 supplied by owner.
+.PHONY: c22h4-status c22h4-history-probe c22h4-once c22h4-shadow c22h4-run c22h4-stop
+c22h4-status:
+	$(PYTHON) -m scripts.ops.c22h4_status --brief
+
+c22h4-history-probe:
+	$(PYTHON) -m scripts.ops.run_c22h4_wine --history-probe
+
+c22h4-once:
+	$(PYTHON) -m scripts.ops.run_c22h4_wine --once
+
+c22h4-shadow:
+	$(PYTHON) -m scripts.ops.run_c22h4_wine --watch --cache-output data/c22h4-shadow-bars.csv
+
+c22h4-run:
+	$(PYTHON) -m scripts.ops.run_c22h4_wine --watch --execute
+
+c22h4-stop:
+	@pkill -INT -f '[r]un_c22h4_wine --watch' 2>/dev/null || true
+	@sleep 1
+	@pkill -TERM -f '[m]t5_wine_c22h4.py --watch' 2>/dev/null || true
+	@echo "candidate watcher stop requested; broker SL/TP remain"
