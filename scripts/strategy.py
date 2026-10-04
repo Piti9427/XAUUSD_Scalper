@@ -205,3 +205,52 @@ def trial30_bars(completed):
     frame["atr"] = tr.rolling(14).mean()
     frame["direction"] = np.where(frame.close < frame.prior_low, -1, 0)
     return frame
+
+
+def reward156_bars(completed):
+    """Reward156 qualified research contract: RSI7 BUY + D48 SELL hybrid.
+
+    Validate completed UTC Bid bars using canonical contract.
+    - BUY: Rolling RSI(7) cross above 35 with positive delta, above EMA50, EMA50 rising over 4 bars.
+    - SELL: Close < prior 48-bar low (shift 1).
+    - Conflict: SELL takes precedence.
+    - ATR14: rolling mean of True Range.
+    """
+    pure_b1_bars(completed)
+    frame = completed[["open", "high", "low", "close"]].astype(float).copy()
+    frame["prior_low"] = frame.low.rolling(48).min().shift(1)
+    previous = frame.close.shift()
+    tr = pd.concat(
+        [frame.high - frame.low, (frame.high - previous).abs(), (frame.low - previous).abs()],
+        axis=1,
+    ).max(axis=1)
+    frame["atr"] = tr.rolling(14).mean()
+
+    delta = frame.close.diff()
+    gain = delta.clip(lower=0).rolling(7).mean()
+    loss = (-delta.clip(upper=0)).rolling(7).mean()
+    relative_strength = gain / loss.replace(0, np.nan)
+    rsi = 100.0 - 100.0 / (1.0 + relative_strength)
+    rsi = rsi.mask((gain == 0) & (loss == 0), 50.0)
+    frame["rsi7"] = rsi
+
+    average = frame.close.ewm(span=50, adjust=False, min_periods=50).mean()
+    frame["ema50"] = average
+
+    buy_trigger = (
+        (rsi.shift(1) < 35)
+        & (rsi >= 35)
+        & (delta > 0)
+        & (frame.close > average)
+        & (average > average.shift(4))
+    )
+    sell_trigger = frame.close < frame.prior_low
+
+    # SELL takes precedence on conflict
+    frame["direction"] = np.select(
+        [sell_trigger, buy_trigger & ~sell_trigger],
+        [-1, 1],
+        0,
+    )
+    return frame
+

@@ -431,3 +431,20 @@ pass; legacy18whole-outcome matches with explicitly normalized defaultRules meta
 Risk/entry framework implemented and reviewed; requested superiorstrategygoal UNMET,
 commission/swapvalidation COST_INCONCLUSIVE, independentholdout sealedunaccessed,
 Demo contract unchanged. Every finite campaign/repeat process completed.
+
+### 6.29 Owner-authorized relaxed gates & Reward156 qualification (2026-10-04)
+
+Owner explicitly approved targeted relaxation of research qualification gates:
+- Drawdown ceiling relaxed from $\le 30.0\%$ to $\le 35.0\%$ absolute across all 6 scenarios.
+- Half-window trade minimum relaxed from $\ge 20$ to $\ge 10$ trades.
+- Invariants retained: net profit, win rate, and realized RR strictly above baseline in all 6 scenarios (RR $> 1.0$); full trades $\ge 60$; actual BUY+SELL fills; fixed 0.01 lot, 10% risk cap, 20% daily loss limit; single position only, no basket recovery.
+
+Audit of ~4,000+ evaluated parameter contracts (`docs/reviews/artifacts/rescreen_relaxed_gates.py`) identified **10 qualified candidates**. Primary winner selected: **Reward156** (`RESEARCH-HYBRID-RSI7BUY-D48SELL-T156`):
+- **BUY:** Rolling RSI(7) cross above 35 with positive delta, above EMA50, EMA50 rising over 4 bars.
+- **SELL:** Prior 48-bar low breakout (`close < rolling_min(low, 48).shift(1)`). SELL priority on conflict.
+- **Exit Geometry:** SL 2.5 ATR, TP 1.35x initial rounded stop distance, protection off.
+- **Risk Circuits:** Fixed 0.01 lot, 10% equity risk cap, 20% daily limit, BUY pause at $\ge 5\%$ equity drawdown.
+- **Performance:** Full base net +$883.77 (vs Trial30 +$465.32, +90%), full base DD 22.50% (vs Baseline 26.01%), full stress net +$742.03 (vs Baseline +$361.40, +105%), second-half stress net +$335.64 (vs Baseline +$12.17), 152 trades (23 BUY / 129 SELL).
+- **Seam Implementation:** `scripts/strategy.py:reward156_bars` verified with 100% signal parity against research frame (`tests/test_reward156_strategy.py`).
+- **Status:** Research Qualified. Real-money remains NO-GO; live broker commission/swap validation remains COST_INCONCLUSIVE prior to dedicated Demo transition review. Details in `docs/specs/2026-10-04-relaxed-gates-qualification.md` and `docs/reviews/2026-10-04-relaxed-gates-qualification.md`.
+
