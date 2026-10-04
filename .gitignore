@@ -51,9 +51,11 @@ COMPLETE
 data/**/*.json
 data/b1_*/
 data/bottradegold_*/
+data/*probe*/
 data/research_cache/
 data/research_output*/
 data/research_results/
+*.zip
 
 # Chart Snapshots
 data/*.png
@@ -78,9 +80,7 @@ scripts/test_tuning.py
 data/exness-demo/
 
 # Immutable local strategy campaign evidence and source snapshots
-data/strategy_*campaign*/
-data/strategy_bidirectional_geometry_tuning_*/
-data/strategy_bidirectional_admission_tuning_*/
+data/strategy_*/
 
 # Trial30 single-writer SQLite lock database
 data/*.sqlite3.lock
