@@ -22,7 +22,7 @@ todos:
     status: cancelled
   - id: review-and-commit
     content: Run repository tests and code-review, fix findings, commit only this work on current branch
-    status: in_progress
+    status: completed
 isProject: false
 ---
 
