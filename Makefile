@@ -6,6 +6,7 @@ RUFF ?= $(shell if [ -f .venv/bin/ruff ]; then echo .venv/bin/ruff; else which r
 BOT_NAME ?= c22h4
 BOT_PID = data/$(BOT_NAME)-demo-watch.pid
 BOT_LOG = data/$(BOT_NAME)-demo-watch.log
+BOT_CACHE_ARGS = $(if $(filter c22h4,$(BOT_NAME)),--cache-output data/c22h4-shadow-bars.csv,)
 
 all: check
 
@@ -22,8 +23,8 @@ help:
 	@echo "  make guide        - How to run, stop, and check the Demo bot"
 	@echo "  make bot-status   - Journal plus local watcher process"
 	@echo "  make bot-once     - One read-only cycle, no order_send"
-	@echo "  make bot-run      - Foreground Demo watcher (Ctrl-C stops)"
-	@echo "  make bot-start    - Background Demo watcher, one writer"
+	@echo "  make bot-run      - Foreground Demo shadow watcher (Ctrl-C stops)"
+	@echo "  make bot-start    - Background Demo shadow watcher, one writer"
 	@echo "  make bot-stop     - Stop watcher only; broker SL/TP stay"
 
 check: compile deps lint format-check test
@@ -61,7 +62,7 @@ clean:
 guide:
 	@echo "C22 + H4 EMA200 Demo — วิธีใช้"
 	@echo "ส่งออเดอร์ได้หลัง cutover gates ผ่านและ owner อนุมัติเท่านั้น. ดู docs/ops/c22h4-demo.md."
-	@echo "bot-run/bot-start ต้องมี MT5_ENABLE_DEMO_ORDER_SEND=1 จาก operator."
+	@echo "bot-run/bot-start เริ่ม shadow โดยไม่ส่งออเดอร์. โหมดส่งออเดอร์ต้องมี MT5_ENABLE_DEMO_ORDER_SEND=1 จาก operator."
 	@echo "trial30-status/once/run/start/stop เก็บไว้สำหรับ rollback."
 	@echo ""
 	@echo "รันจากโฟลเดอร์โปรเจกต์. รหัสอยู่ใน .env. MetaTrader 5 ต้องเปิดอยู่."
@@ -72,13 +73,13 @@ guide:
 	@echo "บอท"
 	@echo "  make bot-status   ดู journal กับโปรเซส. ไม่ติดต่อโบรกเกอร์."
 	@echo "  make bot-once     หนึ่งรอบแบบอ่านอย่างเดียว. ไม่ส่งออเดอร์."
-	@echo "  make bot-run      เฝ้าและส่งออเดอร์ Demo ตามสัญญาณ. ค้างที่เทอร์มินัล. Ctrl-C เพื่อหยุด."
+	@echo "  make bot-run      เฝ้าแบบ shadow ไม่ส่งออเดอร์. ค้างที่เทอร์มินัล. Ctrl-C เพื่อหยุด."
 	@echo "  make bot-start    เหมือน bot-run แต่ไปรันพื้นหลัง. เขียน $(BOT_PID) และ $(BOT_LOG)."
 	@echo "  make bot-stop     ส่ง SIGINT ให้ watcher. ไม่ปิดแอป MetaTrader."
 	@echo ""
 	@echo "ลำดับที่ใช่บ่อย"
 	@echo "  make bot-status"
-	@echo "  MT5_ENABLE_DEMO_ORDER_SEND=1 make bot-start  # หลัง cutover approval"
+	@echo "  make bot-start  # shadow ไม่ส่งออเดอร์"
 	@echo "  make bot-status"
 	@echo "  make bot-stop"
 	@echo ""
@@ -94,11 +95,12 @@ bot-once:
 	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --once
 
 bot-run:
-	@test "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" || { echo "explicit Demo execution gate required; complete cutover review first"; exit 1; }
-	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch --execute
+	@mode=shadow; execute=; \
+	if [ "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" ]; then mode=execution; execute=--execute; fi; \
+	echo "Starting $(BOT_NAME) Demo watcher: $$mode"; \
+	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $$execute $(BOT_CACHE_ARGS)
 
 bot-start:
-	@test "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" || { echo "explicit Demo execution gate required; complete cutover review first"; exit 1; }
 	@if [ -f $(BOT_PID) ] && kill -0 $$(cat $(BOT_PID)) 2>/dev/null; then \
 		echo "watcher already running pid $$(cat $(BOT_PID))"; exit 1; \
 	fi
@@ -106,7 +108,10 @@ bot-start:
 	if [ $$result -eq 0 ]; then echo "Demo watcher already running"; exit 1; \
 	elif [ $$result -ne 1 ]; then echo "watcher inventory unavailable; start blocked"; exit 1; \
 	fi
-	nohup $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch --execute >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
+	@mode=shadow; execute=; \
+	if [ "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" ]; then mode=execution; execute=--execute; fi; \
+	echo "Starting $(BOT_NAME) Demo watcher: $$mode"; \
+	nohup $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $$execute $(BOT_CACHE_ARGS) >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
 	@echo "started pid $$(cat $(BOT_PID))"
 
 bot-stop:

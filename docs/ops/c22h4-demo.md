@@ -2,7 +2,7 @@
 
 Implementation available; broker parity/shadow/cutover **pending**. Real money PROHIBITED. Same Demo account replaces trial30; never simultaneous runners. `make bot-*` now selects C22H4; explicit `make trial30-*` targets retain rollback. Research returns do not qualify profitability or broker costs.
 
-Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). Command routing does not mean a running watcher has switched. `make bot-run`/`make bot-start` require operator-supplied `MT5_ENABLE_DEMO_ORDER_SEND=1`; candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`. PR merge and broker cutover are separate actions.
+Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). On2026-10-05 owner selected shadow as the default for `make bot-run`/`make bot-start`: no `--execute` unless the invoking shell supplies `MT5_ENABLE_DEMO_ORDER_SEND=1`. Both print the selected mode; the env is not enabled implicitly or read from `.env` by Make. Candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`; exact cache is `data/c22h4-shadow-bars.csv`. PR merge and broker cutover are separate actions.
 
 ## Contract
 

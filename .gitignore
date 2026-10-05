@@ -87,6 +87,7 @@ data/strategy_*/
 data/*.sqlite3.lock
 data/trial30-demo-watch.pid
 data/trial30-demo-watch.log
+data/c22h4-demo-watch.pid
 
 # Test execution logs, backtest dumps & experiment run output folders
 runs/

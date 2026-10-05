@@ -16,7 +16,7 @@ MT5_ENABLE_DEMO_ORDER_SEND=1 make trial30-start
 make trial30-stop
 ```
 
-Default `make bot-*` commands now select C22H4. Trial30 commands above are the retained rollback path, only after candidate flatness/reconciliation and owner-reviewed rollback. `trial30-once` is the read-only cycle; `trial30-run` is the foreground Demo watcher. `trial30-start` / `trial30-stop` use `data/trial30-demo-watch.pid`. `trial30-status` reads the journal and does not contact the broker. Equivalent raw entrypoints:
+Default `make bot-*` commands now select C22H4. Trial30 commands above are the retained rollback path, only after candidate flatness/reconciliation and owner-reviewed rollback. `trial30-once` is the read-only cycle; `trial30-run` is the foreground Demo watcher. Run/start default to shadow unless the invoking shell supplies `MT5_ENABLE_DEMO_ORDER_SEND=1`; commands above explicitly request execution. `trial30-start` / `trial30-stop` use `data/trial30-demo-watch.pid`. `trial30-status` reads the journal and does not contact the broker. Equivalent raw entrypoints:
 
 ```bash
 # Read-only shadow: no order_send.
