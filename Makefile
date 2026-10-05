@@ -3,8 +3,9 @@
 
 PYTHON ?= $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else which python3; fi)
 RUFF ?= $(shell if [ -f .venv/bin/ruff ]; then echo .venv/bin/ruff; else which ruff || echo "$(PYTHON) -m ruff"; fi)
-BOT_PID := data/trial30-demo-watch.pid
-BOT_LOG := data/trial30-demo-watch.log
+BOT_NAME ?= c22h4
+BOT_PID = data/$(BOT_NAME)-demo-watch.pid
+BOT_LOG = data/$(BOT_NAME)-demo-watch.log
 
 all: check
 
@@ -58,7 +59,10 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 guide:
-	@echo "Trial30 Demo — วิธีใช้"
+	@echo "C22 + H4 EMA200 Demo — วิธีใช้"
+	@echo "ส่งออเดอร์ได้หลัง cutover gates ผ่านและ owner อนุมัติเท่านั้น. ดู docs/ops/c22h4-demo.md."
+	@echo "bot-run/bot-start ต้องมี MT5_ENABLE_DEMO_ORDER_SEND=1 จาก operator."
+	@echo "trial30-status/once/run/start/stop เก็บไว้สำหรับ rollback."
 	@echo ""
 	@echo "รันจากโฟลเดอร์โปรเจกต์. รหัสอยู่ใน .env. MetaTrader 5 ต้องเปิดอยู่."
 	@echo "บัญชีนี้มี watcher ได้ตัวเดียว. อย่าสั่ง bot-run ซ้อนกับ bot-start."
@@ -74,7 +78,7 @@ guide:
 	@echo ""
 	@echo "ลำดับที่ใช่บ่อย"
 	@echo "  make bot-status"
-	@echo "  make bot-start"
+	@echo "  MT5_ENABLE_DEMO_ORDER_SEND=1 make bot-start  # หลัง cutover approval"
 	@echo "  make bot-status"
 	@echo "  make bot-stop"
 	@echo ""
@@ -84,32 +88,40 @@ guide:
 	@echo "  make test         เฉพาะ unit test"
 
 bot-status:
-	$(PYTHON) scripts/ops/trial30_status.py --brief
+	$(PYTHON) -m scripts.ops.$(BOT_NAME)_status --brief
 
 bot-once:
-	$(PYTHON) -m scripts.ops.run_trial30_wine --once
+	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --once
 
 bot-run:
-	MT5_ENABLE_DEMO_ORDER_SEND=1 $(PYTHON) -m scripts.ops.run_trial30_wine --watch --execute
+	@test "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" || { echo "explicit Demo execution gate required; complete cutover review first"; exit 1; }
+	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch --execute
 
 bot-start:
+	@test "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" || { echo "explicit Demo execution gate required; complete cutover review first"; exit 1; }
 	@if [ -f $(BOT_PID) ] && kill -0 $$(cat $(BOT_PID)) 2>/dev/null; then \
 		echo "watcher already running pid $$(cat $(BOT_PID))"; exit 1; \
 	fi
-	@if pgrep -f '[r]un_trial30_wine --watch' >/dev/null; then \
-		echo "watcher already running"; exit 1; \
+	@pgrep -f '[r]un_(trial30|c22h4)_wine.*--watch|[m]t5_wine_(trial30|c22h4)\.py.*--watch' >/dev/null; result=$$?; \
+	if [ $$result -eq 0 ]; then echo "Demo watcher already running"; exit 1; \
+	elif [ $$result -ne 1 ]; then echo "watcher inventory unavailable; start blocked"; exit 1; \
 	fi
-	MT5_ENABLE_DEMO_ORDER_SEND=1 nohup $(PYTHON) -m scripts.ops.run_trial30_wine --watch --execute >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
+	nohup $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch --execute >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
 	@echo "started pid $$(cat $(BOT_PID))"
 
 bot-stop:
 	@if [ -f $(BOT_PID) ]; then kill -INT $$(cat $(BOT_PID)) 2>/dev/null || true; fi
 	@sleep 1
-	@pkill -INT -f '[r]un_trial30_wine --watch' 2>/dev/null || true
+	@pkill -INT -f '[r]un_$(BOT_NAME)_wine --watch' 2>/dev/null || true
 	@sleep 1
-	@pkill -TERM -f '[m]t5_wine_trial30.py --watch' 2>/dev/null || true
+	@pkill -TERM -f '[m]t5_wine_$(BOT_NAME).py --watch' 2>/dev/null || true
 	@rm -f $(BOT_PID)
 	@echo "watcher stop requested"
+
+# Explicit legacy commands preserve trial30 rollback without changing its contract.
+.PHONY: trial30-status trial30-once trial30-run trial30-start trial30-stop
+trial30-status trial30-once trial30-run trial30-start trial30-stop:
+	$(MAKE) BOT_NAME=trial30 bot-$(patsubst trial30-%,%,$@)
 
 # Candidate defaults are shadow-only. Execution requires operator cutover gates
 # and explicit MT5_ENABLE_DEMO_ORDER_SEND=1 supplied by owner.

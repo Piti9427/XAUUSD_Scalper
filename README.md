@@ -1,4 +1,7 @@
 # XAUUSD Scalper Project
+
+Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EMA200-20261004`. Default `make bot-*` commands select C22H4; `make trial30-*` retains rollback. Broker parity/shadow/cutover pending; no real-money use. Execution requires operator-supplied `MT5_ENABLE_DEMO_ORDER_SEND=1` after cutover review. See [Demo runbook](docs/ops/c22h4-demo.md); strategy math remains in [CORE_STRATEGY section6.33](CORE_STRATEGY.md).
+
 - **Goal:** Implement a hybrid backtesting and real-time alert system for Gold (XAUUSD).
 - **Strategy target (research only):** **Pure B1 Single-Position** (Donchian Breakout + RSI 30–70 + EMA 50) with 6.25 ATR TP, 2.5 ATR SL, and 10% Risk Cap. See [current target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md).
 - **Architecture:** Python + MetaTrader 5 API / Webhook Bridge + Telegram Bot.

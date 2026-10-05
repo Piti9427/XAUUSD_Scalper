@@ -78,22 +78,27 @@ class CandidateCliTests(unittest.TestCase):
                 expected_server="Exness-Demo",
                 journal_path=Path(tmp) / "first.sqlite3",
                 cost_policy=costs,
-                account_guard_dir=ROOT / "data",
+                account_guard_dir=Path(tmp) / "data",
             )
             try:
-                with patch.dict(
-                    "os.environ",
-                    dict(
-                        XAUUSD_MT5_LOGIN="123",
-                        XAUUSD_MT5_SERVER="Exness-Demo",
-                        XAUUSD_MT5_PASSWORD="fixture",
+                with (
+                    patch.dict(
+                        "os.environ",
+                        dict(
+                            XAUUSD_MT5_LOGIN="123",
+                            XAUUSD_MT5_SERVER="Exness-Demo",
+                            XAUUSD_MT5_PASSWORD="fixture",
+                        ),
+                        clear=True,
                     ),
-                    clear=True,
+                    patch("scripts.ops.mt5_wine_trial30.ROOT", Path(tmp)),
                 ):
                     self.assertEqual(
                         main(
                             [
                                 "--once",
+                                "--config",
+                                str(ROOT / "config/c22h4-demo.json"),
                                 "--journal",
                                 str(Path(tmp) / "second.sqlite3"),
                                 "--cost-policy",
@@ -107,3 +112,28 @@ class CandidateCliTests(unittest.TestCase):
                 broker.shutdown.assert_not_called()
             finally:
                 runner.close()
+
+    def test_account_guard_cannot_be_redirected_by_environment(self):
+        from scripts.ops.mt5_wine_trial30 import ROOT
+
+        broker = Mock()
+        broker.initialize.return_value = False
+        broker.last_error.return_value = (-1, "fixture")
+        with TemporaryDirectory() as tmp:
+            cost = Path(tmp) / "cost.json"
+            cost.write_text(json.dumps(policy()))
+            with (
+                patch.dict(
+                    "os.environ",
+                    dict(
+                        XAUUSD_MT5_LOGIN="123",
+                        XAUUSD_MT5_SERVER="Exness-Demo",
+                        XAUUSD_MT5_PASSWORD="fixture",
+                        DEMO_ACCOUNT_GUARD_DIR=tmp,
+                    ),
+                    clear=True,
+                ),
+                patch("scripts.c22h4.runner.C22H4DemoRunner") as runner,
+            ):
+                self.assertEqual(main(["--once", "--cost-policy", str(cost)], mt5=broker), 1)
+                self.assertEqual(runner.call_args.kwargs["account_guard_dir"], ROOT / "data")

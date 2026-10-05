@@ -1,6 +1,8 @@
 # C22H4 research Demo replacement
 
-Implementation available; broker parity/shadow/cutover **pending**. Real money PROHIBITED. Same Demo account replaces trial30; never simultaneous runners. Original trial30 `make bot-*` targets retained for rollback. Research returns do not qualify profitability or broker costs.
+Implementation available; broker parity/shadow/cutover **pending**. Real money PROHIBITED. Same Demo account replaces trial30; never simultaneous runners. `make bot-*` now selects C22H4; explicit `make trial30-*` targets retain rollback. Research returns do not qualify profitability or broker costs.
+
+Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). Command routing does not mean a running watcher has switched. `make bot-run`/`make bot-start` require operator-supplied `MT5_ENABLE_DEMO_ORDER_SEND=1`; candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`. PR merge and broker cutover are separate actions.
 
 ## Contract
 
@@ -54,4 +56,4 @@ make c22h4-stop
 
 Status reads local journal and process list; stale heartbeat/process-unknown is not broker exposure proof. Before first candidate run no journal exists. Stop ends watcher only; existing broker SL/TP remain. Never delete UNKNOWN/SENDING state or safety halt to force new orders. Reconcile full broker evidence first.
 
-Rollback only when candidate is confirmed flat with no pending reconciliation/outbox: stop candidate -> verify account flat and UTC-day circuit suitability -> owner-reviewed restart `make bot-run` or `make bot-start`. Candidate does not auto-close a valid position during shutdown. Terminal/VPN/sleep failures require restart reconciliation; same account guard is local, not distributed across machines/cloned workspaces.
+Rollback only when candidate is confirmed flat with no pending reconciliation/outbox: stop candidate -> verify account flat and UTC-day circuit suitability -> owner-reviewed restart `MT5_ENABLE_DEMO_ORDER_SEND=1 make trial30-run` or `trial30-start`. Use `make trial30-status` and `make trial30-stop` for the old watcher. Candidate does not auto-close a valid position during shutdown. Terminal/VPN/sleep failures require restart reconciliation; same account guard is local, not distributed across machines/cloned workspaces.
