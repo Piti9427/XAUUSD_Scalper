@@ -593,3 +593,24 @@ USD200 once, fixed0.01, single position, initial cap<=10%; no recovery/martingal
 CLI `scripts.research.c22_tuning_loop`, config `config/c22-tuning-loop.json`,
 contract `specs/c22-tuning-loop.md`, ops `docs/ops/c22-tuning-loop.md`.
 Retrospective reused discovery, COST_INCONCLUSIVE; section6.33 Demo unchanged.
+
+
+### 6.36.1 Completed research selection (2026-10-07)
+
+Diversified campaign01 completed300 globally new variants/608 swap-inclusive cells;
+3 qualifiers. Selected `b823f4aefe10fc72` by unchanged worst-case-net winner rank.
+BUY archived RSI7cross25, EMA50+slope, SL1.5ATR, TP2 rounded R, BE1R.
+SELL Donchian96, EMA50+slope, SL2.5ATR, TP2 rounded R, BE1R.
+Both closed H4EMA200; daily loss10%, losing-exit count unlimited, cooldown0,
+all entry sessions, static cost-inclusive initial cap10%, fixed0.01, single position.
+Research config `config/research-c22-qualified-b823f4aefe10fc72.json`; not Demo config.
+Base+swap net741.0958/final941.0958, equity DD29.6368%, mean16.12 entries/full month.
+Stress+swap net499.1840/final699.1840, equity DD37.0976%, mean16.04 entries/full month.
+Both net>=same-input baseline297.4922/284.6542, equity positive, no bankruptcy,
+fixed-lot/risk and conservative terminal gates pass. Last quote2026-10-05 UTC;
+25 full UTC months including warmup/zero months. Independent audit608 cells/
+236677 scenario trades passed; baseline/all3 qualifiers/diagnostic champion fresh
+repeated exactly both views; completed resume preserved706 artifact hashes.
+Evidence: `docs/reviews/2026-10-07-c22-qualified-verdict.md`, ignored
+`runs/c22-tuning-loop-2026-10-07/`. QUALIFIED means retrospective research gates
+only; COST_INCONCLUSIVE remains. Demo section6.33 unchanged; no cutover authorized.

@@ -1,5 +1,8 @@
 # C22 diversified tuning loop — BLOCKED
 
+Historical blocked attempt. Later continuation completed and qualified:
+[completed verdict](2026-10-07-c22-qualified-verdict.md). Evidence below preserved.
+
 Research implementation complete; economic search incomplete. No winner selected.
 Demo unchanged. Real money prohibited. Retrospective reused discovery remains
 COST_INCONCLUSIVE.
