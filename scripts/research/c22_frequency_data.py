@@ -10,6 +10,7 @@ import pandas as pd
 from scripts.research.c22_context_campaign import digest, read, require, verify_baseline
 from scripts.research.public_exness_archive import BASE, acquire, import_month, months
 from scripts.research.reward156_tuning import atomic_json
+from scripts.research.c22_tuning_data import clone_tape
 
 
 def load_bars(path):
@@ -106,14 +107,12 @@ def prepare_input(baseline, root):
     total = cutoff + sum(lengths)
     tape_root = root / "tape"
     tape_root.mkdir(exist_ok=True)
-    for key, dtype in (("time", "int64"), ("bid", "float64"), ("ask", "float64")):
+    for key in ("time", "bid", "ask"):
         target = tape_root / (key + ".npy")
-        output = np.lib.format.open_memmap(target, mode="w+", dtype=dtype, shape=(total,))
-        source_array = np.load(source / (key + ".npy"), mmap_mode="r")
-        for offset in range(0, cutoff, 1000000):
-            output[offset : min(cutoff, offset + 1000000)] = source_array[
-                offset : min(cutoff, offset + 1000000)
-            ]
+        # No complete manifest exists here: these are owned, incomplete writes.
+        # COW clone preserves historical prefix without duplicating all tape pages.
+        target.unlink(missing_ok=True)
+        output = clone_tape(source / (key + ".npy"), target, total)
         offset = cutoff
         for item, length in zip(imported, lengths):
             with np.load(root / "discovery" / (item["month"] + ".npz")) as tape:

@@ -1,0 +1,15 @@
+{
+  "policy": "c22_diversified_loop_v1",
+  "research_only": true,
+  "initial_equity": 200,
+  "volume": 0.01,
+  "risk_cap": 0.1,
+  "new_variants_per_campaign": 300,
+  "max_campaigns": 3,
+  "seed_count": 3,
+  "repeat_top": 5,
+  "lanes": ["frequency", "balanced", "quality"],
+  "views": ["base-swap", "stress-swap"],
+  "swap_required": true,
+  "prior_campaign": "runs/c22-frequency-2026-10-06"
+}

@@ -576,3 +576,20 @@ above40%. All602 cells/81304 scenario trades reconciled; baseline original parit
 and latest fresh repeats passed; completed resume preserved696 content hashes.
 COST_INCONCLUSIVE. Evidence: `docs/reviews/2026-10-07-c22-frequency-verdict.md` and
 ignored `runs/c22-frequency-2026-10-06/`; no financial or Demo qualification inferred.
+
+## 6.36 C22 diversified frequency tuning loop (research only, 2026-10-07)
+
+Continue section6.35 research with unchanged domains, swap-inclusive accounting,
+qualification and winner ranking. Original 300-variant campaign had no qualifier;
+its highest-frequency parent was never expanded under original gate-count rank.
+New exploration selects distinct frequency, balanced-shortfall and original-quality
+parents. Replay baseline and seeds on fresh campaign input; freeze neighbors before
+results; deduplicate globally across completed campaigns. Search300 new variants
+per campaign, at most3 campaigns; finish campaign before qualification selection.
+Baseline/top5 qualifiers plus diagnostic frequency/balanced champions must repeat
+exactly in both swap-inclusive scenarios. Qualification still requires positive
+net>=baseline, DD<=40%, mean>=15 entries/full UTC month, survival/risk/terminal gates.
+USD200 once, fixed0.01, single position, initial cap<=10%; no recovery/martingale.
+CLI `scripts.research.c22_tuning_loop`, config `config/c22-tuning-loop.json`,
+contract `specs/c22-tuning-loop.md`, ops `docs/ops/c22-tuning-loop.md`.
+Retrospective reused discovery, COST_INCONCLUSIVE; section6.33 Demo unchanged.
