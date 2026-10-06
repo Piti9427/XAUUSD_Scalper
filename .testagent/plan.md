@@ -36,3 +36,19 @@ Run narrow tests, then repository unittest discovery. Review assertions and comp
 - Existing closedH4/swap equity-path/cost-inclusive cap/directional exits/BE tests remain required; run narrow then full suite after changes.
 - Fresh/resumed actual replay result matrix JSON seam: test_fresh_and_resumed_replay_matrix_serializes_native_boolean_gates (red reproduced campaign failure; nativebool fix preserves policy).
 - BE price-zero plus swap loss counted before circuit admission/day reset: test_break_even_swap_loss_counts_for_daily_circuit_before_next_admission.
+
+## C22 frequency campaign (2026-10-06)
+
+- Adapter baseline full-frame/rules parity; BUY EMA real signal change; strict
+  keys/domains; future invariance and distinct H4 unavailable diagnostics.
+- Policy tests: both views/all hard gates, full-month denominator including zeros
+  and warmup, partial separation, entry UTC vs exit cash attribution, no double
+  spread cost and separate swap credit/debit.
+- Store tests: protocol/input/result binding; pending commit recovery; unrecognized
+  artifacts; process lock. Search integration: actual replay cells, immutable
+  rounds, bounded partial/resume and full-result repeats, missing swap blocks.
+- Existing canonical tests: midnight reset, triple/weekend rollover, BE negative
+  after swap, tick floating DD and fixed0.01/risk. Economic verification uses
+  frozen full-result parity then current input baseline/top5 fresh repeats.
+- Final focused tests, lint/format and repository unittest discover. No typecheck
+  command configured in Makefile/pyproject; report this explicitly.

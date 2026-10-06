@@ -526,3 +526,53 @@ not rewritten. All future economic comparisons/filter campaigns follow this
 policy; pure unit/accounting regressions do not change trading rules. C22 Demo
 entry/exit/risk/cutover contract in6.33 remains intact. No new profitability or
 historical broker-cost parity claim. Ops: `docs/ops/c22-context-diagnostics.md`.
+
+### 6.35 C22 frequency research campaign (2026-10-06)
+
+Owner-approved research CLI: `python3 -m scripts.research.c22_frequency_campaign
+--output runs/c22-frequency-2026-10-06 --workers 2`; policy/config:
+`specs/c22-frequency-campaign.md`, `config/c22-frequency.json`. Section6.33 Demo
+contract and all archived source pins remain unchanged by this campaign.
+
+USD200 once, fixed0.01, single position and initial cost-inclusive SL cap10%
+(static or canonical drawdown_steps: cap5% at10% DD, cap2.5% at15% DD). No
+future-swap reserve, top-up, martingale or recovery. Every economic cell uses
+modeled swap and pinned commission. Base quoted spread; stress adds0.20 USD/oz
+spread and0.10 USD/oz adverse slippage. Swap calendar remains assumed preceding
+business-day UTC midnight, Wednesday triple posted Thursday, no weekend double
+charge; current-spec rates are not historical broker evidence. Gaps/swap may make
+realized loss exceed admission cap; BE may remain net negative.
+
+Challengers vary archived RSI period/cross, BUY EMA50+slope/off, SELL horizon and
+EMA+slope, closed H4 EMA, ATR exits/rounded-R targets/BE1R, daily loss/count,
+cooldown and entry session. ATR14, archived zero-loss RSI semantics, SELL priority,
+canonical fill/rounding/protection and management of held positions are retained.
+Research adapter maps BUY EMA into oscillator trend_span before raw signals/H4;
+H4 warmup/incomplete/directional mismatch diagnostics remain distinct.
+
+Both base+swap and stress+swap must achieve positive net >= same-input C22H4,
+every-tick equity DD<=40%, mean>=15 entries/full UTC month including zero/warmup
+months, positive equity throughout/no bankruptcy, cap<=10% and no terminal30-day
+all-risk-cap blockage with no exposure/execution. Partial months and no-signal/
+mixed-reason tails are reported separately. WR/RR and monthly/yearly realized net
+are descriptive. Spread proxy already includes extra spread: cost/trade is
+(spread proxy+slippage+commission-signed swap)/trades, not another PnL deduction.
+
+Baseline frozen-result parity precedes latest-input baseline and adaptive search.
+Freeze ordered one-factor rounds, expand top3 unexpanded parents, deduplicate,
+stop at300 challengers or exhaustion; first winner never stops search. Search
+rank is survival, gate count, frequency shortfall, worst net, worst DD, ID. Final
+qualified ranking is worst net, worst DD, worst per-trade cost proxy, worst mean
+admitted risk%, ID. Baseline/top5 qualifiers repeat both views with complete-result
+match required. Mismatch/missing swap/source drift => BLOCKED. No qualifier =>
+NO_QUALIFIER. All results remain retrospective reused-data COST_INCONCLUSIVE;
+no execution, Demo replacement, broker stop-out parity or profit forecast inferred.
+
+Completed2026-10-07 Bangkok:300 unique challengers/602 search cells across5 rounds,
+**NO_QUALIFIER**; no selection or Demo change. Baseline latest base/stress net
+USD297.4922/284.6542, DD39.28073%/37.82315%, mean4.76/4.60 entries across25 full
+months. Highest paired frequency12.24/11.88, with DD57.20%/56.26%, below15 and
+above40%. All602 cells/81304 scenario trades reconciled; baseline original parity
+and latest fresh repeats passed; completed resume preserved696 content hashes.
+COST_INCONCLUSIVE. Evidence: `docs/reviews/2026-10-07-c22-frequency-verdict.md` and
+ignored `runs/c22-frequency-2026-10-06/`; no financial or Demo qualification inferred.

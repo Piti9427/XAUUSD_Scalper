@@ -26,3 +26,19 @@ Fresh-replay NumPy gate serialization failed after104cells. Red `SerializationTe
 
 ### Completed campaign and artifact audit
 Canonical COMPLETE observed:65 configurations,584 cells,64 fresh complete-result control matches. Independent verifier recomputed all row metrics/gates, adaptive catalogs, finalist selection and reconciled51,010 ledger trades;48 main control results match v1 completely. SelectedNONE, finalistsNONE, holdoutNOT_OPENED_NO_QUALIFIER. Strongest measured candidate is profitable above both controls in all8 continuous scenarios, worstnet29.74/worstDD35.60; A32trades fails60 and all A profits fail50. No conditional validation reported as executed. Full requirement/test map: `docs/reviews/reward156-profit-survival-2026-10-04/completion-audit.md`. Final test log and checks are hash-bound; verifier rejects optimized Python assertions. Implementation complete does not mean profit qualification achieved.
+
+## C22 frequency campaign (2026-10-07)
+
+Completed inline test-quality review and requirement mapping in
+`docs/reviews/2026-10-06-c22-frequency-implementation.md`. Added17 focused tests,
+including actual nonzero replay executions, not only all-zero signal assertions.
+Red/green reproduced adapter/policy/Store absence and reduced-budget/type defects.
+Final full suite in existing .venv:909 tests OK, skipped2; new Python lint/format,
+compile and diff whitespace pass. Initial system Python failed13 dependency imports;
+no dependency change required. No configured repository typecheck.
+
+Standards agent:0 findings. Spec agent:1 confirmed reduced-budget finalization
+finding fixed with failing-then-passing regression; service quota prevented its
+final report. Primary agent completed remaining spec/final-diff pass. No independent
+Spec completion claimed. Research result NO_QUALIFIER after300 challengers/602cells,
+81304 trades independently reconciled; baseline parity/repeats and696-hash resume pass.

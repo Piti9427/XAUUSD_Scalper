@@ -23,3 +23,14 @@ Existing tests: test_breakout_logic.py and test_reward156_strategy.py. Archived 
 
 ## Profit/survival v2 (2026-10-04)
 Focused extension targets: reward156_search policy/catalog/causal adapter, reward156_campaign checkpoints/rank/finalists, reward156_holdout pre-read lock; existing breakout replay covered by test_breakout_logic/test_reward156_tuning. New tests use deterministic UTC synthetic bars and temporary checkpoint directories. No external orders/notifiers in research imports.
+
+## C22 frequency campaign (2026-10-06)
+
+Bounded new research modules: c22_frequency adapter/policy/store/data/campaign.
+Owner-preagreed TDD seams: adapter, qualification, monthly count, cost attribution,
+resume. unittest deterministic UTC bar/tick fixtures, isolated temp outputs.
+No optional generator agent installed; inline Research/Plan/Implement workflow.
+Codegraph source lookup; existing breakout/Reward156 tests provide independent
+canonical fill, BE, rollover, daily-state, fixed-lot and risk-cap regressions.
+Spec/acceptance checklist: specs/c22-frequency-campaign.md. Existing Demo work
+predates this task and stays excluded from its commit.

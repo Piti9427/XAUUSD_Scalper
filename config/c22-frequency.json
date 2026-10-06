@@ -1,0 +1,13 @@
+{
+  "policy": "c22_frequency_v1",
+  "research_only": true,
+  "initial_equity": 200,
+  "volume": 0.01,
+  "risk_cap": 0.1,
+  "max_variants": 300,
+  "expand_top": 3,
+  "repeat_top": 5,
+  "start_utc": "2024-09-01T00:00:00+00:00",
+  "swap_required": true,
+  "views": ["base-swap", "stress-swap"]
+}
