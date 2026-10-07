@@ -2,7 +2,7 @@
 
 Implementation available; broker parity/shadow/cutover **pending**. Real money PROHIBITED. Same Demo account replaces trial30; never simultaneous runners. `make bot-*` now selects C22H4; explicit `make trial30-*` targets retain rollback. Research returns do not qualify profitability or broker costs.
 
-Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). On2026-10-05 owner selected shadow as the default for `make bot-run`/`make bot-start`: no `--execute` unless the invoking shell supplies `MT5_ENABLE_DEMO_ORDER_SEND=1`. Both print the selected mode; the env is not enabled implicitly or read from `.env` by Make. Candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`; exact cache is `data/c22h4-shadow-bars.csv`. PR merge and broker cutover are separate actions.
+Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). On2026-10-05 owner selected shadow as the default for `make bot-run`/`make bot-start`: no `--execute` unless the invoking shell supplies `MT5_ENABLE_DEMO_ORDER_SEND=1`. On2026-10-06 `make bot-execute` and `make c22h4-run` set that gate themselves. Make does not read it from `.env`. Both print the selected mode. On2026-10-07 a C22 process that finds an overnight position latches current equity as that UTC day's loss baseline instead of waiting for the next midnight. The same process keeps that number. Starting the process again latches the equity at the new start. The 10% daily-loss and 10% per-trade caps remain. Candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`; exact cache is `data/c22h4-shadow-bars.csv`. PR merge and broker cutover are separate actions.
 
 ## Contract
 
@@ -29,7 +29,7 @@ make c22h4-once
 make c22h4-shadow > data/c22h4-shadow.log 2>&1
 ```
 
-Foreground watcher, Ctrl-C stops. Cache bootstraps once from 100000 M1; updates from 5000-M1 tail per completed M15; only new bar runs full research detector. `data/c22h4-shadow-bars.csv` atomically stores exact causal prefix for offline `prepare_candidate` replay; output contains non-null `macro_ema` and cache size, durable journal includes same diagnostics. Cache divergence blocks then rebuilds; **any divergence fails this shadow gate**. `--cache-output` supports explicit alternative local evidence path.
+Foreground watcher, Ctrl-C stops. Cache bootstraps once from 100000 M1 copied in 50000-bar pages; a single 100000 request is rejected when MaxBars is 100000. Updates from 5000-M1 tail per completed M15; only new bar runs full research detector. `data/c22h4-shadow-bars.csv` atomically stores exact causal prefix for offline `prepare_candidate` replay; output contains non-null `macro_ema` and cache size, durable journal includes same diagnostics. Cache divergence blocks then rebuilds; **any divergence fails this shadow gate**. `--cache-output` supports explicit alternative local evidence path.
 
 Collect >=96 completed M15 bars spanning >=1 UTC midnight, no unexpected BLOCKED status, non-null macro, no cache divergence. Replay signal/WAIT reason on exact exported bars with frozen contract; duplicate-bar WAIT and expired entry windows must be distinguished. Shadow is plumbing evidence; signal frequency (~one per five days) means no observed signal alone proves nothing. Initial offline parity remains independent gate.
 
@@ -42,10 +42,12 @@ Collect >=96 completed M15 bars spanning >=1 UTC midnight, no unexpected BLOCKED
 5. After owner execution approval:
 
 ```bash
-MT5_ENABLE_DEMO_ORDER_SEND=1 make c22h4-run
+make bot-execute
 ```
 
-`--execute` without env gate fails before MT5 initialization. No notifier implicitly enabled; durable broker-confirmed outbox retained. First close: preserve closing deal magic/comment/position ID and full cash ledger to resolve E7; runner does not depend on exit magic.
+`make c22h4-run` is the same execution watcher. Calling the Python entrypoint with `--execute` and without `MT5_ENABLE_DEMO_ORDER_SEND=1` still fails before MT5 initialization. No notifier implicitly enabled; durable broker-confirmed outbox retained. First close: preserve closing deal magic/comment/position ID and full cash ledger to resolve E7; runner does not depend on exit magic.
+
+Each blocked entry, broker-confirmed fill, and close appends `data/c22h4-demo-trades.md` plus a JSONL twin. A block reason is written once per UTC day. The note records entry price and the frozen signal rule, then on close the cash ledger, whether the exit matched the planned stop or target, and that a single trade does not authorize a contract change.
 
 ## Status, stop, rollback
 

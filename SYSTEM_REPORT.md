@@ -1,4 +1,7 @@
 # 📊 XAUUSD Pro Sniper V2 - Project Report
+
+สถานะปัจจุบันของบอท Demo ไม่ได้อยู่ในไฟล์นี้. ใช้ [`CORE_STRATEGY.md`](CORE_STRATEGY.md) หัวข้อ 6.33 และ [`docs/ops/c22h4-demo.md`](docs/ops/c22h4-demo.md). ข้อความด้านล่างเป็นรายงาน Sniper / Pure B1 ช่วงกันยายน 2026.
+
 - **Project Name:** XAUUSD Scalper
 - **Current Status:** Phase 2 (Implementation Complete, Ready for Config & Test)
 - **Last Updated:** 2026-09-29

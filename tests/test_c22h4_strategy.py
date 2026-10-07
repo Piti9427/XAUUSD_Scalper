@@ -1,10 +1,13 @@
 """Frozen candidate public decision/cache contract, no broker side effects."""
 
+from datetime import datetime, timezone
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 import json
 import numpy as np
 import pandas as pd
+from scripts.c22h4.runner import C22H4Strategy
 from scripts.c22h4.strategy import BarCache, CONTRACT, decide, verify_sources
 
 
@@ -113,3 +116,68 @@ class CandidateTests(unittest.TestCase):
         expected, _ = prepare_candidate(source, CONTRACT)
         pd.testing.assert_series_equal(cache.frame.direction, expected.direction)
         pd.testing.assert_frame_equal(cache.bars, source)
+
+    def test_bootstrap_pages_when_terminal_rejects_maxbars_count(self):
+        now = datetime(2026, 10, 5, 12, 0, tzinfo=timezone.utc)
+
+        class Terminal:
+            TIMEFRAME_M1 = 1
+
+            def __init__(self, stored=100000, maxbars=100000):
+                self.stored = stored
+                self.maxbars = maxbars
+                self.calls = []
+
+            def copy_rates_from_pos(self, symbol, timeframe, start, count):
+                self.calls.append((start, count))
+                if count >= self.maxbars:
+                    return None
+                end = self.stored - start
+                begin = end - count
+                if begin < 0 or end <= begin:
+                    return None
+                return [
+                    dict(
+                        time=1_700_000_000 + i * 60,
+                        open=3000.0,
+                        high=3001.0,
+                        low=2999.0,
+                        close=3000.0,
+                    )
+                    for i in range(begin, end)
+                ]
+
+        mt5 = Terminal()
+        config = json.loads(Path("config/c22h4-demo.json").read_text())
+        with patch(
+            "scripts.c22h4.runner.completed_m15_from_m1",
+            side_effect=ValueError("stop-after-copy"),
+        ):
+            with self.assertRaisesRegex(ValueError, "stop-after-copy"):
+                C22H4Strategy(config).frame([], mt5, "XAUUSDm", now)
+        self.assertEqual(sum(count for _, count in mt5.calls), 100000)
+        self.assertTrue(all(count < 100000 for _, count in mt5.calls))
+        self.assertNotIn((0, 100000), mt5.calls)
+
+    def test_copy_m1_rates_concatenates_pages_oldest_first(self):
+        from scripts.c22h4.runner import copy_m1_rates
+
+        stored = [
+            dict(time=1_700_000_000 + i * 60, open=1.0, high=1.0, low=1.0, close=1.0)
+            for i in range(1000)
+        ]
+
+        class Terminal:
+            TIMEFRAME_M1 = 1
+
+            def copy_rates_from_pos(self, symbol, timeframe, start, count):
+                if count >= 500:
+                    return None
+                end = len(stored) - start
+                begin = end - count
+                if begin < 0 or end <= begin:
+                    return None
+                return stored[begin:end]
+
+        got = copy_m1_rates(Terminal(), "XAUUSDm", 1000, page=400)
+        self.assertEqual([row["time"] for row in got], [row["time"] for row in stored])

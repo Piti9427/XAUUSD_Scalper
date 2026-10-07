@@ -1,6 +1,6 @@
 # XAUUSD Scalper Project
 
-Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EMA200-20261004`. Default `make bot-*` commands select C22H4; `make bot-run`/`make bot-start` start shadow without sending orders. `make trial30-*` retains rollback. Broker parity/shadow/cutover pending; no real-money use. Execution requires operator-supplied `MT5_ENABLE_DEMO_ORDER_SEND=1` after cutover review. See [Demo runbook](docs/ops/c22h4-demo.md); strategy math remains in [CORE_STRATEGY section6.33](CORE_STRATEGY.md).
+Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EMA200-20261004`. Default `make bot-*` commands select C22H4; `make bot-run`/`make bot-start` start shadow without sending orders. `make bot-execute` and `make c22h4-run` send Demo orders when a signal passes the gates. `make trial30-*` retains rollback. No real-money use. See [Demo runbook](docs/ops/c22h4-demo.md); strategy math remains in [CORE_STRATEGY section6.33](CORE_STRATEGY.md).
 
 - **Goal:** Implement a hybrid backtesting and real-time alert system for Gold (XAUUSD).
 - **Strategy target (research only):** **Pure B1 Single-Position** (Donchian Breakout + RSI 30–70 + EMA 50) with 6.25 ATR TP, 2.5 ATR SL, and 10% Risk Cap. See [current target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md).
@@ -13,11 +13,11 @@ Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EM
 - **Tests:** Legacy SMC, frozen B1-FINAL, and target Pure B1 tests coexist; suite count alone does not prove live parity.
 
 ## Project Structure
-- `docs/`: System specifications, improvement plans, logic audits, and engineering handoffs.
-- `config/`: Secret tokens and connection parameters.
-- `scripts/`: Implementation of the Pine Script logic in Python.
-- `data/`: Historical data for backtesting and performance logs.
-- `main.py`: Main entry point for the legacy alert loop.
+- `scripts/c22h4`: Live Demo module. `make bot-execute` sends. `make bot-run` stays shadow.
+- `scripts/trial30`: Shared cycle implementation and the rollback strategy.
+- `scripts/research`: Hashed campaign sources. Leave the paths in place.
+- `docs/`: Current index in `docs/README.md`. Older campaign notes are in `docs/archive/`.
+- `main.py`: Legacy alert loop. It does not send C22 orders.
 
 Do not use `main.py` as a Pure B1 live runner: it still evaluates wick rejection and can send signal alerts without broker order approval. The target signal remains in research pending further validation.
 

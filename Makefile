@@ -1,5 +1,5 @@
 .PHONY: all check compile deps lint format format-check test clean help guide \
-	bot-status bot-once bot-run bot-start bot-stop
+	bot-status bot-once bot-run bot-execute bot-start bot-stop
 
 PYTHON ?= $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else which python3; fi)
 RUFF ?= $(shell if [ -f .venv/bin/ruff ]; then echo .venv/bin/ruff; else which ruff || echo "$(PYTHON) -m ruff"; fi)
@@ -24,6 +24,7 @@ help:
 	@echo "  make bot-status   - Journal plus local watcher process"
 	@echo "  make bot-once     - One read-only cycle, no order_send"
 	@echo "  make bot-run      - Foreground Demo shadow watcher (Ctrl-C stops)"
+	@echo "  make bot-execute  - Foreground Demo watcher that can send orders"
 	@echo "  make bot-start    - Background Demo shadow watcher, one writer"
 	@echo "  make bot-stop     - Stop watcher only; broker SL/TP stay"
 
@@ -62,7 +63,7 @@ clean:
 guide:
 	@echo "C22 + H4 EMA200 Demo — วิธีใช้"
 	@echo "ส่งออเดอร์ได้หลัง cutover gates ผ่านและ owner อนุมัติเท่านั้น. ดู docs/ops/c22h4-demo.md."
-	@echo "bot-run/bot-start เริ่ม shadow โดยไม่ส่งออเดอร์. โหมดส่งออเดอร์ต้องมี MT5_ENABLE_DEMO_ORDER_SEND=1 จาก operator."
+	@echo "bot-run/bot-start เริ่ม shadow โดยไม่ส่งออเดอร์. ส่งออเดอร์ใช้ make bot-execute หรือ make c22h4-run."
 	@echo "trial30-status/once/run/start/stop เก็บไว้สำหรับ rollback."
 	@echo ""
 	@echo "รันจากโฟลเดอร์โปรเจกต์. รหัสอยู่ใน .env. MetaTrader 5 ต้องเปิดอยู่."
@@ -74,12 +75,13 @@ guide:
 	@echo "  make bot-status   ดู journal กับโปรเซส. ไม่ติดต่อโบรกเกอร์."
 	@echo "  make bot-once     หนึ่งรอบแบบอ่านอย่างเดียว. ไม่ส่งออเดอร์."
 	@echo "  make bot-run      เฝ้าแบบ shadow ไม่ส่งออเดอร์. ค้างที่เทอร์มินัล. Ctrl-C เพื่อหยุด."
+	@echo "  make bot-execute  เฝ้าแบบส่งออเดอร์บน Demo. ค้างที่เทอร์มินัล. Ctrl-C เพื่อหยุด."
 	@echo "  make bot-start    เหมือน bot-run แต่ไปรันพื้นหลัง. เขียน $(BOT_PID) และ $(BOT_LOG)."
 	@echo "  make bot-stop     ส่ง SIGINT ให้ watcher. ไม่ปิดแอป MetaTrader."
 	@echo ""
 	@echo "ลำดับที่ใช่บ่อย"
 	@echo "  make bot-status"
-	@echo "  make bot-start  # shadow ไม่ส่งออเดอร์"
+	@echo "  make bot-execute  # ส่งออเดอร์บน Demo เมื่อมีสัญญาณ"
 	@echo "  make bot-status"
 	@echo "  make bot-stop"
 	@echo ""
@@ -99,6 +101,10 @@ bot-run:
 	if [ "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" ]; then mode=execution; execute=--execute; fi; \
 	echo "Starting $(BOT_NAME) Demo watcher: $$mode"; \
 	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $$execute $(BOT_CACHE_ARGS)
+
+bot-execute:
+	@echo "Starting $(BOT_NAME) Demo watcher: execution"
+	MT5_ENABLE_DEMO_ORDER_SEND=1 $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch --execute $(BOT_CACHE_ARGS)
 
 bot-start:
 	@if [ -f $(BOT_PID) ] && kill -0 $$(cat $(BOT_PID)) 2>/dev/null; then \
@@ -128,8 +134,7 @@ bot-stop:
 trial30-status trial30-once trial30-run trial30-start trial30-stop:
 	$(MAKE) BOT_NAME=trial30 bot-$(patsubst trial30-%,%,$@)
 
-# Candidate defaults are shadow-only. Execution requires operator cutover gates
-# and explicit MT5_ENABLE_DEMO_ORDER_SEND=1 supplied by owner.
+# bot-run and bot-start stay shadow. bot-execute and c22h4-run set the order gate.
 .PHONY: c22h4-status c22h4-history-probe c22h4-once c22h4-shadow c22h4-run c22h4-stop
 c22h4-status:
 	$(PYTHON) -m scripts.ops.c22h4_status --brief
@@ -143,8 +148,7 @@ c22h4-once:
 c22h4-shadow:
 	$(PYTHON) -m scripts.ops.run_c22h4_wine --watch --cache-output data/c22h4-shadow-bars.csv
 
-c22h4-run:
-	$(PYTHON) -m scripts.ops.run_c22h4_wine --watch --execute
+c22h4-run: bot-execute
 
 c22h4-stop:
 	@pkill -INT -f '[r]un_c22h4_wine --watch' 2>/dev/null || true

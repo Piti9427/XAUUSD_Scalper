@@ -11,7 +11,7 @@
 | `B1FinalValidationEA.mq5` | Frozen non-trading parity probe (unchanged). |
 | `B1FinalParityRunner.mq5` | Tester wrapper that ships the parity CSV to the agent sandbox and includes the probe verbatim. |
 
-Compile and run through `scripts/ops/mt5_wine_tester.py` (MetaEditor cannot take paths with spaces, so builds happen in `C:\b1build`; each Tester run archives its exact `.ex5`). Evidence, verdicts and hashes: [release package](../docs/research/B1_FINAL_RELEASE_2026-09-27.md). Operation: [runbook](../docs/ops/B1_FINAL_RUNBOOK.md).
+Compile and run through `scripts/ops/mt5_wine_tester.py` (MetaEditor cannot take paths with spaces, so builds happen in `C:\b1build`; each Tester run archives its exact `.ex5`). Evidence, verdicts and hashes: [release package](../docs/archive/research/B1_FINAL_RELEASE_2026-09-27.md). Operation: [runbook](../docs/ops/B1_FINAL_RUNBOOK.md).
 
 Parity comparison of probe output:
 

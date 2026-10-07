@@ -107,12 +107,13 @@ def probe(mt5, *, now, archive, output):
     import hashlib
     import pandas as pd
     from scripts.pure_b1.broker_data import completed_m15_from_m1
+    from scripts.c22h4.runner import copy_m1_rates
     from scripts.c22h4.strategy import CONTRACT_ID, verify_sources
 
     config = json.loads((ROOT / "config/c22h4-demo.json").read_text())
     verify_sources(config)
     started = time.monotonic()
-    rates = mt5.copy_rates_from_pos("XAUUSDm", mt5.TIMEFRAME_M1, 0, 100000)
+    rates = copy_m1_rates(mt5, "XAUUSDm")
     bars = completed_m15_from_m1(rates, now=now)
     elapsed = time.monotonic() - started
     # Probe terminal maximum separately; parity uses exact runtime bootstrap.

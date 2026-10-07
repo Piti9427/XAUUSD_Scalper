@@ -51,7 +51,11 @@ class CandidateBroker(Broker):
             )
 
     def copy_rates_from_pos(self, symbol, timeframe, start, count):
-        return self.rates[-count:]
+        end = len(self.rates) - start
+        begin = end - count
+        if end <= 0 or begin >= end:
+            return None
+        return self.rates[max(0, begin) : end]
 
     def send(self, req):
         if req.get("position") and req["action"] == 1:
@@ -159,6 +163,24 @@ class CandidateLifecycleTests(unittest.TestCase):
         self.assertEqual(runner.cycle(now=broker.now)["status"], "MANAGING")
         self.assertEqual(broker.order_send.call_count, 1)
         self.assertEqual([e["kind"] for e in self.events], ["FILLED"])
+
+    def test_fill_and_close_append_entry_price_and_exit_review(self):
+        broker = CandidateBroker()
+        runner = self.runner(broker)
+        filled = runner.cycle(now=broker.now)
+        self.assertEqual(filled["status"], "FILLED")
+        note = runner.trade_log_path.read_text()
+        fill = runner.journal.get("active")["fill"]
+        self.assertIn(f"{fill:.3f}", note)
+        self.assertIn("เพราะ", note)
+        self.assertIn("SELL", note)
+        broker.send(dict(action=1, position=777, type=0, volume=0.01, price=broker.tick.ask))
+        closed = runner.cycle(now=broker.now)
+        self.assertEqual(closed["status"], "CLOSED")
+        text = runner.trade_log_path.read_text()
+        self.assertIn("EXIT", text)
+        self.assertIn("ขาดทุน", text)
+        self.assertIn("รอบหน้า", text)
 
     def test_sell_be_only_after_new_closed_bar(self):
         broker = CandidateBroker()

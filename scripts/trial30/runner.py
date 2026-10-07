@@ -264,6 +264,11 @@ class Trial30DemoRunner:
             entry_ms=int(tick.time_msc),
             last_be_bar=bar,
         )
+        thesis = getattr(self.strategy, "entry_thesis", None)
+        if callable(thesis):
+            note = thesis()
+            if note:
+                active["thesis"] = note
         self.journal.put("active", active)  # Commit BEFORE irreversible API.
         self.journal.put("last_bar", bar)
         try:
@@ -354,8 +359,15 @@ class Trial30DemoRunner:
                     and any(int(d.entry) in (1, 3) for d in ledger)
                 ):
                     net = sum(_cash(d) for d in ledger)
+                    exits = [d for d in ledger if int(d.entry) in (1, 3)]
+                    last_exit = max(exits, key=lambda deal: int(deal.time_msc))
                     event = dict(
-                        kind="CLOSED", position_id=ident, net=net, snapshot=self.strategy.snapshot
+                        kind="CLOSED",
+                        position_id=ident,
+                        net=net,
+                        snapshot=self.strategy.snapshot,
+                        fill=active.get("fill"),
+                        exit_price=float(getattr(last_exit, "price", 0) or 0) or None,
                     )
                     self.journal.transition("active", None, event)
                     baseline = self.journal.get("day")
@@ -363,6 +375,11 @@ class Trial30DemoRunner:
                         "status": "CLOSED",
                         "net": net,
                         "day_start": baseline["equity"] if baseline else None,
+                        "exit_price": event["exit_price"],
+                        "profit": sum(float(d.profit) for d in ledger),
+                        "commission": sum(float(d.commission) for d in ledger),
+                        "swap": sum(float(d.swap) for d in ledger),
+                        "fee": sum(float(d.fee) for d in ledger),
                     }
             return {"status": "UNKNOWN", "reason": "awaiting_broker_reconciliation"}
         if len(matches) != 1:
@@ -631,7 +648,16 @@ class Trial30DemoRunner:
                 snapshot=self.strategy.snapshot,
             )
             self.journal.transition("active", None, event)
-            return {"status": "SAFETY_CLOSED", "reason": reason}
+            return {
+                "status": "SAFETY_CLOSED",
+                "reason": reason,
+                "net": event["net"],
+                "exit_price": float(getattr(position, "price_current", 0) or 0) or None,
+                "profit": event["net"],
+                "commission": 0.0,
+                "swap": 0.0,
+                "fee": 0.0,
+            }
         if sent is not None and int(sent.retcode) not in (10009, 10010, 10008, 10012, 10031):
             active.pop("safety_close_pending")
             self.journal.put("active", active)

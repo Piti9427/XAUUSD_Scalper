@@ -15,13 +15,17 @@ def _cash(deal):
 
 
 class BrokerView:
-    def __init__(self, mt5, login, server, symbol, fingerprint, journal):
+    def __init__(
+        self, mt5, login, server, symbol, fingerprint, journal, *, restart_unknown_baseline=False
+    ):
         self.mt5 = mt5
         self.login = login
         self.server = server
         self.symbol = symbol
         self.fingerprint = fingerprint
         self.journal = journal
+        self.restart_unknown_baseline = restart_unknown_baseline
+        self._restart_baseline_latched = False
 
     def identity(self):
         account = self.mt5.account_info()
@@ -96,11 +100,23 @@ class BrokerView:
             raise ValueError("history_position_mismatch")
         state = self.journal.get("day")
         day = now.date().isoformat()
+        held = any(abs(v) > 1e-8 for v in before.values())
+        if (
+            self.restart_unknown_baseline
+            and not self._restart_baseline_latched
+            and held
+            and now - midnight >= timedelta(seconds=1)
+        ):
+            baseline = float(account.equity)
+            if not _finite(baseline, positive=True):
+                raise ValueError("invalid_day_baseline")
+            self.journal.put("day", {"day": day, "equity": baseline, "source": "restart_equity"})
+            self._restart_baseline_latched = True
+            return baseline
         if state and state["day"] == day:
             if not _finite(state["equity"], positive=True):
                 raise ValueError("invalid_day_baseline")
             return float(state["equity"])
-        held = any(abs(v) > 1e-8 for v in before.values())
         if held:
             if now - midnight >= timedelta(seconds=1):
                 raise ValueError("day_start_floating_unknown")

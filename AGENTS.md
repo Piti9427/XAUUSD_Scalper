@@ -2,10 +2,12 @@
 
 ## Project Structure & Module Organization
 
-This is a Python trading-alert and backtesting project for XAUUSD.
+The live Demo order module is `scripts/c22h4`. Its interface is `make bot-execute` (send) and `make bot-run` (shadow). Implementation of admission, journal, and broker reconcile sits in `scripts/trial30`, which C22 subclasses. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
 
-- `main.py` starts the live monitoring loop, initializes MT5, strategy, Telegram, news checks, and Google Workspace logging.
-- `scripts/` contains the application modules: MT5 access, data fetching, strategy logic, backtesting, notifications, news filtering, and logging.
+- `scripts/c22h4` — frozen C22 detector and the only Python sender on the current Demo account.
+- `scripts/trial30` — shared Demo cycle implementation and the retained rollback strategy. One account, one sender.
+- `scripts/research` — campaign code. Paths are hashed. Do not relocate those files.
+- `scripts/smc`, `scripts/webhook`, `scripts/pure_b1`, `scripts/reward156`, `main.py` — older stacks. They stay importable for their tests. They are outside the live interface.
 - `config/settings.yaml` holds runtime configuration for MT5, Telegram, strategy parameters, news filtering, and Google Workspace IDs.
 - `data/` stores historical CSV data such as `XAUUSD_M15.csv` and `XAUUSD_H1.csv`.
 - `runs/` stores machine-generated experiment runs, simulation checkpoints, and large backtest output dumps. 100% gitignored.
@@ -60,11 +62,14 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the live alert loop:
+Run the Demo bot. `bot-execute` sends. `bot-run` does not:
 
 ```bash
-python main.py
+make bot-execute
+make bot-run
 ```
+
+`python main.py` is the old alert loop. It does not send the C22 Demo orders.
 
 Run unit tests:
 
@@ -86,7 +91,7 @@ Query Codegraph before `cat`, `rg`, `grep`, or reading whole files. Cursor: one 
 
 ## Coding Style & Naming Conventions
 
-Use Python 3, four-space indentation, and clear module boundaries. Keep trading rules in `scripts/strategy.py`, platform access in connector/fetcher modules, and side effects such as Telegram or Google logging in separate modules. Use `snake_case` for functions, variables, and files; use `PascalCase` for classes.
+Use Python 3, four-space indentation, and clear module boundaries. C22 entry rules live in `scripts/c22h4`. `scripts/strategy.py` is the old sniper alert strategy. Use `snake_case` for functions, variables, and files; use `PascalCase` for classes.
 
 Prefer config keys over hardcoded strategy values. Keep comments focused on trading assumptions, risk controls, or external API behavior.
 
