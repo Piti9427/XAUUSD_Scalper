@@ -52,3 +52,12 @@ Run narrow tests, then repository unittest discovery. Review assertions and comp
   frozen full-result parity then current input baseline/top5 fresh repeats.
 - Final focused tests, lint/format and repository unittest discover. No typecheck
   command configured in Makefile/pyproject; report this explicitly.
+
+## SMC challenger implementation (2026-10-08)
+
+# Sequential test slices
+
+1. `test_smc_challenger.py`: reject naive/unordered/bad OHLC; prefix/future mutation and real BUY/SELL setup; session coverage, pivot/CHoCH/FVG publication, invalidation/TTL/dedup and chunk append.
+2. `test_smc_challenger_adapter.py`: public replay with literal expected SELL Ask-side rounded stop/risk, swap debit/equity/circuits, late/no quote/busy, missing swap/cost metadata and unsupported volume.
+3. `test_smc_challenger_campaign.py`: fixture input bundles, both swap views + C22 comparison, complete-result repeat, resume and hash drift, invalid output path, frozen parity prerequisite.
+4. Regression, lint/syntax, full suite; two-axis code review; exact test evidence and limitations in status report. Economic smoke artifacts under runs only; no current profitability/selection claim.

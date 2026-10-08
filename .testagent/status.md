@@ -42,3 +42,20 @@ finding fixed with failing-then-passing regression; service quota prevented its
 final report. Primary agent completed remaining spec/final-diff pass. No independent
 Spec completion claimed. Research result NO_QUALIFIER after300 challengers/602cells,
 81304 trades independently reconciled; baseline parity/repeats and696-hash resume pass.
+
+## SMC research challenger (2026-10-08)
+
+Implemented reviewed isolated research plan with inline Research → Plan → Implement
+and independent Standards/Spec agents. Preserved existing test metadata and frozen
+C22/Trial30 sources. Commission-default, archive-broker provenance and evaluation
+coverage findings fixed with focused regressions; both reviewers report no remaining
+substantive findings. Full requirement mapping:
+`docs/reviews/2026-10-08-smc-challenger-implementation.md`.
+
+Focused21 tests OK; full937 tests OK, skipped2. New Python Ruff check/format and
+syntax compilation passed. No configured/available typechecker. Historical four-cell
+swap-inclusive campaign COMPLETE, archived parity and complete fresh repeats passed;
+direct CLI resume exit0. Independently audited11 artifact hashes, ledger cashflow,
+swap debits and reconstructed equity-checkpoint drawdown. SMC stress net -44.713 USD,
+5 trades: frequency/net-return hypothesis unsupported. COST_INCONCLUSIVE; descriptive
+research only, no holdout/qualification/live readiness or Demo deployment claimed.

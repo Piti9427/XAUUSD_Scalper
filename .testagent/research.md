@@ -34,3 +34,13 @@ Codegraph source lookup; existing breakout/Reward156 tests provide independent
 canonical fill, BE, rollover, daily-state, fixed-lot and risk-cap regressions.
 Spec/acceptance checklist: specs/c22-frequency-campaign.md. Existing Demo work
 predates this task and stays excluded from its commit.
+
+## SMC challenger implementation (2026-10-08)
+
+# SMC challenger bounded test research
+
+Scope: new signal, adapter and campaign modules only. Existing unittest/pandas/NumPy fixtures; no broker mocks inside economic logic. Public seams approved by owner instruction to implement the reviewed spec: causal frame, replay adapter, campaign CLI.
+
+Acceptance checklist: UTC/coverage and causal session/pivot/CHoCH/FVG/retest timing; mirrored sides and setup expiry/dedup; quote-dependent SELL stop and cost-inclusive10% admission; mandatory modeled swap including calendar boundaries; full-result replay repeat, frozen comparator parity, manifests/resume/drift, output boundaries and descriptive status. Frozen C22/Trial30/pins unchanged. Full suite once at end.
+
+Optional find-untested-sources, test-gap-analysis, assertion-quality tools/commands are unavailable (CLI/tool catalog checked); inline bounded discovery/quality review substitutes. No configured type checker in pyproject or available mypy/pyright command; syntax compilation and Ruff used, not claimed as type checking.

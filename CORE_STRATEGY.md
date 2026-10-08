@@ -614,3 +614,79 @@ repeated exactly both views; completed resume preserved706 artifact hashes.
 Evidence: `docs/reviews/2026-10-07-c22-qualified-verdict.md`, ignored
 `runs/c22-tuning-loop-2026-10-07/`. QUALIFIED means retrospective research gates
 only; COST_INCONCLUSIVE remains. Demo section6.33 unchanged; no cutover authorized.
+
+### 6.37 Standalone causal SMC M15 challenger (2026-10-08)
+
+Owner requested implementation of the reviewed SMC/shared-infrastructure plans.
+Research-only prototype `smc_m15_v1`, config `config/smc-challenger.json`;
+spec `docs/specs/2026-10-08-smc-strategy-implementation-plan.md` and ops
+`docs/ops/smc-challenger.md`. No Demo sender, notification or core migration.
+Section6.33 and Trial30 rollback contracts remain unchanged.
+
+Completed UTC Bid M15 from all15 M1 minutes; closed H4EMA200 macro. One fixed0.01
+position, USD200 once per strategy/view, cost-inclusive initial cap10%, daily
+UTC equity circuit10%, at most one losing completed exit/day, no protection,
+pending orders, recovery, grid, martingale or account/indicator resets.
+Known Asian00–07 pools require all28 bars; prior available UTC trading day
+requires all96 bars under explicitly conservative `conservative_utc_96_bars_v1`.
+Missing coverage disables the respective pool; no inferred holidays, rollover
+gap allowances, London pools or substitution. Calendar is a research assumption,
+not historical broker coverage evidence.
+
+Five-bar pivots publish at close of second right bar; latest unbroken confirmed
+swing and protected-swing break drive BOS/CHoCH via existing structure helper.
+Protected break has priority, BOS cannot replace CHoCH. Wick-only low/high sweep
+must precede aligned protected CHoCH by1–8 bars, directional body/range>=0.45.
+CHoCH is middle of three consecutive bars forming >=USD0.30/oz FVG. Third bar
+must close before gap publication. A later close inside inclusive gap within
+1–4 bars triggers one attempt, gated by current macro. New sweep replaces old
+setup; both-side sweep rejects; close beyond sweep wick or a bar gap invalidates;
+expired/consumed setup never revives. Stable IDs bind contract/pool/publication/
+sweep/CHoCH/FVG. No direct reuse of legacy H1/M5 orchestrator/session gates.
+
+BUY stop: Bid sweep low minus tick; SELL: Bid sweep high plus first executable
+scenario Ask-Bid spread plus tick. Canonical adverse grid rounding retained,
+including possible extra adverse tick from legacy float-to-grid arithmetic.
+Target2 times rounded modeled entry-stop distance, rounded on canonical grid.
+Entry is first valid paired tick after retest close<=90s; malformed tape blocks,
+missing/late quotes and cost/risk/margin/busy circuits reject, never guarantee fill.
+Modeled entry Ask+slippage/SELL Bid-slippage; risk=(abs(entry-rounded stop)+exit
+slippage)*contract_size*0.01+roundtrip commission_per_lot*0.01, <=equity*10%.
+Spread is already in quotes. Accrued swap feeds ledger/equity/DD/circuits;
+future swap is not an invented risk reserve. Gaps/swap can exceed initial risk.
+
+SMC adapter reuses exact canonical replay bytecode with a private globals binding
+for prepared entry transform: legacy `_entry_signals` overwrites stop anchors.
+No shared-global mutation, engine source copy or frozen-file modification.
+All other entry/risk/account/event-loop behavior stays canonical. Offline
+midnight equity-baseline policy differs from C22's approved process restart latch;
+replay is not broker parity. Differential complete-result tests guard this seam.
+
+Every new economic cell uses base/current-spec-swap or stress/current-spec-swap.
+Base actual paired quotes, both views declared slippage0.10/oz, stress total extra
+spread0.20/oz; commission explicit USD/lot/roundtrip with named source. Mandatory
+signed points swap mode/rates/point/triple weekday, current-spec calendar per
+`rollover.py`; absent/unsupported metadata blocks, explicit short rate0 valid.
+Archived swap-inclusive baseline parity keeps archived costs unchanged; new
+comparison uses common new costs. Historical costs remain COST_INCONCLUSIVE.
+
+One candidate and frozen C22 comparator, fresh whole-result repeats in both
+views, hash-bound inputs/sources/config/runtime/checkpoints and cell-level resume.
+Machine artifacts under ignored `runs/`; no tuning/holdout/qualified selection
+or new profitability claim. Synthetic mode is labeled FIXTURE_COMPLETE and
+cannot substitute archived parity or historical economic evidence. Optional
+shared-core extraction and Demo gate changes remain separately scoped.
+
+Implementation verification completed:937 repository tests OK(skipped2),21 new
+focused tests, Ruff/syntax pass; no configured typechecker. Full archived C22
+swap-inclusive parity passed,4 new comparison cells each repeated exactly,
+resume exited0 and11 checkpoint artifacts rehashed. Contract IDdd80c871955d7422.
+Requested2024-09-01 through2026-10-04T11:19:48.476278UTC; actual quotes through
+2026-10-02T20:57:59.885UTC,167366065 paired ticks/48367 bars. SMC base/stress+swap
+net-43.625/-44.713USD,5trades each, tick-equity DD24.2828/24.7367%, mean0.20
+entries/full month. Common new-cost C22 comparator nets335.2722/278.7102USD,
+120/116trades, DD39.8684/37.8232%, mean4.76/4.60entries. Prototype does not
+improve frequency or net return. Model includes swap; actual SMC swap charge0
+reflects its ledger exposure, not omitted swap. Retrospective descriptive result,
+no tuning/selection/holdout/qualification. Evidence `runs/smc-challenger-history-20261008/`,
+summary `docs/reviews/2026-10-08-smc-challenger-implementation.md`.
