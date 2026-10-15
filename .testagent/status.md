@@ -81,3 +81,22 @@ C22 source pins9/9 match. Red/green/debugger/status artifacts in ignored runs.
 No MT5 broker initialization/orders, economic replay, cost renewal or rollout.
 Daily continuity limitation remains under owner-selected process-scoped policy;
 deployment acceptance and fresh owner attestation remain separate next gates.
+
+
+## Native frequency research (2026-10-14)
+
+Broad inline Research→Plan→Implement completed; public seams owner-confirmed.
+24 shared actual-MQL5-core cases execute under C++17 strict compiler; native
+harness compiles same cases. Frozen Python C22 differential5000bars/3BUY/93SELL
+matches direction/ATR/RSI/EMA/closedH4macro. make native-frequency-check2tests OK.
+Both actual MetaEditor binaries0errors0warnings, isolated Wine prefix owner-approved;
+process exit1 disclosed, build/log/source/binary provenance verified. Native Tester
+harness runtime/economic runs NOT_RUN, no profitability or broker-parity claim.
+Full suite once at end955tests/77.569s/OK skipped2; compile/deps/lint/scoped format PASS.
+Initial Standards1/Spec3 findings fixed with RED→GREEN regressions; final re-review0/0.
+No optional generator/gap/quality tools available; assertions/negative controls
+reviewed inline. Exact requirement mapping and limitations in
+`docs/reviews/2026-10-14-native-frequency-implementation.md`.
+Frozen pins9/9 match. Commit only native task delta; earlier runtime fixes/owner
+notes preserved unstaged. No Demo sender/cost-policy change, terminal launch,
+account connection, notification, economic replay or native Tester's performance claim.

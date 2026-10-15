@@ -71,3 +71,8 @@ Acceptance checklist:
 
 No named test-generation or gap-analysis tools are exposed in this environment;
 the Research → Plan → Implement → assertion review workflow runs inline.
+
+
+## Native frequency research (2026-10-14)
+
+Native frequency research: MQL5 core + tester EA + no-order native/host harness. Owner-confirmed public signal/admission/order/report seams. Existing unittest, clang++ and bundled MetaEditor; no new dependency. Checklist: tester-only guard; complete UTC bars; causal pullback and retest/session consumption; C22 signal parity; fixed0.01/cost-inclusive10% cap; confirmed/ambiguous lifecycle; swap/commission attestation; monthly zero/partial/cash reports. Native economic evidence remains separate. Optional generator/gap/quality tools absent; inline bounded workflow.

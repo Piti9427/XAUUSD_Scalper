@@ -706,3 +706,45 @@ improve frequency or net return. Model includes swap; actual SMC swap charge0
 reflects its ledger exposure, not omitted swap. Retrospective descriptive result,
 no tuning/selection/holdout/qualification. Evidence `runs/smc-challenger-history-20261008/`,
 summary `docs/reviews/2026-10-08-smc-challenger-implementation.md`.
+
+### 6.38 Native MT5 frequency research (2026-10-14)
+
+Owner requested implementation of Trend Pullback M5 and Session Breakout against
+C22 tuned. Tester-only `mql5/FrequencyResearchEA.mq5`; independent strategy modes,
+no sender/notification or Demo change. Canonical new contract:
+`docs/specs/2026-10-14-native-frequency-research.md`; app workflow and six safe
+`.set` templates: `docs/ops/native-frequency-research.md`, `config/native-frequency/`.
+
+Complete UTC Bid bars from all M1 constituents; explicit fixed historical server
+offset attestation. Pullback uses closed H1EMA50/4-bar slope and M5 EMA20/50 touch
+then next-bar reclaim of prior high/low. UTC session windows07:00/13:00 form complete
+30-minute range; later breakout then distinct retest within6 M5 bars, one consumed
+attempt/session/day. Both stops use two-bar/retest wick plus0.1ATR14 buffer (SELL
+adds executable Ask spread), target2 rounded R, BE1R. C22 tuned reconstructs
+RSI7cross25 BUY/EMA50+slope, prior96 low SELL/EMA50+slope, closed H4EMA200;
+BUY1.5ATR/SELL2.5ATR SL, TP2 rounded R, BE1R. Rolling arithmetic RSI/ATR and causal
+EMA seeds retained. Signal parity is separate from native economic/broker parity.
+
+USD200 comparison deposit, fixed0.01/single position, cost-inclusive10% admission
+ceiling, daily10% equity circuit. New strategies stop after one losing completed
+exit/UTC day; C22 tuned retains research unlimited count. Native first observed
+tick equity/day baseline is declared here, not a change to Demo process-scoped
+baseline. No risk/lot clamp, grids, recovery, topups or real-money attachment.
+
+Owner selected native commission-surcharge Stress. Both Base+swap and
+COST_SURCHARGE_STRESS+swap use actual Tester points-swap/current-spec long/short/
+triple-day assumptions and native instant fees. Stress adds40USD/lot/roundtrip
+through Tester's fee table (0.40USD at0.01), with ledger verification. It represents
+cash burden, not spread/slippage price or stop-trigger parity. Missing attestations,
+unsupported swap, unmatched fees/ledger or unresolved execution invalidates run.
+Tester mode/fees/pips OFF and fixed server offset require explicit provenance;
+current-spec historical model remains COST_INCONCLUSIVE.
+
+Native orders feed deal/month/summary CSVs and actual Tester report. Zero/warmup
+months included when fully bracketed by observed ticks and full within requested
+window; partial/unobserved months excluded from frequency denominator and labelled
+separately. Full observed span does not attest internal quote coverage. Report net,
+monthly profit ratio/median/worst month, entries/winners and observed-tick equity
+DD. Median monthly net is descriptive optimizer score, no automatic qualification.
+No new economic results or future-return claim from implementation/unit fixtures.
+Section6.33, frozen source pins, runtime cost file and active watcher unchanged.

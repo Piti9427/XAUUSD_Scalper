@@ -82,3 +82,8 @@ Run narrow tests, then repository unittest discovery. Review assertions and comp
 
 Daily-baseline contract change is excluded pending owner selection. Durable
 per-bar funnel is a separate observability follow-up; no journal migration here.
+
+
+## Native frequency research (2026-10-14)
+
+Vertical slices: (1) host/native guard+fixed-risk RED→GREEN, (2) pullback mirrored causal bars, (3) session completeness/retest/expiry/consume, (4) C22 rollingRSI/EMA/H4 differential, (5) monthly accounting and execution state, (6) native adapter and compile, (7) scoped lint/types, two-axis review, full suite once, task-only commit. Exact test names recorded in final report. Native compile/run unavailability reported as blocker, never replaced with host success claims.

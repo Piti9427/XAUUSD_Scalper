@@ -155,3 +155,7 @@ c22h4-stop:
 	@sleep 1
 	@pkill -TERM -f '[m]t5_wine_c22h4.py --watch' 2>/dev/null || true
 	@echo "candidate watcher stop requested; broker SL/TP remain"
+
+.PHONY: native-frequency-check
+native-frequency-check:
+	$(PYTHON) -m unittest tests.test_native_frequency -v
