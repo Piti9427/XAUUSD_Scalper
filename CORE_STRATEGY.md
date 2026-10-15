@@ -513,6 +513,22 @@ Shared lifecycle has trial30 default hooks and candidate hooks; 27 existing tria
 
 **Implementation readiness differs from operational readiness:** offline code/test review can proceed, but initial Wine broker probe failed `wine: cannot find the server port: 0x0000044c`. Broker depth/latency/maximum and archive parity remain unverified. No fallback selected, no shadow qualification, no Demo cutover, no orders sent by this implementation session. Required next gates: read-only history/parity, >=96 completed-M15 shadow bars spanning UTC midnight with exact exported-cache replay, fresh owner cost attestation, flat trial30/empty outbox/stopped watcher/no trial30 trade that UTC day, then owner cutover approval. First broker close must record closing magic/comment. Ops: `docs/ops/c22h4-demo.md`; evidence/status: `docs/reviews/2026-10-04-c22h4-implementation.md`.
 
+**Local runtime correction2026-10-14:** shared safety-close lifecycle now persists
+attempt identity/volume/previous closing volume/response before residual recovery.
+Only confirmed partial10010 with complete matching position ledger, consistent
+fresh residual and no pending orders can submit another owned residual close.
+Ambiguous/placed/timeout and legacy pending-without-attempt evidence retain UNKNOWN;
+flat complete closing ledger resolves SAFETY_CLOSED, with actual gross profit,
+commission/swap/fee and last exit-deal price. Safety halt remains. Read-only status
+separates execution mode from local readiness, cost expiry and last recorded block;
+fresh local cost validation is not broker order approval. Owner explicitly retained
+process-scoped daily baseline on2026-10-14, accepting its multi-midnight block and
+requesting clearer reporting; no reset/per-day recovery or allowance change made.
+Entry/geometry/fixed0.01/10% cap/daily10%/one-loss/BE/swap research contract and
+frozen pins unchanged. This is a local file/test correction, not a watcher reload,
+broker acceptance or deployment claim. Cost attestation still requires fresh
+owner review; do not update its timestamp to bypass expiry.
+
 
 ### 6.34 Mandatory swap-inclusive new research runs (2026-10-05)
 

@@ -58,4 +58,23 @@ make c22h4-stop
 
 Status reads local journal and process list; stale heartbeat/process-unknown is not broker exposure proof. Before first candidate run no journal exists. Stop ends watcher only; existing broker SL/TP remain. Never delete UNKNOWN/SENDING state or safety halt to force new orders. Reconcile full broker evidence first.
 
+Local correction2026-10-14: status reports execution mode separately from entry
+readiness and cost expiry. `execution (เปิดส่ง)` means the execution flag is set;
+it does not mean signal/admission/order_check passed. A valid local attestation
+still leaves broker readiness unverified. `heartbeat` is a poll timestamp, not a
+new setup. Last recorded blocker is historical and does not replace current
+readiness. For a watcher using a custom cost file, pass the same path explicitly:
+`python -m scripts.ops.c22h4_status --brief --cost-policy <path>`; otherwise status
+checks the default shared policy. Status never renews attestation or mutates journal.
+
+Owner retained process-scoped daily baseline on2026-10-14. A multi-midnight
+`day_start_floating_unknown` block remains possible; inspect its provenance and
+history under this policy rather than resetting allowance. Safety-close recovery
+can retry only a broker-confirmed partial10010 after complete ledger/residual and
+no-pending-order checks. Ambiguous or legacy pending closes remain UNKNOWN until
+complete broker evidence resolves them. Complete safety closures use real closing
+cash components and exit-deal price, and keep safety halt. These local code changes
+require a separately reviewed rollout; an already-running Python watcher retains
+its loaded code. No restart or cost re-attestation was performed by the fix task.
+
 Rollback only when candidate is confirmed flat with no pending reconciliation/outbox: stop candidate -> verify account flat and UTC-day circuit suitability -> owner-reviewed restart `MT5_ENABLE_DEMO_ORDER_SEND=1 make trial30-run` or `trial30-start`. Use `make trial30-status` and `make trial30-stop` for the old watcher. Candidate does not auto-close a valid position during shutdown. Terminal/VPN/sleep failures require restart reconciliation; same account guard is local, not distributed across machines/cloned workspaces.

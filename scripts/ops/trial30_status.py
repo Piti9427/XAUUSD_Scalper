@@ -5,7 +5,9 @@ import json
 from pathlib import Path
 import sqlite3
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from scripts.trial30.costs import validate_policy
 
 
 STATUS_TEXT = {
@@ -24,21 +26,71 @@ REASON_TEXT = {
     "foreign_exposure": "มีไม้หรือออเดอร์ที่บอทไม่ได้เป็นเจ้าของ",
     "safety_halt": "หยุดฉุกเฉินค้างอยู่",
     "another trial30 writer owns journal": "มี watcher อีกตัวถือ journal อยู่",
+    "day_start_floating_unknown": "baseline equity ต้นวัน UTC ไม่ครบตาม process-scoped policy",
 }
 
 
-def load_report(conn: sqlite3.Connection) -> dict:
+def cost_report(values, path: Path, now: datetime, *, source: str) -> dict:
+    """Read local attestation without changing it or querying the broker."""
+    report = dict(path=str(path), source=source, status="BLOCKED", reason="cost_policy_unreadable")
+    try:
+        raw = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return report
+    fingerprint = values.get("identity")
+    if not isinstance(fingerprint, str) or not fingerprint:
+        costs, status = {}, "identity_unknown"
+    else:
+        costs, status = validate_policy(raw, fingerprint=fingerprint, now=now)
+    report.update(
+        status="VALID" if costs else "BLOCKED",
+        reason=status if costs else "cost_policy_" + status,
+    )
+    try:
+        reviewed = datetime.fromisoformat(raw["reviewed_utc"])
+        if reviewed.tzinfo is not None and reviewed.utcoffset() == timedelta(0):
+            report.update(
+                reviewed_utc=reviewed.isoformat(),
+                expires_utc=(reviewed + timedelta(hours=24)).isoformat(),
+                age_hours=(now - reviewed).total_seconds() / 3600,
+            )
+    except (KeyError, TypeError, ValueError, OverflowError):
+        pass
+    return report
+
+
+def load_report(conn: sqlite3.Connection, *, cost_policy_path=None, now=None) -> dict:
+    now = now or datetime.now(timezone.utc)
     values = {key: json.loads(value) for key, value in conn.execute("SELECT key,value FROM kv")}
     active = values.get("active")
     result = values.get("last_result", {})
     stamp = result.get("captured_utc")
-    age = (
-        (datetime.now(timezone.utc) - datetime.fromisoformat(stamp)).total_seconds()
-        if stamp
-        else None
+    age = (now - datetime.fromisoformat(stamp)).total_seconds() if stamp else None
+    policy = cost_report(
+        values,
+        cost_policy_path
+        or Path(__file__).resolve().parents[2] / "data/trial30-demo-cost-policy.json",
+        now,
+        source="explicit" if cost_policy_path is not None else "default",
     )
+    readiness = dict(status="UNVERIFIED", reason="awaiting_signal_and_broker_checks")
+    if values.get("safety_halt"):
+        readiness.update(status="BLOCKED", reason="safety_halt")
+    elif active:
+        readiness.update(status="BLOCKED", reason="active_reconciliation")
+    elif age is None or not 0 <= age < 15:
+        readiness["reason"] = "heartbeat_stale_or_unknown"
+    elif policy["status"] != "VALID":
+        readiness.update(status="BLOCKED", reason=policy["reason"])
+    elif result.get("status") == "BLOCKED":
+        readiness.update(status="BLOCKED", reason=result.get("reason") or "runtime_blocked")
+    elif result.get("execute") is False:
+        readiness.update(status="BLOCKED", reason="shadow_mode")
     return dict(
         last_result=result,
+        cost_policy=policy,
+        entry_readiness=readiness,
+        last_blocked_note=values.get("trade_block_note"),
         heartbeat_age_seconds=age,
         day=values.get("day"),
         active={
@@ -125,18 +177,43 @@ def format_brief(report: dict, processes: list[tuple[str, str]] | None) -> str:
         process_text = ", ".join(f"{role} {pid}" for role, pid in processes)
     execute = result.get("execute")
     if execute is True:
-        send = "ได้"
+        send = "execution (เปิดส่ง)"
     elif execute is False:
-        send = "ไม่ได้ (เฝ้าอย่างเดียว)"
+        send = "shadow (ไม่ส่ง)"
     else:
         send = "ไม่ทราบ"
     snapshot = result.get("snapshot") or "ไม่ทราบ"
+    readiness = report.get("entry_readiness") or {}
+    ready_text = "ไม่พร้อม" if readiness.get("status") == "BLOCKED" else "ยังไม่ยืนยัน"
+    if readiness.get("reason"):
+        ready_text += " — " + str(readiness["reason"])
+    policy = report.get("cost_policy") or {}
+    cost_text = (
+        "ผ่าน local attestation"
+        if policy.get("status") == "VALID"
+        else str(policy.get("reason") or "ไม่ทราบ")
+    )
+    if policy.get("expires_utc"):
+        cost_text += "; หมดอายุ " + policy["expires_utc"]
+    if policy.get("source"):
+        cost_text += " (ไฟล์ " + policy["source"] + ")"
+    blocked = str(report.get("last_blocked_note") or "")
+    if "|" in blocked:
+        blocked_day, blocked_reason = blocked.split("|", 1)
+        blocked = blocked_day + " — " + blocked_reason
+        if blocked_reason in REASON_TEXT:
+            blocked += " (" + REASON_TEXT[blocked_reason] + ")"
+    else:
+        blocked = "ไม่มีบันทึก"
     return "\n".join(
         [
             f"สัญญา: {snapshot}",
             f"สถานะ: {status_text}",
-            f"ส่งออเดอร์: {send}",
-            f"สัญญาณล่าสุด: {beat}",
+            f"โหมดส่งออเดอร์: {send}",
+            f"ความพร้อมรับไม้: {ready_text}",
+            f"ต้นทุน: {cost_text}",
+            f"blocker ล่าสุดที่บันทึก: {blocked}",
+            f"heartbeat ล่าสุด: {beat}",
             f"ไม้ที่เปิด: {position}",
             f"หยุดฉุกเฉิน: {halt}",
             f"equity วันนี้: {equity_text} ({day_name})",
@@ -154,6 +231,11 @@ def main(argv=None, *, name="trial30"):
         default=Path(__file__).resolve().parents[2] / f"data/{name}-demo.sqlite3",
     )
     parser.add_argument("--brief", action="store_true", help="print a short operator summary")
+    parser.add_argument(
+        "--cost-policy",
+        type=Path,
+        help="match the watcher's cost-policy override; default is the CLI default file",
+    )
     args = parser.parse_args(argv)
     if not args.journal.exists():
         report = dict(last_result=dict(status="UNKNOWN", reason="journal_missing"), active=None)
@@ -161,7 +243,7 @@ def main(argv=None, *, name="trial30"):
         return
     conn = sqlite3.connect(args.journal.resolve().as_uri() + "?mode=ro", uri=True)
     try:
-        report = load_report(conn)
+        report = load_report(conn, cost_policy_path=args.cost_policy)
     finally:
         conn.close()
     if args.brief:

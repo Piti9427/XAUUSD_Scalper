@@ -358,29 +358,10 @@ class Trial30DemoRunner:
                     and abs(net_volume) < 1e-8
                     and any(int(d.entry) in (1, 3) for d in ledger)
                 ):
-                    net = sum(_cash(d) for d in ledger)
-                    exits = [d for d in ledger if int(d.entry) in (1, 3)]
-                    last_exit = max(exits, key=lambda deal: int(deal.time_msc))
-                    event = dict(
-                        kind="CLOSED",
-                        position_id=ident,
-                        net=net,
-                        snapshot=self.strategy.snapshot,
-                        fill=active.get("fill"),
-                        exit_price=float(getattr(last_exit, "price", 0) or 0) or None,
-                    )
-                    self.journal.transition("active", None, event)
-                    baseline = self.journal.get("day")
-                    return {
-                        "status": "CLOSED",
-                        "net": net,
-                        "day_start": baseline["equity"] if baseline else None,
-                        "exit_price": event["exit_price"],
-                        "profit": sum(float(d.profit) for d in ledger),
-                        "commission": sum(float(d.commission) for d in ledger),
-                        "swap": sum(float(d.swap) for d in ledger),
-                        "fee": sum(float(d.fee) for d in ledger),
-                    }
+                    safety = active.get("safety_close_reason")
+                    if not safety and active.get("safety_close_pending"):
+                        safety = self.journal.get("safety_halt") or "safety_close"
+                    return self._record_closed(active, ledger, ident, safety_reason=safety)
             return {"status": "UNKNOWN", "reason": "awaiting_broker_reconciliation"}
         if len(matches) != 1:
             raise ValueError("multiple_owned_positions")
@@ -395,7 +376,15 @@ class Trial30DemoRunner:
                 position, active, info, now, "filled_position_contract_violation"
             )
         if active.get("safety_close_pending"):
-            return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
+            return self._safety_close(
+                position,
+                active,
+                info,
+                now,
+                active.get("safety_close_reason")
+                or self.journal.get("safety_halt")
+                or "safety_close",
+            )
         if active["status"] != "FILLED":
             opening = [
                 d
@@ -584,15 +573,50 @@ class Trial30DemoRunner:
         positions, _ = self.broker._exposure()
         return self._reconcile(positions, deals, tick, info, closed, now)
 
+    def _record_closed(self, active, ledger, ident, *, safety_reason=None):
+        """One complete position ledger supplies both result and confirmed event."""
+        exits = [deal for deal in ledger if int(deal.entry) in (1, 3)]
+        last_exit = max(exits, key=lambda deal: int(deal.time_msc))
+        components = {
+            key: sum(float(getattr(deal, key)) for deal in ledger)
+            for key in ("profit", "commission", "swap", "fee")
+        }
+        kind = "SAFETY_CLOSED" if safety_reason else "CLOSED"
+        event = dict(
+            kind=kind,
+            position_id=ident,
+            net=sum(_cash(deal) for deal in ledger),
+            snapshot=self.strategy.snapshot,
+            fill=active.get("fill"),
+            exit_price=float(getattr(last_exit, "price", 0) or 0) or None,
+            **components,
+        )
+        if safety_reason:
+            event.update(reason=safety_reason, ticket=active.get("safety_close_ticket"))
+        self.journal.transition("active", None, event)
+        baseline = self.journal.get("day")
+        result = dict(
+            status=kind,
+            net=event["net"],
+            exit_price=event["exit_price"],
+            day_start=baseline["equity"] if baseline else None,
+            **components,
+        )
+        if safety_reason:
+            result["reason"] = safety_reason
+        return result
+
     def _safety_close(self, position, active, info, now, reason):
         """Contain unexpected fills; never touch another strategy's position."""
         self.journal.put("safety_halt", reason)
         if not self.execute:
             return {"status": "BLOCKED", "reason": reason}
         if active.get("safety_close_pending"):
-            return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
+            attempt = active.get("safety_close_attempt") or {}
+            if attempt.get("retcode") != 10010:
+                return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
         self.broker.identity()
-        fresh, _ = self.broker._exposure()
+        fresh, orders = self.broker._exposure()
         owned = [
             p
             for p in fresh
@@ -604,6 +628,31 @@ class Trial30DemoRunner:
         if len(owned) != 1:
             return {"status": "UNKNOWN", "reason": "safety_close_position_changed"}
         position = owned[0]
+        ledger = [
+            deal
+            for deal in self.broker._history(self._send_clock(now))
+            if int(deal.position_id) == int(position.identifier) and int(deal.type) in (0, 1)
+        ]
+        exit_volume = sum(float(deal.volume) for deal in ledger if int(deal.entry) in (1, 3))
+        if active.get("safety_close_pending"):
+            attempt = active.get("safety_close_attempt") or {}
+            if orders:
+                return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
+            requested = float(attempt.get("volume", 0))
+            progress = exit_volume - float(attempt.get("exit_volume_before", exit_volume))
+            residual = float(position.volume)
+            net_volume = sum(
+                float(deal.volume) * (1 if int(deal.type) == 0 else -1) for deal in ledger
+            )
+            if (
+                not all(_finite(value, positive=True) for value in (requested, progress, residual))
+                or abs(progress + residual - requested) > 1e-8
+                or abs(net_volume - residual * (1 if int(position.type) == 0 else -1)) > 1e-8
+                or int(attempt.get("position_id", 0)) != int(position.identifier)
+            ):
+                return {"status": "UNKNOWN", "reason": "awaiting_safety_close_confirmation"}
+            # Confirmed partial completion, complete ledger and no pending orders:
+            # close only freshly observed residual, never repeat an ambiguous request.
         tick = self.broker._quote(self._send_clock(now))
         if int(position.type) not in (0, 1):
             return {"status": "BLOCKED", "reason": "safety_position_type_unknown"}
@@ -623,15 +672,32 @@ class Trial30DemoRunner:
         )
         active["safety_close_pending"] = True
         active["position_id"] = int(position.identifier)
+        active["safety_close_reason"] = reason
+        active["safety_close_ticket"] = int(position.ticket)
+        active["safety_close_attempt"] = dict(
+            position_id=int(position.identifier),
+            volume=float(position.volume),
+            exit_volume_before=exit_volume,
+            order_ticket=None,
+            retcode=None,
+        )
+        if _finite(position.price_open, positive=True):
+            active["fill"] = float(position.price_open)
         self.journal.put("active", active)
         try:
             sent = self.mt5.order_send(request)
         except Exception:
             sent = None
+        if sent is not None:
+            active["safety_close_attempt"].update(
+                retcode=int(sent.retcode),
+                order_ticket=int(getattr(sent, "order", 0) or 0),
+            )
+            self.journal.put("active", active)
         fresh, _ = self.broker._exposure()
         ledger = [
             d
-            for d in self.broker._history(now)
+            for d in self.broker._history(self._send_clock(now))
             if int(d.position_id) == int(position.identifier) and int(d.type) in (0, 1)
         ]
         volume = sum(float(d.volume) * (1 if int(d.type) == 0 else -1) for d in ledger)
@@ -639,25 +705,11 @@ class Trial30DemoRunner:
             not any(int(p.ticket) == int(position.ticket) for p in fresh)
             and ledger
             and abs(volume) < 1e-8
+            and any(int(deal.entry) in (1, 3) for deal in ledger)
         ):
-            event = dict(
-                kind="SAFETY_CLOSED",
-                ticket=int(position.ticket),
-                reason=reason,
-                net=sum(_cash(d) for d in ledger),
-                snapshot=self.strategy.snapshot,
+            return self._record_closed(
+                active, ledger, int(position.identifier), safety_reason=reason
             )
-            self.journal.transition("active", None, event)
-            return {
-                "status": "SAFETY_CLOSED",
-                "reason": reason,
-                "net": event["net"],
-                "exit_price": float(getattr(position, "price_current", 0) or 0) or None,
-                "profit": event["net"],
-                "commission": 0.0,
-                "swap": 0.0,
-                "fee": 0.0,
-            }
         if sent is not None and int(sent.retcode) not in (10009, 10010, 10008, 10012, 10031):
             active.pop("safety_close_pending")
             self.journal.put("active", active)

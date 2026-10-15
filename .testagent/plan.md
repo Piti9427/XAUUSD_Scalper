@@ -61,3 +61,24 @@ Run narrow tests, then repository unittest discovery. Review assertions and comp
 2. `test_smc_challenger_adapter.py`: public replay with literal expected SELL Ask-side rounded stop/risk, swap debit/equity/circuits, late/no quote/busy, missing swap/cost metadata and unsupported volume.
 3. `test_smc_challenger_campaign.py`: fixture input bundles, both swap views + C22 comparison, complete-result repeat, resume and hash drift, invalid output path, frozen parity prerequisite.
 4. Regression, lint/syntax, full suite; two-axis code review; exact test evidence and limitations in status report. Economic smoke artifacts under runs only; no current profitability/selection claim.
+
+## C22 runtime corrections (2026-10-14)
+
+1. Re-run existing invariant witness to RED; inspect real pending/cash branches
+   with pdb before modifying knobs. Store breadcrumbs under ignored `runs/`.
+2. Add `tests/test_c22h4_safety_recovery.py` using public `cycle()` and existing
+   CandidateBroker. Cover partial completion/restart, pending orders, incomplete
+   and mismatched ledger, definitive rejection, ambiguous response, legacy
+   pending compatibility, and immediate/late cash attribution. Run RED first.
+3. Persist additive safety-close attempt metadata before send. Reconcile fresh
+   residual position, complete ledger and no pending orders before retrying only
+   confirmed partial completion. Preserve UNKNOWN for ambiguous/legacy requests.
+   Use complete closing ledger for SAFETY_CLOSED result/event.
+4. Add status regressions before status changes. Keep broker access absent;
+   report execution mode independently of cost validation and heartbeat.
+5. Run narrow tests during fixes, focused integration checks, then one repository
+   unit suite. Verify source pins and final scoped diff. Author compact fix record
+   with exact test names and remaining owner decisions; do not deploy/restart.
+
+Daily-baseline contract change is excluded pending owner selection. Durable
+per-bar funnel is a separate observability follow-up; no journal migration here.

@@ -59,3 +59,25 @@ direct CLI resume exit0. Independently audited11 artifact hashes, ledger cashflo
 swap debits and reconstructed equity-checkpoint drawdown. SMC stress net -44.713 USD,
 5 trades: frequency/net-return hypothesis unsupported. COST_INCONCLUSIVE; descriptive
 research only, no holdout/qualification/live readiness or Demo deployment claimed.
+
+## C22 runtime corrections (2026-10-14)
+
+User requested `$debug-mantra`, then selected “คง policy เดิม แสดง blocker ให้ชัด”.
+Baseline policy, frozen strategy/risk pins, live watcher and cost attestation kept.
+Local shared safety-close recovery/accounting and read-only status corrected.
+Existing research/plan/status history preserved; current plan appended.
+
+Permanent public-cycle regressions:10 safety-recovery cases; status suite8 cases
+(including2 existing). Exact acceptance-to-test mapping and inline quality review:
+`docs/reviews/2026-10-14-c22h4-runtime-debug-fixes.md`. Negative controls assert no
+resend with incomplete/pending/ambiguous/legacy evidence; positive cases assert
+actual residual/ticket, restart, no phantom FILLED, cash components and exit price.
+Status tests verify readiness/expiry/history semantics and no journal/policy write.
+
+Final make test:953 tests/85.085s/OK, skipped2. Compile/deps/lint PASS; four changed
+Python files Ruff check/format PASS. Whole-repository format-check still fails13
+pre-existing out-of-scope files; no aggregate make check or typecheck claim.
+C22 source pins9/9 match. Red/green/debugger/status artifacts in ignored runs.
+No MT5 broker initialization/orders, economic replay, cost renewal or rollout.
+Daily continuity limitation remains under owner-selected process-scoped policy;
+deployment acceptance and fresh owner attestation remain separate next gates.

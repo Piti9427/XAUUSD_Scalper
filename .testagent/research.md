@@ -44,3 +44,30 @@ Scope: new signal, adapter and campaign modules only. Existing unittest/pandas/N
 Acceptance checklist: UTC/coverage and causal session/pivot/CHoCH/FVG/retest timing; mirrored sides and setup expiry/dedup; quote-dependent SELL stop and cost-inclusive10% admission; mandatory modeled swap including calendar boundaries; full-result replay repeat, frozen comparator parity, manifests/resume/drift, output boundaries and descriptive status. Frozen C22/Trial30/pins unchanged. Full suite once at end.
 
 Optional find-untested-sources, test-gap-analysis, assertion-quality tools/commands are unavailable (CLI/tool catalog checked); inline bounded discovery/quality review substitutes. No configured type checker in pyproject or available mypy/pyright command; syntax compilation and Ruff used, not claimed as type checking.
+
+## C22 runtime corrections (2026-10-14)
+
+Request: `$debug-mantra`, following C22 runtime scrutiny findings.
+
+Scope: `Trial30DemoRunner` safety-close reconciliation/accounting and read-only
+`scripts/ops/trial30_status.py` readiness reporting. Preserve C22/trial30 entry,
+geometry, risk, daily baseline policy, frozen source pins, journal schema, and live
+watcher state. Cost attestation is owner-reviewed; do not refresh its timestamp.
+
+Existing conventions: unittest discovery under `tests`; public cycle fixtures in
+`test_c22h4_demo.py` and `test_trial30_demo.py`; persistent temporary journals,
+aware UTC clocks, broker mocks. No real MetaTrader5 initialization or sends.
+
+Acceptance checklist:
+- Confirmed partial safety close recovers only reconciled owned residual volume.
+- Pending broker order or incomplete/mismatched ledger prevents resubmission.
+- Timeout/placed/no response and legacy pending state never blindly retry.
+- Restart retains request evidence; recovery emits no phantom FILLED event.
+- Safety halt remains after closure; rejected close can be retried safely.
+- Immediate and late safety closures use actual gross/cost/exit ledger values.
+- Status separates execute mode from local cost readiness, even without signal.
+- Default/explicit cost-policy source and expiry are visible without secrets.
+- Existing source pins and C22/trial30 lifecycle/CLI behavior remain verified.
+
+No named test-generation or gap-analysis tools are exposed in this environment;
+the Research → Plan → Implement → assertion review workflow runs inline.
