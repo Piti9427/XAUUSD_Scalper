@@ -24,8 +24,8 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/detection.py",
             "scripts/smc/structure.py",
-            "tests/test_smc_detection.py",
-            "tests/test_smc_structure_choch.py",
+            "tests/smc/test_smc_detection.py",
+            "tests/smc/test_smc_structure_choch.py",
         ],
     },
     {
@@ -34,7 +34,7 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/structure.py",
-            "tests/test_smc_structure_choch.py",
+            "tests/smc/test_smc_structure_choch.py",
         ],
         "note": "HH/HL construction details remain open material (story 48)",
     },
@@ -44,7 +44,7 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/structure.py",
-            "tests/test_smc_structure_choch.py",
+            "tests/smc/test_smc_structure_choch.py",
         ],
     },
     {
@@ -52,7 +52,7 @@ SCENARIOS: list[dict] = [
         "title": "Replay-prefix / future-append invariance",
         "status": "software_covered",
         "evidence": [
-            "tests/test_smc_structure_choch.py",
+            "tests/smc/test_smc_structure_choch.py",
         ],
     },
     {
@@ -61,7 +61,7 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/detection.py",
-            "tests/test_smc_detection.py",
+            "tests/smc/test_smc_detection.py",
         ],
     },
     {
@@ -70,7 +70,7 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/structure.py",
-            "tests/test_smc_detection.py",
+            "tests/smc/test_smc_detection.py",
         ],
     },
     {
@@ -79,9 +79,9 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/liquidity.py",
-            "tests/test_smc_liquidity.py",
-            "tests/test_smc_liquidity_tp.py",
-            "tests/test_smc_pool_tp.py",
+            "tests/smc/test_smc_liquidity.py",
+            "tests/smc/test_smc_liquidity_tp.py",
+            "tests/smc/test_smc_pool_tp.py",
         ],
     },
     {
@@ -102,16 +102,16 @@ SCENARIOS: list[dict] = [
             "scripts/webhook/pending_cancel.py",
             "scripts/webhook/clock_routes.py",
             "smc_main.py",
-            "tests/test_smc_setup_identity.py",
-            "tests/test_smc_live_h1_bias.py",
-            "tests/test_smc_orchestrator.py",
-            "tests/test_smc_quotes.py",
-            "tests/test_smc_detection.py",
-            "tests/test_smc_broker_lifecycle.py",
-            "tests/test_webhook_bridge.py",
-            "tests/test_webhook_h1_bias.py",
-            "tests/test_webhook_pending_cancel.py",
-            "tests/test_webhook_setup_registry_resolve.py",
+            "tests/smc/test_smc_setup_identity.py",
+            "tests/smc/test_smc_live_h1_bias.py",
+            "tests/smc/test_smc_orchestrator.py",
+            "tests/smc/test_smc_quotes.py",
+            "tests/smc/test_smc_detection.py",
+            "tests/smc/test_smc_broker_lifecycle.py",
+            "tests/webhook/test_webhook_bridge.py",
+            "tests/webhook/test_webhook_h1_bias.py",
+            "tests/webhook/test_webhook_pending_cancel.py",
+            "tests/webhook/test_webhook_setup_registry_resolve.py",
         ],
     },
     {
@@ -120,8 +120,8 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/fibonacci.py",
-            "tests/test_smc_fibonacci.py",
-            "tests/test_smc_detection.py",
+            "tests/smc/test_smc_fibonacci.py",
+            "tests/smc/test_smc_detection.py",
         ],
     },
     {
@@ -132,10 +132,10 @@ SCENARIOS: list[dict] = [
             "scripts/smc/risk.py",
             "scripts/smc/stops_geometry.py",
             "scripts/smc/broker_metadata.py",
-            "tests/test_smc_risk.py",
-            "tests/test_smc_stops_geometry.py",
-            "tests/test_smc_broker_metadata.py",
-            "tests/test_webhook_bridge.py",
+            "tests/smc/test_smc_risk.py",
+            "tests/smc/test_smc_stops_geometry.py",
+            "tests/smc/test_smc_broker_metadata.py",
+            "tests/webhook/test_webhook_bridge.py",
         ],
     },
     {
@@ -145,9 +145,9 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/account_pnl_sync.py",
             "scripts/smc/risk_halt.py",
-            "tests/test_smc_account_pnl.py",
-            "tests/test_smc_risk_halt.py",
-            "tests/test_smc_replay_report.py",
+            "tests/smc/test_smc_account_pnl.py",
+            "tests/smc/test_smc_risk_halt.py",
+            "tests/smc/test_smc_replay_report.py",
         ],
     },
     {
@@ -158,8 +158,8 @@ SCENARIOS: list[dict] = [
             "scripts/smc/account_mode.py",
             "scripts/smc/mt5_adapter/models.py",
             "scripts/smc/mt5_adapter/execution.py",
-            "tests/test_smc_account_mode.py",
-            "tests/test_smc_ownership.py",
+            "tests/smc/test_smc_account_mode.py",
+            "tests/smc/test_smc_ownership.py",
         ],
     },
     {
@@ -169,8 +169,8 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/mt5_adapter/journal.py",
             "scripts/smc/mt5_adapter/adapter.py",
-            "tests/test_smc_mt5_adapter.py",
-            "tests/test_webhook_bridge.py",
+            "tests/smc/test_smc_mt5_adapter.py",
+            "tests/webhook/test_webhook_bridge.py",
         ],
     },
     {
@@ -180,8 +180,8 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/reconcile.py",
             "scripts/smc/broker_lifecycle.py",
-            "tests/test_smc_reconcile.py",
-            "tests/test_smc_broker_lifecycle.py",
+            "tests/smc/test_smc_reconcile.py",
+            "tests/smc/test_smc_broker_lifecycle.py",
         ],
     },
     {
@@ -190,7 +190,7 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/orchestrator.py",
-            "tests/test_smc_orchestrator.py",
+            "tests/smc/test_smc_orchestrator.py",
         ],
     },
     {
@@ -200,9 +200,9 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/quotes.py",
             "scripts/smc/orchestrator.py",
-            "tests/test_smc_quotes.py",
-            "tests/test_smc_orchestrator.py",
-            "tests/test_smc_backtester.py",
+            "tests/smc/test_smc_quotes.py",
+            "tests/smc/test_smc_orchestrator.py",
+            "tests/smc/test_smc_backtester.py",
         ],
     },
     {
@@ -211,8 +211,8 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/risk_halt.py",
-            "tests/test_smc_risk_halt.py",
-            "tests/test_webhook_bridge.py",
+            "tests/smc/test_smc_risk_halt.py",
+            "tests/webhook/test_webhook_bridge.py",
         ],
     },
     {
@@ -221,8 +221,8 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/news.py",
-            "tests/test_smc_news.py",
-            "tests/test_webhook_bridge.py",
+            "tests/smc/test_smc_news.py",
+            "tests/webhook/test_webhook_bridge.py",
         ],
     },
     {
@@ -232,8 +232,8 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/clock_exit.py",
             "scripts/smc/notification_policy.py",
-            "tests/test_smc_clock_exit.py",
-            "tests/test_smc_notification_policy.py",
+            "tests/smc/test_smc_clock_exit.py",
+            "tests/smc/test_smc_notification_policy.py",
         ],
     },
     {
@@ -242,8 +242,8 @@ SCENARIOS: list[dict] = [
         "status": "software_covered",
         "evidence": [
             "scripts/smc/notification_policy.py",
-            "tests/test_smc_notification_policy.py",
-            "tests/test_webhook_bridge.py",
+            "tests/smc/test_smc_notification_policy.py",
+            "tests/webhook/test_webhook_bridge.py",
         ],
     },
     {
@@ -253,9 +253,9 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/cost_accounting.py",
             "scripts/smc/trade_closed_pnl.py",
-            "tests/test_smc_cost_accounting.py",
-            "tests/test_smc_trade_closed_pnl.py",
-            "tests/test_smc_backtester.py",
+            "tests/smc/test_smc_cost_accounting.py",
+            "tests/smc/test_smc_trade_closed_pnl.py",
+            "tests/smc/test_smc_backtester.py",
         ],
     },
     {
@@ -265,9 +265,9 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/provenance.py",
             "scripts/smc/stats_protocol.py",
-            "tests/test_smc_provenance.py",
-            "tests/test_smc_stats_protocol.py",
-            "tests/test_smc_backtester.py",
+            "tests/smc/test_smc_provenance.py",
+            "tests/smc/test_smc_stats_protocol.py",
+            "tests/smc/test_smc_backtester.py",
         ],
     },
     {
@@ -277,8 +277,8 @@ SCENARIOS: list[dict] = [
         "evidence": [
             "scripts/smc/stats_protocol.py",
             "scripts/smc/eval_windows.py",
-            "tests/test_smc_stats_protocol.py",
-            "tests/test_smc_eval_windows.py",
+            "tests/smc/test_smc_stats_protocol.py",
+            "tests/smc/test_smc_eval_windows.py",
         ],
     },
     {

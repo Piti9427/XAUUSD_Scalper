@@ -57,6 +57,6 @@ Entry-quality trial11 improves profit ($330.004 vs $302.636) and DD (20.412% vs4
 .venv/bin/python -m scripts.research.tune_breakout_logic --batch entry_quality --output data/entry_quality_NEW
 ```
 
-Local final ledgers: `data/breakout_protection_2026_09_30_v2/` and `data/breakout_entry_quality_2026_09_30_v2/`. Tracked summaries and hashes: `docs/reviews/2026-09-30-breakout-followup-results.json`.
+Local final ledgers: `data/breakout_protection_2026_09_30_v2/` and `data/breakout_entry_quality_2026_09_30_v2/`. Tracked summaries and hashes: `data/research_output/review-fixtures/2026-09-30-breakout-followup-results.json`.
 
 No replacement adopted. Research implementation complete for these batches; strategy-improvement objective remains unmet. Additional work needs a distinct testable hypothesis or independent history, not a claim that repeated search guarantees success.

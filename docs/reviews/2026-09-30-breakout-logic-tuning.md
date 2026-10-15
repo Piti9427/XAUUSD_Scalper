@@ -72,7 +72,7 @@ Trial 55 has the highest training profit among candidates: retest entry, reset r
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Complete local run: `data/breakout_logic_tuning_2026_09_30_structural`. Every trial has base/stress ledger JSON. Summary copy: `docs/reviews/2026-09-30-breakout-logic-results.json`.
+Complete local run: `data/breakout_logic_tuning_2026_09_30_structural`. Every trial has base/stress ledger JSON. Summary copy: `data/research_output/review-fixtures/2026-09-30-breakout-logic-results.json`.
 Results SHA-256: `6b828bd7c8820c7b5eaafca2336b0b55f131c7f2636f95207eb51f9fca24d524`.
 
 ## Remaining objective

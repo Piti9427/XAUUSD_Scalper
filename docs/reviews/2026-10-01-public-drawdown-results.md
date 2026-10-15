@@ -17,7 +17,7 @@ Rows above are diagnostics, not selected strategies. Every candidate failed at l
 
 Protocol3 drawdown336 is original floor-only RR screen; preserved separately. Protocol4 rerun336 adds RR greater than each defined parent, restoring owner explicit request "realized RR เพิ่ม". Undefined core RR skips comparison only; candidate still requires RR>=1. Neither screen found a winner. Full and both halves must beat both parents profit/WR, lower DD<=20%, minimum60/20 trades, base and stress; partial windows cannot qualify.
 
-[All evaluated contracts, metrics and frozen protocols](2026-10-01-public-drawdown-results.json). Local ledger/equity artifacts and source snapshots hash-verified for all four runs. [Acquisition provenance and holdout constraints](2026-10-01-public-tick-acquisition.md). Ten months audited, three ZIP-only sealed; actual twelve-month tick coverage not yet verified. No sealed-price reading or future-data selection.
+[All evaluated contracts, metrics and frozen protocols](../../data/research_output/review-fixtures/2026-10-01-public-drawdown-results.json). Local ledger/equity artifacts and source snapshots hash-verified for all four runs. [Acquisition provenance and holdout constraints](2026-10-01-public-tick-acquisition.md). Ten months audited, three ZIP-only sealed; actual twelve-month tick coverage not yet verified. No sealed-price reading or future-data selection.
 
 ## Validation
 

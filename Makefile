@@ -158,4 +158,4 @@ c22h4-stop:
 
 .PHONY: native-frequency-check
 native-frequency-check:
-	$(PYTHON) -m unittest tests.test_native_frequency -v
+	$(PYTHON) -m unittest tests.native.test_native_frequency -v

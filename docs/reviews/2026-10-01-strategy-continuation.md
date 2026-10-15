@@ -15,7 +15,7 @@ Highest-net diagnostic rows do not represent passing or selected candidates. Str
 
 ## Evidence and repeatability
 
-[All2,208 configs and evaluated metrics](2026-10-01-strategy-continuation-results.json). Every run has independent protocol, source snapshot hashes, ledger/equity artifacts and verdict. Earlier in-flight runs retained imported frozen code; later source additions did not alter those processes. Snapshots for all six runs were verified byte-for-byte against original hashes. Source snapshots and large local evidence are ignored in Git; tracked evidence contains run paths and hashes.
+[All2,208 configs and evaluated metrics](../../data/research_output/review-fixtures/2026-10-01-strategy-continuation-results.json). Every run has independent protocol, source snapshot hashes, ledger/equity artifacts and verdict. Earlier in-flight runs retained imported frozen code; later source additions did not alter those processes. Snapshots for all six runs were verified byte-for-byte against original hashes. Source snapshots and large local evidence are ignored in Git; tracked evidence contains run paths and hashes.
 
 Base0 commission remains an archived assumption; stress spread+0.20/oz and adverse market slippage0.10/oz. Historical swap and actual all-in broker costs unverified. No fee or real execution advantage claimed.184 days remain reused discovery.
 

@@ -13,11 +13,22 @@ Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EM
 - **Tests:** Legacy SMC, frozen B1-FINAL, and target Pure B1 tests coexist; suite count alone does not prove live parity.
 
 ## Project Structure
-- `scripts/c22h4`: Live Demo module. `make bot-execute` sends. `make bot-run` stays shadow.
-- `scripts/trial30`: Shared cycle implementation and the rollback strategy.
-- `scripts/research`: Hashed campaign sources. Leave the paths in place.
-- `docs/`: Current index in `docs/README.md`. Older campaign notes are in `docs/archive/`.
-- `main.py`: Legacy alert loop. It does not send C22 orders.
+
+| Path | Purpose |
+| --- | --- |
+| `scripts/c22h4/`, `scripts/trial30/` | Current Demo module and shared cycle/rollback |
+| `scripts/ops/` | Existing watcher/status/read-only interfaces |
+| `scripts/research/` | Frozen campaign/replay sources; keep pinned paths |
+| `scripts/debug/reviews/` | Historical offline reproducer code |
+| `mql5/`, `config/` | Native source and pinned contracts/presets |
+| `tests/<family>/` | Application, Demo, native, B1, research, SMC and webhook suites |
+| `docs/architecture/`, `docs/ops/`, `docs/specs/`, `docs/reviews/` | Architecture, runbooks, specs, human reports |
+| `data/research_output/review-fixtures/` | Preserved historical versioned evidence inputs |
+| `runs/` | Ignored generated experiments and snapshots |
+
+[Module interfaces and folder map](docs/architecture/codebase-layout.md) ·
+[Test commands](tests/README.md) · [Python modules](scripts/README.md).
+`main.py` remains the legacy alert loop and does not send C22 orders.
 
 Do not use `main.py` as a Pure B1 live runner: it still evaluates wick rejection and can send signal alerts without broker order approval. The target signal remains in research pending further validation.
 

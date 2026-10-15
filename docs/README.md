@@ -14,3 +14,14 @@
 โค้ดที่อยู่หลังคำสั่งนั้นคือ `scripts/c22h4`. รอบเข้าออเดอร์อยู่ที่ `scripts/trial30`. `scripts/research` ย้ายที่ไม่ได้เพราะแคมเปญแฮชพาธไฟล์. `main.py`, `scripts/smc`, `scripts/webhook`, `scripts/pure_b1` อยู่นอกคำสั่งนี้.
 
 เอกสารแคมเปญเก่า แผน SMC และงานวิจัย B1 อยู่ใน [`archive/`](archive/). ห้ามใช้ไฟล์เหล่านั้นเปลี่ยนสัญญาที่กำลังรัน. `reviews/` เก็บรายงานตรวจที่เป็นหลักฐาน ยังไม่ถูกลบ.
+
+
+## โครงสร้างและงานวิจัยล่าสุด
+
+- [Folder map / module interfaces](architecture/codebase-layout.md)
+- [Tests แยกตามงาน](../tests/README.md)
+- [รายงานเพิ่มไม้ปิดกำไรต่อเดือน](reviews/2026-10-15-c22-profitable-exits-verdict.md)
+- [Reproducer code](../scripts/debug/reviews/README.md)
+- [Archived JSON/text evidence](../data/research_output/review-fixtures/README.md)
+
+`reviews/` เก็บเฉพาะ Markdown; ผลทดลองใหม่เก็บ `runs/` เสมอ.

@@ -26,7 +26,7 @@ These diagnostic rows are not selected candidates; every full/half scenario must
 
 ## Reproducibility
 
-Implementation commit: `4f66709`. Local immutable run: `data/strategy_campaign_2026_09_30_v3`. Protocol SHA256: `4ce410dd0d6bde12a620e602c4ed78aa189bc19140f3935ccb6fb43ee1faf8b0`. Verdict SHA256: `c02ded5db10dabc0e6089e75ace7e9861524e511d5dbbfe208e230931ab44ce0`. [All config/metric results](2026-09-30-strategy-campaign-results.json). [Frozen spec](../specs/2026-09-30-strategy-campaign.md).
+Implementation commit: `4f66709`. Local immutable run: `data/strategy_campaign_2026_09_30_v3`. Protocol SHA256: `4ce410dd0d6bde12a620e602c4ed78aa189bc19140f3935ccb6fb43ee1faf8b0`. Verdict SHA256: `c02ded5db10dabc0e6089e75ace7e9861524e511d5dbbfe208e230931ab44ce0`. [All config/metric results](../../data/research_output/review-fixtures/2026-09-30-strategy-campaign-results.json). [Frozen spec](../archive/specs/2026-09-30-strategy-campaign.md).
 
 45,671,201 audited raw ticks;12,100 canonical bars; same broker specification, capital and costs across parents/candidates. Source/input hashes in protocol. Each trial stores full/half base/stress ledger, equity checkpoints, rejections and cost attribution. Tick-level DD uses all visited quotes. Equity artifact is compact checkpoints, not a full every-tick export.
 

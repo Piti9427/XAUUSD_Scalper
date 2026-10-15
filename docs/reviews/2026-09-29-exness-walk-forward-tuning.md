@@ -79,4 +79,4 @@ Donchian 48 / TP 3.5 has the lowest full-window DD of this grid (40.58%). Donchi
 
 - Complete local evidence: `data/exness_walk_forward_2026_09_29_v2/results.json`, `protocol.json`, per-fold JSON, `COMPLETE`.
 - Results SHA-256: `bc9a5f1bed2a032a16db813a32a460a7c4d5f176dd99ebe523c1e2ea98506576`.
-- Source hashes, raw manifest hash and all three tape hashes are embedded in results.json. A compact tracked copy accompanies this review as `2026-09-29-exness-walk-forward-results.json`.
+- Source hashes, raw manifest hash and all three tape hashes are embedded in results.json. A compact tracked copy accompanies this review as `data/research_output/review-fixtures/2026-09-29-exness-walk-forward-results.json`.

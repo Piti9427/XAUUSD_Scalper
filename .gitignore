@@ -114,3 +114,19 @@ docs/reviews/*.json
 docs/reviews/**/*.csv
 docs/reviews/*.csv
 config/reward156-profit-survival.json
+
+# Versioned historical review inputs relocated byte-for-byte; no new run dumps.
+!data/research_output/
+data/research_output/*
+!data/research_output/review-fixtures/
+data/research_output/review-fixtures/*
+!data/research_output/review-fixtures/README.md
+!data/research_output/review-fixtures/2026-09-13-corrected-proxy-backtest.txt
+!data/research_output/review-fixtures/2026-09-13-python-refactor-results.json
+!data/research_output/review-fixtures/2026-09-29-exness-walk-forward-results.json
+!data/research_output/review-fixtures/2026-09-30-breakout-followup-results.json
+!data/research_output/review-fixtures/2026-09-30-breakout-logic-results.json
+!data/research_output/review-fixtures/2026-09-30-strategy-campaign-results.json
+!data/research_output/review-fixtures/2026-10-01-dd30-results.json
+!data/research_output/review-fixtures/2026-10-01-public-drawdown-results.json
+!data/research_output/review-fixtures/2026-10-01-strategy-continuation-results.json
