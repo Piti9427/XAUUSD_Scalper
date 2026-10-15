@@ -748,3 +748,37 @@ monthly profit ratio/median/worst month, entries/winners and observed-tick equit
 DD. Median monthly net is descriptive optimizer score, no automatic qualification.
 No new economic results or future-return claim from implementation/unit fixtures.
 Section6.33, frozen source pins, runtime cost file and active watcher unchanged.
+
+### 6.39 Shared native detector economic comparison (2026-10-14)
+
+Owner requested best measured test cases, then selected shared MQL5 detector plus
+existing canonical tick replay while native app control is unavailable. New frozen
+protocol `docs/specs/2026-10-14-native-frequency-economic-cases.md`: five cases
+(Pullback, session UTC06/12,07/13,08/14, C22 tuned comparator), each Base+swap and
+commission40USD/lot/roundtrip COST_SURCHARGE_STRESS+swap. Same native core and causal
+first-post-close quote geometry, immutable167622055 Exness paired quotes through
+2026-10-05; reused discovery, not holdout/native Tester/broker parity.
+
+Swap points−567.4long/0short, point0.001, Wednesday triple/UTC-midnight archived
+calendar assumption; commission0 base/40 stress and no extra spread/slippage.
+Current-spec/historical costs remain COST_INCONCLUSIVE. Canonical execution keeps
+fixed0.01/USD200/cost-inclusive10% cap/daily10%; new cases one losing exit/day,
+C22 comparator unlimited. Canonical fee is upfront and BE is fee-inclusive on
+completed M5/M15 management bars, with strict open-position midnight baseline;
+these differ from native EA execution and approved Demo process baseline.
+No native parity inferred from shared detector. All10 cells must complete,
+cash/risk/lot/swap audit and whole-result fresh repeat before selecting under
+preregistered monthly/frequency/net/DD gates. No gate relaxation to force winner.
+Artifacts under ignored `runs/native-frequency-economic-2026-10-14/`; no Demo
+sender/source-pin/cost-attestation change. Completed campaign03 on2026-10-15:
+all10 cells and all10 whole-result repeats audited/hash-verified. Verdict
+NO_IMPROVEMENT; diagnostic champion C22 tuned only, no new qualified replacement.
+C22 base+swap USD200→941.1258/net741.1258/DD29.63%/404trades; cash stress+swap
+USD200→803.5988/net603.5988/DD36.96%/402trades.24 full requested+observed-bracketed
+months: entries16.79/16.71,winners5.75/5.83 per month,positive17/24 and16/24.
+SessionUTC07/13 raises winners6.21/6.54 but stressDD57.99% fails40% cap;
+other new cases fail both-view risk/profit gates. Human verdict:
+`docs/reviews/2026-10-15-native-frequency-economic-verdict.md`. These remain
+modeled reused-discovery results,COST_INCONCLUSIVE,not native Tester or Demo
+qualification. Current frozen C22H4 Demo variant1af968e9ac6a26ea unchanged;
+research C22 tuned comparator b823f4aefe10fc72 is not adopted.

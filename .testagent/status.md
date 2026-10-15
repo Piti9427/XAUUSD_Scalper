@@ -100,3 +100,25 @@ reviewed inline. Exact requirement mapping and limitations in
 Frozen pins9/9 match. Commit only native task delta; earlier runtime fixes/owner
 notes preserved unstaged. No Demo sender/cost-policy change, terminal launch,
 account connection, notification, economic replay or native Tester's performance claim.
+
+
+## Shared native detector economic cases (completed2026-10-15)
+
+Inline Research→Plan→Implement economic adapter and detector bridge.7 public
+regressions pass, including literal replay→metrics fee+swap/account result;
+missing metadata, monthly cash, one-view rejection, incomplete checkpoint refusal,
+whole-result repeat mismatch and completed binary drift. Exact names/mapping in
+`docs/reviews/2026-10-15-native-frequency-economic-verdict.md`.
+Attempt01 dtype-only parity failure retained; attempt02 canonical missingbankrupt
+field report failure retained. Frozen engine untouched; adapter derives actual
+liquidation/equity flag. Final Standards/Spec rereview0/0. Optional quality tools
+absent; assertions independently inspected and integrated boundary fixed.
+Campaign03:167622055 verifiedquotes,739312M1,48465M15 full detector parity,
+all10swap-inclusivecells,all10fresh whole-result repeats identical. Independent
+persisted audit recomputed cash/lot/risk/nonoverlap/swap/monthly metrics10/10;
+COMPLETE every-file hash verification exit0. NO_IMPROVEMENT,diagnosticC22only.
+Fullsuite962tests77.846s OK skipped2; focused7tests exit0; scopedRuff PASS.
+Native compile sources4/4 unchanged; native Tester economic/harness runtime
+NOT_RUN. Costs-inconclusive, discoveryreused,noholdout,NoDemochange/noadoption.
+Review ZIP/presets generated in ignoredruns,attestationsfalse. Git commit remains
+pending authorization from earlier native task; no staging/commit claimed.

@@ -76,3 +76,8 @@ the Research → Plan → Implement → assertion review workflow runs inline.
 ## Native frequency research (2026-10-14)
 
 Native frequency research: MQL5 core + tester EA + no-order native/host harness. Owner-confirmed public signal/admission/order/report seams. Existing unittest, clang++ and bundled MetaEditor; no new dependency. Checklist: tester-only guard; complete UTC bars; causal pullback and retest/session consumption; C22 signal parity; fixed0.01/cost-inclusive10% cap; confirmed/ambiguous lifecycle; swap/commission attestation; monthly zero/partial/cash reports. Native economic evidence remains separate. Optional generator/gap/quality tools absent; inline bounded workflow.
+
+
+## Shared native detector economic cases (2026-10-14)
+
+Owner selected shared native MQL5 detector plus canonical tick execution. Five preregistered cases/two modeled swap+commission views. Native core/source pins unchanged. Existing canonical replay/SwapPolicy/audit reused; bound globals preserve native prepared geometry. Fixture risk2.6/fee0.4/triple swap−1.7022/net2.2978; absent swap blocks. No native Tester result label, no holdout, no Demo action.

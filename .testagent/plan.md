@@ -87,3 +87,15 @@ per-bar funnel is a separate observability follow-up; no journal migration here.
 ## Native frequency research (2026-10-14)
 
 Vertical slices: (1) host/native guard+fixed-risk RED→GREEN, (2) pullback mirrored causal bars, (3) session completeness/retest/expiry/consume, (4) C22 rollingRSI/EMA/H4 differential, (5) monthly accounting and execution state, (6) native adapter and compile, (7) scoped lint/types, two-axis review, full suite once, task-only commit. Exact test names recorded in final report. Native compile/run unavailability reported as blocker, never replaced with host success claims.
+
+
+## Shared native detector economic cases (2026-10-14)
+
+RED→GREEN public replay fee+swap fixture, missing metadata; monthly fee cash attribution and negative selection controls. Build actual C++ native detector bridge, verify real M15 and C22 against frozen Python; hash source/input. Run all10 cells, cash/lot/risk/swap audit, fresh all10 full-result repeats. Rank only both-view strict improvements; NO_IMPROVEMENT if none. Report all candidates/diagnostic champion and costs/execution differences; focused/full tests and assertion review, no native UI/commit escalation inferred.
+
+
+Economic completion:7adapter/checkpoint regressions mapped in final report;
+report-seam bankruptcy bug reproduced thenfixed without frozenengine edits.
+Incomplete resume replaced by explicit refusal/freshdirectory; fullrepeat and
+hashproof mandatory. All10cells+10repeats+independentaudit completed,strict
+NO_IMPROVEMENT. Fullsuite962OKskip2; currentDemounchanged.
