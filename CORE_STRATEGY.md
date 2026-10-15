@@ -782,3 +782,111 @@ other new cases fail both-view risk/profit gates. Human verdict:
 modeled reused-discovery results,COST_INCONCLUSIVE,not native Tester or Demo
 qualification. Current frozen C22H4 Demo variant1af968e9ac6a26ea unchanged;
 research C22 tuned comparator b823f4aefe10fc72 is not adopted.
+
+
+### 6.40 Active Demo vs tuned paired comparison (2026-10-15)
+
+Owner selected direct comparison of active Demo C22H4 variant1af968e9ac6a26ea
+against research b823f4aefe10fc72,after nativeUI remains unavailable. Frozen
+`docs/specs/2026-10-15-c22-demo-vs-tuned.md`: same canonical execution/input,
+Base+swap and commission40USD/lot cash-stress+swap,all4whole-result repeats.
+Modeled archivedswap points−567.4long/0short,Wednesday triple/UTCmidnight;
+COST_INCONCLUSIVE,reuseddiscovery,no nativeTester/broker qualification.
+Tuned changes RSI14→7,BUYoff→BE1R,SELLTP3ATR→2R,max_daily_losses1→0;
+fixed0.01/USD200/cost-inclusive10% cap/daily10% unchanged. Removal of daily loss
+count stop is research-only material tradeoff,no Demo permission inferred.
+Compare monthly winners/entries/cash/positive ratio andDDexplicitly.
+Completed campaign02,MODELED_IMPROVEMENT,all4cells+4whole-result repeats audited.
+Same-engine base:active USD200→497.4922/net297.4922/DD39.2807%,tuned→941.0958/
+net741.0958/DD29.6368%;coststress:active→498.6422/net298.6422/DD40.6326%,tuned→
+803.5688/net603.5688/DD36.9582%.24fullmonths winning entries2.42→5.75 base,
+2.46→5.83stress. Full active frozen frame/rules parity48465bars,pins9/9 verified.
+No native/runtime/forward qualification or Demo adoption. Human verdict
+`docs/reviews/2026-10-15-c22-demo-vs-tuned-backtest.md`.
+No active runtime/config/cost-attestation/baseline change.
+
+
+### 6.41 Frequency-first research campaign (2026-10-15)
+
+Owner prioritizes more monthly entries. Frozen21-case/42-swap-inclusive-cell
+protocol `docs/specs/2026-10-15-c22-frequency-first.md` reuses current canonical
+helper and C22 domains,compares to tunedb823f4aefe10fc72. Rank minimum both-view
+monthlyentries first,profitableentries next; require both to rise,netpositive,
+DD<=40%,riskcap10%,fixed0.01,no terminalrisklockout,medianmonthlycash>=0 and
+positive-months>=50%. Separate profit-floor profile retains tuned netfloor.
+No post-result gate relaxation. At most top3 each profile plusbaseline repeated
+before selection; unrepeated others screening only. All42 results retained.
+Allcostviews include archivedswap points−567.4long/0short,point0.001,Wednesday
+triple/UTCmidnight,commission0/40USDperlotroundtrip. COST_INCONCLUSIVE,reuseddata,
+not nativeTester/forward or Demo qualification. Campaign01 COMPLETE42cells,
+8whole-result repeats,all42persistedaccounting/swap/monthly audits/hashproofPASS.
+Both profiles choose9bb30c154de68d07(RSIthreshold25→30). Meanmonthlyentries
+16.79/16.71→20.96/20.83,winners5.75/5.83→6.79/6.96(base/stress);net741.0958/
+603.5688→758.6858/617.2428,DD29.64/36.96→32.94/38.33%. Stressmedianmonthlycash
+21.95→4.70,positivefullmonths16/24→12/24:frequencygain with weaker monthlycash
+consistency. Balanced alternatived398087c22657b7b(SELLlookback96→48):stress
+18.46entries/6.42winners/net924.2118/DD38.92%/median27.63/positive17of24months.
+Configs exported research-only,no nativeparameterport/adoption. Humanverdict:
+`docs/reviews/2026-10-15-c22-frequency-first-verdict.md`. ActiveDemo,frozenpins,
+0.01lot,10%riskcap,no recovery/processbaseline unchanged.
+
+
+### 6.42 Profitable-exit monthly objective (2026-10-15)
+
+Ownerclarifies increasing profitabletrades/month. Newfrozenprotocol
+`docs/specs/2026-10-15-c22-profitable-exits-first.md`:17cases/34swapcells based
+onpriorleaders,net-positiveclosedpositions aftercommission/swap counted byUTC
+exitmonth androundedUSDcent(excludesBEfloatingnoise). Primaryrankmeanwinning
+exits,thenmedian/p25;totalentriesdescriptive. Requireboth-viewmeanwins>RSI30,
+medianwins>=RSI30,netpositive,DD<=40%,fixed0.01,10%cap,no terminalrisklockout,
+medianmonthlycash>=0,positivecashmonths>=50%. Separateprofitfloor C22tuned.
+Allinherit tuned daily10%/max_daily_losses0/no recovery;no Demochange.
+Samearchived167622055quotes,COST_INCONCLUSIVE,swaplong−567.4/short0,
+point0.001,Wednesdaytriple/UTCmidnight,commission0/40USDperlotRT. Adaptivefollowup
+onreuseddata,no newholdout/native/forwardqualification. Initialcampaign34cells+
+4controlrepeatsCOMPLETE:no candidatebeatsRSI30 winningmean/median withDD<=40%
+bothviews. Follow-upsection6.43 restoresresearchcountguards,withoutgate relaxation.
+
+
+### 6.43 Profitable-exit count guards follow-up (2026-10-15)
+
+Initial6.42campaignCOMPLETE34cells,4baseline/RSI30repeatcells,no candidatepasses
+highermeanwins+medianfloor withDD<=40% bothviews. NearestRSI30+SELLTP1.35 has
+stress8.0wins/month,DD40.19%;unqualified. Adaptiveboundedfollowup frozen
+`docs/specs/2026-10-15-c22-profitable-exits-daily-guard.md`:fourshortTPseeds with
+max_daily_losses1/2 plus2controls,20swapcells,unchangedqualification,riskcap10%,
+daily10%,fixed0.01,oneposition,no recovery. Countlimits protectentriesafter net
+losingexitsperUTCday;no change to activeDemo processbaseline/countpolicy.
+SameCOST_INCONCLUSIVEarchivedswap/cashstress/reuseddata,no native/forwardevidence.
+Follow-up20cells+8whole-result repeatsCOMPLETE. Both profileschoose81a78454baaffcd1:
+RSI7cross30/SELLlookback48/SELLTP1.35R/max_daily_losses2;BUYTP2R/SL1.5ATR,
+SELLSL2.5ATR,BE1R/H4EMA200/EMA50 fixed0.01/risk10%/daily10%unchanged.
+WinningUTCexits/base8.54,stress8.71permonth,median9both,p25=7both vsRSI30base6.79/
+stress6.96median7.5. BaseUSD200→1386.6618/net1186.6618/DD30.93%;stress→1076.9278/
+net876.9278/DD36.88%;positivecash16/24months,median19.61/13.52USD.
+All54persistedaccount/swap/monthly audits and12repeats/hashproofPASS. Researchconfig
+`config/research-c22-profitable-exits-81a78454baaffcd1.json`;humanverdict
+`docs/reviews/2026-10-15-c22-profitable-exits-verdict.md`. Dailyguardrawnet<0 includes
+4stresscent-zero losses;one observedcount-sensitiveblockedentry2026-02-09T21:45UTC.
+Brokerclosingcashrounding/lifecycle remainsunverified,COST_INCONCLUSIVE,no native
+port/forward/readinessqualification. No runtimeadoption/activeDemocontractchange.
+
+
+### 6.44 Winning-exit guard rounding sensitivity (2026-10-15)
+
+Ownercontinues;isolate observed−0.002USDdailycountwitness. Frozen4cellprotocol
+`docs/specs/2026-10-15-c22-profitable-exits-rounding.md`:selected81a78454baaffcd1
+rawguardvsUSDcentroundedguard,base/stressbothmandatoryswap. Privatecanonical
+sourcecopy changesexactlyone losingcounterpredicate,ledger/prices/cash unchanged,
+cooldown0;rawentireresultparity andall4fullrepeat required. No frozenfile/global
+mutation or claim of fullbrokercashrounding/nativeparity. Retainrisk10%,fixed0.01,
+daily10%,two-losscount. SamearchivedCOST_INCONCLUSIVEquotes/swap/reuseddata.
+COMPLETE:PASSES_BOTH_GUARD_MODELS,4cells+4freshwhole-resultrepeats/audits/hashproofPASS.
+Rawcontrolentireresultmatchespreceding81a78454baaffcd1case. Centguardstressmean
+winningexits8.6667/median9/p25=7,net784.5628USD/final984.5628USD/DD38.0213%,
+positivecash15/24months vsraw8.7083/net876.9278/DD36.8756%/16of24. Baseunchanged
+8.5417/net1186.6618/DD30.9268%. CentguardadmitsFeb09witnessandsubsequentlyremoves
+2026-03-19T08:15UTCentry;net−92.365USD. Win-countgoalstillpassesbothguardmodels;
+communicateconservativeobservedstress8.67wins/net784.56/DD38.02. Boundsforonlytwo
+testedmodels,not brokerparity.Fullcashposting/nativeport/forward/COST_INCONCLUSIVE
+unresolved,no Demo/nativeport/contractadoption.
