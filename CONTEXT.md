@@ -73,6 +73,7 @@ Qualification always names its policy version; no older result is relabeled.
 | **Target Demo Account** | บัญชี Exness Demo ที่ระบบยืนยันตัวตนจาก terminal ปัจจุบัน ใช้เป็นฐานเดียวกันสำหรับต้นทุน ขนาดสัญญา ความเสี่ยง และผล Demo ของ candidate |
 | **Target Broker Symbol** | สัญลักษณ์ทองที่ Target Demo Account คืนมา; ผลของสัญลักษณ์หรือชนิดบัญชีอื่นไม่ถือว่า qualify สัญลักษณ์นี้โดยอัตโนมัติ |
 | **Shadow Monitor** | โหมดเฝ้าดูตลาดและบันทึกสัญญาณ/ผลจำลองของ Validation Challenger โดยไม่ส่งคำสั่งไป broker; ผล Shadow เป็นหลักฐานทดสอบกฎ ไม่ใช่ fill จริงหรือ Demo Execution Path |
+| **Unified Core Environment** | โมดูลกลาง (`scripts/core/`) รวมศูนย์ `MarketDataProvider`, `TradingCostPolicy`, และ `RiskCircuitEngine` เป็น Single Source of Truth สำหรับ Backtest และ Live เพื่อแก้ปัญหาการประกาศพารามิเตอร์และต้นทุนซ้ำซ้อนในแต่ละไฟล์ |
 
 ---
 
