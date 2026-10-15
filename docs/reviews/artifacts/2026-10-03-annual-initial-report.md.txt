@@ -1,0 +1,69 @@
+# Actual annual BUY/SELL research verdict
+
+192 parameter evaluations in four completed campaigns,0 qualified strategies. All1,176 fresh whole-result scenarios match initial frozen results. Independent ledger/raw-quote arithmetic matches final balances and all-tickDD for30 additional scenarios. These are actual archived Bid/Ask replays, not fabricated results or proof of future profitability.
+
+## Dataset and comparison contract
+
+2025-10-01 inclusive through2026-10-01 exclusive:365 calendar days,12 audited nonempty public Exness XAUUSDm months,104,133,248 ticks,23,230 complete UTCBidM15 assembled from all15M1. No filled missing bars. Existing Jul–Sep2025 sealed validation files untouched. Annual2026 overlaps reused discovery; no independent annual validation or target-Demo parity. Broker specs remain declared research assumptions, including fixed0.01 admissibility/margin. Commission0 assumed/swap omitted; base actual spread, stress additional0.20 spread/0.10 adverse market-fill slippage.
+
+[Published results](2026-10-03-annual-results.json) preserve every setting and full/first/second base/stress metric, source/dataset/protocol/verdict/proof/scenario hashes and12 monthly archive/cache/tape provenance. [Frozen-source copies](artifacts/annual-snapshots/index.json) pin the two campaign versions and engine. Actual ledgers/equity remain in each listed local `data/strategy_annual_*` directory. These raw directories and archives are intentionally not included in the research commit. [Exporter](artifacts/2026-10-03-annual-exporter.py.txt) verifies published data from completed hashes/proofs; [verifier](artifacts/2026-10-03-annual-verifier.py.txt) loads frozen main+engine then actual audited annual inputs and compares entire replay dictionaries, not only summary metrics.
+
+Full window starts$200. First halfOct1–Apr1 and secondApr1–Oct1 each independently start$200. Trial30 unchanged D48SELL/SL2.5ATR/TP3ATR/BE1R/daily20%/fixed0.01/10%cap. Original six-scenario gates unchanged: net/WR/realizedRR strictly above same-window trial30, DD<=trial30 and<=30%, candidateRR>1, >=60full/20half trades, actualBUY+SELL, admittedrisk<=10%. Never compare an annual candidate only with a six-month baseline to imply fair superiority.
+
+## Completed parameter loops
+
+| Catalog | Evaluations | Exact fresh scenarios | Best full base net / its DD | Lowest full base DD | Qualified |
+|---|---:|---:|---|---:|---:|
+| D48 parent setup invalidation |36|222|180.047 /36.34%|32.08%|0|
+| D96 intermediate reward |48|294|318.800 /57.62%|53.67%|0|
+| D96 intermediate ATR stop |72|438|118.927 /56.16%|54.30%|0|
+| Corrected symmetric trend breakout |36|222|1,057.245 /46.50%|44.67%|0|
+
+First three catalogs repeat156 existing parameter contracts on newly acquired annual inputs; fourth tests36 symmetric Donchian24/48/96+EMA50/200, target1.35/1.5/2R, off/BE1R with fixed risk controls. These192 evaluations are not192 independent statistical experiments. No incomplete prefix declared winner. All four runners and verifiers exited0; finite workers finished.
+
+The highest full base profit, symmetric trial17, is D48/EMA50/SL2.5ATR/2R/protectionoff/daily10%/one losing trade per UTCday/noBUYpause. Fullbase executes171BUY/126SELL with net1,057.245, DD46.5045%, WR39.7306%, RR1.87947. Fullstress executes64BUY/25SELL with net51.309, DD65.6278%, WR37.0787%, RR1.79216. Different cost/admission/equity paths must be preserved; this large stress sensitivity rejects promotion.
+
+| Trial17 case | Trial30 net / DD / WR / RR | Challenger net / DD / WR / RR |
+|---|---|---|
+| Full base |-90.710 /47.79% /0% /undefined|1,057.245 /46.50% /39.73% /1.8795|
+| Full stress |-91.817 /48.24% /0% /undefined|51.309 /65.63% /37.08% /1.7922|
+| First base |-90.710 /47.79% /0% /undefined|394.921 /45.92% /38.46% /1.8809|
+| First stress |-91.817 /48.24% /0% /undefined|-57.588 /57.86% /34.43% /1.7376|
+| Second base |507.245 /25.99% /53.06% /1.1702|49.290 /50.05% /38.24% /1.8395|
+| Second stress |452.366 /26.07% /52.38% /1.1644|37.449 /50.48% /37.14% /1.8663|
+
+All192 candidates exceed30% full baseDD. Thus none meets the original gates even if the owner later approves a special all-loss baseline-RR floor. Conditional RRfloor diagnostics in JSON are explicitly unapproved analytical probes, not altered qualification or a winner.
+
+## Diagnosis, fixes and pending decision
+
+Prior184-day discovery cannot establish one-year performance. New annual CLI guard checks actual monthly tick/bar counts and rejects short/missing/unordered/empty input before output/scenarios; annual requirement is frozen and cannot disappear on resume. This resolves the new coverage gap.
+
+Review reproduced a real config defect: newly documented BE1R inherited `Rules.protect_after_r=0.5`. Explicit1.0 fix/regression passes. Initial10 completed trial results preserved in [superseded record](2026-10-03-annual-be-correction.json); interrupted worker exit130, no valid-count/qualification credit. Corrected36 fully rerun and222 whole-result comparisons match. Previously running catalogs unaffected.
+
+Annual trial30 full/first each has7 losing SELLs, realizedRR=None. Existing comparator rejects an undefined baseline; the fast feedback probe verifies that changing only baselineRR makes the synthetic comparator probe accepted. This is a missing benchmark definition, not a manufactured backtest result. Owner clarification pending before any alternate RR rule. No criterion changed. Even under the suggested all-lossRRfloor0/candidateRR>1 definition, the192 observed strategies still fail other gates.
+
+[Experiment ledger](2026-10-03-annual-experiment-ledger.json) cross-references original RED coverage/qualification, debugger trace, ranked/falsified hypotheses, actual acquisition, independent arithmetic, BE RED→GREEN and measured loops. [Post-mortem](../post-mortem/2026-10-03-annual-research-debug.md) records mechanism/prevention. [Feedback harness](artifacts/2026-10-03-annual-feedback.py.txt) runs in under2seconds in this session; original performance goal remainsRED. No retained runtime debug instrumentation, forced order, recovery basket, cap removal or new Demo deployment.
+
+## Requirement and validation evidence
+
+| Requirement quoted from owner | Evidence / state |
+|---|---|
+| “backtest ย้อนหลัง 1 ปี” | Actual12monthly archives/365days in published manifest. `test_one_year_requirement_rejects_short_archive_before_scenarios`, `test_one_year_cli_checks_actual_months_and_freezes_resume_requirement` pass. Fixtures validate guard/resume only; actual performance uses104,133,248 archived ticks. |
+| “ปรับแก้ไขแล้ว loop หาให้เจอ” | BE default bug fixed; `test_annual_catalog_freezes_explicit_one_r_protection` RED0.5!=1.0→GREEN1.0; corrected36 plus existing156 completed. |
+| “ต้องได้ประสิทธิ์ที่ดีกว่าผผลลัพเดิม” | Unmet:0/192 qualify; full/stress/independent-half failures published without relaxed gates or fabricated success. |
+
+Final current-code validation:769 tests,767 pass/2 skips,16.781s exit0. Regular mypy1changedresearchfile with`--ignore-missing-imports` passes; plain invocation failed external pandas/pandas_ta stubs, not silently concealed. Ruffcheck/format2changedcodefiles and whitespace check pass. No connector/credential/timeframe change, no new MT5 smoke or order sent.
+
+## Standards
+
+0 remaining hard breaches;0 actionable smells. Initial explicit-BE-contract mismatch reproduced, corrected and superseded. Fixedlot/cap/causal UTC/research-only boundaries reviewed. Reviewer independently executed new CLI/activation tests; did not independently certify all annual measurements.
+
+## Spec
+
+0 remaining implementation defects. One-year coverage and documented36 settings now match code; superior-strategy requirement remains unmet. Undefined baselineRR stays fail-closed pending owner definition. Review reference develop=a24114097988e4b3669d48d6be19773c502c3924, incremental annual scope starts0068121; operator/status/Makefile/.gitignore changes excluded.
+
+Standards0 remaining; Spec0 implementation defects/performance outcome unmet. Demo remains authorized SELL-only trial30; no annual strategy promoted.
+
+## Subsequent owner-approved RR policy
+
+Owner later explicitly approved “ใช้ RR อ้างอิง 0 เฉพาะ baseline แพ้ทั้งหมด; strategy ใหม่ RR>1”. New qualifier counts actual negative-net baseline trades and accepts reference0 only when every positive-count trade loses, WR0/netnegative. MeasuredRRNone unchanged. [Separate requalification](2026-10-03-annual-approved-requalification.json) confirms all192 original candidates still fail. Original raw artifacts/proofs and their historical comparator remain intact. New risk36/confirmation48/hybridunpaused96 campaigns run under frozen approvedpolicy; these are distinct subsequent results, not updates to the initial192 performance.

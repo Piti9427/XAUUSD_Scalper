@@ -158,7 +158,7 @@ def main():
         risk_pct = args.risk or 0.01
         profile_name = f"SMALL-ACCOUNT $100 PROFILE (ADR-020 Gate, Risk: {risk_pct * 100:.1f}%, Spread: ${args.spread:.2f})"
     elif use_gold:
-        balance = args.balance or 10000.0
+        balance = args.balance or 200.0
         risk_pct = args.risk if args.risk is not None else GOLD_V2_DEMO["risk_pct"]
         profile_name = (
             f"GOLD_V2_DEMO (${balance:,.2f}, Risk: {risk_pct * 100:.1f}%, "
@@ -166,7 +166,7 @@ def main():
         )
 
     else:
-        balance = args.balance or 10000.0
+        balance = args.balance or 200.0
         risk_pct = args.risk or 0.005
         profile_name = f"STANDARD BACKTEST (${balance:,.2f}, Risk: {risk_pct * 100:.1f}%, Spread: ${args.spread:.2f})"
 

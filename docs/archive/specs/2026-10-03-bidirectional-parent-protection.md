@@ -1,0 +1,7 @@
+# D24 rounded reward protection continuation
+
+Preregister144 contracts before evaluation. CorrectedD24 trial106 passes full/first-half but secondDD39.96/43.28; parent-trend34 first-half passes but secondDD36.26/33.16. D96 shorter-stop72 produced no initial jointly qualified candidate. Hypothesis existing break-even/candle-trail protection can reduce adverse D24 capital paths while intermediate reward preserves realizedRR. It may reduce RR or signal frequency; no claimed improvement before all-six results.
+
+RSI BUY7/lower30,35/EMA50/pauseBUY5/10%; SELL prior-low24 with parent trendoff/EMA50. SL2.5ATR, rounded-stop target1.35/1.40/1.45R; protection break_even0.5R, candle_trail0.5R or candle_trail1R (activation uses existing cost-inclusive initial risk). Daily10%, UTC daily losing-trade count0(disabled)/1. Product2thresholds*2pauses*2parenttrends*3rewards*3protection states*2loss limits=144. Fixed0.01/staticcap10/all-session/no recovery; existing signal/protection/risk formulas only, completed UTC bars/shifted anchors/first quote<=90s unchanged.
+
+Actual immutable Bid/Ask/complete UTCM15; original trial30 baseline and all six full/half base/stress gates unchanged. Strict net/WR/realizedRR improvement, DD<=baseline and<=30%, >=60/20 executed trades/both sides/risk<=10. Freeze144/source/input before all scenarios; fresh whole-result dual-frozen repeat/control identity audit. Reused discovery/commission0 assumption/omittedswap remain; no holdout access, runtime promotion or calendar/outcome switching.

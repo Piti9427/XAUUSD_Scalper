@@ -1,0 +1,40 @@
+# Research contract only. Not loaded by live runtime.
+version: bottradegold-b1-validation-v1
+scope: validation_only
+strategy:
+  baseline: B1_reconstruction
+  timeframe_minutes: 15
+  donchian_lookback: 30
+  filters: [rsi]
+  sl_atr: 2.5
+  session_filter: all
+  preserve_existing_entry_logic: true
+money_management:
+  risk_per_trade: 0.005
+  reference: equity
+  volume_rounding: floor
+  reject_below_minimum_volume: true
+trade:
+  target_rr: 2.5
+validation:
+  rr_neighbors: [2.0, 2.5, 3.0]
+  additional_cost_reserve_r: [0.0, 0.1, 0.2]
+  selection_metrics: [oos_expectancy_r, profit_factor, max_equity_drawdown]
+  historical_data_status: exposed_retrospective
+  qualified_candidate: null
+  acceptance_max_drawdown: null # User's stricter acceptance threshold not specified.
+risk_limits:
+  daily_loss: 0.02
+  soft_drawdown: 0.05
+  hard_drawdown: 0.08
+  emergency_drawdown: 0.10
+drawdown_measure:
+  type: equity_relative
+  reference: high_water_mark
+  formula: (high_water_mark - equity) / high_water_mark
+implementation_status:
+  risk_sizing: existing_replay
+  drawdown_measurement: existing_replay
+  daily_and_drawdown_circuit_breakers: not_implemented_in_replay
+  threshold_actions: pending_explicit_definition
+  runtime_deployment: false

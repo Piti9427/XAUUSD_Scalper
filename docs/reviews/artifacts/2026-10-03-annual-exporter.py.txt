@@ -1,0 +1,81 @@
+"""Publish only completed, hashed and freshly repeated annual evidence."""
+import json
+from pathlib import Path
+from scripts.research.bidirectional_campaign import qualifies_trial30
+from scripts.research.tune_breakout_logic import sha256
+
+dataset = Path("data/b1_public_exness_2025_10_2026_09")
+metadata = json.loads((dataset / "dataset.json").read_text())
+assert sha256("docs/reviews/artifacts/2026-10-03-build-annual-dataset.py.txt") == metadata["builder_source_sha256"]
+assert sha256("scripts/research/public_exness_archive.py") == metadata["importer_source_sha256"]
+families = ("parent_invalidation", "parent_reward_fine", "parent_atr", "bidirectional_corrected")
+keys = ("net_usd", "max_dd_pct", "win_rate", "realized_rr", "trades", "buy_trades", "sell_trades", "max_admitted_risk_pct")
+published = []
+baseline_results = None
+for family in families:
+    root = Path("data/strategy_annual_" + family + "_2026_10_03")
+    protocol = json.loads((root / "protocol.json").read_text())
+    verdict = json.loads((root / "verdict.json").read_text())
+    proof = json.loads((root / "fresh-verification.json").read_text())
+    assert proof["status"] == "FRESH_REPLAY_MATCH"
+    assert proof["protocol_sha256"] == sha256(root / "protocol.json")
+    assert proof["verdict_sha256"] == sha256(root / "verdict.json")
+    assert proof["verifier_sha256"] == sha256("docs/reviews/artifacts/2026-10-03-annual-verifier.py.txt")
+    assert verdict["campaign_exhausted"] and verdict["completed_trials"] == len(protocol["candidates"])
+    assert protocol["audit"]["dataset_sha256"] == sha256(dataset / "dataset.json")
+    assert proof["verified_scenarios"] == 6 * (verdict["completed_trials"] + 1)
+    for source, digest in protocol["source_hashes"].items():
+        assert sha256(root / "source_snapshot" / source) == digest
+    baseline = json.loads((root / "baseline/result.json").read_text())["metrics"]
+    actual_baseline = {
+        name: json.loads((root / "baseline" / name).read_text())
+        for name in proof["artifacts"]["0"]["scenario_hashes"]
+    }
+    if baseline_results is None:
+        baseline_results = actual_baseline
+    else:
+        assert baseline_results == actual_baseline
+    conditional_baseline = {
+        window: [dict(p, realized_rr=0.0) if p["realized_rr"] is None
+                 and p["trades"] > 0 and p["win_rate"] == 0 else p for p in pair]
+        for window, pair in baseline.items()
+    }
+    for number, artifacts in proof["artifacts"].items():
+        directory = root / ("baseline" if number == "0" else f"trial-{int(number):03d}")
+        assert sha256(directory / "result.json") == artifacts["result_sha256"]
+        for name, digest in artifacts["scenario_hashes"].items():
+            assert sha256(directory / name) == digest
+    rows = []
+    for row in verdict["rows"]:
+        passes = {w: qualifies_trial30(pair, baseline[w], 60 if w == "full" else 20)
+                  for w, pair in row["metrics"].items()}
+        assert row["window_pass"] == passes and row["discovery_pass"] == all(passes.values())
+        conditional = {w: qualifies_trial30(pair, conditional_baseline[w], 60 if w == "full" else 20)
+                       for w, pair in row["metrics"].items()}
+        rows.append(dict(trial=row["trial"], candidate=row["candidate"],
+                         metrics={w:[{k:p[k] for k in keys} for p in pair] for w,pair in row["metrics"].items()},
+                         window_pass=passes, discovery_pass=row["discovery_pass"],
+                         diagnostic_only_if_all_loss_baseline_rr_floor_approved=conditional,
+                         artifacts=proof["artifacts"][str(row["trial"])]))
+    published.append(dict(family=family, root=str(root), completed_trials=len(rows),
+                          repeated_scenarios=proof["verified_scenarios"],
+                          qualified_discovery=verdict["qualified_discovery"],
+                          protocol=protocol, protocol_sha256=sha256(root / "protocol.json"),
+                          verdict_sha256=sha256(root / "verdict.json"),
+                          fresh_verification_sha256=sha256(root / "fresh-verification.json"),
+                          baseline={w:[{k:p[k] for k in keys} for p in pair] for w,pair in baseline.items()},
+                          rows=rows))
+output = dict(status="NO_QUALIFIED_CANDIDATE_UNDER_UNCHANGED_GATES",
+              annual_evaluations=sum(p["completed_trials"] for p in published),
+              exact_fresh_scenario_comparisons=sum(p["repeated_scenarios"] for p in published),
+              dataset_metadata=metadata, dataset_sha256=sha256(dataset / "dataset.json"),
+              exporter_sha256=sha256(__file__), campaigns=published,
+              superseded=json.loads(Path("docs/reviews/2026-10-03-annual-be-correction.json").read_text()),
+              independent_arithmetic=[json.loads((Path(published[i]["root"]) / "ledger-oracle.json").read_text()) for i in (0,3)],
+              limitations="Reused discovery; public indicative feed not Demo parity; commission0 assumed/swap omitted; RRNone fails closed. Conditional RRfloor diagnostic is not an approved gate or winner.",
+              demo_changed=False, qualification_criteria_changed=False)
+assert all(p["qualified_discovery"] == 0 for p in published)
+assert all(row["metrics"]["full"][0]["max_dd_pct"] > 30 for p in published for row in p["rows"])
+assert all(not all(row["diagnostic_only_if_all_loss_baseline_rr_floor_approved"].values()) for p in published for row in p["rows"])
+Path("docs/reviews/2026-10-03-annual-results.json").write_text(json.dumps(output, indent=2) + "\n")
+print("EXPORTED", output["annual_evaluations"], output["exact_fresh_scenario_comparisons"], flush=True)

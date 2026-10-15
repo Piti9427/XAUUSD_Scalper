@@ -1,0 +1,7 @@
+# Bearish D96 parent intermediate ATR stops
+
+Preregister72 contracts before evaluation, following owner continuation. Risk-admission36 yields0paired/joint passes, maximum fullstressnet13.448USD and some one-trade scenarios. D96/EMA200 target1.45R/SL2.5ATR produced second-half passes but fullDD failures. Hypothesis existing SL1.5/2ATR can change initial losses/admission without reducing the fixed10% maximum risk cap. Prior ATR432 tested unfiltered D48, not this D96/EMA200 combination; no novelty claim before control audit.
+
+RSI BUY7/lower30,35/EMA50, BUYpause5/10%; SELL prior-low96/bearish EMA200/four-bar slope; SL1.5/2ATR, target1.35/1.45/1.5 times rounded stop distance/off; daily10%, UTC losing-trade count0(disabled)/1/2. Product2thresholds*2pauses*2stops*3rewards*3loss-counts=72. Existing replay formulas only; fixed0.01/staticcap10/all-session/no recovery. Shorter stop still rejects invalid geometry/over-cap orders, no resizing or data-window switching.
+
+Actual immutable archived Bid/Ask and complete UTCM15, original trial30 baseline and all six full/half base/stress strict profit/WR/RR/DD gates, >=60/20trades, executed BUY+SELL, risk<=10. Freeze all72/source/input before evaluation; fresh whole-result dual-frozen replay and prior controls audit. Research-only, Demo remains original SELL-only contract. Reused discovery, commission0 assumption and omittedswap limits remain; untouched validation not opened.

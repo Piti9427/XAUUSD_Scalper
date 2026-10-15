@@ -1,0 +1,236 @@
+{
+  "version": 2,
+  "research_only": true,
+  "initial_equity": 200.0,
+  "volume": 0.01,
+  "risk_cap": 0.1,
+  "daily_loss_limit": 0.2,
+  "costs": {
+    "base": {},
+    "stress": {
+      "extra_spread": 0.2,
+      "slippage": 0.1
+    }
+  },
+  "datasets": {
+    "A": {
+      "path": "data/b1_public_exness_2024_09_2025_09",
+      "start": "2024-09-01",
+      "split": "2025-02-01",
+      "end": "2025-07-01"
+    },
+    "B": {
+      "path": "data/b1_public_exness_2025_10_2026_09",
+      "start": "2025-10-01",
+      "split": "2026-04-01",
+      "end": "2026-10-01"
+    }
+  },
+  "policy": "profit_survival_v2",
+  "limits": {
+    "one_factor_per_seed": 27,
+    "selected_seeds": 2,
+    "new_configs": 62,
+    "finalists": 6
+  },
+  "seeds": [
+    {
+      "strategy": "reward156",
+      "formula": "frozen",
+      "rsi_period": 7,
+      "rsi_threshold": 35,
+      "sell_lookback": 48,
+      "sell_ema": 0,
+      "macro_span": 100,
+      "buy_pause_drawdown": 0.0,
+      "stop_atr": 2.5,
+      "buy_stop_atr": 2.5,
+      "buy_target_rr": 1.35,
+      "sell_target": "r1.35",
+      "protect_mode": "off",
+      "buy_protect_mode": "off",
+      "daily_loss_limit": 0.2,
+      "max_daily_losses": 0,
+      "cooldown_bars": 0,
+      "entry_session": "all",
+      "risk_mode": "static",
+      "risk_cap": 0.1,
+      "name": "reward156_h4_ema100"
+    },
+    {
+      "strategy": "reward156",
+      "formula": "frozen",
+      "rsi_period": 7,
+      "rsi_threshold": 35,
+      "sell_lookback": 48,
+      "sell_ema": 0,
+      "macro_span": 200,
+      "buy_pause_drawdown": 0.0,
+      "stop_atr": 2.5,
+      "buy_stop_atr": 2.5,
+      "buy_target_rr": 1.35,
+      "sell_target": "r1.35",
+      "protect_mode": "off",
+      "buy_protect_mode": "off",
+      "daily_loss_limit": 0.2,
+      "max_daily_losses": 0,
+      "cooldown_bars": 0,
+      "entry_session": "all",
+      "risk_mode": "static",
+      "risk_cap": 0.1,
+      "name": "reward156_h4_ema200"
+    },
+    {
+      "strategy": "reward156",
+      "formula": "archived",
+      "rsi_period": 14,
+      "rsi_threshold": 25,
+      "sell_lookback": 96,
+      "sell_ema": 50,
+      "macro_span": 0,
+      "buy_pause_drawdown": 0.0,
+      "stop_atr": 2.5,
+      "buy_stop_atr": 1.5,
+      "buy_target_rr": 2.0,
+      "sell_target": "atr3",
+      "protect_mode": "break_even",
+      "buy_protect_mode": "off",
+      "daily_loss_limit": 0.1,
+      "max_daily_losses": 1,
+      "cooldown_bars": 0,
+      "entry_session": "all",
+      "risk_mode": "static",
+      "risk_cap": 0.1,
+      "name": "circuit22"
+    },
+    {
+      "strategy": "reward156",
+      "formula": "archived",
+      "rsi_period": 14,
+      "rsi_threshold": 25,
+      "sell_lookback": 96,
+      "sell_ema": 200,
+      "macro_span": 0,
+      "buy_pause_drawdown": 0.0,
+      "stop_atr": 2.5,
+      "buy_stop_atr": 1.0,
+      "buy_target_rr": 2.0,
+      "sell_target": "atr3",
+      "protect_mode": "break_even",
+      "buy_protect_mode": "off",
+      "daily_loss_limit": 0.1,
+      "max_daily_losses": 1,
+      "cooldown_bars": 0,
+      "entry_session": "all",
+      "risk_mode": "static",
+      "risk_cap": 0.1,
+      "name": "fine6"
+    },
+    {
+      "strategy": "reward156",
+      "formula": "archived",
+      "rsi_period": 7,
+      "rsi_threshold": 35,
+      "sell_lookback": 24,
+      "sell_ema": 200,
+      "macro_span": 0,
+      "buy_pause_drawdown": 0.0,
+      "stop_atr": 1.5,
+      "buy_stop_atr": 1.5,
+      "buy_target_rr": 1.35,
+      "sell_target": "r1.35",
+      "protect_mode": "off",
+      "buy_protect_mode": "off",
+      "daily_loss_limit": 0.1,
+      "max_daily_losses": 1,
+      "cooldown_bars": 0,
+      "entry_session": "all",
+      "risk_mode": "drawdown_steps",
+      "risk_cap": 0.1,
+      "name": "unpaused28"
+    }
+  ],
+  "domains": {
+    "signal": {
+      "rsi_period": [
+        7,
+        14
+      ],
+      "rsi_threshold": [
+        25,
+        30,
+        35
+      ],
+      "sell_lookback": [
+        24,
+        48,
+        96
+      ],
+      "sell_ema": [
+        0,
+        50,
+        200
+      ],
+      "macro_span": [
+        0,
+        100,
+        200
+      ]
+    },
+    "exit": {
+      "buy_stop_atr": [
+        1.0,
+        1.5,
+        2.0,
+        2.5
+      ],
+      "stop_atr": [
+        1.5,
+        2.0,
+        2.5
+      ],
+      "buy_target_rr": [
+        1.35,
+        1.5,
+        2.0
+      ],
+      "sell_target": [
+        "atr3",
+        "r1.35",
+        "r2"
+      ],
+      "buy_protect_mode": [
+        "off",
+        "break_even"
+      ],
+      "protect_mode": [
+        "off",
+        "break_even"
+      ]
+    },
+    "circuit": {
+      "daily_loss_limit": [
+        0.1,
+        0.2
+      ],
+      "max_daily_losses": [
+        0,
+        1,
+        2
+      ],
+      "cooldown_bars": [
+        0,
+        2,
+        4
+      ],
+      "entry_session": [
+        "all",
+        "avoid_rollover"
+      ],
+      "risk_mode": [
+        "static",
+        "drawdown_steps"
+      ]
+    }
+  }
+}

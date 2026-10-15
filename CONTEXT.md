@@ -1,5 +1,21 @@
 # CONTEXT: XAUUSD Trading System v2 (SMC Liquidity & Structure Engine)
 
+> **Scope note (2026-09-29):** เอกสารนี้อธิบายศัพท์และ ADR ของ SMC v2 เดิม. Contract ของ Pure B1 research target และสถานะ NO-GO อยู่ที่ [CORE_STRATEGY.md](CORE_STRATEGY.md); ผลย้อนหลังให้ยึด [target replay verdict](docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md). SMC sizing, exits, sessions และ execution path ด้านล่างไม่ใช่กฎ Pure B1.
+
+## Language
+
+**Strict Improvement**:
+A **Research Candidate** beats its parent only when net profit, tick-equity drawdown, realized reward-to-risk, and cost-stressed net are all better together. More trades or a higher win rate does not qualify.
+_Avoid_: better performance, ดีขึ้น, win-rate improvement, profit-only selection
+
+This definition describes legacy research policy. Annual trial30 `strict_v1` also
+requires WR/RR superiority. Owner-approved `profit_dd_v2` (2026-10-03) requires
+positive net above trial30, DD <= trial30 and <=30%, minimum actual trade counts
+and both executed sides across all six full/half base/stress scenarios. WR/RR are
+reported without superiority gates. Research-only risk ceiling20%; every window
+starts USD200 and sizes from current equity. Demo retains fixed0.01/cap10%.
+Qualification always names its policy version; no older result is relabeled.
+
 > **Version:** 2.0-production-hardened  
 > **Status:** Production Hardening & Financial Safety Execution  
 > **Last Updated:** 2026-09-24
@@ -48,12 +64,16 @@
 | **Golden Session Setup (GSS)** | การย่อตัวกลับเข้าสู่โซน Fibonacci 61.8%–78.6% (Optimal Trade Entry - OTE) ของคลื่นส่ง Displacement ในช่วง London/NY Killzone |
 | **Frozen Strategy Contract** | กฎของ strategy หนึ่งเวอร์ชันที่นิยามครบและเปลี่ยนไม่ได้ระหว่างการประเมินผล; reconstruction ที่ต่างจากกฎเก่าถือเป็น contract ใหม่ ไม่ใช่ผลทำซ้ำของกฎเดิม |
 | **Research Candidate** | Frozen Strategy Contract ที่อยู่ระหว่างการคัดจากผลย้อนหลังหรือข้อมูลวิจัย; ผลบวกย้อนหลังอย่างเดียวไม่ทำให้ผ่านเกตไปทดลอง Demo bot |
+| **Profit-First Selection** | เกณฑ์เลือก Research Candidate โดยให้กำไรสุทธิหลังต้นทุนสูงสุดในกลุ่มที่ผ่านข้อจำกัดความเสี่ยงที่ตกลงไว้; win rate เป็นข้อมูลประกอบ ไม่ใช่เป้าหมายอันดับแรก _Avoid_: win-rate-first selection |
+| **Research Starting Capital** | เงินทุนตั้งต้นที่ผู้ใช้กำหนดให้บัญชีจำลองสำหรับประเมิน Research Candidate; ไม่ถือเป็นหลักฐานยืนยัน balance ปัจจุบันจาก broker |
+| **Research RR Floor** | อัตราส่วนระยะทางเป้ากำไรต่อระยะทางจุดตัดขาดทุนขั้นต่ำของ Research Candidate; RR ที่ตั้งไว้ไม่ใช่ผลกำไรที่เกิดจริงหลังต้นทุนหรืออัตราชนะ |
 | **Validation Challenger** | Research Candidate ที่เลือกและตรึงไว้เพื่อให้ข้อมูลใหม่ทดสอบหักล้าง ยังไม่ผ่านเกตหรือมีสิทธิ์เข้า Demo bot; คำนี้ไม่ใช่ WATCH Signal ซึ่งหมายถึงสัญญาณก่อนเข้าเทรด |
 | **Historically Qualified Candidate** | Research Candidate ที่ผ่านเกณฑ์ซึ่งกำหนดไว้ก่อนทดสอบบนข้อมูลอิสระหลังตรึงกฎ รวมต้นทุนและความเสี่ยงตามบัญชีเป้าหมาย; ยังไม่ใช่หลักฐานว่า Demo forward หรือเงินจริงจะทำกำไร |
 | **Demo Bot Candidate** | Historically Qualified Candidate ที่ถูกเลือกให้พัฒนาและตรวจพฤติกรรมบน Demo; ต่างจาก Demo Execution Path ซึ่งพิสูจน์เพียงเส้นทางส่งคำสั่ง |
 | **Target Demo Account** | บัญชี Exness Demo ที่ระบบยืนยันตัวตนจาก terminal ปัจจุบัน ใช้เป็นฐานเดียวกันสำหรับต้นทุน ขนาดสัญญา ความเสี่ยง และผล Demo ของ candidate |
 | **Target Broker Symbol** | สัญลักษณ์ทองที่ Target Demo Account คืนมา; ผลของสัญลักษณ์หรือชนิดบัญชีอื่นไม่ถือว่า qualify สัญลักษณ์นี้โดยอัตโนมัติ |
 | **Shadow Monitor** | โหมดเฝ้าดูตลาดและบันทึกสัญญาณ/ผลจำลองของ Validation Challenger โดยไม่ส่งคำสั่งไป broker; ผล Shadow เป็นหลักฐานทดสอบกฎ ไม่ใช่ fill จริงหรือ Demo Execution Path |
+| **Unified Core Environment** | โมดูลกลาง (`scripts/core/`) รวมศูนย์ `MarketDataProvider`, `TradingCostPolicy`, และ `RiskCircuitEngine` เป็น Single Source of Truth สำหรับ Backtest และ Live เพื่อแก้ปัญหาการประกาศพารามิเตอร์และต้นทุนซ้ำซ้อนในแต่ละไฟล์ |
 
 ---
 

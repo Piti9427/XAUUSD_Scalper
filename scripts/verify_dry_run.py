@@ -34,7 +34,7 @@ def run_verification():
             auth_token=secret,
             dry_run=True,
             db_path=db_path,
-            account_balance=10000.0,
+            account_balance=200.0,
             risk_pct=0.01,
             max_daily_losses=2,
             rollover_hour_utc=20,
@@ -52,7 +52,7 @@ def run_verification():
         assert data["mode"] == "dry-run"
         assert data["daily_realized_losses"] == 0
         assert data["circuit_breaker_tripped"] is False
-        print("  -> Health Check OK: mode=dry-run, equity=10000.0, losses=0")
+        print("  -> Health Check OK: mode=dry-run, equity=200.0, losses=0")
 
         # 2. SETUP_PENDING Limit Placement
         print("[2/8] Verifying SETUP_PENDING (BUY Limit Placement)...")

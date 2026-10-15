@@ -1,0 +1,21 @@
+{
+  "snapshot": "RESEARCH-HYBRID-RSI7BUY-D48SELL-T156",
+  "symbol": "XAUUSDm",
+  "rsi_period": 7,
+  "rsi_threshold": 35,
+  "ema_span": 50,
+  "donchian": 48,
+  "atr": 14,
+  "sides": ["BUY", "SELL"],
+  "volume": 0.01,
+  "sl_atr": 2.5,
+  "target_rr": 1.35,
+  "buy_pause_drawdown": 0.05,
+  "risk_cap": 0.10,
+  "daily_loss_limit": 0.20,
+  "commission_unit": "USD_per_lot_round_trip",
+  "journal": "data/reward156-demo.sqlite3",
+  "cost_policy": "data/trial30-demo-cost-policy.json",
+  "research_only": true,
+  "real_money": "PROHIBITED"
+}

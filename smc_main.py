@@ -80,6 +80,8 @@ async def run_smc_live_copilot():
     )
 
     strat_cfg = config.get("strategy", {})
+    wh_cfg = config.get("webhook") or {}
+    account_balance = float(wh_cfg.get("account_balance", 200.0))
     mt5_cfg = config.get("mt5", {}) or {}
     adapter = SMCExecutionAdapter(
         symbol=symbol,
@@ -101,12 +103,12 @@ async def run_smc_live_copilot():
         partial_tp_ratio=strat_cfg.get("partial_tp_ratio", 0.5),
         be_enabled=bool(strat_cfg.get("be_enabled", False)),
         be_trigger_r=strat_cfg.get("be_trigger_r", 1.0),
-        risk_pct=float(strat_cfg.get("risk_pct", 0.005)),
+        risk_pct=float(wh_cfg.get("risk_pct", strat_cfg.get("risk_pct", 0.05))),
         setup_registry=setup_registry,
     )
     news_mgr = NewsManager()
     notifier = SMCTelegramNotifier({"telegram": {"enabled": False}})
-    account = AccountState(balance=10000.0, equity=10000.0)
+    account = AccountState(balance=account_balance, equity=account_balance)
     risk_halt_path = Path(strat_cfg.get("risk_halt_path", "data/risk_halt_state.json"))
     risk_halt = load_risk_halt_state(risk_halt_path) or new_risk_halt_state(account.equity)
     if risk_halt.halted:

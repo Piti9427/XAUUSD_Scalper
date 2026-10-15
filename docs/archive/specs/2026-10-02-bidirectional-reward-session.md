@@ -1,0 +1,7 @@
+# Rounded-reward UTC entry-session continuation
+
+Preregistered108 contracts before replay, while reward594 runs. Prior admission22 ledger: entries21:00–before00:00UTC net-14.20 first half and-17.30 second half. Other sessions vary across halves; no date-specific switching. Hypothesis: exclude this fixed entry interval to reduce poor trade quality. This observation is reused discovery, not independent confirmation.
+
+RSI BUYperiod7/14/21 threshold25/30/35 EMA50; retainedSELL D48. BUYpause5/10%, nominal rounded-stop target1.35/1.5R, protectionoff/BE/trail1R. Fixed0.01/maxrisk10/daily20/SL2.5ATR unchanged. Apply `avoid_rollover` to BOTH directions by completed M15 close UTC hour>=21. Preserve all OHLC rows: existing positions still consume every tick, exits and protection during blocked entry hours. Midnight close permitted. Immediate-entry catalog, first quote<=90s; close-based hour is explicit, not a broker-local calendar or swap schedule claim.
+
+All six strict original trial30 comparisons unchanged. Baseline remains all-session SELL-only trial30. Frozen sources/input/metadata, full-result exact repeat, distinct-contract accounting. Public replay verifies21:00 boundary rejects BUY, next UTC day SELL remains, and held BUY TP executes21:01 inside blocked session. CLI108 freeze/resume retained. No runtime promotion; no claim that this eliminates overnight holdings or models swap. Reused discovery, assumedcommission0 and omittedswap remain limits.

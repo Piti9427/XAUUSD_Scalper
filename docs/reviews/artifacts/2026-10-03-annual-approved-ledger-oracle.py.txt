@@ -1,0 +1,93 @@
+"""Independent ledger arithmetic and raw-quote DD audit, not strategy selection.
+
+Run: PYTHONPATH=. .venv/bin/python artifact.py.txt CAMPAIGN_DIRECTORY
+No replay/strategy/MT5 calls. Verifies completed baseline and supplied trial results.
+"""
+import json
+import math
+from pathlib import Path
+import sys
+import numpy as np
+import pandas as pd
+from scripts.research.public_exness_archive import load_discovery
+from scripts.research.tune_breakout_logic import sha256
+
+root = Path(sys.argv[1])
+protocol = json.loads((root / "protocol.json").read_text())
+_, ticks, broker, audit = load_discovery(Path(protocol["audit"]["dataset_path"]))
+assert audit == protocol["audit"]
+times, bid, ask = ticks
+factor = broker["trade_contract_size"] * 0.01
+checks = []
+for directory in [root / "baseline"] + [root / name for name in sys.argv[2:]]:
+    marker = json.loads((directory / "result.json").read_text())
+    for name, digest in marker["artifact_hashes"].items():
+        path = directory / name
+        assert sha256(path) == digest
+        result = json.loads(path.read_text())
+        balance = peak = 200.0
+        max_dd = 0.0
+        costs = result["costs"]
+        fee = costs["commission_per_lot"] * 0.01
+        def observe(values):
+            global peak, max_dd
+            peaks = np.maximum.accumulate(np.r_[peak, values])[1:]
+            max_dd = max(max_dd, float(np.max((peaks - values) / peaks)))
+            peak = max(peak, float(np.max(values)))
+
+        for trade in result["ledger"]:
+            side = trade["direction"]
+            assert trade["volume"] == 0.01 and trade["risk_pct"] <= 10
+            cap = result["rules"]["risk_cap"]
+            if result["rules"]["risk_mode"] == "drawdown_steps":
+                drawdown = max(0.0, (peak - balance) / peak)
+                if drawdown >= 0.15:
+                    cap = min(cap, 0.025)
+                elif drawdown >= 0.10:
+                    cap = min(cap, 0.05)
+            risk = (abs(trade["entry"] - trade["initial_stop"]) + costs["slippage"]) * factor + fee
+            assert math.isclose(risk, trade["risk_usd"], abs_tol=1e-7)
+            assert math.isclose(risk / balance * 100, trade["risk_pct"], abs_tol=1e-7)
+            assert math.isclose(cap * 100, trade["admission_cap_pct"], abs_tol=1e-7)
+            assert risk <= balance * cap + 1e-7
+            assert math.isclose(trade["entry_equity"], balance, abs_tol=1e-7)
+            entry_ms = pd.Timestamp(trade["entry_time_utc"]).value // 10**6
+            exit_ms = pd.Timestamp(trade["exit_time_utc"]).value // 10**6
+            begin = int(np.searchsorted(times, entry_ms))
+            low, high = np.searchsorted(times, [exit_ms, exit_ms], side="left")
+            high = int(np.searchsorted(times, exit_ms, side="right"))
+            exit_quotes = (bid[low:high] - costs["extra_spread"] / 2 if side == 1
+                           else ask[low:high] + costs["extra_spread"] / 2)
+            if trade["reason"] == "TP":
+                matches = np.flatnonzero(side * (exit_quotes - trade["target"]) >= 0)
+            else:
+                matches = np.flatnonzero(np.isclose(
+                    exit_quotes - side * costs["slippage"], trade["exit"], rtol=0, atol=1e-8))
+            assert len(matches), (name, trade["exit_time_utc"])
+            finish = high - 1 if trade["reason"] == "END_OF_SAMPLE" else int(low + matches[0])
+            entry_quote = (ask[begin] + costs["extra_spread"] / 2 if side == 1
+                           else bid[begin] - costs["extra_spread"] / 2)
+            assert math.isclose(entry_quote + side * costs["slippage"], trade["entry"], abs_tol=1e-7)
+            for offset in range(begin, finish + 1, 100000):
+                stop = min(finish + 1, offset + 100000)
+                quotes = (bid[offset:stop] - costs["extra_spread"] / 2 if side == 1
+                          else ask[offset:stop] + costs["extra_spread"] / 2)
+                marks = balance - fee + side * (quotes - trade["entry"]) * factor
+                if stop == finish + 1 and trade["reason"] == "TP":
+                    marks[-1] = balance - fee + side * (trade["target"] - trade["entry"]) * factor
+                observe(marks)
+            net = side * (trade["exit"] - trade["entry"]) * factor - fee
+            assert math.isclose(net, trade["net"], abs_tol=1e-7)
+            balance += net
+            observe(np.array([balance]))
+        assert math.isclose(balance, result["final_balance"], abs_tol=1e-7)
+        assert math.isclose(max_dd * 100, result["max_dd_pct"], abs_tol=1e-7), (name, max_dd * 100, result["max_dd_pct"])
+        checks.append(dict(directory=directory.name, scenario=name, scenario_sha256=digest,
+                           trades=result["trades"], independent_final_balance=balance,
+                           independent_all_tick_dd_pct=max_dd * 100))
+output = dict(status="INDEPENDENT_LEDGER_RAW_QUOTE_DD_ADMISSION_MATCH",
+              protocol_sha256=sha256(root / "protocol.json"),
+              oracle_sha256=sha256(__file__), checks=checks,
+              limitation="Independent arithmetic only; same source tick feed and assumptions; no independent strategy signal or broker oracle")
+(root / "ledger-oracle.json").write_text(json.dumps(output, indent=2) + "\n")
+print(output["status"], len(checks), "scenarios", flush=True)

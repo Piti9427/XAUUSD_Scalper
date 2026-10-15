@@ -1,0 +1,7 @@
+# Partially passing parents stricter risk admission
+
+Preregister36 configs before evaluation. Corrected parent106 (SELL24/no parent trend/target1.35R) passes full/first-half but fails secondDD; fine31 (SELL96/EMA200/target1.45R) passes second-half but fails full/first. Tighter BUYpause12 provides no joint pass. Hypothesis existing lower risk admission and loss cooldown can interrupt harmful capital paths without changing fixed lot or switching by data window.
+
+RSI BUY7/lower35/EMA50/pause5%. Two fixed parent contracts: SELL24/trendoff/rounded target1.35R, or SELL96/EMA200/rounded target1.45R. Existing staticcap5% or drawdown_steps with maxcap10%; steps reduces cap to5% at peak-equityDD10%,2.5% atDD15%. Fixed0.01 lot never resized: over-cap entries reject. Existing losing-exit cooldown0/1/4bars, UTC losing-trade limit0(disabled)/1/2, daily10%, SL2.5ATR/protectionoff/all-session/no recovery. Both sides share risk guards; no additional detector/math or runtime changes. Product2parents*2riskpolicies*3cooldowns*3loss-counts=36.
+
+Same actual immutable Bid/Ask/complete UTCM15 and trial30 baseline; original six full/half base/stress strict net/WR/RR/DD, >=60/20 trades, actual BUY+SELL, risk<=10 gates unchanged. Source/contracts/input frozen before all36 evaluations; fresh whole-result dual-frozen repeats and control identity audit. Reused discovery/swap omission/commission0 assumptions remain, no holdout access or Demo promotion. Partial pass does not establish profitable full run.

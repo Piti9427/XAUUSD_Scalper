@@ -1,0 +1,47 @@
+"""Bounded two-process fresh repeat of corrected M5 campaigns; no trading API."""
+import asyncio
+import json
+from pathlib import Path
+import runpy
+import sys
+import time
+from scripts.research.tune_breakout_logic import sha256
+
+SUPERVISOR = Path('docs/reviews/artifacts/2026-10-03-annual-async-supervisor-v2.py.txt')
+helpers = runpy.run_path(str(SUPERVISOR))
+run_child = helpers['run_child']
+
+async def main():
+    began = time.perf_counter()
+    jobs = []
+    roots = []
+    for holding in ('intraday', 'bounded24'):
+        root = Path(f'data/strategy_annual_m5_{holding}_corrected_profit_dd_v2_2026_10_03')
+        roots.append(root)
+        jobs.append(asyncio.create_task(run_child(
+            [sys.executable, '-m', 'scripts.research.bidirectional_campaign', '--dataset',
+             'data/b1_public_exness_2025_10_2026_09', '--output', str(root), '--catalog',
+             f'annual_m5_{holding}', '--qualification-policy', 'profit_dd_v2',
+             '--require-calendar-year', '--resume'], f'logs/equity-m5-{holding}-fresh.log')))
+    try:
+        codes = await asyncio.gather(*jobs)
+    finally:
+        for job in jobs:
+            if not job.done(): job.cancel()
+        await asyncio.gather(*jobs, return_exceptions=True)
+    counts = []
+    for root in roots:
+        verdict = json.loads((root/'verdict.json').read_text())
+        assert verdict['verification'] == 'FRESH_REPLAY_MATCH'
+        assert verdict['completed_trials'] == 64 and verdict['verified_scenarios'] == 390
+        counts.append(verdict['verified_scenarios'])
+    proof = dict(child_exit_codes=codes,max_children=2,child_timeout_seconds=7200,
+                 fresh_scenarios=counts,wall_seconds=time.perf_counter()-began,
+                 supervisor_sha256=sha256(__file__),helper_sha256=sha256(SUPERVISOR),
+                 protocols={str(r):sha256(r/'protocol.json') for r in roots},
+                 verdicts={str(r):sha256(r/'verdict.json') for r in roots})
+    Path('docs/reviews/2026-10-03-equity-m5-supervision.json').write_text(json.dumps(proof,indent=2)+'\n')
+    print(json.dumps(proof),flush=True)
+
+if __name__ == '__main__':
+    asyncio.run(main())

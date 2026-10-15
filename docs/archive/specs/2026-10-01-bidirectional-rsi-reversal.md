@@ -1,0 +1,7 @@
+# Rolling RSI price-reversal continuation
+
+Breakout horizon/quality families still fail joint WR/DD gates. New entry-family hypothesis, preregistered before replay: enter when an oversold/overbought oscillator recross coincides with price actually reversing. This is explicitly rolling-mean RSI, not Wilder RSI and not previous B1 RSI guard.
+
+72 contracts: RSI period7/14/21; symmetric lower threshold25/30/35, upper100-lower; trend off/EMA50 with aligned four-bar slope; guard off/body_dominant; BE/trail1R. BUY: previous RSI strictly below lower, current RSI>=lower and close change>0. SELL: previous RSI strictly above upper, current RSI<=upper and close change<0. Gains/losses use simple rolling averages over period changes; warmup requires full period, flat gain/loss bothzero maps50; one-sided gain/loss maps100/0. Dropping old losses out of a rolling window without a positive price change cannot cause BUY. No future bars or full-sample thresholds.
+
+ATR14, SL2.5ATR, TP3ATR, immediate entry, fixed0.01, risk<=10%, daily20% unchanged. Recorded setup anchor is trigger close, not Donchian high/low. No breakout transform, failed-breakout exit, stop boundary mode or delayed entry is combined. Original six trial30 gates and raw Bid/Ask provenance retained. Synthetic RSI examples prove rule math only; historical performance requires actual archive replay. No automatic Demo promotion; repeated discovery is not untouched validation; commission0 assumption and omitted swap still limit claims.

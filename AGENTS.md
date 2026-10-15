@@ -2,14 +2,55 @@
 
 ## Project Structure & Module Organization
 
-This is a Python trading-alert and backtesting project for XAUUSD.
+The live Demo order module is `scripts/c22h4`. Its interface is `make bot-execute` (send) and `make bot-run` (shadow). Implementation of admission, journal, and broker reconcile sits in `scripts/trial30`, which C22 subclasses. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
 
-- `main.py` starts the live monitoring loop, initializes MT5, strategy, Telegram, news checks, and Google Workspace logging.
-- `scripts/` contains the application modules: MT5 access, data fetching, strategy logic, backtesting, notifications, news filtering, and logging.
+- `scripts/c22h4` — frozen C22 detector and the only Python sender on the current Demo account.
+- `scripts/trial30` — shared Demo cycle implementation and the retained rollback strategy. One account, one sender.
+- `scripts/research` — campaign code. Paths are hashed. Do not relocate those files.
+- `scripts/smc`, `scripts/webhook`, `scripts/pure_b1`, `scripts/reward156`, `main.py` — older stacks. They stay importable for their tests. They are outside the live interface.
 - `config/settings.yaml` holds runtime configuration for MT5, Telegram, strategy parameters, news filtering, and Google Workspace IDs.
 - `data/` stores historical CSV data such as `XAUUSD_M15.csv` and `XAUUSD_H1.csv`.
+- `runs/` stores machine-generated experiment runs, simulation checkpoints, and large backtest output dumps. 100% gitignored.
+- `docs/reviews/` stores human-readable review reports, verdicts, and audit summaries (*.md). Never write raw multi-file run dumps here.
 - `test_mt5.py` is a manual MT5 connectivity smoke test.
 - `README.md` and `SYSTEM_REPORT.md` provide context.
+
+## Machine Experiment Outputs & Documentation Boundaries
+
+- **`docs/reviews/` is STRICTLY for human-authored markdown reports (`*.md`)**. Never write multi-file simulation dumps, JSON cells, execution logs, or CSV tables directly into `docs/reviews/`.
+- **All machine-generated test outputs, simulation runs, parameter tuning dumps, and checkpoints MUST be written to `runs/<campaign-name>/`** (or `data/research_output/`).
+- The `runs/` directory is 100% ignored in `.gitignore` and must never be tracked or committed to Git.
+- When an experiment or campaign concludes, author a synthesized summary markdown document in `docs/reviews/YYYY-MM-DD-<title>.md` citing the run metrics.
+
+## Codex and Antigravity Collaboration
+
+The owner works on this project with both Codex and agy/Antigravity.
+
+- Antigravity's local workspace/artifacts commonly live under `/Users/nopparuj/.gemini/antigravity-cli/`.
+- When a referenced script or experiment is absent from this repository or `/tmp`, search `brain/<session-id>/scratch/` under that root. Do not assume it is missing before checking there.
+- Example located on 2026-09-28: `brain/1730c142-c74c-49ae-b1bc-af441f236211/scratch/compare_basket_rules.py`. Session IDs vary; discover the relevant file rather than hardcoding this session.
+- Read external scripts before running them. Resolve relative data paths against their intended working directory; the example above expects this repository root.
+- Treat scratch scripts and summaries as evidence to verify against source, inputs and reproducible outputs, not as proof of current runtime behavior. Preserve original artifacts; keep audit copies and provenance in this repository when needed.
+
+## Current Core Strategy & Historical Context (CRITICAL FOR AGENTS)
+
+**SINGLE SOURCE OF TRUTH:** The active trading strategy, logic, and risk/fee math are centrally documented in `CORE_STRATEGY.md` at the project root. **Any time you modify the strategy, entry logic, parameters, or risk calculations, you MUST update `CORE_STRATEGY.md` to reflect the changes.**
+
+The declared research target is **Pure B1 Single-Position (Donchian Breakout + RSI Guard + EMA Filter)**. It is not connected to live execution; keep it research-only until a separate Demo and real-money readiness review.
+*   **Timeframe:** M15
+*   **Bar input:** UTC Bid M15 assembled from all 15 M1 bars; direct MT5 M15 may include partial rollover bars excluded by the archived replay.
+*   **Capital:** $200 (Micro-account)
+*   **TP / SL:** 6.25 ATR / 2.5 ATR
+*   **Risk Cap:** 10% of equity per trade (reject if SL risk exceeds cap)
+*   **Risk / Sizing:** 0.01 lot fixed (no martingale, no basket recovery).
+*   **Daily Loss Limit:** 40% ($80).
+*   **Backtest Evidence:** Archived $200 → $884 (+342%), Max DD 34.4%, WR 37.4%, 190 trades used a different RSI guard and no EMA50. The declared RSI 30–70 + EMA50 target replayed on the same Exness ticks at **-33.51%** spread-only (4 trades); a hypothetical 0.10R fee/current-spec swap scenario yielded **+150.31%** (49 trades) by changing 10% cap admission and equity path. Neither proves live broker parity or target profitability. Use `docs/reviews/2026-09-29-pure-b1-target-replay-verdict.md` and its hashed `contract.json` as result references.
+
+**DO NOT RE-ENABLE RECOVERY BASKETS.** 
+History: On 2026-09-28, extensive backtesting proved that the original "Hybrid Basket Recovery" logic was mathematically incompatible with Breakout entries. A breakout logic will *never* fire a same-direction entry while a trade is drawing down, meaning recovery legs never trigger. The system is explicitly configured to trade single isolated legs only. See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md).
+
+**DO NOT REMOVE THE 10% RISK CAP.**
+History: On 2026-09-29, tick replay proved that without the risk cap, $200 account blows up from 8-trade losing streaks. The 10% cap rejects trades when equity is too low, letting the account survive drawdowns. See [2026-09-28-pivot-pure-b1-logic.md](docs/post-mortem/2026-09-28-pivot-pure-b1-logic.md).
 
 ## Build, Test, and Development Commands
 
@@ -21,11 +62,14 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the live alert loop:
+Run the Demo bot. `bot-execute` sends. `bot-run` does not:
 
 ```bash
-python main.py
+make bot-execute
+make bot-run
 ```
+
+`python main.py` is the old alert loop. It does not send the C22 Demo orders.
 
 Run unit tests:
 
@@ -41,9 +85,13 @@ python3 test_mt5.py
 
 There is no formal build step. Treat dependency install, unit tests, and MT5 smoke test as the readiness check.
 
+## Code Lookup
+
+Query Codegraph before `cat`, `rg`, `grep`, or reading whole files. Cursor: one `codegraph_explore` call first; its source is Read-equivalent. Then `codegraph_search`, `codegraph_callers`, `codegraph_callees`, `codegraph_impact`, or `codegraph_files` as needed. Shell-only agents use `codegraph query|callers|callees|impact|files`. Do not re-grep a hit already returned. Read or grep only for a line Codegraph omitted, a file named in its staleness banner, or non-code (docs, plans, CSV, logs, lockfiles). If `.codegraph/` is missing, run `codegraph init -i` once. If Codegraph itself is unavailable, fall back to Read or grep. Do not use graphify for symbol lookup. Full rule: `.cursor/rules/codegraph-first.mdc`.
+
 ## Coding Style & Naming Conventions
 
-Use Python 3, four-space indentation, and clear module boundaries. Keep trading rules in `scripts/strategy.py`, platform access in connector/fetcher modules, and side effects such as Telegram or Google logging in separate modules. Use `snake_case` for functions, variables, and files; use `PascalCase` for classes.
+Use Python 3, four-space indentation, and clear module boundaries. C22 entry rules live in `scripts/c22h4`. `scripts/strategy.py` is the old sniper alert strategy. Use `snake_case` for functions, variables, and files; use `PascalCase` for classes.
 
 Prefer config keys over hardcoded strategy values. Keep comments focused on trading assumptions, risk controls, or external API behavior.
 
@@ -80,3 +128,24 @@ Stop: "stop caveman" or "normal mode"
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
+
+## C22H4 research Demo replacement selection (2026-10-04)
+
+Owner selected `variant_1af968e9ac6a26ea` / snapshot `RESEARCH-C22-H4EMA200-20261004` to replace trial30 on the same existing Exness Demo account. Dedicated contract: `CORE_STRATEGY.md` section6.33, `config/c22h4-demo.json`, `docs/ops/c22h4-demo.md`. Keep archived RSI14cross25 BUY/96-bar SELL/EMA50/closed H4 EMA200, BUY SL1.5ATR/TP2 rounded R/no protection, SELL SL2.5ATR/TP3ATR/BE1R, daily10%/one losing exit per UTC day/fixed0.01/cost-inclusive10% cap intact. No recovery baskets; real money PROHIBITED; no research or profitability qualification inferred.
+
+Implementation and read-only preparation authorized by replacement plan. Actual cutover requires owner approval at execution time after broker history/parity, 96-bar shadow spanning UTC midnight, fresh <=24h cost attestation, flat trial30/empty outbox/stopped watcher and no trial30 trade on cutover UTC day. Never run both strategies on same account concurrently. Broker-confirmed lifecycle, persisted reconciliation and Demo identity gates mandatory. Trial30 snapshot `RESEARCH-D48-SELL-BE1R-20261001-T030` remains retained rollback path with its original SELL-only/D48/TP3ATR/BE1R/daily20% contract. Do not substitute retired Reward156 runner or legacy SMC/recovery.
+
+
+## Mandatory swap-inclusive research policy (2026-10-05)
+
+Owner: "ตัดส่วน test ที่ไม่รวม swap ออกไปเลยทุกครั้งต่อไปให้ test แบบรวม swap ทุกครั้ง".
+All new economic strategy backtests, comparisons, rankings and filter campaigns
+MUST include modeled swap in every scenario. Run base+swap and stress+swap;
+no new no-swap cell or economic qualification. Missing/unsupported swap metadata
+blocks the run; never substitute zero or omit swap silently. Name rate/calendar
+assumptions and retain costs-inconclusive status when broker history is unverified.
+Archived frozen no-swap artifacts may be read to reproduce historical evidence,
+but must not be rerun as a new economic evaluation or used for current selection.
+Unit regressions of price/accounting/API behavior are not economic comparisons.
+Do not rewrite frozen strategy/source pins or Demo contracts to alter archives.
+Current active C22 diagnostics CLI follows this policy with two mandatory views.

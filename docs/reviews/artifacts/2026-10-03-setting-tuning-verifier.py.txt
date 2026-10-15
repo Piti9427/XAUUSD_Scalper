@@ -1,0 +1,95 @@
+"""Verify frozen campaigns and export measured evidence. No runtime APIs."""
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import time
+import hashlib
+
+def sha256(path):
+    digest=hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
+    return digest.hexdigest()
+
+root=Path(sys.argv[1])
+protocol=json.loads((root/'protocol.json').read_text())
+main_source='scripts/research/bidirectional_campaign.py'
+engine_source='scripts/research/breakout_logic.py'
+for source,digest in protocol['source_hashes'].items():
+    assert sha256(root/'source_snapshot'/source)==digest, source
+    if source not in (main_source,engine_source): assert sha256(source)==digest,source
+# Load actual hashed frozen engine before helpers import Rules/features/replay.
+engine_spec=importlib.util.spec_from_file_location('scripts.research.breakout_logic',root/'source_snapshot'/engine_source)
+engine=importlib.util.module_from_spec(engine_spec)
+sys.modules[engine_spec.name]=engine
+engine_spec.loader.exec_module(engine)
+from scripts.research.tune_breakout_logic import load_data
+from scripts.research.run_strategy_campaign import write_json
+spec=importlib.util.spec_from_file_location('frozen_campaign',root/'source_snapshot'/main_source)
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+assert module.contracts(protocol['catalog'])==protocol['candidates']
+frame,ticks,broker,audit=load_data()
+assert audit==protocol['audit'] and broker==protocol['broker']
+count=0
+rows=[]
+artifacts={}
+total=len(protocol['candidates'])
+
+def wait_json(path):
+    deadline=time.monotonic()+7200
+    while True:
+        try: return json.loads(path.read_text())
+        except (FileNotFoundError,json.JSONDecodeError):
+            if time.monotonic()>deadline:raise TimeoutError(str(path))
+            time.sleep(2)
+
+for number,candidate in enumerate([None]+protocol['candidates']):
+    directory=root/('baseline' if number==0 else f'trial-{number:03d}')
+    marker_path=directory/'result.json'
+    marker=wait_json(marker_path)
+    marker_hash=sha256(marker_path)
+    assert marker['candidate']==candidate
+    rules=module.Rules(**(protocol['baseline_rules'] if candidate is None else candidate['rules']))
+    if candidate is None:
+        prepared=frame
+    else:
+        kwargs={'oscillator_spec':candidate['oscillator_spec']} if 'oscillator_spec' in candidate else {}
+        if 'entry_session' in candidate: kwargs['entry_session']=candidate['entry_session']
+        prepared=module.candidate_frame(frame,candidate['buy_filter'],candidate['depth'],candidate.get('buy_signal','breakout'),candidate.get('signal_spec'),**kwargs)
+    names={f'{w}-{c}.json' for w in protocol['windows'] for c in protocol['costs']}
+    assert set(marker['artifact_hashes'])==names
+    summary={}
+    for window,bounds in protocol['windows'].items():
+        summary[window]=[]
+        for cost_name,cost_config in protocol['costs'].items():
+            path=directory/f'{window}-{cost_name}.json'
+            assert sha256(path)==marker['artifact_hashes'][path.name]
+            saved=json.loads(path.read_text())
+            fresh=module.replay(prepared,ticks,broker,rules,module.Costs(**cost_config),start=module.pd.Timestamp(bounds[0]),end=module.pd.Timestamp(bounds[1]))
+            assert fresh==saved,(number,window,cost_name)
+            assert sha256(path)==marker['artifact_hashes'][path.name]
+            summary[window].append(module.metrics(fresh));count+=1
+    assert marker['metrics']==summary and sha256(marker_path)==marker_hash
+    artifacts[str(number)]=dict(result_sha256=marker_hash,scenario_hashes=marker['artifact_hashes'])
+    if candidate is None:baseline=summary
+    else:
+        passes={w:module.qualifies_trial30(pair,baseline[w],60 if w=='full' else 20) for w,pair in summary.items()}
+        rows.append(dict(trial=number,candidate=candidate,metrics=summary,window_pass=passes,discovery_pass=all(passes.values())))
+    print(f'Verified {number}/{total} exact scenarios={count}',flush=True)
+verdict=wait_json(root/'verdict.json')
+assert verdict['campaign_exhausted'] and verdict['completed_trials']==verdict['total_contracts']==total
+assert verdict['rows']==rows
+eligible=[r for r in rows if r['discovery_pass']]
+leader=min(eligible,key=lambda r:(max(p[1]['max_dd_pct'] for p in r['metrics'].values()),-r['metrics']['full'][1]['net_usd'],r['trial']),default=None)
+assert verdict['qualified_discovery']==len(eligible) and verdict['frozen_discovery_winner']==leader
+assert verdict['status']==('AWAITING_INDEPENDENT_VALIDATION' if leader else 'NO_QUALIFIED_CANDIDATE')
+assert verdict['deployment']=='UNCHANGED'
+for source,digest in protocol['source_hashes'].items():
+    assert sha256(root/'source_snapshot'/source)==digest
+    if source not in (main_source,engine_source):assert sha256(source)==digest
+write_json(root/'fresh-verification.json',dict(status='FRESH_REPLAY_MATCH',verified_scenarios=count,
+    protocol_sha256=sha256(root/'protocol.json'),verdict_sha256=sha256(root/'verdict.json'),source_hashes=protocol['source_hashes'],
+    verifier_sha256=sha256(__file__),frozen_loaded=[main_source,engine_source],artifacts=artifacts))
+print('COMPLETE exact comparisons',count,flush=True)

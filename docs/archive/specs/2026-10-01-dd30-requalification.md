@@ -1,0 +1,5 @@
+# Owner DD relaxation: separate requalification
+
+Owner accepts DD25-30%, requires portfolio survival plus profit, win rate and realized RR above previous baseline after fee/risk costs. Preferred DD<=25%, hard ceiling30%, both base and stress in full and chronological halves. Baselines core and D48 on identical ticks. Fixed capital200, lot0.01, cap<=10%, no recovery, margin and cost-inclusive risk rejection unchanged. All-tick DD<=30% implies positive equity on observed tape, not guaranteed future survival. Actual commission/swap and Demo parity remain unverified.
+
+Re-screen stored discovery metrics under strict RR and DD30, preserving original protocols. Missing halves cannot qualify: replay them in separate version5 catalog, no cached oldPASS adoption. Existing activation trial30 is only stored full-period survivor; its half results unknown until replay. New output directories only. Sealed Jul-Sep2025 prices untouched. If full and halves pass, freeze contract then evaluate other historical discovery tape; no tuning from holdout. Robustness/parity/Shadow remain necessary before Demo.

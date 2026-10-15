@@ -13,7 +13,7 @@ Scope: resolve the three Python findings from the September 13 review. Preserve 
 
 | ID | Change / command | Observed result | Conclusion |
 |---|---|---|---|
-| E01 | Re-ran `python3 docs/reviews/reproduce_expansion_breakout_review.py` before edits | Original stale-sweep rejected; cross-level false negative reproduced; body mutation survives | Prior review reproduces on current workspace |
+| E01 | Re-ran `python3 scripts/debug/reviews/reproduce_expansion_breakout_review.py` before edits | Original stale-sweep rejected; cross-level false negative reproduced; body mutation survives | Prior review reproduces on current workspace |
 | E02 | `python3 -c 'import smc_main'` | Imports successfully | Offline live-loop test seam available |
 | E03 | Added deterministic BUY/SELL cross-level and separate body/wick/boundary/fresh-sweep tests; ran detection module | 11 tests, two subtest failures, both cross-level | Desired preservation behavior fails; other controls pass |
 | E04 | Added one-iteration loop tests with real orchestrator and adapter, fake broker retcodes | Accepted order passes; rejected order sends one alert, test fails | Broker failure demonstrably reaches notifier |

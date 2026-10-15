@@ -1,0 +1,57 @@
+"""Requalify unchanged frozen actual ledgers after explicit owner RR approval."""
+import json
+from pathlib import Path
+from scripts.research.bidirectional_campaign import metrics, qualifies_trial30
+from scripts.research.tune_breakout_logic import sha256
+
+families = ("parent_invalidation", "parent_reward_fine", "parent_atr", "bidirectional_corrected")
+campaigns = []
+for family in families:
+    root = Path("data/strategy_annual_" + family + "_2026_10_03")
+    proof = json.loads((root / "fresh-verification.json").read_text())
+    protocol = json.loads((root / "protocol.json").read_text())
+    assert proof["protocol_sha256"] == sha256(root / "protocol.json")
+    assert proof["verdict_sha256"] == sha256(root / "verdict.json")
+    baseline = None
+    rows = []
+    for number in range(len(protocol["candidates"]) + 1):
+        directory = root / ("baseline" if number == 0 else f"trial-{number:03d}")
+        expected = proof["artifacts"][str(number)]
+        assert sha256(directory / "result.json") == expected["result_sha256"]
+        marker = json.loads((directory / "result.json").read_text())
+        measured = {}
+        for window in protocol["windows"]:
+            measured[window] = []
+            for cost in protocol["costs"]:
+                name = window + "-" + cost + ".json"
+                assert sha256(directory / name) == expected["scenario_hashes"][name]
+                actual = metrics(json.loads((directory / name).read_text()))
+                original = dict(actual)
+                del original["loss_trades"]
+                assert original == marker["metrics"][window][len(measured[window])]
+                measured[window].append(actual)
+        if number == 0:
+            baseline = measured
+            continue
+        passed = {w: qualifies_trial30(pair, baseline[w], 60 if w == "full" else 20)
+                  for w, pair in measured.items()}
+        rows.append(dict(trial=number, window_pass=passed,
+                         qualified=all(passed.values()),
+                         loss_counts={w:[p["loss_trades"] for p in pair] for w,pair in measured.items()}))
+    campaigns.append(dict(root=str(root), protocol_sha256=proof["protocol_sha256"],
+                          original_verdict_sha256=proof["verdict_sha256"],
+                          proof_sha256=sha256(root / "fresh-verification.json"),
+                          baseline_loss_counts={w:[p["loss_trades"] for p in pair] for w,pair in baseline.items()},
+                          baseline_measured_rr={w:[p["realized_rr"] for p in pair] for w,pair in baseline.items()},
+                          qualified=sum(row["qualified"] for row in rows), rows=rows))
+output = dict(status="APPROVED_RR_REQUALIFICATION_COMPLETE_NO_QUALIFIED_CANDIDATE",
+              owner_approval="ใช้ RR อ้างอิง 0 เฉพาะ baseline แพ้ทั้งหมด; strategy ใหม่ RR>1",
+              policy="Loss count from actual ledger equals positive executed baseline trades, winrate0/netnegative; reference0 only, measuredRRNone preserved; candidateRR>1; other gates unchanged",
+              qualifier_source_sha256=sha256("scripts/research/bidirectional_campaign.py"),
+              requalifier_sha256=sha256(__file__), campaigns=campaigns,
+              replay_outputs_changed=False, original_proofs_preserved=True,
+              total_requalified=sum(len(c["rows"]) for c in campaigns),
+              total_qualified=sum(c["qualified"] for c in campaigns))
+assert output["total_requalified"] == 192 and output["total_qualified"] == 0
+Path("docs/reviews/2026-10-03-annual-approved-requalification.json").write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n")
+print("REQUALIFIED", output["total_requalified"], "qualified", output["total_qualified"], flush=True)
