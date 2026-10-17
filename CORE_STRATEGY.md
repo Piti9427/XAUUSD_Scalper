@@ -507,9 +507,9 @@ Frozen detector is exactly `reward156_search.prepare_candidate` with archived ci
 
 BUY SL=1.5 ATR, TP=2 times **rounded** entry-stop distance, protection off. SELL SL=2.5 ATR, TP=3 ATR, BE only at closed-bar first quote net >=1R. Canonical `breakout_entry.prepare_entry` uses modeled adverse entry=Ask+slippage (BUY) or Bid-slippage (SELL); actual market request price uses current Ask/Bid. Stop/target grid rounds toward risk (BUY floor, SELL ceiling). Risk=(abs(modeled entry-stop)+exit slippage)*contract_size*0.01+round-trip commission_per_lot*0.01. Broker profit calculation independently checks risk before send and after confirmed fill using freshly verified entry equity; never clamps volume. Flat research balance admission maps to live equity admission. Broker actual fills, quote/entry window, margin, stop/freeze levels and cost evidence can reject a research signal.
 
-Daily UTC equity loss limit 10%, max **one losing completed position per exit UTC day**, cooldown0, no BUY pause, all sessions. Restart-safe loss count routes C22-owned opening deals (magic `22261004`, `C22_` comment) to position IDs, then sums complete ledger profit+commission+swap+fee. Flat volume and net<0 count a loss on last exit day; closing magic/comment need not match. Demo broker-confirmed FILLED/CLOSED/BE events and outbox reuse trial30 Journal unchanged. SENDING/UNKNOWN remain unresolved until complete broker evidence; unexpected fill risk/volume/stops/costs close only owned ticket and halt further admission.
+Daily UTC equity loss limit 10%, max **one losing completed position per exit UTC day**, cooldown0, no BUY pause, all sessions. Restart-safe loss count routes C22-owned opening deals (magic `22261004`, `C22_` comment) to position IDs, then sums complete ledger profit+commission+swap+fee. Flat volume and net<0 count a loss on last exit day; closing magic/comment need not match. Demo broker-confirmed FILLED/CLOSED/BE events and outbox reuse the unchanged shared Journal (`scripts/demo_runtime/journal.py`; legacy `scripts/trial30/journal.py` import retained). SENDING/UNKNOWN remain unresolved until complete broker evidence; unexpected fill risk/volume/stops/costs close only owned ticket and halt further admission.
 
-Shared lifecycle has trial30 default hooks and candidate hooks; 27 existing trial30 lifecycle tests remain unchanged. Local account fingerprint writer guard is acquired before MT5 initialization and excludes simultaneous trial30/c22h4 writers with separate journals. CLI uses same canonical account-guard directory even for journal overrides. Candidate journal `data/c22h4-demo.sqlite3`; trial30 journal/config/targets retained for rollback. Config pins contract plus research/detector/bar-assembly SHA256; `source_drift` blocks admission while existing trades continue reconciliation/protection. Cost policy reused, owner attestation <=24 hours; stale policy blocks entries.
+Shared `DemoRunner` receives trial30 or candidate strategy hooks; 27 existing trial30 lifecycle tests remain unchanged. Local account fingerprint writer guard is acquired before MT5 initialization and excludes simultaneous trial30/c22h4 writers with separate journals. CLI uses same canonical account-guard directory even for journal overrides. Candidate journal `data/c22h4-demo.sqlite3`; trial30 journal/config/targets retained for rollback. Config pins contract plus research/detector/bar-assembly SHA256; `source_drift` blocks admission while existing trades continue reconciliation/protection. Cost policy reused, owner attestation <=24 hours; stale policy blocks entries.
 
 **Implementation readiness differs from operational readiness:** offline code/test review can proceed, but initial Wine broker probe failed `wine: cannot find the server port: 0x0000044c`. Broker depth/latency/maximum and archive parity remain unverified. No fallback selected, no shadow qualification, no Demo cutover, no orders sent by this implementation session. Required next gates: read-only history/parity, >=96 completed-M15 shadow bars spanning UTC midnight with exact exported-cache replay, fresh owner cost attestation, flat trial30/empty outbox/stopped watcher/no trial30 trade that UTC day, then owner cutover approval. First broker close must record closing magic/comment. Ops: `docs/ops/c22h4-demo.md`; evidence/status: `docs/reviews/2026-10-04-c22h4-implementation.md`.
 
@@ -528,6 +528,18 @@ Entry/geometry/fixed0.01/10% cap/daily10%/one-loss/BE/swap research contract and
 frozen pins unchanged. This is a local file/test correction, not a watcher reload,
 broker acceptance or deployment claim. Cost attestation still requires fresh
 owner review; do not update its timestamp to bypass expiry.
+
+**Implementation references (2026-10-18):**
+
+C22 runner `scripts/c22h4/runner.py` now inherits
+`scripts/demo_runtime/runner.py:DemoRunner` directly. Trial30 rollback remains
+`scripts/trial30/runner.py:Trial30DemoRunner`, supplying its existing strategy.
+Shared entry admission and broker lifecycle implementations live in
+`scripts/demo_runtime/admission.py` and `lifecycle.py`; broker/journal/costs and
+shared CLI/Wine/status live alongside them. Old imports and ops entrypoints are
+compatibility facades. No strategy numbers, rules, cost policy, frozen source
+pins, persistence schema or readiness claims change. Debug map:
+`docs/architecture/codebase-layout.md`.
 
 
 ### 6.34 Mandatory swap-inclusive new research runs (2026-10-05)

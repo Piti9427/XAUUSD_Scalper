@@ -16,7 +16,8 @@ Selected Exness Demo replacement: **C22 + H4 EMA200**, frozen `RESEARCH-C22-H4EM
 
 | Path | Purpose |
 | --- | --- |
-| `scripts/c22h4/`, `scripts/trial30/` | Current Demo module and shared cycle/rollback |
+| `scripts/c22h4/`, `scripts/trial30/` | C22 strategy/notes and trial30 rollback adapter |
+| `scripts/demo_runtime/` | Shared orchestration, admission, lifecycle, broker, journal, CLI/host/status |
 | `scripts/ops/` | Existing watcher/status/read-only interfaces |
 | `scripts/research/` | Frozen campaign/replay sources; keep pinned paths |
 | `scripts/debug/reviews/` | Historical offline reproducer code |
@@ -51,6 +52,8 @@ This runs one cycle using the ignored `.env` login. Day-start equity is sampled 
 
 ## Verification
 - Unit tests: `python3 -m unittest discover -s tests`
+- Offline Demo tests: `make test-demo`
+- Debug by stage: [module → tests → command map](docs/architecture/codebase-layout.md#debug-entrypoints)
 - Syntax check: `python3 -m py_compile main.py test_mt5.py scripts/*.py tests/*.py`
 - MT5 smoke test after credentials are configured: `python3 test_mt5.py`
 

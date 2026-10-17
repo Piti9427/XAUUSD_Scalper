@@ -53,3 +53,14 @@ SL/TP are server protections; BE requires watcher alive and fresh completed bars
 - Actual broker fill, BE, close and restart evidence must be collected from genuine forward signals. No synthetic signal or forced order is used to claim strategy verification.
 
 Frozen strategy/spec: `docs/specs/2026-10-01-trial30-demo-execution.md`. Original diagnosis artifacts remain evidence of previous mismatch; repro command now uses dedicated trial30 detector and returns PASS.
+
+## Offline runtime debugging
+
+Shared implementation now lives in `scripts/demo_runtime`: runner orchestration,
+admission, lifecycle, broker, journal, costs, CLI, Wine host and local status.
+C22 owns detection/notes/cache; trial30 owns the rollback strategy adapter.
+Existing ops entrypoints and compatibility imports remain supported.
+Use [stage → module → tests → command map](../architecture/codebase-layout.md#debug-entrypoints)
+and `make test-demo` before tracing runtime changes. Tests use synthetic brokers.
+This structural change preserves known failure-matrix gaps and does not authorize
+broker access, watcher restart or deployment, or change readiness.

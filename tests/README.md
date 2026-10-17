@@ -1,13 +1,13 @@
 # Regression suites
 
-All130 Python test modules are grouped by purpose. Assertions/test behavior are
+Python test modules are grouped by purpose. Assertions/test behavior are
 preserved; source imports and repository/fixture paths follow the new folders.
 Native C++ harness files keep their existing paths.
 
 | Folder | Modules | Scope |
 | --- | ---: | --- |
 | application/ | 22 | Config, CLI, CI and tooling |
-| demo/ | 9 | C22H4 and trial30 |
+| demo/ | 10 | C22H4 and trial30 |
 | native/ | 2 | Shared MQL5 host cases and replay |
 | pure_b1/ | 12 | B1 target and frozen release/capture/parity |
 | research/ | 30 | Economic replay, catalogs and qualification |
@@ -20,6 +20,7 @@ Native C++ harness files keep their existing paths.
 .venv/bin/python -m unittest discover -s tests
 
 # Focused interfaces with package-qualified imports.
+make test-demo
 .venv/bin/python -m unittest discover -s tests/demo -t .
 .venv/bin/python -m unittest tests.research.test_c22_frequency
 .venv/bin/python -m unittest tests.native.test_native_frequency_replay

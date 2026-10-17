@@ -1,4 +1,4 @@
-.PHONY: all check compile deps lint format format-check test clean help guide \
+.PHONY: all check compile deps lint format format-check test test-demo clean help guide \
 	bot-status bot-once bot-run bot-execute bot-start bot-stop
 
 PYTHON ?= $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else which python3; fi)
@@ -19,6 +19,7 @@ help:
 	@echo "  make format-check - Check code formatting without modifying"
 	@echo "  make format       - Auto-format code with ruff"
 	@echo "  make test         - Run unit tests"
+	@echo "  make test-demo    - Run offline Demo runtime tests"
 	@echo "  make clean        - Clean cache artifacts"
 	@echo "  make guide        - How to run, stop, and check the Demo bot"
 	@echo "  make bot-status   - Journal plus local watcher process"
@@ -54,6 +55,9 @@ format:
 test:
 	@echo "[5/5] Running unit tests..."
 	$(PYTHON) -m unittest discover -s tests
+
+test-demo:
+	$(PYTHON) -m unittest discover -s tests/demo -t .
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

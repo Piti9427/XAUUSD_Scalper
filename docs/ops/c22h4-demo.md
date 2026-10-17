@@ -78,3 +78,14 @@ require a separately reviewed rollout; an already-running Python watcher retains
 its loaded code. No restart or cost re-attestation was performed by the fix task.
 
 Rollback only when candidate is confirmed flat with no pending reconciliation/outbox: stop candidate -> verify account flat and UTC-day circuit suitability -> owner-reviewed restart `MT5_ENABLE_DEMO_ORDER_SEND=1 make trial30-run` or `trial30-start`. Use `make trial30-status` and `make trial30-stop` for the old watcher. Candidate does not auto-close a valid position during shutdown. Terminal/VPN/sleep failures require restart reconciliation; same account guard is local, not distributed across machines/cloned workspaces.
+
+## Offline runtime debugging
+
+Shared implementation now lives in `scripts/demo_runtime`: runner orchestration,
+admission, lifecycle, broker, journal, costs, CLI, Wine host and local status.
+C22 owns detection/notes/cache; trial30 owns the rollback strategy adapter.
+Existing ops entrypoints and compatibility imports remain supported.
+Use [stage → module → tests → command map](../architecture/codebase-layout.md#debug-entrypoints)
+and `make test-demo` before tracing runtime changes. Tests use synthetic brokers.
+This structural change preserves known failure-matrix gaps and does not authorize
+broker access, watcher restart or deployment, or change readiness.

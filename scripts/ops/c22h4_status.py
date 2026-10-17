@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 
 
 def main(argv=None):
-    from scripts.ops.trial30_status import main as status
+    from scripts.demo_runtime.status import main as status
 
     return status(argv, name="c22h4")
 

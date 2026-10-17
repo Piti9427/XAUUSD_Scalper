@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 def main(argv=None, *, mt5=None):
     from scripts.c22h4.runner import C22H4DemoRunner, SNAPSHOT
     from scripts.c22h4.strategy import CONTRACT, CONTRACT_ID
-    from scripts.ops.mt5_wine_trial30 import main as run
+    from scripts.demo_runtime.cli import main as run
 
     return run(
         argv,

@@ -2,10 +2,11 @@
 
 ## Project Structure & Module Organization
 
-The live Demo order module is `scripts/c22h4`. Its interface is `make bot-execute` (send) and `make bot-run` (shadow). Implementation of admission, journal, and broker reconcile sits in `scripts/trial30`, which C22 subclasses. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
+The live Demo order module is `scripts/c22h4`. Its interface is `make bot-execute` (send) and `make bot-run` (shadow). Shared admission, journal, and broker reconciliation live in `scripts/demo_runtime`; C22 subclasses `DemoRunner` directly. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
 
 - `scripts/c22h4` — frozen C22 detector and the only Python sender on the current Demo account.
-- `scripts/trial30` — shared Demo cycle implementation and the retained rollback strategy. One account, one sender.
+- `scripts/demo_runtime` — shared orchestration, admission, lifecycle, broker, journal, costs, CLI/host/status.
+- `scripts/trial30` — retained rollback strategy adapter and compatibility imports. One account, one sender.
 - `scripts/research` — campaign code. Paths are hashed. Do not relocate those files.
 - `scripts/smc`, `scripts/webhook`, `scripts/pure_b1`, `scripts/reward156`, `main.py` — older stacks. They stay importable for their tests. They are outside the live interface.
 - `config/settings.yaml` holds runtime configuration for MT5, Telegram, strategy parameters, news filtering, and Google Workspace IDs.

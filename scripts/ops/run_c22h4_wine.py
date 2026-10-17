@@ -1,7 +1,7 @@
 """Existing Wine host wrapper for C22H4 or read-only history probe."""
 
 import sys
-from scripts.ops.run_trial30_wine import main as run
+from scripts.demo_runtime.host import main as run
 
 
 def main(argv=None):
