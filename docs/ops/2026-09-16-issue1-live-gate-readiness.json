@@ -1,6 +1,6 @@
 {
-  "captured_at_utc": "2026-09-17T05:03:08.198535+00:00",
-  "git_head": "86ef41803109b3c19de0c39190e04ca051bc7e60",
+  "captured_at_utc": "2026-09-28T17:50:36.411032+00:00",
+  "git_head": "10edb7051834aba90c858e7224cb2c32916f5f42",
   "gate_b_scenario_software": {
     "artifact": "docs/ops/2026-09-16-issue1-scenario-coverage.json",
     "software_evidence_complete": true,
@@ -9,7 +9,7 @@
   "gate_c_exness_smoke": {
     "ok": false,
     "artifact": null,
-    "latest_attempt_artifact": "docs/ops/2026-09-17-exness-smoke-mac-probe.json",
+    "latest_attempt_artifact": "docs/ops/2026-09-28-exness-smoke-mac-probe.json",
     "blocker_docs": [
       "docs/ops/2026-09-16-mac-live-gate-blocker.md",
       "docs/ops/2026-09-16-mac-wine-initialize-path.json",
@@ -34,7 +34,7 @@
     "note": "Do not invent a start artifact; operator fills after Gates B/C."
   },
   "operator_blockers": {
-    "gh_auth_ok": false,
+    "gh_auth_ok": true,
     "operator_gh_auth_paste": "docs/ops/2026-09-17-operator-gh-auth-paste.json",
     "host_reachability_artifact": "docs/ops/2026-09-16-host-reachability-hunt.json",
     "utm_app_present": true,

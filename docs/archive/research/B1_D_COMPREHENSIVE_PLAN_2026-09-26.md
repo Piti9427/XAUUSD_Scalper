@@ -1,0 +1,17 @@
+# B1/D comprehensive bounded backtest plan — 2026-09-26
+
+User authorized broader B1/D backtesting and selection. This plan freezes the finite search before observing expanded results. “All conditions” means the matrix below and declared execution stress, not all possible markets or guaranteed future profit.
+
+Universe: B1 Donchian30/RSI and reconstructed D ATR1.5/RSI/FVG; unchanged entry indicators. SL multipliers 1, 1.5, 2, 2.5, 3 ATR; targets 1.5, 2, 2.5, 3R; risk caps 0.5%, 1%, 1.5%, 2%; sessions all versus London/New York (07:00–10:30 and 12:30–16:30 UTC, signal-close time). 320 independent policies, including both native contracts. No new indicators, martingale, grid, or risk >2%.
+
+Replay every policy at extra-cost reserves 0, 0.10, 0.20R: 960 account experiments. Current exact Demo balance/spec snapshot; real broker Bid/Ask. Preserve lot floors and no-trade/rejection rows. Compare direction, session, causal entry regime, calendar-month performance, drawdown, loss streak and account return. Stop geometry changes create new experiment IDs. Candidate news avoidance remains unverified without historical calendar; do not fabricate event timestamps.
+
+Acquire broader broker ticks 2026-01-01 through 2026-09-25 and preceding warmup, subject to actual server availability. Capture daily immutable archives, hash and audit tick-derived M1 against actual M1 where available. Absent historical broker data must be reported, not synthesized or silently replaced with proxy feed.
+
+Selection: chronological development January–June; validation July–August; final retrospective confirmation September. September and earlier research data already exposed: none is pristine prospective OOS. Rank on development only, lock shortlist before validation/September results. Prefer candidates with >=30 development trades, positive 0.10/0.20R development net and PF, development DD <=5%; rank stress return / max DD, then trade count, then lower risk. If none passes, rank least-bad research finalist separately and explicitly select no deployment candidate. Never relax 5% DD because best net is attractive.
+
+Shortlist maximum three policies. Repeat final candidates under twice observed spread around midpoint, 2-second entry latency and 0.10 price-distance adverse entry/stop/sample-end slippage. Recompute account admission and exits; no favorable target gap improvement. Evaluate retrospective monthly expanding-window selection and seeded weekly-block bootstrap/Monte Carlo loss-order drawdown. Multiple-selection correction disclosed; 320-policy search makes unadjusted confidence inappropriate. Minimum 100 closed trades and all existing broker-cost/prospective qualification requirements remain deployment gates.
+
+Output immutable manifest, every policy ledger, matrix, breakdowns, ranking/selection JSON, stress ledgers, coverage audit and report. COMPLETE only after reconciliation. Do not change trading runtime config or submit orders. Use a durable comparison canvas when available; report files remain canonical evidence.
+
+Coverage amendment before matrix scoring: broker returned zero ticks January–May 6, first ticks May 7, total 31,780,274 through September 25. These zeros are unavailable history, not evidence of no trading. Use May 7–13 for warmup and **May 14–June 30 development**, July–August validation, September retrospective confirmation. Build Bid M1 from actual ticks so truncated terminal M1 cache does not silently shorten scoring. Preserve fixed selector and note shorter sample; no prospective/OOS claim.

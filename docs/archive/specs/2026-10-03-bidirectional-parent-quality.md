@@ -1,0 +1,7 @@
+# Bearish D24 parent candle-quality continuation
+
+Preregister24 contracts before evaluation. Running parent-trend prefix trial34 (not a campaign winner) has first-half paired pass and second-half base/stress DD36.26/33.16, net362.70/295.09; all-window qualification fails. Hypothesis: existing symmetric entry candle/prior-day guards can suppress false parent breakouts while retaining RSI BUY. This follow-up uses observed discovery and does not create independent validation.
+
+RSI BUY7/lower30,35/EMA50, pauseBUY5/10%; SELL prior-low24 and bearish EMA50 with four-bar slope. Rounded-stop target1.35/1.5R, existing entry_guard body_dominant/close_extreme/prior_day applied BOTH directions, daily10%, max UTC daily losses1, protectionoff. Fixed0.01/SL2.5ATR/staticcap10/all-session/no recovery. No new detector or execution math, full prior-channel/EMA warmup and independent RSI BUY remain. Parent trend catalog stays frozen under its original source; this catalog freezes new source separately.
+
+All24 evaluated across full/first_half/second_half base/stress, same actual ticks/complete UTCM15 and unchanged trial30 baseline. Original strict profit/WR/RR, DD<=baseline and<=30%, >=60/20 trades, executed BUY+SELL, risk<=10% gates unchanged. Whole-result fresh frozen replay and prior control identity audit required. No winner from incomplete prefix, sealed holdout opened or Demo config promoted. Swap omitted, commission0 assumed, reused discovery limitations retained.

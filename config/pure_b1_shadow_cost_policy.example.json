@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "account_fingerprint": "<SHA256(server:login) first 16 hex from broker capture manifest>",
+  "account_type": "Standard Demo",
+  "source": "https://get.exness.help/hc/en-us/articles/360012007919-Are-trading-accounts-charged-a-commission-fee; verify swap-free status in Personal Area",
+  "reviewed_utc": null,
+  "commission_per_lot": 0.0,
+  "commission_unit": "USD_per_lot_round_trip",
+  "account_evidence_sha256": "<SHA256 of account-specific tariff and swap-free evidence>",
+  "slippage_allowance_price": null,
+  "swap_free_qualified": false
+}

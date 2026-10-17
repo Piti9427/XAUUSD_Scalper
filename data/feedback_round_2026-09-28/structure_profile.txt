@@ -1,0 +1,20 @@
+         145886 function calls in 0.093 seconds
+
+   Ordered by: cumulative time
+   List reduced from 75 to 12 due to restriction <12>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.004    0.004    0.131    0.131 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:249(replay_structure_until)
+     2000    0.000    0.000    0.126    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:241(_available_pivots)
+     2000    0.005    0.000    0.126    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:229(available_confirmed_pivots)
+     2000    0.076    0.000    0.121    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:92(record_confirmed_pivots)
+   132777    0.007    0.000    0.007    0.000 {method 'append' of 'list' objects}
+      981    0.001    0.000    0.002    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:128(apply_close_break)
+      581    0.000    0.000    0.001    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:120(_latest_opposite_pivot)
+      464    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+      981    0.000    0.000    0.000    0.000 <string>:2(__init__)
+     3810    0.000    0.000    0.000    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/structure.py:125(<lambda>)
+        3    0.000    0.000    0.000    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/.venv/lib/python3.14/site-packages/pandas/core/generic.py:6179(__getattr__)
+        3    0.000    0.000    0.000    0.000 /Users/nopparuj/my-agents/XAUUSD_Scalper/.venv/lib/python3.14/site-packages/pandas/core/frame.py:4337(__getitem__)
+
+

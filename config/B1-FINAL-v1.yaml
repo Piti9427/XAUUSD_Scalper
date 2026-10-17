@@ -1,0 +1,67 @@
+strategy:
+  id: B1-FINAL-v1
+  symbol_family: XAUUSD
+  signal_timeframe_minutes: 15
+  donchian_period: 30
+  include_signal_bar_in_channel: false
+  rsi_period: 14
+  rsi_long_max: 75.0
+  rsi_short_min: 25.0
+  atr_period: 14
+  sl_atr: 2.5
+  target_rr: 3.5
+  warmup_completed_bars: 100
+  max_concurrent_positions: 1
+  partial_tp: false
+  break_even: false
+  trailing: false
+  martingale: false
+  grid: false
+indicators:
+  smoothing: arithmetic_seed_then_wilder
+  seed_anchor: first_bar_of_hashed_reference_dataset
+  atr_first_true_range: high_minus_low
+  rsi_first_delta: 0.0
+  rsi_flat_value: 50.0
+  rsi_zero_loss_positive_gain: 100.0
+execution:
+  entry: first_valid_tick_in_immediately_next_m15_interval
+  entry_window_ms: 900000
+  long_entry: ask
+  short_entry: bid
+  long_exit: bid
+  short_exit: ask
+  fill_policy: quote_anchored_sl_tp_no_reanchor
+  price_normalization: nearest_tick_half_up
+  volume_rounding: floor
+  reject_below_minimum_volume: true
+  unresolved_bar_ambiguity: sl_first
+  real_tick_ambiguity: chronological_tick_order
+drawdown_risk:
+  reference: equity_high_water_mark
+  tiers:
+    - {dd_lt: 0.03, risk_per_trade: 0.01}
+    - {dd_lt: 0.06, risk_per_trade: 0.0075}
+    - {dd_lt: 0.09, risk_per_trade: 0.005}
+    - {dd_lt: 0.12, risk_per_trade: 0.0025}
+  hard_stop: 0.12
+  action: STOP_NEW_ENTRIES
+  auto_restart: false
+  liquidate_existing_position: false
+daily_loss:
+  hard_stop: false
+  telemetry_r: [-2.0, -3.0]
+validation:
+  scope: implementation_validation
+  live_orders_enabled: false
+  required_tester: Every_tick_based_on_real_ticks
+  signal_parity: 1.0
+  net_expectancy_gt: 0.0
+  profit_factor_gt: 1.0
+  max_equity_dd_lt: 0.12
+  hard_stop_must_not_trigger: true
+  minimum_closed_oos_trades: 100
+  demo_minimum_weeks: 8
+  demo_minimum_closed_trades: 50
+  monte_carlo_minimum_paths: 50000
+  real_money_status: NO_GO

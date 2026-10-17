@@ -1,0 +1,95 @@
+"""Research-only annual acquisition using existing audited monthly importer.
+
+Run from repository root. Existing sealed Jul-Sep2025 archive never accessed.
+No MT5, order or notification APIs. Partial outputs cannot load as a dataset.
+"""
+
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from scripts.research.public_exness_archive import acquire, import_month, months
+from scripts.research.tune_breakout_logic import sha256
+
+root = Path("data/b1_public_exness_2025_10_2026_09")
+start, end = "2025-10", "2026-10"
+catalog = list(months(start, end))
+assert len(catalog) == 12
+assert (pd.Timestamp(end + "-01") - pd.Timestamp(start + "-01")).days == 365
+if (root / "dataset.json").exists():
+    raise ValueError("completed annual dataset exists; never overwrite")
+root.mkdir(exist_ok=True)
+source = Path("scripts/research/public_exness_archive.py")
+(root / "importer-source.py").write_bytes(source.read_bytes())
+source_hash = sha256(source)
+with ThreadPoolExecutor(max_workers=2) as pool:
+    archives = list(pool.map(lambda month: acquire(root, month), catalog))
+manifest = dict(
+    created_at_utc=datetime.now(timezone.utc).isoformat(),
+    provider="Exness public indicative tick history", symbol="XAUUSDm",
+    discovery_start=start + "-01", discovery_end=end + "-01",
+    holdout_start=None, holdout_end=None,
+    holdout_policy="No independent holdout inside annual discovery; existing Jul-Sep2025 remains sealed",
+    target_demo_parity_verified=False, archives=archives,
+    importer_source_sha256=source_hash,
+    builder_source_sha256=sha256(__file__),
+)
+(root / "archive-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+(root / "discovery").mkdir(exist_ok=True)
+audits, frames = [], []
+for item in archives:
+    audit, frame = import_month(root, item)
+    if audit["ticks"] <= 0 or audit["canonical_bars"] <= 0:
+        raise ValueError("empty month cannot count toward annual coverage")
+    audits.append(audit)
+    frames.append(frame)
+    (root / "progress.json").write_text(json.dumps(dict(
+        stage="importing", imported_months=len(audits), required_months=12,
+        ticks=sum(a["ticks"] for a in audits),
+    ), indent=2) + "\n")
+total = sum(a["ticks"] for a in audits)
+tape = root / "discovery/tape"
+tape.mkdir(exist_ok=True)
+for key, dtype in (("time", "int64"), ("bid", "float64"), ("ask", "float64")):
+    output = np.lib.format.open_memmap(tape / (key + ".npy"), mode="w+", dtype=dtype, shape=(total,))
+    offset = 0
+    for item in audits:
+        path = root / "discovery" / (item["month"] + ".npz")
+        if sha256(path) != item["cache_sha256"]:
+            raise ValueError("audited monthly cache changed")
+        with np.load(path) as month:
+            values = month[key]
+            output[offset:offset + len(values)] = values
+            offset += len(values)
+    assert offset == total
+    output.flush()
+    del output
+bars = pd.concat(frames)
+assert bars.index.is_monotonic_increasing and bars.index.is_unique
+bars.to_csv(root / "discovery/bars.csv", index_label="bar_open_utc")
+reference = Path("data/b1_hybrid_exness_6mo_fixed_2026_09_28/manifest.json")
+broker = json.loads(reference.read_text())
+assert sha256(source) == source_hash
+dataset = dict(
+    manifest, imported_months=audits, discovery_ticks=total,
+    verified_nonempty_discovery_months=12, calendar_year_days=365,
+    annual_months=catalog,
+    holdout_nonempty_coverage_verified=False,
+    broker_spec_is_research_assumption=True,
+    broker_spec_source_sha256=sha256(reference),
+    broker=dict(broker["symbol_spec"], leverage=broker["account"]["leverage"]),
+    artifacts={
+        "discovery/bars.csv": sha256(root / "discovery/bars.csv"),
+        **{f"discovery/tape/{k}.npy": sha256(tape / (k + ".npy")) for k in ("time", "bid", "ask")},
+    },
+    reused_2026_discovery_overlap=True,
+    independent_validation=False,
+)
+pending = root / "dataset.pending.json"
+pending.write_text(json.dumps(dataset, indent=2) + "\n")
+pending.replace(root / "dataset.json")
+print("ANNUAL_DATASET_COMPLETE", total, "ticks", len(bars), "complete M15", flush=True)

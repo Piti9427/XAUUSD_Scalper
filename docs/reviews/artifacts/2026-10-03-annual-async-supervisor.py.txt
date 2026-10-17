@@ -1,0 +1,90 @@
+"""Bounded async process supervision; CPU replay stays in frozen sync workers."""
+import asyncio
+import json
+import os
+from pathlib import Path
+import sys
+import time
+from scripts.research.tune_breakout_logic import sha256
+
+async def run_child(command, log, timeout=7200):
+    with Path(log).open("w") as output:
+        process = await asyncio.create_subprocess_exec(
+            *command, stdout=output, stderr=asyncio.subprocess.STDOUT,
+            env=dict(os.environ, PYTHONPATH="."),
+        )
+        try:
+            code = await asyncio.wait_for(process.wait(), timeout)
+            if code:
+                raise RuntimeError(f"child exit {code}: {log}")
+            return code
+        finally:
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), 5)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+
+async def main():
+    if sys.argv[1:] == ["--self-test"]:
+        try:
+            await run_child([sys.executable, "-c", "import time;time.sleep(30)"],
+                            "/tmp/annual-supervisor-timeout.log", timeout=0.05)
+        except asyncio.TimeoutError:
+            print("TIMEOUT_PROPAGATED_CHILD_REAPED", flush=True)
+        else:
+            raise AssertionError("timeout suppressed")
+        try:
+            await run_child([sys.executable, "-c", "raise SystemExit(7)"],
+                            "/tmp/annual-supervisor-failure.log")
+        except RuntimeError as error:
+            assert "child exit 7" in str(error)
+            print("CHILD_FAILURE_PROPAGATED", flush=True)
+        else:
+            raise AssertionError("failure suppressed")
+        return
+    root = Path("data/strategy_annual_directional_fine_approved_rr_2026_10_03")
+    if root.exists():
+        raise ValueError("fresh frozen run requires absent output root")
+    began = time.perf_counter()
+    # Two independently bounded child processes. No CPU replay on async event loop.
+    async def verify_after_protocol():
+        async def wait_for_protocol():
+            while not (root / "protocol.json").exists():
+                await asyncio.sleep(0.1)
+        await asyncio.wait_for(wait_for_protocol(), 120)
+        return await run_child(
+            [sys.executable, "docs/reviews/artifacts/2026-10-03-annual-verifier.py.txt", str(root)],
+            "logs/annual-approved-directional-fine-verification.log",
+        )
+    tasks = [
+        asyncio.create_task(run_child(
+            [sys.executable, "-m", "scripts.research.bidirectional_campaign", "--dataset",
+             "data/b1_public_exness_2025_10_2026_09", "--output", str(root), "--catalog",
+             "annual_directional_fine", "--require-calendar-year"],
+            "logs/annual-approved-directional-fine.log",
+        )),
+        asyncio.create_task(verify_after_protocol()),
+    ]
+    try:
+        codes = await asyncio.gather(*tasks)
+    finally:
+        for task in tasks:
+            if not task.done(): task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    proof = json.loads((root / "fresh-verification.json").read_text())
+    verdict = json.loads((root / "verdict.json").read_text())
+    assert proof["status"] == "FRESH_REPLAY_MATCH" and proof["verified_scenarios"] == 150
+    assert verdict["campaign_exhausted"] and verdict["completed_trials"] == 24
+    output = dict(status="BOUNDED_ASYNC_CHILDREN_COMPLETE", child_exit_codes=codes,
+                  wall_seconds=time.perf_counter() - began, max_children=2,
+                  supervisor_sha256=sha256(__file__), protocol_sha256=sha256(root / "protocol.json"),
+                  fresh_verification_sha256=sha256(root / "fresh-verification.json"),
+                  qualification=verdict["qualified_discovery"], replay_math_changed_by_supervision=False)
+    (root / "async-supervision.json").write_text(json.dumps(output, indent=2) + "\n")
+    print(json.dumps(output), flush=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,0 +1,55 @@
+"""Fast deterministic goal feedback from hashed actual replay artifacts.
+
+Prior coverage / prior qualification / annual undefined baseline RR are separate
+minimal failure paths. None of these scripts fabricates a strategy win.
+"""
+import argparse
+import json
+from pathlib import Path
+from scripts.research.bidirectional_campaign import qualifies_trial30
+from scripts.research.tune_breakout_logic import sha256
+import pandas as pd
+
+parser = argparse.ArgumentParser()
+parser.add_argument("mode", choices=("coverage", "qualification", "annual_rr"))
+args = parser.parse_args()
+prior = Path("data/strategy_bidirectional_hybrid_parent_trend_campaign_2026_10_03")
+annual = Path("data/strategy_annual_parent_invalidation_2026_10_03")
+root = annual if args.mode == "annual_rr" else prior
+protocol = json.loads((root / "protocol.json").read_text())
+if args.mode == "coverage":
+    start, end = map(pd.Timestamp, protocol["windows"]["full"])
+    days = (end - start).days
+    print(dict(protocol_sha256=sha256(root / "protocol.json"), calendar_days=days), flush=True)
+    assert days >= 365, f"ONE_YEAR_COVERAGE_MISSING: {days} days"
+else:
+    baseline_path = root / "baseline/result.json"
+    baseline = json.loads(baseline_path.read_text())
+    for name, digest in baseline["artifact_hashes"].items():
+        assert sha256(root / "baseline" / name) == digest
+    if args.mode == "qualification":
+        candidate_path = root / "trial-178/result.json"
+        candidate = json.loads(candidate_path.read_text())
+        for name, digest in candidate["artifact_hashes"].items():
+            assert sha256(root / "trial-178" / name) == digest
+        passed = {w: qualifies_trial30(pair, baseline["metrics"][w], 60 if w == "full" else 20)
+                  for w, pair in candidate["metrics"].items()}
+        print(dict(candidate_sha256=sha256(candidate_path), window_pass=passed), flush=True)
+        assert all(passed.values()), "SECOND_HALF_STRICT_QUALIFICATION_FAILED"
+    else:
+        measured = baseline["metrics"]["full"]
+        ideal = [dict(p, net_usd=10000.0, max_dd_pct=0.0, win_rate=0.99,
+                      realized_rr=10.0, trades=100, buy_trades=50, sell_trades=50,
+                      max_admitted_risk_pct=1.0) for p in measured]
+        accepted = qualifies_trial30(ideal, measured, 60)
+        only_rr_changed = [dict(p, realized_rr=0.0) for p in measured]
+        disproof = qualifies_trial30(ideal, only_rr_changed, 60)
+        assert not accepted and disproof, "undefined RR is not the isolated fail path"
+        print(dict(baseline_sha256=sha256(baseline_path),
+                   baseline_trades=[p["trades"] for p in measured],
+                   baseline_wr=[p["win_rate"] for p in measured],
+                   baseline_rr=[p["realized_rr"] for p in measured],
+                   synthetic_ideal_probe_accepted=accepted,
+                   synthetic_probe_only_baseline_rr_zero=disproof), flush=True)
+        # Synthetic probe tests comparator only; never a measured strategy result.
+        assert accepted, "UNDEFINED_BASELINE_RR_REJECTS_EVEN_IDEAL_METRICS"

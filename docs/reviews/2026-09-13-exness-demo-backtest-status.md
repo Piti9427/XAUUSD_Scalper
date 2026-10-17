@@ -37,7 +37,7 @@ Same local GC=F M15 proxy, March 10–May 18, 2026; initial capital USD 10,000. 
 
 Newly recorded March 12 fill-bar SL loses USD 47.55. Volume-based partial cash and subsequent sizing also change the ledger. Earlier performance comparison remains a historical benchmark for the performance-only patch; exact before/after output parity is not expected after these intentional accounting fixes.
 
-Full executed output: `2026-09-13-corrected-proxy-backtest.txt`.
+Full executed output: `data/research_output/review-fixtures/2026-09-13-corrected-proxy-backtest.txt`.
 
 ## Remaining financial blockers
 

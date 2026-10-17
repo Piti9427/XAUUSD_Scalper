@@ -1,0 +1,23 @@
+{
+  "strategy": "reward156",
+  "formula": "archived",
+  "buy_pause_drawdown": 0.0,
+  "risk_cap": 0.1,
+  "rsi_period": 7,
+  "rsi_threshold": 30,
+  "sell_lookback": 96,
+  "sell_ema": 50,
+  "macro_span": 200,
+  "buy_stop_atr": 1.5,
+  "buy_target_rr": 2.0,
+  "buy_protect_mode": "break_even",
+  "stop_atr": 2.5,
+  "sell_target": "r2",
+  "protect_mode": "break_even",
+  "daily_loss_limit": 0.1,
+  "max_daily_losses": 0,
+  "cooldown_bars": 0,
+  "entry_session": "all",
+  "risk_mode": "static",
+  "buy_ema": 50
+}

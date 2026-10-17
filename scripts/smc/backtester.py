@@ -67,7 +67,7 @@ class SMCBacktester:
 
     def __init__(
         self,
-        initial_balance: float = 10000.0,
+        initial_balance: float = 200.0,
         risk_pct: float = 0.005,
         spread_buffer: float = 0.30,
         max_sl_cap: float = 25.00,

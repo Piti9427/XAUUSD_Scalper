@@ -15,7 +15,7 @@ Use the existing **MT5 desktop on this Mac (Wine)** for the next read-only data 
 
 Baseline is the working tree **after the previous debug fixes**, frozen before this performance refactor at `.scratch/python-readiness/baseline/detection.py`; it is not a different trading strategy. SHA-256: `8504b10e7b35898761055def61ae777a52e69ed694d5363b0e762b1ff1e75c8e`. Current detector: `a9d1b0f364f8724e26406a2300651fb4504454d4145ae1be4111276583d7f4de`.
 
-Same local data, parameters and environment; median of three unprofiled runs per variant. Final measurement was rerun without the concurrent profiler used during exploratory measurements. Python 3.14.6; platform `macOS-26.5.1-arm64-arm-64bit-Mach-O`. Source/data hashes, every timing, detector stream hashes and trade records are in [results JSON](/Users/nopparuj/my-agents/XAUUSD_Scalper/docs/reviews/2026-09-13-python-refactor-results.json:1).
+Same local data, parameters and environment; median of three unprofiled runs per variant. Final measurement was rerun without the concurrent profiler used during exploratory measurements. Python 3.14.6; platform `macOS-26.5.1-arm64-arm-64bit-Mach-O`. Source/data hashes, every timing, detector stream hashes and trade records are in [results JSON](/Users/nopparuj/my-agents/XAUUSD_Scalper/data/research_output/review-fixtures/2026-09-13-python-refactor-results.json:1).
 
 | Parameter profile | Before | After | Speedup | Behavioral check |
 |---|---:|---:|---:|---|
@@ -64,7 +64,7 @@ Both winners and the loss entered in the London session. This sample provides no
 | Fills/partial exits | Orchestrator infers fills from OHLC; [partial volume:98](/Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/smc/orchestrator.py:98) rounds to two decimals and clamps remainder to 0.01. | Reconcile broker tickets/fills, lot steps, partial rejection and restart state before emitting execution milestones. |
 | Costs/news | Backtest lacks historical spread/slippage/commission/news behavior matching live. | Broker bid/ask or tick data, fee model and timestamped news corpus; baseline and stressed-cost runs. |
 
-Executed [four counterexamples](/Users/nopparuj/my-agents/XAUUSD_Scalper/docs/reviews/reproduce_backtest_readiness.py:1). The broader ledger/account changes above were not silently mixed into a performance refactor because they change financial behavior and require their own reviewed execution contract.
+Executed [four counterexamples](/Users/nopparuj/my-agents/XAUUSD_Scalper/scripts/debug/reviews/reproduce_backtest_readiness.py:1). The broader ledger/account changes above were not silently mixed into a performance refactor because they change financial behavior and require their own reviewed execution contract.
 
 ## Local Mac correction
 

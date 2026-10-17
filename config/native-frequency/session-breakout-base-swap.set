@@ -1,0 +1,16 @@
+Strategy=1
+CostView=0
+CostsAttested=false
+TesterEconomicsAttested=false
+CostSource=
+BaseCommissionUSDPerLotRoundTrip=-1
+SwapLongPoints=0
+SwapShortPoints=0
+SwapTripleWeekday=3
+ServerOffsetAttested=false
+ServerUtcOffsetMinutes=0
+EvaluationFromUTC=2024.09.01 00:00:00
+EvaluationToUTC=2026.10.06 00:00:00
+Session1UtcMinute=420
+Session2UtcMinute=780
+ReportPrefix=session-breakout_base-swap

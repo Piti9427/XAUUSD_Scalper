@@ -54,7 +54,7 @@ Mechanical v1 deliverable landed in-repo.
 
 Evidence:
 - docs/specs/xauusd-s1-s4-mechanical-v1.md
-- tests/test_s1_s4_mechanical_spec_contract.py
+- tests/application/test_s1_s4_mechanical_spec_contract.py
 - docs/handoff/2026-09-16-issues-3-4-local-acceptance-audit.md
 - branch feature/smc-v2-hardening
 EOF

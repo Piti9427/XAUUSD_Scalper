@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XAUUSD Scalper · Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-paper:       #f5f5f5;
+      --color-paper-2:     #ececec;
+      --color-ink:         #2d3142;
+      --color-muted:       #4f5d75;
+      --color-soft:        #7a8399;
+      --color-rule:        rgba(45,49,66,0.12);
+      --color-rule-solid:  rgba(79,93,117,0.25);
+      --color-accent:      #eb6c36;
+      --color-accent-tint: rgba(235,108,54,0.08);
+      --color-link:        #2e5aa8;
+      --font-sans:   'Geist', system-ui, -apple-system, sans-serif;
+      --font-serif:  'Instrument Serif', Georgia, serif;
+      --font-mono:   'Geist Mono', ui-monospace, Menlo, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      min-height: 100vh;
+      padding: 3rem 2rem;
+      color: var(--color-ink);
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.75rem, 3vw + 1rem, 2.5rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: var(--color-ink);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--color-muted);
+      max-width: 64ch;
+    }
+
+    /* ── Diagram container ────────────────────────────────────────── */
+    .diagram-container {
+      background: transparent;
+      border: none;
+      padding: 0;
+      overflow-x: auto;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 960px;
+      display: block;
+    }
+
+    /* ── Info cards ───────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: 1.05fr 1.15fr 1fr;
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 860px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px solid var(--color-rule);
+      padding: 1.25rem;
+    }
+
+    .card-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .card-dot.link   { background: var(--color-link); }
+    .card-dot.coral  { background: var(--color-accent); }
+    .card-dot.slate  { background: var(--color-muted); }
+
+    .card-header h3 {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-ink);
+      letter-spacing: -0.01em;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .card li {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--color-muted);
+    }
+
+    .card li code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(45,49,66,0.05);
+      padding: 0.15rem 0.35rem;
+      border-radius: 3px;
+      color: var(--color-ink);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--color-soft);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <p class="header-eyebrow">Architecture · Diagram Design</p>
+      <h1>XAUUSD Scalper Architecture</h1>
+      <p class="subtitle">System architecture and pipeline topology: Ingress feeds, Pure B1 strategy detection, strict 10% risk gate, and decoupled execution outbox.</p>
+    </header>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1040 576" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="xauusd-arch-title xauusd-arch-desc">
+        <title id="xauusd-arch-title">XAUUSD Scalper Repository Architecture</title>
+        <desc id="xauusd-arch-desc">System architecture diagram showing 3-tier structure: market ingress, Pure B1 strategy and 10% risk gate, and execution outbox with telemetry.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <!-- Base clean paper -->
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- ── Tier Zones (Painted before arrows and nodes) ────────── -->
+        <!-- Zone 1: Ingress -->
+        <rect x="48" y="88" width="248" height="288" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="116" y="92" width="112" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="172" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">INGRESS &amp; DATA</text>
+
+        <!-- Zone 2: Core Engine & Risk -->
+        <rect x="336" y="88" width="344" height="384" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="432" y="92" width="152" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="508" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">CORE ENGINE &amp; RISK</text>
+
+        <!-- Zone 3: Execution & Telemetry -->
+        <rect x="736" y="88" width="256" height="384" rx="8"
+              fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="792" y="92" width="144" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="864" y="100" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">OUTBOX &amp; TELEMETRY</text>
+
+        <!-- ── Connectors (Drawn before boxes) ────────────────────── -->
+        <!-- Conn 1: MT5 -> Orchestrator (Straight horizontal) -->
+        <line x1="280" y1="172" x2="352" y2="172" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+        <!-- Conn 2: News -> Orchestrator (Orthogonal elbow right-up) -->
+        <path d="M 280,324 H 308 Q 316,324 316,316 V 200 Q 316,192 324,192 H 352"
+              fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Conn 3: Orchestrator -> Strategy (Straight vertical) -->
+        <line x1="480" y1="208" x2="480" y2="256" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Conn 4: Strategy -> Risk Gate (Straight vertical) -->
+        <line x1="480" y1="328" x2="480" y2="380" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Conn 5: Orchestrator -> Alert Relay (Straight horizontal) -->
+        <line x1="664" y1="172" x2="752" y2="172" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Conn 6: Risk Gate -> Execution Outbox (Orthogonal elbow right-up) -->
+        <path d="M 664,400 H 700 Q 708,400 708,392 V 300 Q 708,292 716,292 H 752"
+              fill="none" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- Conn 7: Execution Outbox -> Alert Relay (Straight vertical) -->
+        <line x1="864" y1="256" x2="864" y2="208" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Conn 8: Tests & Data -> Risk Gate (Straight horizontal dashed return) -->
+        <line x1="752" y1="424" x2="664" y2="424" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ── Arrow Labels (Opaque mask with >=8px gap from stroke) ── -->
+        <!-- Label 1: BARS/TICKS (Above stroke at Y=172) -->
+        <rect x="288" y="152" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="316" y="160" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TICKS/BARS</text>
+
+        <!-- Label 2: CALENDAR (Beside vertical stroke at X=316) -->
+        <rect x="252" y="248" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="280" y="256" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CALENDAR</text>
+
+        <!-- Label 3: EVALUATE (Beside vertical stroke at X=480) -->
+        <rect x="488" y="228" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="516" y="236" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EVALUATE</text>
+
+        <!-- Label 4: CANDIDATE (Beside vertical stroke at X=480) -->
+        <rect x="488" y="348" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="520" y="356" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CANDIDATE</text>
+
+        <!-- Label 5: TELEMETRY (Above stroke at Y=172) -->
+        <rect x="676" y="152" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="708" y="160" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TELEMETRY</text>
+
+        <!-- Label 6: PERMITTED (Beside vertical stroke at X=708) -->
+        <rect x="636" y="340" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="668" y="348" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PERMITTED</text>
+
+        <!-- Label 7: DISPATCH (Beside vertical stroke at X=864) -->
+        <rect x="872" y="228" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="900" y="236" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DISPATCH</text>
+
+        <!-- Label 8: TICK AUDIT (Above stroke at Y=424) -->
+        <rect x="676" y="404" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="708" y="412" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TICK AUDIT</text>
+
+        <!-- ── Node 1: MT5 Connector ─────────────────────────────── -->
+        <rect x="64" y="136" width="216" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="64" y="136" width="216" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="72" y="144" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="88" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FEED</text>
+        <text x="172" y="172" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">MT5 Connector</text>
+        <text x="172" y="188" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">scripts/mt5_connector.py · M15</text>
+
+        <!-- ── Node 2: News & Webhooks ───────────────────────────── -->
+        <rect x="64" y="288" width="216" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="64" y="288" width="216" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="72" y="296" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="88" y="304" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">INGR</text>
+        <text x="172" y="324" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">News &amp; Webhooks</text>
+        <text x="172" y="340" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">news_service · webhook_bridge</text>
+
+        <!-- ── Node 3: Alert Orchestrator ────────────────────────── -->
+        <rect x="352" y="136" width="312" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="352" y="136" width="312" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="360" y="144" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="376" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LOOP</text>
+        <text x="508" y="172" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Alert Orchestrator</text>
+        <text x="508" y="188" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">main.py · smc_main.py (polling loop)</text>
+
+        <!-- ── Node 4: Pure B1 Strategy (FOCAL CORAL) ────────────── -->
+        <rect x="352" y="256" width="312" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="352" y="256" width="312" height="72" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+        <rect x="360" y="264" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.40)" stroke-width="0.8"/>
+        <text x="376" y="272" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+        <text x="508" y="292" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Pure B1 Strategy Engine</text>
+        <text x="508" y="308" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">scripts/strategy.py · Donchian + RSI + EMA</text>
+
+        <!-- ── Node 5: Risk & Capital Gate (SECURITY BOUNDARY) ───── -->
+        <rect x="352" y="380" width="312" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="352" y="380" width="312" height="72" rx="6" fill="rgba(235,108,54,0.05)" stroke="rgba(235,108,54,0.70)" stroke-width="1"/>
+        <rect x="360" y="388" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.40)" stroke-width="0.8"/>
+        <text x="376" y="396" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GATE</text>
+        <text x="508" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Risk &amp; Capital Gate</text>
+        <text x="508" y="432" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">10% Equity Cap · 40% Daily Loss Limit</text>
+
+        <!-- ── Node 6: Alert Relay ───────────────────────────────── -->
+        <rect x="752" y="136" width="224" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="752" y="136" width="224" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="760" y="144" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="776" y="152" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">NOTIF</text>
+        <text x="864" y="172" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Alert Relay</text>
+        <text x="864" y="188" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">notifier.py · gws_logger.py</text>
+
+        <!-- ── Node 7: Execution Outbox ──────────────────────────── -->
+        <rect x="752" y="256" width="224" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="752" y="256" width="224" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="760" y="264" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="776" y="272" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXEC</text>
+        <text x="864" y="292" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Execution Outbox</text>
+        <text x="864" y="308" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">scripts/b1_outbox.py · Staging</text>
+
+        <!-- ── Node 8: Research & Test Suite ─────────────────────── -->
+        <rect x="752" y="380" width="224" height="72" rx="6" fill="#f5f5f5"/>
+        <rect x="752" y="380" width="224" height="72" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="760" y="388" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.40)" stroke-width="0.8"/>
+        <text x="776" y="396" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EVID</text>
+        <text x="864" y="416" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Research &amp; Tests</text>
+        <text x="864" y="432" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">tests/ · data/ 6mo Exness Ticks</text>
+
+        <!-- ── Legend Strip ──────────────────────────────────────── -->
+        <line x1="48" y1="496" x2="992" y2="496" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <text x="48" y="516" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <!-- Legend Items -->
+        <rect x="48" y="532" width="16" height="12" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+        <text x="72" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Pure B1 Focal</text>
+
+        <rect x="160" y="532" width="16" height="12" rx="2" fill="rgba(235,108,54,0.05)" stroke="rgba(235,108,54,0.70)" stroke-width="1"/>
+        <text x="184" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Risk &amp; Capital Gate</text>
+
+        <rect x="300" y="532" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="324" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Core Service</text>
+
+        <rect x="424" y="532" width="16" height="12" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <text x="448" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Test / State Store</text>
+
+        <line x1="560" y1="538" x2="588" y2="538" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+        <text x="596" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Primary Pipeline</text>
+
+        <line x1="708" y1="538" x2="736" y2="538" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <text x="744" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Market Feed</text>
+
+        <line x1="844" y1="538" x2="872" y2="538" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+        <text x="880" y="540" fill="#4f5d75" font-size="8" font-family="'Geist', sans-serif">Audit / Verification</text>
+      </svg>
+    </div>
+
+    <!-- ── Summary Cards ─────────────────────────────────────────── -->
+    <div class="cards">
+      <div class="card">
+        <p class="card-eyebrow">Tier 01 · Ingress &amp; Sensors</p>
+        <div class="card-header">
+          <span class="card-dot link"></span>
+          <h3>Market Feeds &amp; Filters</h3>
+        </div>
+        <ul>
+          <li><code>mt5_connector.py</code> — Real-time M15 bar polling and live bid/ask spread monitoring directly from MetaTrader 5 API.</li>
+          <li><code>news_service.py</code> — Forex macroeconomic calendar guard; blocks entries during high-impact USD events (NFP, CPI, FOMC).</li>
+          <li><code>webhook_bridge.py</code> — Optional secondary HTTP listener for TradingView alerts and dry-run webhook verification.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="card-eyebrow">Tier 02 · Strategy &amp; Risk Boundary</p>
+        <div class="card-header">
+          <span class="card-dot coral"></span>
+          <h3>Pure B1 &amp; Risk Invariants</h3>
+        </div>
+        <ul>
+          <li><code>scripts/strategy.py</code> — Target single-position Donchian breakout (20-period) with RSI 30–70 guard and EMA 50 trend filter. Dynamic 6.25 ATR TP / 2.5 ATR SL.</li>
+          <li><code>CORE_STRATEGY.md</code> — Single source of truth. Zero basket recovery, zero martingale. Strict <strong>10% equity risk cap</strong> per trade.</li>
+          <li><code>main.py</code> / <code>smc_main.py</code> — Alert loop and simulation runner with hard 40% ($80) daily loss circuit breaker.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <p class="card-eyebrow">Tier 03 · Outbox &amp; Safety Harness</p>
+        <div class="card-header">
+          <span class="card-dot slate"></span>
+          <h3>Execution, Alerts &amp; Evidence</h3>
+        </div>
+        <ul>
+          <li><code>b1_outbox.py</code> — Decoupled staging outbox that enforces broker-reconciliation before order firing. Live remains NO-GO.</li>
+          <li><code>notifier.py</code> &amp; <code>gws_logger.py</code> — Telegram bot sending structured trade levels with Google Workspace audit log sheet.</li>
+          <li><code>tests/</code> &amp; <code>data/</code> — Deterministic unit test suite and 6-month Exness tick replay dataset (reproducible verification contract).</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span>XAUUSD_Scalper · Repository Architecture</span>
+      <span>Rendered with Diagram Design Editorial System</span>
+    </footer>
+  </div>
+</body>
+</html>

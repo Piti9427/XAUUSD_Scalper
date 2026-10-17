@@ -1,0 +1,18 @@
+{
+  "version": "smc_m15_v1",
+  "research_only": true,
+  "initial_equity": 200,
+  "volume": 0.01,
+  "risk_cap": 0.1,
+  "daily_loss_limit": 0.1,
+  "max_daily_losses": 1,
+  "macro_span": 200,
+  "min_body_ratio": 0.45,
+  "min_fvg_gap": 0.3,
+  "sweep_to_choch_bars": 8,
+  "retest_bars": 4,
+  "target_rr": 2.0,
+  "calendar": "conservative_utc_96_bars_v1",
+  "swap_required": true,
+  "views": ["base-current-spec-swap", "stress-current-spec-swap"]
+}

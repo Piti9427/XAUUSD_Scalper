@@ -1,0 +1,36 @@
+{
+  "version": "B1-profit-research-v1",
+  "research_only": true,
+  "initial_theoretical_equity": 100,
+  "baseline_frozen": "B1-FINAL-v1 / supplied GetData handoff execution model",
+  "costs_r": [0.1, 0.15],
+  "discovery_start": "2026-02-12T20:00:00Z",
+  "inner_split": "2026-05-01T00:00:00Z",
+  "primary_start": "2026-06-26T00:00:00Z",
+  "end_exclusive": "2026-09-26T00:00:00Z",
+  "challengers": {
+    "B20": "Donchian 20 only; other B1 rules unchanged",
+    "B40": "Donchian 40 only; other B1 rules unchanged",
+    "P1": "EMA20/50 pullback from unfinished prior experiment; original exact rules, B1 exits",
+    "B1_H1": "B1 long only if completed H1 close>EMA200 and slope>0; short inverse",
+    "B1_BODY": "B1 direction-aligned candle body >=50% of candle range",
+    "B1_SESSION": "B1 signal close UTC in [07:00,17:00)",
+    "B1_SL2": "B1 stop 2 ATR instead of 2.5; target remains 3.5R",
+    "B1_TP25": "B1 target 2.5R instead of 3.5; stop remains 2.5ATR"
+  },
+  "selection": {
+    "use_only": ["pre_primary", "early", "late"],
+    "pre_primary_min_trades": 30,
+    "pre_primary_min_pf": 1.1,
+    "pre_primary_return": "strictly above B1 at both cost reserves",
+    "pre_primary_dd": "at or below B1 at both cost reserves and strictly below 12%",
+    "early_late": "at 0.15R each >=10 trades, positive total R, no hard stop",
+    "hard_stop": "never triggered in qualification windows",
+    "rank": "highest pre_primary sized return at 0.15R; then lower DD; stable name tie-break",
+    "fallback": "B1"
+  },
+  "risk": "Original equity-HWM DD tiers; no leverage/risk increase; no portfolio combination",
+  "execution": "Exact supplied handoff simulator: next observed M15 open, SL first for unresolved both-hit, gap SL at open, TP at target; ideal fractional exposure",
+  "retrospective_warning": "All history exposed previously; primary is a later evaluation window, not pristine OOS. No selection based on primary results.",
+  "broker_followup": "Compare selected candidate and B1 on Exness real ticks with actual contract/minimum volume and simulated $100 equity; no order APIs"
+}

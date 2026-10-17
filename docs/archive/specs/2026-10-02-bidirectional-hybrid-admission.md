@@ -1,0 +1,5 @@
+# RSI BUY admission continuation
+
+Owner asks to continue research. Earlier RSI/D48144 has no qualified candidate. Preregister108 contracts before actual replay: RSI BUY period7/14/21, lower25/30/35, trendoff/EMA50, BUYpause at peak-equity drawdown2.5/5/10%, BE/trail1R. SELL stays unfiltered D48. TP3ATR/SL2.5ATR, fixed0.01/maxrisk10/daily20%, no recovery. Pause rejects BUY while leaving SELL eligible; it never changes lot or stop. Existing public BUYpause test and frozen108 CLI/resume tests apply.
+
+Hypothesis: restrict RSI BUY during account drawdown rather than introducing calendar-specific switching. RSI first-half gains in prior discovery did not survive second-half qualification; this is a new causal admission test, not proof that bad trades can be predicted. Six original full/half base/stress gates remain exact. Frozen sources/inputs and full-result fresh reproduction required. Historical discovery uses reused actual Bid/Ask; commission0 assumption and omitted swap remain. No automatic runtime promotion or independent-validation claim.
