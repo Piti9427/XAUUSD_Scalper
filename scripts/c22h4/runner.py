@@ -15,7 +15,7 @@ from scripts.c22h4.trade_log import (
     review_exit,
 )
 from scripts.pure_b1.broker_data import completed_m15_from_m1
-from scripts.trial30.runner import Trial30DemoRunner
+from scripts.demo_runtime.runner import DemoRunner
 
 SNAPSHOT = "RESEARCH-C22-H4EMA200-20261004"
 MAGIC = 22261004
@@ -150,7 +150,7 @@ class C22H4Strategy:
         return dict(side=side, close=close, macro_ema=macro, atr=atr, prior_low=prior_low, why=why)
 
 
-class C22H4DemoRunner(Trial30DemoRunner):
+class C22H4DemoRunner(DemoRunner):
     def __init__(self, *, config=None, **kwargs):
         config = (
             json.loads((ROOT / "config/c22h4-demo.json").read_text()) if config is None else config
