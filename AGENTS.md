@@ -47,6 +47,14 @@ Use Python 3, four-space indentation, and clear module boundaries. Keep trading 
 
 Prefer config keys over hardcoded strategy values. Keep comments focused on trading assumptions, risk controls, or external API behavior.
 
+## Cursor Cloud specific instructions
+
+- `install` creates `/workspace/.venv` from `requirements-viz.txt` (that file includes `requirements.txt`) and puts wrapper scripts for `python`, `python3`, `pip`, and `pip3` on `/usr/local/bin`. Login shells do not activate `.venv` through `~/.bashrc`. Wrappers are required because a symlink to `.venv/bin/python3` resolves to system Python and drops the venv prefix.
+- `python3.12-venv` is installed in that same `install` step. The default image does not include it.
+- `MetaTrader5` is Windows-only and is skipped on Linux. `main.py` logs a connector error and returns. `smc_main.py` stays in dry-run and loops, so it does not belong in `start`.
+- `config/settings.yaml` is gitignored. Unit tests do not need broker, Telegram, or Google credentials. Live smoke test remains `python3 test_mt5.py` after secrets are set.
+- Live copilot entry is `smc_main.py` (`deploy/entrypoint.sh` uses it). `config/settings.yaml.example` matches that v1 config. `main.py` is the older sniper and raises `KeyError: tp_pips` against that template.
+
 ## Testing Guidelines
 
 Unit tests live in `tests/` and use `unittest`. Run them after changing config loading, timeframe mapping, or strategy behavior. Use `python3 test_mt5.py` after changing MT5 credentials, symbol settings, connector logic, or timeframe handling. Keep test data minimal and deterministic.
