@@ -542,6 +542,59 @@ pins, persistence schema or readiness claims change. Debug map:
 `docs/architecture/codebase-layout.md`.
 
 
+**Approved containment/baseline policy implemented locally (2026-10-23):**
+This supersedes the process restart latch and environment-selected shadow behavior
+recorded above. `bot-run`/`bot-start` and rollback `trial30-run/start` always force
+shadow, including inherited gate=1. Sending requires `bot-execute`, `c22h4-run`,
+or `trial30-execute` and the CLI execution gate. Execution requires an explicit
+`MT5_TERMINAL_PATH` dedicated to this account; use a dedicated Wine prefix.
+Repeated MT5 SDK reads plus identity-before-mutation are containment checks, not
+an atomic transaction. Local writer lock does not coordinate separate machines.
+
+Baseline is account/UTC-day bound, persisted across restart. Reuse an already
+proven day value; never relatch current equity to increase allowance. Legacy
+`restart_equity` baselines block admission until independently reconciled.
+A missed midnight with floating exposure blocks that day's new entries while
+valid existing positions continue reconciliation. Flat-midnight history can
+reconstruct baseline; exact UTC-boundary capture remains supported.
+
+Stable broker position identifier plus owned opening ledger establishes identity;
+comment reuse cannot adopt another position. Ticket may change under the same ID.
+Every observation checks finite prices/volume, side, original TP, non-widening SL,
+and cost-inclusive risk against verified entry equity. Valid SL tightening/BE is
+accepted and persisted; original entry risk remains BE1R denominator. Proven
+owned contract violations close only that position and retain safety halt.
+Unclear identity/ledger halts sending; pending UNKNOWN is never blindly retried.
+Flat position plus complete closing ledger is required to announce closure.
+
+C22 cost policy v2 lasts 168h from explicit review; v1 and trial30 retain 24h.
+V2 requires hashed tariff, broker spec/swap terms and dated USD-per-lot swap
+calendar documents. Missing/stale/changed evidence or observed closed-deal cost
+drift blocks entry and queues a blocker alert. No timestamp auto-renewal.
+Cutover still requires cost evidence <=24h. V1 compatibility does not establish
+historical broker cost parity. Modeled swaps remain mandatory in every new
+economic comparison; this correction runs accounting/API regressions only.
+
+SQLite append-only audit commits financial state/events and request intent before
+mutation. Events include UTC, correlation/event IDs, account fingerprint,
+release/config hashes, expected/observed state, request/response and reasons.
+Invalid broker numerics remain explicit labels in audit JSON. Notes/JSONL and
+notification deliveries retry from durable events; delivery failures cannot
+skip position management. Financial persistence failure prohibits new mutation.
+Protection uncertainty >=180s queues CRITICAL independently of process heartbeat.
+Healthchecks receives failure pings while critical. Explicit DEMO_* credentials
+are required for external notification, which was not enabled by this task.
+
+Prospective evidence groups fixed-lot broker ledgers by release/config cohort,
+keeps actual profit/commission/swap/fee, and reports net USD, expectancy, profit
+factor, sampled observed equity DD, blockers and incomplete reconciliation.
+Simulated returns remain separate. 48h/96 complete M15 shadow spanning UTC midnight
+and 7 Demo days are operational gates, never profitability/real-money approval.
+Profitability stays INCONCLUSIVE and historical costs COST_INCONCLUSIVE until
+separate evidence/review. No automatic retuning, real-money enablement or failover.
+Deployment/systemd/private-bucket/soak remain unexecuted owner-gated operations.
+
+
 ### 6.34 Mandatory swap-inclusive new research runs (2026-10-05)
 
 Owner requires swap in every new economic backtest. Active C22 context diagnostics

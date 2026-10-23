@@ -1,0 +1,14 @@
+# Dedicated terminal/prefix; secrets belong in operator-owned mode0600 files.
+WINEPREFIX=/var/lib/c22-demo/wine
+DEMO_WINE_BIN=/usr/local/bin/wine64
+DEMO_WINDOWS_PYTHON=C:\tools\python312\python.exe
+MT5_TERMINAL_PATH=C:\C22Demo\terminal64.exe
+XAUUSD_MT5_LOGIN=
+XAUUSD_MT5_SERVER=
+XAUUSD_MT5_PASSWORD=
+DEMO_TELEGRAM_TOKEN=
+DEMO_TELEGRAM_CHAT_ID=
+DEMO_HEALTHCHECK_URL=
+# Separate /etc/c22-backup.env; pre-existing PRIVATE bucket, no ACL mutation.
+C22_PRIVATE_BUCKET=
+C22_NAMESPACE=

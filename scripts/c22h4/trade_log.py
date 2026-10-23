@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 
@@ -15,7 +16,7 @@ def explain_block(reason: str) -> str:
             "ปิดไม้เองหลังเที่ยงคืนแล้วยังติดเงื่อนไขนี้จนถึง 00:00 UTC ถัดไป."
         ),
         "cost_policy_invalid_or_stale": (
-            "ยังเข้าออเดอร์ไม่ได้เพราะใบรับรองต้นทุนเก่าเกิน 24 ชั่วโมง. "
+            "ยังเข้าออเดอร์ไม่ได้เพราะใบรับรองต้นทุนเก่าเกินอายุ policy: v1 24 ชั่วโมง, C22 v2 168 ชั่วโมง. "
             "บอทใช้ค่าคอมมิชชันต่อล็อตและเผื่อสลิปเพจจากใบนี้ก่อนคิดเพดานเสี่ยง 10%. "
             "ต้องตรวจ tariff ของบัญชีแล้วบันทึกเวลาใหม่ การแก้เฉพาะ timestamp ไม่ผ่าน."
         ),
@@ -148,8 +149,45 @@ def render_exit(captured_utc: str, thesis: dict, review: dict, **facts) -> tuple
 
 
 def append_note(path: Path, title: str, body: str, record: dict) -> None:
+    """Durable independent consumers; completion footer follows full Markdown body."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    event_id = record.get("event_id")
+    marker = f"<!-- complete-event:{event_id} -->" if event_id else None
+    complete = marker and path.exists() and marker in path.read_text(encoding="utf-8")
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(f"## {title}\n\n{body}\n\n")
-    with path.with_suffix(".jsonl").open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+        if not complete:
+            handle.write(f"## {title}\n\n{body}\n\n{marker + chr(10) if marker else ''}")
+        handle.flush()
+        os.fsync(handle.fileno())
+    jsonl = path.with_suffix(".jsonl")
+    with jsonl.open("a+b") as handle:
+        handle.seek(0)
+        data = handle.read()
+        if data and not data.endswith(b"\n"):
+            tail = data.rsplit(b"\n", 1)[-1]
+            try:
+                json.loads(tail)
+            except (ValueError, UnicodeError):
+                # Derived consumer only: replay incomplete final record from SQLite.
+                handle.truncate(len(data) - len(tail))
+                data = data[: -len(tail)]
+            else:
+                handle.write(b"\n")
+        found = False
+        for line in data.splitlines():
+            try:
+                found = bool(event_id and json.loads(line).get("event_id") == event_id)
+            except (ValueError, UnicodeError):
+                continue
+            if found:
+                break
+        if not found:
+            handle.write((json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n").encode())
+        handle.flush()
+        os.fsync(handle.fileno())
+    if hasattr(os, "O_DIRECTORY"):
+        descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)

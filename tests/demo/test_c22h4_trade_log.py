@@ -63,19 +63,15 @@ class TradeLogTests(unittest.TestCase):
         restarted = BrokerView(
             None, 1, "Exness-Demo", "XAUUSDm", "abc", view.journal, restart_unknown_baseline=True
         )
-        self.assertEqual(
-            restarted._baseline(NS(balance=230.50, equity=230.50), [], deals, now), 230.50
+        # Restart must never increase daily allowance by latching current equity.
+        with self.assertRaisesRegex(ValueError, "day_start_floating_unknown"):
+            restarted._baseline(NS(balance=230.50, equity=230.50), [], deals, now)
+        self.assertIsNone(view.journal.get("day"))
+        view.journal.put(
+            "day", {"day": now.date().isoformat(), "equity": 999.0, "source": "restart_equity"}
         )
-        self.assertEqual(view.journal.get("day")["source"], "restart_equity")
-        self.assertEqual(
-            restarted._baseline(NS(balance=230.50, equity=210.0), [], deals, now), 230.50
-        )
-        view.journal.put("day", {"day": now.date().isoformat(), "equity": 999.0, "source": "stale"})
-        again = BrokerView(
-            None, 1, "Exness-Demo", "XAUUSDm", "abc", view.journal, restart_unknown_baseline=True
-        )
-        self.assertEqual(again._baseline(NS(balance=230.50, equity=230.50), [], deals, now), 230.50)
-        self.assertEqual(view.journal.get("day")["source"], "restart_equity")
+        with self.assertRaisesRegex(ValueError, "unproven_day_baseline"):
+            restarted._baseline(NS(balance=230.50, equity=230.50), [], deals, now)
 
     def test_target_profit_and_planned_stop_do_not_request_a_contract_change(self):
         win = review_exit(
@@ -176,6 +172,7 @@ class TradeLogTests(unittest.TestCase):
 
             runner = C22H4DemoRunner.__new__(C22H4DemoRunner)
             runner.journal = Journal()
+            runner._note_event_id = "fixture-block"
             runner.trade_log_path = path.with_name(path.stem + "-trades.md")
             result = {"status": "BLOCKED", "reason": "day_start_floating_unknown"}
             runner._record_trade_note(None, result, now)

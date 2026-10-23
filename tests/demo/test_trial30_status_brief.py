@@ -135,12 +135,12 @@ class Trial30StatusBriefTest(unittest.TestCase):
         self.assertEqual(result["cost_policy"]["status"], "BLOCKED")
         self.assertEqual(result["entry_readiness"]["reason"], "cost_policy_identity_unknown")
 
-    def test_process_scoped_baseline_block_is_history_not_current_readiness(self):
+    def test_account_bound_baseline_block_is_history_not_current_readiness(self):
         result = self.load_with_cost(last_block="2026-09-30|day_start_floating_unknown")
         self.assertEqual(result["entry_readiness"]["reason"], "awaiting_signal_and_broker_checks")
         text = format_brief(result, [("watcher", "1")])
         self.assertIn("blocker ล่าสุดที่บันทึก: 2026-09-30 — day_start_floating_unknown", text)
-        self.assertIn("baseline equity ต้นวัน UTC ไม่ครบตาม process-scoped policy", text)
+        self.assertIn("baseline equity ต้นวัน UTC ไม่ครบตาม account-bound UTC policy", text)
         self.assertIn("ความพร้อมรับไม้: ยังไม่ยืนยัน", text)
 
 

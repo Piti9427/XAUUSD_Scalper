@@ -26,7 +26,7 @@ REASON_TEXT = {
     "foreign_exposure": "มีไม้หรือออเดอร์ที่บอทไม่ได้เป็นเจ้าของ",
     "safety_halt": "หยุดฉุกเฉินค้างอยู่",
     "another trial30 writer owns journal": "มี watcher อีกตัวถือ journal อยู่",
-    "day_start_floating_unknown": "baseline equity ต้นวัน UTC ไม่ครบตาม process-scoped policy",
+    "day_start_floating_unknown": "baseline equity ต้นวัน UTC ไม่ครบตาม account-bound UTC policy",
 }
 
 
@@ -41,7 +41,14 @@ def cost_report(values, path: Path, now: datetime, *, source: str) -> dict:
     if not isinstance(fingerprint, str) or not fingerprint:
         costs, status = {}, "identity_unknown"
     else:
-        costs, status = validate_policy(raw, fingerprint=fingerprint, now=now)
+        costs, status = validate_policy(
+            raw,
+            fingerprint=fingerprint,
+            now=now,
+            strategy="c22h4"
+            if values.get("strategy_snapshot", "").startswith("RESEARCH-C22")
+            else "trial30",
+        )
     report.update(
         status="VALID" if costs else "BLOCKED",
         reason=status if costs else "cost_policy_" + status,
@@ -51,7 +58,9 @@ def cost_report(values, path: Path, now: datetime, *, source: str) -> dict:
         if reviewed.tzinfo is not None and reviewed.utcoffset() == timedelta(0):
             report.update(
                 reviewed_utc=reviewed.isoformat(),
-                expires_utc=(reviewed + timedelta(hours=24)).isoformat(),
+                expires_utc=(
+                    reviewed + timedelta(hours=168 if raw.get("version") == 2 else 24)
+                ).isoformat(),
                 age_hours=(now - reviewed).total_seconds() / 3600,
             )
     except (KeyError, TypeError, ValueError, OverflowError):
@@ -86,12 +95,21 @@ def load_report(conn: sqlite3.Connection, *, cost_policy_path=None, now=None) ->
         readiness.update(status="BLOCKED", reason=result.get("reason") or "runtime_blocked")
     elif result.get("execute") is False:
         readiness.update(status="BLOCKED", reason="shadow_mode")
+    has_exposure = bool(
+        active or result.get("observed_positions") or result.get("position_protection") == "unknown"
+    )
     return dict(
         last_result=result,
         cost_policy=policy,
         entry_readiness=readiness,
         last_blocked_note=values.get("trade_block_note"),
         heartbeat_age_seconds=age,
+        position_protection=(
+            "unknown"
+            if has_exposure and (age is None or age >= 15)
+            else result.get("position_protection", "unverified")
+        ),
+        critical=bool(has_exposure and (age is None or age >= 180 or result.get("critical"))),
         day=values.get("day"),
         active={
             k: active.get(k) for k in ("status", "ticket", "position_id", "fill", "risk", "be_done")
@@ -215,6 +233,7 @@ def format_brief(report: dict, processes: list[tuple[str, str]] | None) -> str:
             f"blocker ล่าสุดที่บันทึก: {blocked}",
             f"heartbeat ล่าสุด: {beat}",
             f"ไม้ที่เปิด: {position}",
+            f"position protection: {report.get('position_protection', 'unverified')}; critical={report.get('critical', False)}",
             f"หยุดฉุกเฉิน: {halt}",
             f"equity วันนี้: {equity_text} ({day_name})",
             f"เหตุการณ์โบรกเกอร์: {event_text}",

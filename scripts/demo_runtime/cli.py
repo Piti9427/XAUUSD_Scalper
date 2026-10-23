@@ -93,6 +93,15 @@ def main(
 
         mt5 = broker_module
     terminal = os.environ.get("MT5_TERMINAL_PATH", r"C:\Program Files\MetaTrader 5\terminal64.exe")
+    if args.execute and not os.environ.get("MT5_TERMINAL_PATH"):
+        emit(dict(status="BLOCKED", reason="dedicated_terminal_path_required"))
+        return 2
+    from scripts.demo_runtime.delivery import TelegramDelivery, HealthDelivery
+
+    token, chat = os.environ.get("DEMO_TELEGRAM_TOKEN"), os.environ.get("DEMO_TELEGRAM_CHAT_ID")
+    notify = TelegramDelivery(token, chat) if token and chat else None
+    health_url = os.environ.get("DEMO_HEALTHCHECK_URL")
+    health = HealthDelivery(health_url) if health_url else None
     runner = None
     initialize_attempted = False
     try:
@@ -104,6 +113,9 @@ def main(
             journal_path=args.journal,
             cost_policy=policy,
             execute=args.execute,
+            notify=notify,
+            health_notify=health,
+            alert_notify=notify,
             account_guard_dir=ROOT / "data",
             **options,
         )
@@ -118,7 +130,7 @@ def main(
                 )
             )
             return 1
-        # No notifier enabled implicitly; durable broker-confirmed events remain in journal.
+        # Delivery requires explicit DEMO_* configuration; events persist during outages.
         count = 0
         prior = None
         heartbeat = time.monotonic()

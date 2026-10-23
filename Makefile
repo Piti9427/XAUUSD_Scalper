@@ -101,10 +101,8 @@ bot-once:
 	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --once
 
 bot-run:
-	@mode=shadow; execute=; \
-	if [ "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" ]; then mode=execution; execute=--execute; fi; \
-	echo "Starting $(BOT_NAME) Demo watcher: $$mode"; \
-	$(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $$execute $(BOT_CACHE_ARGS)
+	@echo "Starting $(BOT_NAME) Demo watcher: shadow"
+	MT5_ENABLE_DEMO_ORDER_SEND=0 $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $(BOT_CACHE_ARGS)
 
 bot-execute:
 	@echo "Starting $(BOT_NAME) Demo watcher: execution"
@@ -118,10 +116,8 @@ bot-start:
 	if [ $$result -eq 0 ]; then echo "Demo watcher already running"; exit 1; \
 	elif [ $$result -ne 1 ]; then echo "watcher inventory unavailable; start blocked"; exit 1; \
 	fi
-	@mode=shadow; execute=; \
-	if [ "$$MT5_ENABLE_DEMO_ORDER_SEND" = "1" ]; then mode=execution; execute=--execute; fi; \
-	echo "Starting $(BOT_NAME) Demo watcher: $$mode"; \
-	nohup $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $$execute $(BOT_CACHE_ARGS) >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
+	@echo "Starting $(BOT_NAME) Demo watcher: shadow"
+	@MT5_ENABLE_DEMO_ORDER_SEND=0 nohup $(PYTHON) -m scripts.ops.run_$(BOT_NAME)_wine --watch $(BOT_CACHE_ARGS) >> $(BOT_LOG) 2>&1 & echo $$! > $(BOT_PID)
 	@echo "started pid $$(cat $(BOT_PID))"
 
 bot-stop:
@@ -163,3 +159,7 @@ c22h4-stop:
 .PHONY: native-frequency-check
 native-frequency-check:
 	$(PYTHON) -m unittest tests.native.test_native_frequency -v
+
+.PHONY: trial30-execute
+trial30-execute:
+	$(MAKE) BOT_NAME=trial30 bot-execute

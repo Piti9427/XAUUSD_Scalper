@@ -1,12 +1,14 @@
 """New-entry detection, admission and intent-before-send ordering."""
 
 from datetime import datetime, timedelta
+import hashlib
+import json
 import time
 
 import pandas as pd
 
 from scripts.demo_runtime.broker import _finite, _cash
-from scripts.demo_runtime.costs import validate_policy
+from scripts.demo_runtime.costs import validate_policy, validate_observed_costs
 from scripts.smc.mt5_filling import resolve_type_filling
 from scripts.smc.risk import check_fixed_lot_risk
 
@@ -23,6 +25,15 @@ class Admission:
         row = frame.iloc[-1]
         closed = frame.index[-1].to_pydatetime() + timedelta(minutes=15)
         bar = closed.isoformat()
+        if ctx.journal.get("last_signal_bar") != bar:
+            ctx.journal.audit(
+                "SIGNAL",
+                bar=bar,
+                direction=int(row.direction),
+                expected={"snapshot": ctx.strategy.snapshot},
+                observed=row.to_dict(),
+            )
+            ctx.journal.put("last_signal_bar", bar)
         if ctx.journal.get("safety_halt"):
             raise ValueError("safety_halt")
         baseline = ctx.broker._baseline(account, positions, deals, now)
@@ -47,9 +58,16 @@ class Admission:
         first = ctx._first_quote(closed, now)
         if int(first.time_msc) > int((closed + timedelta(seconds=90)).timestamp() * 1000):
             raise ValueError("first_quote_late")
-        cost, status = validate_policy(ctx.policy, fingerprint=ctx.fingerprint, now=now)
+        cost, status = validate_policy(
+            ctx.policy,
+            fingerprint=ctx.fingerprint,
+            now=now,
+            strategy="c22h4" if ctx.strategy.prefix == "C22_" else "trial30",
+            spec=info,
+        )
         if not cost:
             raise ValueError("cost_policy_" + status)
+        validate_observed_costs(cost, deals, magic=ctx.strategy.magic, now=now)
         if baseline - float(account.equity) >= baseline * ctx.strategy.daily_loss_limit:
             ctx.journal.put("last_bar", bar)
             raise ValueError("daily_loss_limit")
@@ -90,7 +108,14 @@ class Admission:
         if direction * (executable - sl) <= distance or direction * (tp - executable) <= distance:
             raise ValueError("stop_geometry")
         margin = ctx.mt5.order_calc_margin(order_type, ctx.symbol, 0.01, entry)
-        if margin is None or not _finite(margin) or margin < 0 or margin > account.margin_free:
+        if (
+            margin is None
+            or not _finite(margin)
+            or margin < 0
+            or not _finite(account.margin_free)
+            or account.margin_free < 0
+            or margin > account.margin_free
+        ):
             raise ValueError("insufficient_margin")
         filling = resolve_type_filling(int(info.filling_mode), for_pending=False, mt5_mod=ctx.mt5)
         if int(info.filling_mode) & 1:
@@ -129,6 +154,8 @@ class Admission:
             raise ValueError("entry_window_expired")
         if abs(float(fresh_tick.ask if direction == 1 else fresh_tick.bid) - entry) > allowance:
             raise ValueError("quote_changed_before_send")
+        if not _finite(fresh_account.margin_free) or margin > float(fresh_account.margin_free):
+            raise ValueError("insufficient_margin")
         if (
             risk_amount > float(fresh_account.equity) * ctx.strategy.risk_cap
             or baseline - float(fresh_account.equity) >= baseline * ctx.strategy.daily_loss_limit
@@ -138,6 +165,10 @@ class Admission:
         if current_positions or current_orders:
             raise ValueError("exposure_changed")
         active = dict(
+            cohort_id=ctx.cohort_id,
+            cost_policy_hash=hashlib.sha256(
+                json.dumps(ctx.policy, sort_keys=True).encode()
+            ).hexdigest(),
             direction=direction,
             comment=comment,
             bar=bar,
@@ -160,13 +191,11 @@ class Admission:
                 active["thesis"] = note
         ctx.journal.put("active", active)  # Commit BEFORE irreversible API.
         ctx.journal.put("last_bar", bar)
-        try:
-            sent = ctx.mt5.order_send(request)
-        except Exception:
-            sent = None
+        sent = ctx.send(request, now)
         if sent is not None and int(sent.retcode) not in (10009, 10010, 10008, 10012, 10031):
             ctx.journal.put("active", None)
             return {"status": "REJECTED", "retcode": int(sent.retcode)}
+        active["broker_order"] = int(getattr(sent, "order", 0) or 0) if sent else None
         active["status"] = "UNKNOWN"
         ctx.journal.put("active", active)
         positions, _ = ctx.broker._exposure()

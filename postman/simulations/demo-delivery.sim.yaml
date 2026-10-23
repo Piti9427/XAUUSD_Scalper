@@ -1,0 +1,27 @@
+simulation: demo-delivery
+routing: path
+mocks:
+  - routeKey: telegram
+    path: ../mocks/demo-delivery/telegram.yaml
+  - routeKey: health
+    path: ../mocks/demo-delivery/health.yaml
+  - routeKey: rate-limit
+    path: ../mocks/demo-delivery/rate-limit.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            error: {status_code: 429}
+  - routeKey: unavailable
+    path: ../mocks/demo-delivery/unavailable.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            error: {status_code: 503}
+  - routeKey: timeout
+    path: ../mocks/demo-delivery/timeout.yaml
+    scenarios:
+      - overrides:
+          conditions:
+            latency: {delay_ms: 250}
+  - routeKey: lost-ack
+    path: ../mocks/demo-delivery/lost-ack.yaml

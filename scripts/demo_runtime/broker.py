@@ -7,7 +7,10 @@ from scripts.smc.account_mode import verify_account_mode
 
 
 def _finite(value, *, positive=False):
-    return math.isfinite(float(value)) and (float(value) > 0 if positive else True)
+    try:
+        return math.isfinite(float(value)) and (float(value) > 0 if positive else True)
+    except (TypeError, ValueError, OverflowError):
+        return False
 
 
 def _cash(deal):
@@ -54,11 +57,13 @@ class BrokerView:
         if prior is not None and prior != self.fingerprint:
             raise ValueError("journal_account_mismatch")
         self.journal.put("identity", self.fingerprint)
+        self.last_equity = float(account.equity)
         return account
 
     def _exposure(self):
         positions = self.mt5.positions_get()
         orders = self.mt5.orders_get()
+        self.position_count = None if positions is None else len(positions)
         if positions is None or orders is None:
             raise ValueError("exposure_unknown")
         return positions, orders
@@ -71,8 +76,23 @@ class BrokerView:
             raise ValueError("history_unknown")
         if len({int(d.ticket) for d in deals}) != len(deals):
             raise ValueError("history_duplicate")
-        if any(not _finite(_cash(d)) for d in deals):
+        if any(
+            not all(_finite(getattr(d, k, None)) for k in ("profit", "commission", "swap", "fee"))
+            for d in deals
+        ):
+            self.journal.audit(
+                "BROKER_HISTORY_INVALID", observed=deals, reason="invalid_history_cashflow"
+            )
             raise ValueError("invalid_history_cashflow")
+        if any(
+            int(d.type) in (0, 1)
+            and (not _finite(d.volume, positive=True) or int(d.entry) not in (0, 1, 3))
+            for d in deals
+        ):
+            self.journal.audit(
+                "BROKER_HISTORY_INVALID", observed=deals, reason="invalid_history_volume"
+            )
+            raise ValueError("invalid_history_volume")
         return deals
 
     def _baseline(self, account, positions, deals, now):
@@ -101,19 +121,14 @@ class BrokerView:
         state = self.journal.get("day")
         day = now.date().isoformat()
         held = any(abs(v) > 1e-8 for v in before.values())
-        if (
-            self.restart_unknown_baseline
-            and not self._restart_baseline_latched
-            and held
-            and now - midnight >= timedelta(seconds=1)
-        ):
-            baseline = float(account.equity)
-            if not _finite(baseline, positive=True):
-                raise ValueError("invalid_day_baseline")
-            self.journal.put("day", {"day": day, "equity": baseline, "source": "restart_equity"})
-            self._restart_baseline_latched = True
-            return baseline
         if state and state["day"] == day:
+            if state.get("account_fingerprint", self.fingerprint) != self.fingerprint or state.get(
+                "source"
+            ) not in (
+                "captured_at_utc_boundary",
+                "reconstructed_flat_midnight_from_reconciled_history",
+            ):
+                raise ValueError("unproven_day_baseline")
             if not _finite(state["equity"], positive=True):
                 raise ValueError("invalid_day_baseline")
             return float(state["equity"])
@@ -129,7 +144,15 @@ class BrokerView:
             source = "reconstructed_flat_midnight_from_reconciled_history"
         if not _finite(baseline, positive=True):
             raise ValueError("invalid_day_baseline")
-        self.journal.put("day", {"day": day, "equity": baseline, "source": source})
+        self.journal.put(
+            "day",
+            {
+                "day": day,
+                "equity": baseline,
+                "source": source,
+                "account_fingerprint": self.fingerprint,
+            },
+        )
         return baseline
 
     def _quote(self, now):

@@ -11,19 +11,22 @@ import sys
 def main(argv=None, *, entrypoint="mt5_wine_trial30.py") -> int:
     root = Path(__file__).resolve().parents[2]
     env = os.environ.copy()
-    for line in (root / ".env").read_text().splitlines():
+    for line in (root / ".env").read_text().splitlines() if (root / ".env").exists() else []:
         if line.strip() and not line.lstrip().startswith("#") and "=" in line:
             key, value = line.split("=", 1)
             env.setdefault(key.strip(), value.strip().strip("\"'"))
-    env["WINEPREFIX"] = str(
-        Path.home() / "Library/Application Support/net.metaquotes.wine.metatrader5"
+    env.setdefault(
+        "WINEPREFIX",
+        str(Path.home() / "Library/Application Support/net.metaquotes.wine.metatrader5"),
     )
     env["WINEDLLOVERRIDES"] = "mscoree,mshtml="
     env["PYTHONPATH"] = "Z:" + str(root).replace("/", "\\")
     args = list(sys.argv[1:] if argv is None else argv)
     command = [
-        "/Applications/MetaTrader 5.app/Contents/SharedSupport/wine/bin/wine",
-        r"C:\tools\python312\python.exe",
+        env.get(
+            "DEMO_WINE_BIN", "/Applications/MetaTrader 5.app/Contents/SharedSupport/wine/bin/wine"
+        ),
+        env.get("DEMO_WINDOWS_PYTHON", r"C:\tools\python312\python.exe"),
         "-u",
         "Z:" + str(root / "scripts/ops" / entrypoint).replace("/", "\\"),
         *args,

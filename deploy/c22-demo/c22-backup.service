@@ -1,0 +1,11 @@
+[Unit]
+Description=C22 consistent financial journal backup
+
+[Service]
+Type=oneshot
+User=c22demo
+WorkingDirectory=/opt/XAUUSD_Scalper
+EnvironmentFile=/etc/c22-backup.env
+ExecStart=/opt/XAUUSD_Scalper/.venv/bin/python -m scripts.demo_runtime.backup --journal data/c22h4-demo.sqlite3 --directory runs/c22-backups --private-bucket ${C22_PRIVATE_BUCKET} --namespace ${C22_NAMESPACE}
+UMask=0077
+NoNewPrivileges=true

@@ -65,6 +65,7 @@ class Trial30CliTests(unittest.TestCase):
             cost.write_text(json.dumps(policy()))
             env = dict(
                 MT5_ENABLE_DEMO_ORDER_SEND="1",
+                MT5_TERMINAL_PATH=r"C:\DemoMT5\terminal64.exe",
                 XAUUSD_MT5_LOGIN="123",
                 XAUUSD_MT5_SERVER="Exness-Demo",
                 XAUUSD_MT5_PASSWORD="fixture",

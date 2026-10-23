@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import hashlib
 import time
+import json
+import uuid
 from pathlib import Path
 from typing import Any, Callable
 
-from scripts.pure_b1.broker_data import completed_m15_from_m1
+from scripts.demo_runtime.market_data import completed_m15_from_m1
 from scripts.demo_runtime.journal import Journal
 from scripts.demo_runtime.broker import BrokerView
 
@@ -27,6 +29,8 @@ class DemoRunner:
         cost_policy: dict,
         execute: bool = False,
         notify: Callable[[dict], None] | None = None,
+        health_notify: Callable[[dict], None] | None = None,
+        alert_notify: Callable[[dict], None] | None = None,
         symbol: str = "XAUUSDm",
         strategy,
         account_guard_dir: Path | None = None,
@@ -41,13 +45,34 @@ class DemoRunner:
         self.execute = execute
         self.policy = cost_policy
         self.notify = notify
+        self.health_notify = health_notify
+        self.alert_notify = alert_notify
         self.journal = Journal(journal_path)
         self.fingerprint = hashlib.sha256(
             f"{expected_server}:{expected_login}".encode()
         ).hexdigest()[:16]
 
+        self.release_hash = hashlib.sha256(
+            b"".join(
+                path.read_bytes()
+                for folder in ("demo_runtime", "c22h4", "trial30")
+                for path in sorted((Path(__file__).parent.parent / folder).glob("*.py"))
+            )
+        ).hexdigest()
+        self.journal.audit_context = dict(
+            account_fingerprint=self.fingerprint,
+            release_hash=self.release_hash,
+            config_hash=hashlib.sha256(
+                json.dumps(
+                    getattr(strategy, "config", {"snapshot": strategy.snapshot}), sort_keys=True
+                ).encode()
+            ).hexdigest(),
+        )
+        self.cohort_id = self.release_hash + ":" + self.journal.audit_context["config_hash"]
+        self.journal.audit_context["correlation_id"] = uuid.uuid4().hex
+
         # Same-account runners share a local single-writer guard, even with
-        # separate strategy journals. Journal implementation stays unchanged.
+        # separate strategy journals. SQLite guard is local to this host.
         try:
             recorded = self.journal.get("strategy_snapshot")
             active = self.journal.get("active")
@@ -82,6 +107,9 @@ class DemoRunner:
         if now.tzinfo is None or now.utcoffset() != timedelta(0):
             raise ValueError("cycle clock must be aware UTC")
         self._started = time.monotonic()
+        self.broker.position_count = None
+        self.broker.last_equity = None
+        self.journal.audit_context["correlation_id"] = uuid.uuid4().hex
         try:
             result = self._cycle(now)
         except ValueError as exc:
@@ -92,7 +120,75 @@ class DemoRunner:
             snapshot=self.strategy.snapshot, execute=self.execute, captured_utc=now.isoformat()
         )
         result.update(self.strategy.diagnostics())
+        active = self.journal.get("active")
+        protected = result["status"] in ("FILLED", "MANAGING", "BE_MOVED", "SHADOW_BE")
+        since = self.journal.get("protection_unknown_since")
+        exposure = self.broker.position_count
+        known_flat = active is None and exposure == 0
+        owned_protected = bool(active and protected and exposure == 1)
+        uncertain = not (known_flat or owned_protected)
+        if uncertain:
+            since = since or now.isoformat()
+        else:
+            since = None
+        self.journal.put("protection_unknown_since", since)
+        critical = bool(since and now - datetime.fromisoformat(since) >= timedelta(seconds=180))
+        result.update(
+            process_alive=True,
+            entry_ready=result["status"] == "SHADOW_ADMIT",
+            position_protection="unknown"
+            if uncertain
+            else "confirmed"
+            if owned_protected
+            else "flat",
+            owned_position_protection="confirmed"
+            if active and protected
+            else "unknown"
+            if active
+            else "absent",
+            observed_positions=exposure,
+            critical=critical,
+        )
+        if critical and not self.journal.get("protection_alerted"):
+            self.journal.event(
+                dict(
+                    kind="CRITICAL",
+                    reason="position_unreconciled_180s",
+                    captured_utc=now.isoformat(),
+                    snapshot=self.strategy.snapshot,
+                )
+            )
+            self.journal.put("protection_alerted", True)
+        elif not critical:
+            self.journal.put("protection_alerted", False)
+        if result["status"] == "BLOCKED":
+            block_key = now.date().isoformat() + "|" + str(result.get("reason"))
+            if self.journal.get("last_alert_block") != block_key:
+                self.journal.audit("BLOCKER", reason=result.get("reason"), result=result)
+                self.journal.put("last_alert_block", block_key)
         self.journal.put("last_result", result)
+        self.journal.audit("CYCLE", result=result, equity=getattr(self.broker, "last_equity", None))
+        last_health = self.journal.get("last_health_event")
+        if last_health is None or now - datetime.fromisoformat(last_health) >= timedelta(
+            seconds=60
+        ):
+            self.journal.audit("HEALTH", result=result)
+            self.journal.put("last_health_event", now.isoformat())
+        if self.health_notify is not None:
+            try:
+                self.journal.consume(
+                    "health_v1",
+                    lambda event: self.health_notify(dict(event, result=result)),
+                    kinds=("HEALTH",),
+                    latest=True,
+                )
+            except Exception:
+                result["health_delivery"] = "pending_retry"
+        if self.alert_notify is not None:
+            try:
+                self.journal.consume("alerts_v1", self.alert_notify, kinds=("BLOCKER",), limit=1)
+            except Exception:
+                result["alerts"] = "pending_retry"
         try:
             self.journal.flush(self.notify)
         except Exception:
@@ -127,6 +223,35 @@ class DemoRunner:
             self.mt5.copy_rates_from_pos(self.symbol, self.mt5.TIMEFRAME_M1, 0, 5000), now=now
         )
         return self._admission.admit(account, positions, orders, deals, info, tick, bars, now)
+
+    def send(self, request, now):
+        """Persistence failure blocks mutation; ambiguous responses remain pending."""
+        request_id = uuid.uuid4().hex
+        started = time.monotonic()
+        self.journal.audit(
+            "REQUEST", request=request, request_id=request_id, expected=self.journal.get("active")
+        )
+        self.broker.identity()
+        try:
+            response = self.mt5.order_send(request)
+        except Exception as exc:
+            self.journal.audit(
+                "RESPONSE",
+                request=request,
+                response=None,
+                reason=type(exc).__name__,
+                request_id=request_id,
+                elapsed_ms=(time.monotonic() - started) * 1000,
+            )
+            return None
+        self.journal.audit(
+            "RESPONSE",
+            request=request,
+            response=response,
+            request_id=request_id,
+            elapsed_ms=(time.monotonic() - started) * 1000,
+        )
+        return response
 
     def _send_clock(self, now):
         return now + timedelta(seconds=time.monotonic() - self._started)

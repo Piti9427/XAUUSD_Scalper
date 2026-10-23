@@ -2,7 +2,7 @@
 
 Implementation available; broker parity/shadow/cutover **pending**. Real money PROHIBITED. Same Demo account replaces trial30; never simultaneous runners. `make bot-*` now selects C22H4; explicit `make trial30-*` targets retain rollback. Research returns do not qualify profitability or broker costs.
 
-Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). On2026-10-05 owner selected shadow as the default for `make bot-run`/`make bot-start`: no `--execute` unless the invoking shell supplies `MT5_ENABLE_DEMO_ORDER_SEND=1`. On2026-10-06 `make bot-execute` and `make c22h4-run` set that gate themselves. Make does not read it from `.env`. Both print the selected mode. On2026-10-07 a C22 process that finds an overnight position latches current equity as that UTC day's loss baseline instead of waiting for the next midnight. The same process keeps that number. Starting the process again latches the equity at the new start. The 10% daily-loss and 10% per-trade caps remain. Candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`; exact cache is `data/c22h4-shadow-bars.csv`. PR merge and broker cutover are separate actions.
+Owner reaffirmed C22H4 as the new Demo strategy on 2026-10-04 and requested default runner replacement. Keep frozen `1af968e9ac6a26ea` contract unchanged while resolving readiness findings in [PR scrutiny](../reviews/2026-10-04-c22h4-pr-scrutinize.md). Current local correction2026-10-23: `bot-run`/`bot-start` always force shadow even when the inherited execution gate is1. Sending uses `bot-execute`/`c22h4-run`; rollback sending uses `trial30-execute`. Baseline is now account/UTC-day bound and restart-persistent. Legacy `restart_equity` values cannot authorize entries. Candidate PID/log paths are `data/c22h4-demo-watch.pid` and `data/c22h4-demo-watch.log`; exact cache is `data/c22h4-shadow-bars.csv`. PR merge and broker cutover are separate actions.
 
 ## Contract
 
@@ -22,7 +22,7 @@ Initial run from Codex sandbox failed before MT5 initialization: `wine: cannot f
 
 ## Shadow and exact cache audit
 
-Owner re-attests `data/trial30-demo-cost-policy.json` <=24h using existing tariff/account evidence workflow in [trial30-demo.md](trial30-demo.md). Do not merely change timestamp to bypass validation. Shadow performs broker `order_check`, never `order_send` or phantom fill notifications.
+Owner re-attests the explicit cost-policy file using existing tariff/account evidence workflow in [trial30-demo.md](trial30-demo.md). Do not merely change timestamp to bypass validation. Shadow performs broker `order_check`, never `order_send` or phantom fill notifications.
 
 ```bash
 make c22h4-once
@@ -31,7 +31,7 @@ make c22h4-shadow > data/c22h4-shadow.log 2>&1
 
 Foreground watcher, Ctrl-C stops. Cache bootstraps once from 100000 M1 copied in 50000-bar pages; a single 100000 request is rejected when MaxBars is 100000. Updates from 5000-M1 tail per completed M15; only new bar runs full research detector. `data/c22h4-shadow-bars.csv` atomically stores exact causal prefix for offline `prepare_candidate` replay; output contains non-null `macro_ema` and cache size, durable journal includes same diagnostics. Cache divergence blocks then rebuilds; **any divergence fails this shadow gate**. `--cache-output` supports explicit alternative local evidence path.
 
-Collect >=96 completed M15 bars spanning >=1 UTC midnight, no unexpected BLOCKED status, non-null macro, no cache divergence. Replay signal/WAIT reason on exact exported bars with frozen contract; duplicate-bar WAIT and expired entry windows must be distinguished. Shadow is plumbing evidence; signal frequency (~one per five days) means no observed signal alone proves nothing. Initial offline parity remains independent gate.
+Collect >=48 hours and >=96 completed M15 bars spanning >=1 UTC midnight, no unexpected BLOCKED status, non-null macro, no cache divergence. Replay signal/WAIT reason on exact exported bars with frozen contract; duplicate-bar WAIT and expired entry windows must be distinguished. Shadow is plumbing evidence; signal frequency (~one per five days) means no observed signal alone proves nothing. Initial offline parity remains independent gate.
 
 ## Cutover: owner approval at execution time
 
@@ -67,17 +67,101 @@ readiness. For a watcher using a custom cost file, pass the same path explicitly
 `python -m scripts.ops.c22h4_status --brief --cost-policy <path>`; otherwise status
 checks the default shared policy. Status never renews attestation or mutates journal.
 
-Owner retained process-scoped daily baseline on2026-10-14. A multi-midnight
-`day_start_floating_unknown` block remains possible; inspect its provenance and
-history under this policy rather than resetting allowance. Safety-close recovery
-can retry only a broker-confirmed partial10010 after complete ledger/residual and
-no-pending-order checks. Ambiguous or legacy pending closes remain UNKNOWN until
-complete broker evidence resolves them. Complete safety closures use real closing
-cash components and exit-deal price, and keep safety halt. These local code changes
-require a separately reviewed rollout; an already-running Python watcher retains
-its loaded code. No restart or cost re-attestation was performed by the fix task.
+Current containment policy2026-10-23 supersedes the old process restart latch.
+Baseline must have reconciled provenance and remain unchanged across restart.
+Missing midnight floating equity blocks new entries for that UTC day; existing
+positions remain managed. Never reset saved baseline/halt/UNKNOWN to force entry.
+Confirmed partial10010 recovery still requires complete matching ledger,
+consistent residual, no pending orders and stable position ID. Ticket changes
+under that same ID are accepted; comments alone never establish ownership.
 
-Rollback only when candidate is confirmed flat with no pending reconciliation/outbox: stop candidate -> verify account flat and UTC-day circuit suitability -> owner-reviewed restart `MT5_ENABLE_DEMO_ORDER_SEND=1 make trial30-run` or `trial30-start`. Use `make trial30-status` and `make trial30-stop` for the old watcher. Candidate does not auto-close a valid position during shutdown. Terminal/VPN/sleep failures require restart reconciliation; same account guard is local, not distributed across machines/cloned workspaces.
+Rollback: candidate confirmed flat, empty reconciliation/outbox -> stop candidate
+-> verify account flat and UTC-day circuit -> execution-time owner approval ->
+`make trial30-execute`. `trial30-run/start` are shadow regardless of environment.
+Only one host/sender may own this account; no automatic cross-machine failover.
+
+## Durable evidence, costs and notifications
+
+`audit_events` in the existing journal is append-only (SQLite update/delete
+triggers). Financial state/event changes share one transaction; request audit is
+committed before order_send. Response and reconciliation follow in separate
+records. Crash after send may leave SENDING/UNKNOWN; resolve broker evidence,
+never erase intent. Financial persistence failure blocks further mutation.
+Existing `events` remains broker/critical notification outbox. Note consumers
+replay durable lifecycle events across restart, independent of Telegram delivery;
+Markdown/JSONL deduplicate stable event IDs. Lost HTTP acknowledgement can
+produce duplicate Telegram messages with the same event ID, never another order.
+
+v1/trial30 age24h; C22 v2 age168h. No automatic re-attestation. V2 carries
+`evidence.tariff/spec/swap_calendar`, each `{document, sha256}`; SHA256 is over
+`json.dumps(document, sort_keys=True, allow_nan=False).encode()`. All documents
+require `source`. Tariff specifies `commission_per_lot` and
+`unit=USD_per_lot_round_trip`. Spec `fields` includes contract/tick/volume min/max/
+step, swap_mode/long/short/rollover3days and must equal current broker values.
+Swap calendar `unit=USD_per_lot`, with `days[YYYY-MM-DD]` containing aware UTC
+`rollover_utc`, signed `buy`/`sell` amounts including that day's holiday/triple-day
+multiplier. Cover current day and each observed post-review closed position.
+Missing coverage blocks; actual closed-deal swap/commission/fee drift blocks.
+These are attested assumptions until verified against broker history. Cutover
+requires <=24h evidence even if v2's runtime admission lifetime is168h.
+
+Execution CLI requires explicit `MT5_TERMINAL_PATH`. Use a dedicated terminal,
+Wine prefix and account. Account identity is checked before every mutation;
+multiple SDK calls are not atomic. Never switch accounts manually in that terminal.
+
+Explicit operator configuration only:
+`DEMO_TELEGRAM_TOKEN` + `DEMO_TELEGRAM_CHAT_ID` enable lifecycle/critical/blocker
+alerts; `DEMO_HEALTHCHECK_URL` enables bounded HTTP heartbeat with `/fail` on
+critical protection uncertainty. Configure external dead-man alerts for a stopped
+process or dead network. Local process-alive, admission readiness and protection
+are separate fields. Unreconciled active position >=180s queues CRITICAL; regular
+heartbeat cannot turn it into healthy protection. HTTP errors retry with bounded
+backoff and wall deadline, capped response body and one daemon HTTP worker per
+client. Stuck DNS/headers/body cannot stall financial management or spawn more
+workers. At most one broker and blocker delivery plus one coalesced latest health
+ping per cycle. No secrets enter audit or backup.
+
+Weekly evidence, machine output under `runs/`:
+
+```bash
+python -m scripts.demo_runtime.evidence --journal data/c22h4-demo.sqlite3 --since 2026-10-16T00:00:00+00:00 --until 2026-10-23T00:00:00+00:00 --out runs/c22-weekly/evidence.json
+python -m scripts.demo_runtime.backup --journal data/c22h4-demo.sqlite3 --directory runs/c22-backups
+```
+
+Evidence separates release/config cohorts, broker net USD/expectancy/PF/count,
+sampled equity DD, shadow admissions and blocker-cycle counts. Poll counts are not
+independent missed signals; missing broker/time coverage remains INCONCLUSIVE.
+Write a human-reviewed weekly synthesis to `docs/reviews/YYYY-MM-DD-*.md`.
+No legacy normalized-R qualification or trade-by-trade automatic strategy changes.
+Any new baseline/latency economic comparison must run base+swap and stress+swap;
+missing swap metadata means COST_INCONCLUSIVE and no run.
+
+## Oracle compatibility, soak and cutover
+
+Templates: `deploy/c22-demo/`. Not installed or enabled. Zero additional spend.
+First verify actual free OCI entitlement and existing private bucket permissions.
+No OCI CLI/config or usable SSH target was available in this local task; this
+is missing access evidence, not proof that Oracle works or is free.
+Timebox Box64/Wine/MT5/Windows Python on the actual VM to one engineering day.
+If compatibility fails, stop Oracle attempt and use existing Windows fallback.
+
+After compatibility passes and original sender is stopped/account flat, run
+shadow >=48h and >=96 complete M15 bars across UTC midnight. Exercise disconnect,
+restart and boot recovery. Retain timestamps, exact cache, commands and broker
+identity/history/parity; no evidence manufactured from local synthetic tests.
+Templates bound restart to3 starts/300s, restart delay10s; systemd starts shadow.
+Daily SQLite backup uses SQLite online backup, integrity/checksum and local
+restore verification, retaining7 cumulative snapshots without pruning source
+financial history. Upload option requires an existing `NoPublicAccess` bucket;
+credentials stay in private environment/OCI files. Configure and verify remote
+7-snapshot retention and perform an actual bucket download/restore before approval;
+local restore test alone does not prove cloud recovery. Bucket creation/ACL,
+retention changes and service installation require deployment review.
+
+Cutover retains history/parity, <=24h cost evidence, flat old sender, reconciled
+journal/empty outbox and owner approval at execution time. 7 Demo days and shadow
+gates establish operational evidence only; real-money profitability remains
+INCONCLUSIVE/PROHIBITED pending a separate review.
 
 ## Offline runtime debugging
 

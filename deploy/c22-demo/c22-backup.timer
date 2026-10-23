@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily C22 financial audit backup
+
+[Timer]
+OnCalendar=*-*-* 00:10:00 UTC
+Persistent=true
+Unit=c22-backup.service
+
+[Install]
+WantedBy=timers.target

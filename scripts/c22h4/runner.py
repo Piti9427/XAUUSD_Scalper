@@ -14,7 +14,7 @@ from scripts.c22h4.trade_log import (
     render_exit,
     review_exit,
 )
-from scripts.pure_b1.broker_data import completed_m15_from_m1
+from scripts.demo_runtime.market_data import completed_m15_from_m1
 from scripts.demo_runtime.runner import DemoRunner
 
 SNAPSHOT = "RESEARCH-C22-H4EMA200-20261004"
@@ -158,13 +158,28 @@ class C22H4DemoRunner(DemoRunner):
         journal_path = Path(kwargs["journal_path"])
         self.trade_log_path = journal_path.with_name(journal_path.stem + "-trades.md")
         super().__init__(strategy=C22H4Strategy(config), **kwargs)
-        self.broker.restart_unknown_baseline = True
 
     def cycle(self, *, now):
-        prior = self.journal.get("active")
         result = super().cycle(now=now)
-        self._record_trade_note(prior, result, now)
+        try:
+            self.journal.consume("trade_notes_v1", self._consume_note, kinds=("LIFECYCLE", "CYCLE"))
+        except Exception:
+            result["notes"] = "pending_retry"
         return result
+
+    def _consume_note(self, event):
+        from datetime import datetime
+
+        self._note_event_id = event["event_id"]
+        if event["kind"] == "LIFECYCLE":
+            result = dict(event["event"], status=event["event"]["kind"])
+            self._record_trade_note(
+                event.get("active"), result, datetime.fromisoformat(event["utc"])
+            )
+        elif event["kind"] == "CYCLE" and event["result"]["status"] == "BLOCKED":
+            self._record_trade_note(
+                None, event["result"], datetime.fromisoformat(event["result"]["captured_utc"])
+            )
 
     def _record_trade_note(self, prior, result, now):
         status = result.get("status")
@@ -174,10 +189,12 @@ class C22H4DemoRunner(DemoRunner):
             if self.journal.get("trade_block_note") == key:
                 return
             title, body, record = render_block(now.isoformat(), reason)
-            append_note(self.trade_log_path, title, body, record)
+            append_note(
+                self.trade_log_path, title, body, dict(record, event_id=self._note_event_id)
+            )
             self.journal.put("trade_block_note", key)
             return
-        active = self.journal.get("active") if status == "FILLED" else prior
+        active = prior
         if not isinstance(active, dict) or not active.get("thesis"):
             return
         thesis = active["thesis"]
@@ -189,9 +206,9 @@ class C22H4DemoRunner(DemoRunner):
             if active.get("entry_noted"):
                 return
             title, body, record = render_entry(now.isoformat(), thesis, fill, stop, target)
-            append_note(self.trade_log_path, title, body, record)
-            active["entry_noted"] = True
-            self.journal.put("active", active)
+            append_note(
+                self.trade_log_path, title, body, dict(record, event_id=self._note_event_id)
+            )
             return
         if status not in ("CLOSED", "SAFETY_CLOSED"):
             return
@@ -217,7 +234,7 @@ class C22H4DemoRunner(DemoRunner):
             exit_price=result.get("exit_price"),
             net=result.get("net"),
         )
-        append_note(self.trade_log_path, title, body, record)
+        append_note(self.trade_log_path, title, body, dict(record, event_id=self._note_event_id))
 
     def export_cache(self, path):
         """Persist exact causal prefix for shadow audit, only when last bar changes."""

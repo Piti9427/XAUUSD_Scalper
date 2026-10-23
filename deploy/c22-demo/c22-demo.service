@@ -1,0 +1,25 @@
+# Template only. Install after Oracle compatibility and owner rollout approval.
+[Unit]
+Description=C22 Demo shadow watcher
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=c22demo
+WorkingDirectory=/opt/XAUUSD_Scalper
+EnvironmentFile=/etc/c22-demo.env
+Environment=MT5_ENABLE_DEMO_ORDER_SEND=0
+ExecStart=/opt/XAUUSD_Scalper/.venv/bin/python -m scripts.ops.run_c22h4_wine --watch --cache-output data/c22h4-shadow-bars.csv
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGINT
+KillMode=control-group
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

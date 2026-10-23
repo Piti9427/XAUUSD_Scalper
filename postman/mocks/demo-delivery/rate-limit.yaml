@@ -1,0 +1,7 @@
+version: 1
+name: rate-limit
+interceptRequests: true
+scenarios:
+  - name: default
+    path: default.js
+    default: true

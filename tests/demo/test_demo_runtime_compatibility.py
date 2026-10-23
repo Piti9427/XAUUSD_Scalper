@@ -5,6 +5,7 @@ import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+import uuid
 from unittest.mock import patch
 
 from scripts.c22h4.runner import C22H4DemoRunner
@@ -44,6 +45,8 @@ class DemoRuntimeCompatibilityTests(unittest.TestCase):
                 "cost_policy",
                 "execute",
                 "notify",
+                "health_notify",
+                "alert_notify",
                 "symbol",
                 "strategy",
                 "account_guard_dir",
@@ -59,7 +62,12 @@ class DemoRuntimeCompatibilityTests(unittest.TestCase):
         for mode in ("shadow", "fill", "rejected", "ambiguous", "blocked"):
             observations = []
             for direct in (False, True):
-                with self.subTest(mode=mode, direct=direct), TemporaryDirectory() as directory:
+                # IDs are new audit metadata; pin entropy to compare adapter behavior.
+                with (
+                    self.subTest(mode=mode, direct=direct),
+                    TemporaryDirectory() as directory,
+                    patch("uuid.uuid4", side_effect=(uuid.UUID(int=i) for i in range(1, 1000))),
+                ):
                     broker = Broker()
                     if mode == "ambiguous":
                         broker.order_send.side_effect = TimeoutError("synthetic timeout")

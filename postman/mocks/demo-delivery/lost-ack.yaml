@@ -1,0 +1,7 @@
+version: 1
+name: lost-ack
+interceptRequests: true
+scenarios:
+  - name: default
+    path: lost-ack.js
+    default: true
