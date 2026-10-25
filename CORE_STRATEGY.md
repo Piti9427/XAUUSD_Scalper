@@ -991,3 +991,29 @@ not broker/forwardprofit qualification. Handoff:
 `docs/reviews/2026-10-25-c22-selected-shadow.md`. Ops:
 `docs/ops/c22-selected-demo.md`;spec:
 `specs/c22-selected-demo-adapter-2026-10-25.md`.
+
+### 6.52 Selected26b8 actual Demo execution request (2026-10-25)
+
+Owner explicitly requests replacing old C22 with selected26b8 and actual broker
+Demo order execution using the configured MT5 account. Authorization is recorded;
+it is not cost attestation, a passed shadow interval or real-money permission.
+The supplied account fingerprint matches existing VM env. Latest observed Demo
+equity is1812.21USD; fixed0.01 and10% equity admission cap remain unchanged.
+No lot growth or initial-capital rewrite is introduced.
+
+Local selected CLI supports exact --execute plus envgate1/dedicatedterminal and
+selected execution-review. Review binds actual account/release/config/cost and
+new measured readiness; source config now17runtime pins. Missing/revoked review
+blocks new admissions, while active/UNKNOWN lifecycle reconciliation and BE
+continue across restart. Source101 frozen research pins and native28Rules remain.
+Full1130testsPASS(skip2),newselected34PASS;49,729bar/2751entrygeometry code-agreement
+repeated with0mismatches. No new economic or broker-fill qualification claimed.
+
+Execution-capable release selected-6f9d1a75e34073a9 is staged onOracle,70filebindings
+verified,original58files unchanged. Execution unit NOT installed/started/enabled;
+existing selectedshadow remains gate0/AutoTradingoff. Current costs still
+COST_INCONCLUSIVE; no prospective bars/fresh quote onclosedSunday. Swap status
+and selected shadow-duration decision requested, not assumed. No old feed/time
+waiver transfers. No credential update, actual order or automaticactivation.
+Runbook docs/ops/c22-selected-demo.md;review
+`docs/reviews/2026-10-25-c22-selected-execution-preparation.md`.

@@ -49,6 +49,7 @@ SOURCE_PATHS = (
     "scripts/c22_selected/strategy.py",
     "scripts/c22_selected/runner.py",
     "scripts/c22_selected/__main__.py",
+    "scripts/c22_selected/execution.py",
     "scripts/ops/mt5_wine_c22_selected.py",
 )
 
