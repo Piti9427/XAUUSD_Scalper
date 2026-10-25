@@ -955,3 +955,39 @@ positivecash15/24months vsraw8.7083/net876.9278/DD36.8756%/16of24. Baseunchanged
 communicateconservativeobservedstress8.67wins/net784.56/DD38.02. Boundsforonlytwo
 testedmodels,not brokerparity.Fullcashposting/nativeport/forward/COST_INCONCLUSIVE
 unresolved,no Demo/nativeport/contractadoption.
+
+### 6.51 Owner-selected26b8 bot test adapter (2026-10-25)
+
+Owner now selects26b8bcd69e043653 for bot testing because its audited historical
+terminal return exceeds old C22. New isolated `scripts/c22_selected` adapter,
+config `config/c22-selected-demo.json`, snapshot
+`RESEARCH-C22-SELECTED-20261025-26B8`,magic22261025; retained old6.33contract and
+source pins are not rewritten. This selection authorizes shadow→Demo preparation
+and shadow testing, not proof of forwardprofit or permission to skip cost/parity.
+
+Exact archived entry7/30BUY+SELL48/EMA50/closedH4EMA200;BUY SL2.5ATR/TP3R,
+SELL SL2.5ATR/TP1.35R, both BE1R at completed-bar first quote. Fixed0.01,
+cost-inclusive10% cap,daily10%/two negative completed positions per final exit
+UTC day. Any negative full net including swap/commission/fee triggers30elapsed
+minutes cooldown, compared with signal first quote (not laterpoll time), across
+UTCmidnight/restart. No recovery, lot growth or capital reset. All28 native
+Rules hash exactly26b8. Shared broker admission/lifecycle/identity/persistence
+remain;new focused cooldown adapter does not block active-position protection.
+Selected source code participates in release/cohort hashes and its separate
+journal;new source/config drift blocks admissions.
+
+CLI defaults to shadow and explicitly blocks selected sending pending its own
+readiness review. Old `make bot-*` still identifies the old6.33contract;never
+use that command as if it were the new version. Runtime/cost/feed/forward gates
+remain distinct. Current observed broker cost policy is COST_INCONCLUSIVE;
+no attestation or old waiver is transferred. Oracle shadow handoff completed
+2026-10-25:gate0 selectedservice active/enabled,oldobserver inactive/disabled,
+executioninactive,currentpointer/oldrelease retained. Fresh read-only broker
+probe verified zero positions/orders and AutoTradingoff. Old/newjournal backups
+downloaded/restored onMac;oldpendingoutbox retained. Latest cycle BLOCKEDquote_stale
+whilemarketclosed;costpolicyCOST_INCONCLUSIVE. Archive49729bar/2751entrygeometry
+parity passes;full1118testsPASS(skipped2). These are code/runtime observations,
+not broker/forwardprofit qualification. Handoff:
+`docs/reviews/2026-10-25-c22-selected-shadow.md`. Ops:
+`docs/ops/c22-selected-demo.md`;spec:
+`specs/c22-selected-demo-adapter-2026-10-25.md`.
