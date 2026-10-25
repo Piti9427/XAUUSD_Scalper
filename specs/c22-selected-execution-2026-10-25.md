@@ -33,3 +33,21 @@ sender plus verified backup/monitor. Missing facts stay BLOCKED. A changed CLI
 requires new selected source/config/release bindings, preserving all101 frozen
 research source hashes and old financial artifacts. No credential disclosure,
 real-money orders, cost fabrication, automatic cutover timer or blind resend.
+
+
+## Explicit selected duration decision — 2026-10-25
+
+Owner chose: “เริ่ม Demo trial เมื่อหลักฐานพร้อม โดยยกเว้นเวลา shadow 48 ชั่วโมง/96 แท่งสำหรับ 26b8”.
+Swap-Free answer: “ยังไม่ได้ตรวจสถานะ”; entitlement remains unknown.
+
+Add separate selected/account/cohort-bound duration-waiver input. Remove only
+48hour and96bar duration blockers. Retain measured counts/hours and identify
+waived criteria explicitly, never mark the soak passed. UTC-midnight is outside
+the selected text and remains required. Observer continuity, at least one fresh
+prospective complete M15, finite current macro, costs/feed/quote/identity/risk/
+ledger/backup/monitor remain required. Old contract waivers cannot qualify this
+version. Readiness stays read-only and execution_authorized=false.
+
+The previously agreed public readiness build_report/CLI seams cover explicit
+valid decision, invalid/broader/old identity/cohort/time, continuity and freshness,
+retained remaining blockers, raw/canonical input hashing and immutable outputs.

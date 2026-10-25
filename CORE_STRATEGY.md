@@ -1017,3 +1017,24 @@ and selected shadow-duration decision requested, not assumed. No old feed/time
 waiver transfers. No credential update, actual order or automaticactivation.
 Runbook docs/ops/c22-selected-demo.md;review
 `docs/reviews/2026-10-25-c22-selected-execution-preparation.md`.
+
+### 6.53 Explicit selected26b8 duration waiver (2026-10-25)
+
+Owner explicitly selects beginning Demo trial once evidence is ready with
+48hour/96bar shadow waiting criteria waived for26b8. Account Swap-Free remains
+UNKNOWN (“ยังไม่ได้ตรวจสถานะ”). Separate owner waiver binds selected snapshot,
+magic/account/release/config cohort and exact two waiting criteria; readiness
+retains measured hours/bars, continuity<=120seconds and a fresh prospective M15
+plus finite current macro. UTC-midnight, costs/feed/quote/identity/risk/ledger/
+backup/monitor remain unchanged. Waived is not passed. Old waiver never transfers.
+
+Selected ops readiness accepts --shadow-waiver and includes canonical/raw input
+hashes. Runtime detector/config17sources, native28Rules and research101pins are
+unchanged. New helper is packaged in immutable release selected-a6a67fcd01a2fcb8. Flat
+shadow observer upgraded to this release after preserved unit/journal backups;
+actual source/config cohort verified,gate0/execute=false/no position. Observation
+starts2026-10-25T13:05:37.026470Z; earliercohort is retained,not counted asnew.
+Execution unit remains not installed/inactive;terminalconfigurationunchanged.
+Broker costs remain
+COST_INCONCLUSIVE; actual order sending remains off until missing evidence.
+See `docs/reviews/2026-10-25-c22-selected-duration-waiver.md`.

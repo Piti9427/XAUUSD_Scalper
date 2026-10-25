@@ -117,3 +117,39 @@ Current VM remains shadow/gate0. Quote is stale on closed Sunday; cost policy is
 COST_INCONCLUSIVE. Standard new-candidate48h/96fresh-bars/UTC-midnight gates have
 not passed; old Monday waiver remains inapplicable. No automatic activation timer
 was created, AutoTrading was not enabled, and no broker order was sent.
+
+
+## Selected duration waiver recorded — 2026-10-25
+
+Owner now explicitly waives48hours/96bars for26b8 once remaining evidence is
+ready. Use `--shadow-waiver <owner-duration-waiver.json>` on selected readiness.
+This input is separate from feed acceptance and binds exact selected snapshot,
+magic, account, runtime source/config cohort, aware acceptance time and exact
+48h/96bar scope. Its hash participates in the report and subsequent execution
+review. Retain actual elapsed hours/bar count; display criteria as waived.
+
+UTC-midnight remains a separate gate (07:00 Asia/Bangkok); it was not named in
+this narrower waiver. Require healthy continuous observation with <=120second
+gaps, at least one genuinely new complete M15 still fresh at review, finite
+current macro and every existing cost/feed/quote/identity/exposure/outbox gate.
+Invalid or broader waiver blocks rather than silently changing the scope.
+
+Owner has not checked Swap-Free. Keep account applicability UNKNOWN and runtime
+cost policy COST_INCONCLUSIVE; do not attest zero swap. Broker credentials match
+the configured account but do not establish swap entitlement. A browser check
+could not proceed because local browser access is disabled; no account login or
+credential transmission was attempted.
+
+Current owner artifact is retained under ignored
+`runs/c22-selected-waiver-2026-10-25/owner-duration-waiver.json` and staged only
+in VM preparation. It is not an execution permission file. VM shadow observer now runs the reviewed execution-capable source release at
+`selected-a6a67fcd01a2fcb8` with gate0 and notifications unset. Its source/config
+cohort matches local hashes. Execution unit remains inactive/not installed;
+terminal configuration was unchanged. No timer or
+activation is implied by this waiver.
+
+Qualification for this source cohort starts at2026-10-25T13:05:37.026470Z
+(20:05:37 Asia/Bangkok), not the earlier version's cycles. The separate owner
+waiver was rebound to measured current cohort using the same explicit decision;
+the original decision/bindings are retained. Newmarket cost/feed and observations
+must still be measured on that cohort before any execution review.
