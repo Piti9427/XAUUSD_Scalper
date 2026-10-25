@@ -1038,3 +1038,46 @@ Execution unit remains not installed/inactive;terminalconfigurationunchanged.
 Broker costs remain
 COST_INCONCLUSIVE; actual order sending remains off until missing evidence.
 See `docs/reviews/2026-10-25-c22-selected-duration-waiver.md`.
+
+### 6.54 Monday actual Demo armed trial (2026-10-25)
+
+Owner latest direction: actual MT5 Demo orders from26b8 when Monday market opens
+and strategy conditions match. This supersedes remaining UTC-midnight waiting
+alongside48h/96bars for this Demo forward trial. It authorizes arming now, not
+real-money orders, forced signals, changed native28Rules or fabricated strict
+readiness/economic qualification.
+
+Distinct SELECTED_DEMO_ARMED_TRIAL binds actual account, source/config/policy,
+fresh flat/full-history broker proof and explicit owner permission. Status
+ARMED_DEMO_TRIAL_WITH_LIMITATIONS retains COST_INCONCLUSIVE, swap entitlement
+UNKNOWN, broker-feed parity not established and waiting waived. New admissions
+wait not-before2026-10-25T17:00UTC (Monday00:00Asia/Bangkok), then completedM15
+after approval/start plus actual freshquote/macro/signal and every existing
+identity/cost/spec/exposure/risk/margin/cooldown rule. Strict reviewed pathway and
+shadow defaults remain. Exact approval persists across restart; active/UNKNOWN
+manager still reconciles/protects with revoked entry review, no blindresend.
+
+Fresh actual SDK regular POINTS swap and published Standardzero-commission plus
+reconciled full-history charges support a NEW conservative Demo assumption,
+independent of unverified Swap-Free entitlement. It is not the old helper's cost
+attestation. Dated regular schedule remains an assumption with exceptions unproved;
+exact observed costdrift guard and168h expiry remain, no autorefresh. Different
+actual swap, including lower, blocks new entries pending review.
+
+Fixed0.01/costinclusive10% equitycap/daily10%/loss2/negative-net30minute cooldown,
+BUY/SELL SLTP/BE unchanged. Runtime source contract now18pins, research101pins
+unchanged. Operational implementation/test/actualactivation evidence:
+`docs/reviews/2026-10-25-c22-monday-armed-demo.md`; runbook:
+`docs/ops/c22-selected-demo.md`. Actualfirstfill requires future live Demo signal;
+no Sunday synthetic order or profit claim is authorized.
+
+
+Actual activation2026-10-25T13:25UTC: selected-0d9ff29ef41e90df deployed,
+71filebindings verified; SDKDemo/hedgingUSD/flat41dealhistorycash=1812.21,
+terminalAutoTradingtrue verified,32charts/noEA. Selectedexecutionservice active
+execute=true/gate1, bothshadow/oldexecutioninactive, new armedreview accepted.
+At13:27UTC latestflat/quote_stale/0REQUEST,0service restarts. Backup5minactive
+and selectedexecution+shadow MacrestorePASS. Native28Rules and frozen101 unchanged;
+full1152testsPASS(skip2), independentreviewsPASS. Costassumptions expireNov1
+13:25UTC; exactobservedcostdrift remains. Executionnotbootenabled; VMreboot needs
+reviewedmanager restoration. NoSundayorder/fill/profit is claimed.

@@ -1,5 +1,12 @@
 # Selected26b8 shadow and Demo test
 
+Current state2026-10-25: `c22-selected-execution.service` is active with
+execute=true/gate1 and verified Demo terminal AutoTrading. It is armed for Monday
+and new completed market bars under explicit Demo-trial limits. Shadow services
+are inactive. Earlier sections retain preparation history; use the final Monday
+armed-trial section and `docs/reviews/2026-10-25-c22-monday-armed-demo.md` for the
+current activation and remaining operational limits.
+
 Owner selected native Rules `26b8bcd69e043653` on2026-10-25. New snapshot
 `RESEARCH-C22-SELECTED-20261025-26B8`,magic22261025, separate journal/cache.
 This is a new version of C22 for shadow→Demo qualification. Old frozen
@@ -153,3 +160,46 @@ Qualification for this source cohort starts at2026-10-25T13:05:37.026470Z
 waiver was rebound to measured current cohort using the same explicit decision;
 the original decision/bindings are retained. Newmarket cost/feed and observations
 must still be measured on that cohort before any execution review.
+
+
+## Actual Monday armed Demo trial supersedes the waiting gates
+
+Owner latest instruction is to have real MT5 Demo execution ready for Monday
+market open. This supersedes the earlier retained UTC-midnight wait as well as
+48h/96bars for this explicitly limited forward trial. There is no additional
+waiting interval after actual fresh data and a valid strategy signal are ready.
+
+`SELECTED_DEMO_ARMED_TRIAL` is separate from strict `SELECTED_DEMO_EXECUTION`
+readiness. Its report is `ARMED_DEMO_TRIAL_WITH_LIMITATIONS`, never a fabricated
+strict PASS. Initial approval binds fresh actual flat broker evidence, exact
+Demo account, current source/config/policy and archive code agreement. It records
+unknown swap entitlement, unqualified feed economic parity and waived soak.
+
+The sender is armed before the market opens. Its entry gate starts no earlier
+than2026-10-26T00:00 Asia/Bangkok (2026-10-25T17:00UTC), then waits for actual
+fresh executable quotes and a completed UTC M15 after permission/start. The
+strategy and existing90second entry window still determine entries. Full closed
+H4 macro bootstrap is mandatory; old bars do not count as a prospective fill.
+Market opening itself does not force an order. It needs the next eligible signal.
+
+Current cost policy is explicitly CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS,
+using fresh actual SDK regular rates with published calendar as an assumption.
+Account Swap-Free remains UNKNOWN; holiday exceptions and future costs are not
+attested. Exact observed swap/commission drift guard remains, so lower actual
+swap can also block later entries until review. Policy expires after its existing
+168hour validity; renewal must use new evidence, never timestamp-only changes.
+
+Use the execution journal/service for this trial, not the retained shadow or old
+C22 service. Both shadow services and old execution must remain inactive while
+selected execution runs. Do not casually restart/stop/kill Wine if a position
+is active or UNKNOWN. Broker SL/TP and persisted manager state must be inspected.
+
+```bash
+sudo systemctl status c22-selected-execution.service --no-pager
+sudo journalctl -u c22-selected-execution.service -f
+```
+
+Selected cumulative journal backup has its own `c22-selected-backup.service` /
+`c22-selected-backup.timer`, every5minutes on the same VM. Downloaded Mac restore
+proof is separate from local snapshots. No external notification delivery or
+private cloud backup is asserted; execution is a Demo forward trial only.

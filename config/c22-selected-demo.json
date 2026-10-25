@@ -30,7 +30,7 @@
   "real_money": "PROHIBITED",
   "commission_unit": "USD_per_lot_round_trip",
   "default_mode": "shadow",
-  "execution_readiness": "EXPLICIT_REVIEW_REQUIRED",
+  "execution_readiness": "OWNER_AUTHORIZED_ARMED_DEMO_TRIAL",
   "source_hashes": {
     "scripts/research/reward156_search.py": "33d80b8c6fe1f068d24210104d2e52e85aeeb11c11a3f2e3244daf7c62307f92",
     "scripts/research/reward156_tuning.py": "05b50e60796a60eed56e20de3ec4938b637b60b7f5e5effcecd696b547f6296f",
@@ -44,10 +44,11 @@
     "scripts/demo_runtime/market_data.py": "a86faf2f24e32347aa096050ab820c4a04bf8a78fac02b8b9e245f4e135884a9",
     "scripts/c22h4/runner.py": "7bcd71a166480385597599c0425009e233ec7701528909ad3d5649a7783c4897",
     "scripts/c22_selected/__init__.py": "6cdb9dcc34c2547734128941dda6dcf37042db8973494e784e6841b5064a0f9e",
-    "scripts/c22_selected/strategy.py": "9851084fe03e9409633939913b21940a3d8ad90cf2c87347efa527081e8c65f1",
+    "scripts/c22_selected/strategy.py": "0f0182aadf7bb90fc2546f7886e767c1880740c7b402d69f1f9fe72f54cce49a",
     "scripts/c22_selected/runner.py": "8193a0a879a89f48c31c30f8bfb408a2145f7f9bd71681f8d4f8f3955d71f351",
     "scripts/c22_selected/__main__.py": "3e012305bbfdd9df0736c32867289f7687d581ec570f837c474d0fff2becf6a9",
-    "scripts/c22_selected/execution.py": "468cc8963ca5a6c047eb09bb3517b4901f001e640c85ef64f500fd4206d0975d",
+    "scripts/c22_selected/execution.py": "e73339a10eea989edb057756eab98682d0cd4f95a24590fec060405bae375f99",
+    "scripts/c22_selected/trial_costs.py": "c84a2602a345f8d2915f21c309e748eb0f6037eb2d3014e8fc6b0d13599f22a4",
     "scripts/ops/mt5_wine_c22_selected.py": "c5c5b0e92ae4ac53c9c6ab90dbbb19b6975a0a85ef94880111fc3cab67b75337"
   },
   "research_proof": {

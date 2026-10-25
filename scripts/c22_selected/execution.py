@@ -15,6 +15,16 @@ CONFIRMATIONS = (
     "flat_single_sender_and_ledger_reviewed",
     "backup_restore_and_monitor_reviewed",
 )
+TRIAL_CONFIRMATIONS = (
+    "exact_demo_identity_and_flat_verified",
+    "exact_strategy_sources_and_archive_agreement_reviewed",
+    "regular_swap_assumptions_and_cost_drift_guard_reviewed",
+    "single_sender_backup_restore_reviewed",
+)
+TRIAL_LIMITATIONS = {
+    "COST_INCONCLUSIVE", "SWAP_ENTITLEMENT_UNKNOWN",
+    "BROKER_FEED_PARITY_NOT_ESTABLISHED", "SHADOW_WAIT_WAIVED",
+}
 
 
 def canonical_hash(value):
@@ -46,12 +56,29 @@ class ExecutionReview:
                       "config_hash": ctx.journal.audit_context["config_hash"]}
             approved = _utc(review["approved_utc"])
             captured = _utc(report["captured_utc"])
+            armed = review["scope"] == "SELECTED_DEMO_ARMED_TRIAL"
+            if armed:
+                _utc(review["arm_not_before_utc"])
+                qualified = (
+                    all(review["confirmations"].get(name) is True for name in TRIAL_CONFIRMATIONS)
+                    and report["status"] == "ARMED_DEMO_TRIAL_WITH_LIMITATIONS"
+                    and isinstance(report["limitations"], list)
+                    and TRIAL_LIMITATIONS.issubset(report["limitations"])
+                    and ctx.policy.get("status") == "CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS"
+                    and ctx.policy.get("swap_entitlement") == "UNKNOWN"
+                    and ctx.policy.get("research_economic_qualification") == "COST_INCONCLUSIVE"
+                    and ctx.policy.get("execution_authorized") is False
+                )
+            else:
+                qualified = (
+                    review["scope"] == "SELECTED_DEMO_EXECUTION"
+                    and all(review["confirmations"].get(name) is True for name in CONFIRMATIONS)
+                    and report["status"] == "AWAITING_OPERATOR_REVIEW" and report["blockers"] == []
+                )
             if not (
-                review["version"] == 1 and review["scope"] == "SELECTED_DEMO_EXECUTION"
+                type(review["version"]) is int and review["version"] == 1 and qualified
                 and review["owner_authorized"] is True
                 and isinstance(review["owner_instruction"], str) and review["owner_instruction"].strip()
-                and all(review["confirmations"].get(name) is True for name in CONFIRMATIONS)
-                and report["status"] == "AWAITING_OPERATOR_REVIEW" and report["blockers"] == []
                 and report["execution_authorized"] is False and report["snapshot"] == SNAPSHOT
                 and report["contract_id"] == CANDIDATE_ID and report["magic"] == MAGIC
                 and report["account_fingerprint"] == ctx.fingerprint and report["cohort"] == cohort
@@ -71,10 +98,14 @@ class ExecutionReview:
             resumed = ctx.journal.get("selected_execution_review_sha256") == digest
             if not resumed and (now - captured > timedelta(minutes=5) or now - approved > timedelta(minutes=5)):
                 raise ValueError("initial readiness stale")
-            if record and not resumed:
+            # An armed process may wait through a closed market before reaching
+            # admission. Persist that exact acceptance now so its manager can
+            # restart without pretending the Sunday market evidence was ready.
+            if (record or armed) and not resumed:
                 ctx.journal.put("selected_execution_review_sha256", digest)
                 ctx.journal.audit("EXECUTION_REVIEW_ACCEPTED", review_sha256=digest,
                                   readiness_sha256=review["readiness_sha256"])
+            return review
         except (OSError, ValueError, KeyError, TypeError, AttributeError, OverflowError):
             raise ValueError("selected_execution_review_invalid") from None
 
@@ -85,7 +116,17 @@ class ReviewedAdmission(SelectedAdmission):
         self.review = review
 
     def admit(self, account, positions, orders, deals, info, tick, bars, now):
-        self.review.check(self.context, now, record=True)
+        review = self.review.check(self.context, now, record=True)
+        if review["scope"] == "SELECTED_DEMO_ARMED_TRIAL":
+            not_before = _utc(review["arm_not_before_utc"])
+            if now < not_before:
+                raise ValueError("armed_trial_not_started")
+            closed = _utc(bars.index[-1].to_pydatetime() + timedelta(minutes=15))
+            if (
+                closed <= _utc(review["approved_utc"]) or closed < not_before
+                or not timedelta(0) <= now - closed <= timedelta(minutes=15)
+            ):
+                raise ValueError("armed_trial_new_closed_m15_required")
         return super().admit(account, positions, orders, deals, info, tick, bars, now)
 
 

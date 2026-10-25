@@ -2,9 +2,10 @@
 
 ## Project Structure & Module Organization
 
-The live Demo order module is `scripts/c22h4`. Its interface is `make bot-execute` (send) and `make bot-run` (shadow). Shared admission, journal, and broker reconciliation live in `scripts/demo_runtime`; C22 subclasses `DemoRunner` directly. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
+The active Oracle Demo adapter is `scripts/c22_selected` (C22 Selected26b8). Its execution service is `c22-selected-execution.service`; operational commands and limits are in `docs/ops/c22-selected-demo.md`. Legacy `make bot-execute` / `make bot-run` still target old C22 and must not be used to launch this version. Shared admission, journal, and broker reconciliation live in `scripts/demo_runtime`; the selected runner subclasses `DemoRunner` directly. Do not start `main.py`, `smc_main.py`, the webhook bridge, or `mql5/B1FinalEA.mq5` on the same account.
 
-- `scripts/c22h4` — frozen C22 detector and the only Python sender on the current Demo account.
+- `scripts/c22_selected` — current selected26b8 Demo adapter; one account, one sender.
+- `scripts/c22h4` — retained frozen old C22 adapter and rollback contract; never concurrent with selected execution.
 - `scripts/demo_runtime` — shared orchestration, admission, lifecycle, broker, journal, costs, CLI/host/status.
 - `scripts/trial30` — retained rollback strategy adapter and compatibility imports. One account, one sender.
 - `scripts/research` — campaign code. Paths are hashed. Do not relocate those files.
@@ -150,3 +151,25 @@ but must not be rerun as a new economic evaluation or used for current selection
 Unit regressions of price/accounting/API behavior are not economic comparisons.
 Do not rewrite frozen strategy/source pins or Demo contracts to alter archives.
 Current active C22 diagnostics CLI follows this policy with two mandatory views.
+
+
+## Selected26b8 Monday Demo forward trial (2026-10-25)
+
+Owner explicitly requests actual MT5 Demo execution when Monday market data and
+strategy signals arrive. Current contract is CORE_STRATEGY section6.54 and the
+selected runbook. This latest decision authorizes an armed Demo sender, including
+waiving48h/96bars/UTC-midnight waiting. It does not authorize real-money activity,
+forced orders, native-rule changes or fabricated strict readiness/economic parity.
+
+Distinct SELECTED_DEMO_ARMED_TRIAL binds current account/source/config/policy and
+owner permission. New entries wait until Monday2026-10-26 Asia/Bangkok and a fresh
+complete M15 after permission/start. Keep fixed0.01, cost-inclusive10% equitycap,
+daily10%/loss2, cooldown, SL/TP/BE, identity/exposure/risk/margin/source checks and
+persisted UNKNOWN/no-resend unchanged. Active/UNKNOWN managers must continue
+reconciliation/protection if new-entry permission is revoked.
+
+Swap-Free entitlement is UNKNOWN. New labelled regular-swap Demo assumptions
+use fresh actual SDK POINTS rates and dated published schedule, never missing
+zero. Economic qualification remains COST_INCONCLUSIVE; no old attestation is
+fabricated. Existing exact observed cost/swap drift blocks later entries when
+actual charges differ, including lower swap. No automatic cost-policy renewal.
