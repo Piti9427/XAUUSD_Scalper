@@ -17,6 +17,7 @@ from scripts.research.breakout_models import Costs, Rules
 from scripts.research.reward156_search import prepare_candidate
 from scripts.research.reward156_tuning import closed_h4_ema
 from scripts.strategy import pure_b1_bars
+from scripts.c22_selected.history import load_seed, merge_history, save_manifest
 
 ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_ID = "26b8bcd69e043653"
@@ -44,10 +45,17 @@ SOURCE_PATHS = (
     "scripts/research/breakout_signals.py",
     "scripts/pure_b1/broker_data.py",
     "scripts/demo_runtime/market_data.py",
+    "scripts/demo_runtime/diagnostics.py",
     "scripts/c22h4/runner.py",
     "scripts/c22_selected/__init__.py",
     "scripts/c22_selected/strategy.py",
     "scripts/c22_selected/runner.py",
+    "scripts/c22_selected/evidence.py",
+    "scripts/c22_selected/cost_generations.py",
+    "scripts/c22_selected/generations.py",
+    "scripts/c22_selected/source_packets.py",
+    "scripts/c22_selected/renewal_runtime.py",
+    "scripts/c22_selected/history.py",
     "scripts/c22_selected/__main__.py",
     "scripts/c22_selected/execution.py",
     "scripts/c22_selected/trial_costs.py",
@@ -90,6 +98,11 @@ class SelectedBarCache:
         self.frame = None
         self.rules = None
         self.row = None
+        self.complete_h4 = 0
+        self.h4_status = {}
+
+    def unavailable_reason(self):
+        return "macro_latest_h4_incomplete" if self.complete_h4 >= 201 else "macro_warmup_insufficient"
 
     def append(self, bars):
         pure_b1_bars(bars)
@@ -106,11 +119,19 @@ class SelectedBarCache:
             tail = bars.loc[bars.index > self.bars.index[-1]]
             if tail.empty:
                 if self.row is None or pd.isna(self.row.macro_ema):
-                    raise ValueError("macro_warmup_insufficient")
+                    raise ValueError(self.unavailable_reason())
                 return self.row
             bars = pd.concat([self.bars, tail])
         self.bars = bars
-        if int((bars.close.resample("4h").count() == 16).sum()) < 201:
+        counts = bars.close.resample("4h").count()
+        self.complete_h4 = int((counts == 16).sum())
+        decision = bars.index[-1] + pd.Timedelta(minutes=15)
+        prior = decision.floor("4h") - pd.Timedelta(hours=4)
+        self.h4_status = dict(complete_h4_bars=self.complete_h4, required_h4_bars=201,
+                              prior_h4_open_utc=prior.isoformat(),
+                              prior_h4_m15_count=int(counts.get(prior, 0)),
+                              next_h4_close_utc=(decision.floor("4h") + pd.Timedelta(hours=4)).isoformat())
+        if self.complete_h4 < 201:
             raise ValueError("macro_warmup_insufficient")
         self.frame, self.rules = prepare_candidate(bars, CONTRACT)
         if _rules_id(self.rules) != CANDIDATE_ID:
@@ -118,7 +139,7 @@ class SelectedBarCache:
         self.frame["macro_ema"] = closed_h4_ema(bars, 200)
         self.row = self.frame.iloc[-1]
         if pd.isna(self.row.macro_ema):
-            raise ValueError("macro_warmup_insufficient")
+            raise ValueError(self.unavailable_reason())
         return self.row
 
 
@@ -148,10 +169,16 @@ class SelectedStrategy:
     cooldown_bars = 2
     no_signal_reason = "no_signal"
 
-    def __init__(self, config):
+    def __init__(self, config, *, cache_path=None, fingerprint=None):
         self.config = config
         self.cache = SelectedBarCache()
         self.source_error = None
+        self.cache_path = cache_path
+        self.cache_fingerprint = fingerprint
+        self.history_seed_status = "disabled" if cache_path is None else "not_loaded"
+        self._last_bootstrap = None
+        self._checkpoint = None
+        self._checkpoint_seed_status = None
         try:
             verify_sources(config)
         except ValueError as exc:
@@ -161,11 +188,31 @@ class SelectedStrategy:
         if self.source_error:
             raise ValueError(self.source_error)
         verify_sources(self.config)
-        if self.cache.bars is None:
+        retry = self.cache.bars is not None and self.cache.complete_h4 < 201 and (
+            self._last_bootstrap is None or time.monotonic() - self._last_bootstrap >= 60)
+        if self.cache.bars is None or retry:
             started = time.monotonic()
-            bars = completed_m15_from_m1(copy_m1_rates(mt5, symbol), now=now)
-            if time.monotonic() - started >= 60:
-                raise ValueError("history_bootstrap_timeout")
+            seed = None
+            if self.cache.bars is None and self.cache_path is not None:
+                seed, self.history_seed_status = load_seed(
+                    self.cache_path, recent=bars, fingerprint=self.cache_fingerprint,
+                    config=self.config, now=now)
+            if seed is None or int((seed.close.resample("4h").count() == 16).sum()) < 201:
+                self._last_bootstrap = started
+                prior = self.cache.bars if retry else seed
+                fresh = completed_m15_from_m1(copy_m1_rates(mt5, symbol), now=now)
+                if time.monotonic() - started >= 60:
+                    raise ValueError("history_bootstrap_timeout")
+                try:
+                    seed = merge_history(prior, fresh) if prior is not None else fresh
+                except ValueError as exc:
+                    if str(exc) == "bar_cache_divergence":
+                        self.cache = SelectedBarCache()
+                        self.history_seed_status = "broker_overlap_divergence"
+                    raise
+                if retry:
+                    self.cache = SelectedBarCache()
+            bars = seed
         try:
             self.cache.append(bars)
         except ValueError as exc:
@@ -177,6 +224,31 @@ class SelectedStrategy:
             raise ValueError("macro_warmup_insufficient")
         self.no_signal_reason = "macro_gate" if bool(row.macro_blocked) else "no_signal"
         return self.cache.frame
+
+    def checkpoint(self, *, now):
+        """Return an optional write failure for the runner's durable diagnostics."""
+        if self.cache_path is None or self.cache.bars is None:
+            return
+        def signature(item):
+            value = item.stat()
+            return value.st_size, value.st_mtime_ns, value.st_ctime_ns
+        try:
+            path = Path(self.cache_path)
+            meta = path.with_suffix(path.suffix + ".meta.json")
+            mark = (id(self.cache.bars), signature(path), signature(meta) if meta.exists() else None)
+            if mark == self._checkpoint:
+                return
+            save_manifest(path, bars=self.cache.bars, fingerprint=self.cache_fingerprint,
+                          config=self.config, now=now)
+            self._checkpoint = (id(self.cache.bars), signature(path), signature(meta))
+            if self.history_seed_status == "checkpoint_failed":
+                self.history_seed_status = self._checkpoint_seed_status
+                self._checkpoint_seed_status = None
+        except Exception as error:
+            if self.history_seed_status != "checkpoint_failed":
+                self._checkpoint_seed_status = self.history_seed_status
+            self.history_seed_status = "checkpoint_failed"
+            return error
 
     def levels(self, row, tick, info, costs, account):
         spec = {
@@ -195,12 +267,14 @@ class SelectedStrategy:
     def diagnostics(self):
         row = self.cache.row
         bars = self.cache.bars
-        if row is None or bars is None:
+        if bars is None:
             return {}
         return {
             "candidate_id": CANDIDATE_ID,
-            "macro_ema": float(row.macro_ema) if row.notna()["macro_ema"] else None,
+            "macro_ema": float(row.macro_ema) if row is not None and row.notna()["macro_ema"] else None,
             "cache_bars": len(bars),
+            "history_seed_status": self.history_seed_status,
+            **self.cache.h4_status,
         }
 
     def entry_thesis(self):

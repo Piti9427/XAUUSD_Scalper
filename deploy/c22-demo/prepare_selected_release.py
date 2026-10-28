@@ -19,6 +19,9 @@ def build_release(root: Path, output: Path) -> dict:
     names = set(old["files"])
     names.update(str(path.relative_to(root)) for path in (root / "scripts/c22_selected").glob("*.py"))
     names.update({"config/c22-selected-demo.json", "scripts/ops/mt5_wine_c22_selected.py"})
+    names.update({"deploy/c22-demo/launch_selected_terminal.py", "deploy/c22-demo/enable_selected_boot.py",
+                  "scripts/demo_runtime/boundary.py", "scripts/demo_runtime/diagnostics.py",
+                  "scripts/ops/c22_selected_watchdog.py"})
     for name in ("scripts/ops/c22h4_readiness.py", "scripts/ops/c22_selected_readiness.py"):
         if (root / name).is_file():
             names.add(name)
@@ -29,6 +32,11 @@ def build_release(root: Path, output: Path) -> dict:
                 or path.suffix not in (".py", ".json") or not name.startswith(("scripts/", "config/", "deploy/"))):
             raise ValueError("Release path not permitted: " + name)
         payload[name] = path.read_bytes()
+    terminal_config_name = "deploy/c22-demo/c22-selected-terminal-execution.ini"
+    terminal_config = root / terminal_config_name
+    if terminal_config.is_symlink() or not terminal_config.resolve().is_relative_to(root):
+        raise ValueError("Release path not permitted: " + terminal_config_name)
+    payload[terminal_config_name] = terminal_config.read_bytes()
     config = json.loads(payload["config/c22-selected-demo.json"])
     if (config.get("contract_id") != "26b8bcd69e043653" or config.get("volume") != 0.01
             or config.get("real_money") != "PROHIBITED" or config.get("default_mode") != "shadow"):
@@ -75,10 +83,9 @@ WantedBy=multi-user.target
     hashes["c22-selected-shadow.service"] = hashlib.sha256(unit.encode()).hexdigest()
     execution_unit = f'''[Unit]
 Description=Selected C22 26b8 Demo execution (review required)
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=300
-StartLimitBurst=3
+After=network-online.target c22-selected-terminal.service
+Wants=network-online.target c22-selected-terminal.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -99,9 +106,70 @@ TimeoutStopSec=30
 UMask=0077
 NoNewPrivileges=true
 Nice=5
+
+[Install]
+WantedBy=multi-user.target
 '''
     payload["c22-selected-execution.service"] = execution_unit.encode()
     hashes["c22-selected-execution.service"] = hashlib.sha256(execution_unit.encode()).hexdigest()
+    terminal_unit = f'''[Unit]
+Description=Selected C22 dedicated Demo terminal (reviewed boot recovery)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory={remote}
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStartPre=/bin/sh -c '! systemctl is-active --quiet c22-selected-terminal-armed.service && ! systemctl is-active --quiet c22-demo-shadow.service && ! systemctl is-active --quiet c22-selected-shadow.service && ! systemctl is-active --quiet c22-demo-execution.service'
+ExecStart=/usr/bin/python3 {remote}/deploy/c22-demo/launch_selected_terminal.py
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+KillMode=control-group
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+'''
+    payload["c22-selected-terminal.service"] = terminal_unit.encode()
+    hashes["c22-selected-terminal.service"] = hashlib.sha256(terminal_unit.encode()).hexdigest()
+    watchdog_unit = f'''[Unit]
+Description=Read-only Selected C22 Demo health observer
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory={remote}
+Environment=DEMO_TELEGRAM_TOKEN= DEMO_TELEGRAM_CHAT_ID=
+UnsetEnvironment=DEMO_TELEGRAM_TOKEN DEMO_TELEGRAM_CHAT_ID
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStart=/usr/bin/python3 -m scripts.ops.c22_selected_watchdog --journal /home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3 --state /home/ubuntu/c22-demo/state/c22-selected-watchdog.sqlite3 --expected-fingerprint c4020d69b754dfb5 --service c22-selected-execution.service --stale-seconds 180
+ReadOnlyPaths=-/home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=45
+'''
+    watchdog_timer = '''[Unit]
+Description=Independent Selected C22 Demo health checks
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+Unit=c22-selected-watchdog.service
+
+[Install]
+WantedBy=timers.target
+'''
+    for name, content in (("c22-selected-watchdog.service", watchdog_unit),
+                          ("c22-selected-watchdog.timer", watchdog_timer)):
+        payload[name] = content.encode()
+        hashes[name] = hashlib.sha256(content.encode()).hexdigest()
     drift = [name for name, expected in old["files"].items() if hashes[name] != expected]
     manifest = {"release_id": release_id, "files": hashes, "changed_from_old_release": drift,
                 "mode": "shadow-default-execution-staged", "execution_authorized": False,
@@ -119,7 +187,8 @@ Nice=5
     output.mkdir(parents=True)
     archive_bytes = archive.getvalue()
     (output / "release.tar.gz").write_bytes(archive_bytes)
-    for name in ("release-manifest.json", "release.sha256", "c22-selected-shadow.service", "c22-selected-execution.service"):
+    for name in ("release-manifest.json", "release.sha256", "c22-selected-shadow.service", "c22-selected-execution.service",
+                 "c22-selected-terminal.service", "c22-selected-watchdog.service", "c22-selected-watchdog.timer"):
         (output / name).write_bytes(payload[name])
     result = manifest | {"archive_sha256": hashlib.sha256(archive_bytes).hexdigest(), "archive": str(output / "release.tar.gz")}
     (output / "build.json").write_text(json.dumps(result, indent=2) + "\n")

@@ -37,7 +37,19 @@ def main(argv=None, *, mt5=None, runner_class=None):
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     parser.add_argument("--cache-output", type=Path)
     parser.add_argument("--execution-review", type=Path)
+    parser.add_argument("--broker-evidence-dir", type=Path)
+    parser.add_argument("--renewal-grant", type=Path)
+    parser.add_argument("--renewal-grant-sha256")
+    parser.add_argument("--renewal-generation-root", type=Path)
+    parser.add_argument("--renewal-sources", type=Path)
     selected, args = parser.parse_known_args(args)
+    renewal = (selected.renewal_grant, selected.renewal_grant_sha256,
+               selected.renewal_generation_root, selected.renewal_sources)
+    if any(value is not None for value in renewal) and (
+            not all(value is not None for value in renewal) or selected.execution_review is None):
+        print(json.dumps({"status": "BLOCKED", "reason": "renewal_runtime_explicit_configuration_required",
+                          "broker_api_called": False, "execute": False}))
+        return 2
     if "--execute" in args and selected.execution_review is None:
         print(json.dumps({"status": "BLOCKED", "reason": "selected_demo_readiness_pending", "order_api_called": False}))
         return 2
@@ -53,8 +65,16 @@ def main(argv=None, *, mt5=None, runner_class=None):
             raise ValueError("selected_demo_readiness_pending")
         if selected.cache_output is not None:
             kwargs["cache_output"] = selected.cache_output
+        if selected.broker_evidence_dir is not None:
+            kwargs["broker_evidence_dir"] = selected.broker_evidence_dir
         runner = (runner_class or SelectedDemoRunner)(config=config, **kwargs)
-        if execute:
+        if selected.renewal_grant is not None:
+            runner.configure_renewal(grant_path=selected.renewal_grant,
+                trusted_grant_sha256=selected.renewal_grant_sha256,
+                generation_root=selected.renewal_generation_root,
+                original_review_path=selected.execution_review, now=runtime_cli.clock_now(),
+                sources_path=selected.renewal_sources)
+        elif execute:
             try:
                 install_execution_review(runner, selected.execution_review, now=runtime_cli.clock_now())
             except Exception:
@@ -62,7 +82,8 @@ def main(argv=None, *, mt5=None, runner_class=None):
                 raise
         return runner
 
-    return shared_main(args, mt5=mt5, runner_class=reviewed_runner, name="c22-selected", expected_config=expected)
+    return shared_main(args, mt5=mt5, runner_class=reviewed_runner, name="c22-selected", expected_config=expected,
+                       recover_initial_policy=selected.renewal_grant is not None)
 
 
 if __name__ == "__main__":

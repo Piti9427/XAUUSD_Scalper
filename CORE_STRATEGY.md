@@ -595,6 +595,25 @@ separate evidence/review. No automatic retuning, real-money enablement or failov
 Deployment/systemd/private-bucket/soak remain unexecuted owner-gated operations.
 
 
+**Oracle attended Demo exception (2026-10-24):**
+Oracle shadow/boot recovery/local cumulative backups and verified Mac restore
+are now deployed; execution remains uninstalled and sending disabled. Owner
+accepted the diagnosed actual-feed differences for prospective Demo evaluation
+and selected an attended trial with Mac console/off-VM backup while Telegram
+and private bucket are deferred. This does not approve unattended operation.
+
+Owner then explicitly selected “ยกเว้นเวลา shadow สำหรับ Demo trial มีคนเฝ้า”
+for Monday2026-10-26 (Asia/Bangkok), requesting broker Demo orders when the market
+opens. For this dated attended trial only,48h/96bar/UTC-midnight waiting gates are
+waived, not passed. Fresh complete closed M15, finite closed-H4 macro, healthy
+current observation, supported current costs, account/ledger/single-sender checks,
+original strategy/risk controls and execution-time attended approval remain.
+The original duration gates apply outside this dated exception. Real money
+remains PROHIBITED. A one-off04:45 local Codex heartbeat performs read-only
+readiness checks and invites the owner back; automatic approval review rejected
+scheduled trading activation, so no execution timer or automatic cutover exists.
+Operational procedure: `docs/ops/c22-attended-market-open.md`.
+
 ### 6.34 Mandatory swap-inclusive new research runs (2026-10-05)
 
 Owner requires swap in every new economic backtest. Active C22 context diagnostics
@@ -956,6 +975,311 @@ communicateconservativeobservedstress8.67wins/net784.56/DD38.02. Boundsforonlytw
 testedmodels,not brokerparity.Fullcashposting/nativeport/forward/COST_INCONCLUSIVE
 unresolved,no Demo/nativeport/contractadoption.
 
+
+### 6.45 Dobby reconstructed vs active C22 research comparison (2026-10-18)
+
+Owner authorized original-parameter Dobby RSI14 martingale reconstruction for
+research only, compared with active C22 `1af968e9ac6a26ea`. Original EA paste is
+incomplete; no native/terminal parity inferred. Dobby: strict BUY RSI<30 / SELL>70,
+fixed initial0.01, multiplier2, max4legs, grid3000points, basketTP8/SL55USD,
+skipMonday initial entries, one basketSL/serverday. One same-direction basket;
+management before entry filters, one added leg/tick, serverUTC primary and
+UTC+2/+3 sensitivity. This is a new research contract, not a Demo change.
+
+Shared 167,366,065 indicative Exness ticks/48,367 completeUTC BidM15bars,
+2024-09-01 through actual last quote2026-10-02. InitialUSD200 per full/earlier/later
+window, no monthlyreset. Mandatoryswap in base/stress/fee-sensitivity cells;
+modeled historical costs/calendar remain COST_INCONCLUSIVE. Primary22cells with
+22fresh repeats and exploratory margin50%/100% whole-basketstopout18cells with
+18fresh repeats completed. CanonicalC22 source/configpins unchanged.
+
+Decision retainC22: fullbase/stress+swap net+291.5482/+278.7102USD,
+DD39.2807/37.8232%,120/116positions; matches prior frozen swap controls.
+Dobby primary fullbase/stress net-200.0020/-200.8280USD,DD~100%,346/56baskets.
+Primary allows negative modeled equity; actual broker stopout unknown, so not an
+actual-account settlement claim. Exploratory stopout net across18cells remains
+-198.8470 to-196.1220USD,DD98.1184–99.7308%; no ranking reversal. EarlierC22
+base/stress netnegative~22USD, so no claim of uniform profitability/unusedholdout.
+
+No recovery re-enabled, no riskcap change, no liveconfig, watcherrestart, broker
+connection, cutover or deployment. C22Demo6.33 and readiness gates remain intact.
+Evidence `runs/dobby-vs-c22-2026-10-18/`; human verdict
+`docs/reviews/2026-10-18-dobby-vs-c22-comparison.md`.
+
+### 6.46 Terminal-growth C22 research objective (2026-10-24)
+
+Owner clarified the research objective: maximize terminal profit from the original
+start through the latest data while the account survives. Intermediate balance
+below initial capital, high DD, low monthly frequency and losing months are not
+automatic research rejection gates. This supersedes earlier research ranking
+preferences only; the active Demo contract in6.33 and its execution gates remain
+unchanged. It does not remove the10% initial risk ceiling, fixed0.01, single
+position, daily10% protection or prohibition on recovery/real money.
+
+Authorized offline campaign `specs/c22-terminal-growth-2026-10-24.md` reuses the
+verified171,171,013 Exness ticks through2026-10-23 with one continuousUSD200 account.
+Mandatory base+swap and spread/slippage-stress+swap plus hypothetical7USD/lot fee
+sensitivity. Snapshot swap/calendar and broker execution remain COST_INCONCLUSIVE.
+Finite discovery compares incumbent/prior research leaders, one-factor entry/exit/
+daily-count changes, and causal SELL filters using completed-bar H4 slope,
+breakout-depth/ATR or trailing ATR context. Research daily-count0/1/2 and BUY BE
+changes do not modify the frozen sender. No date-specific or future-outcome rule.
+
+Primary research rank maximizes worst terminal net across base/price stress;
+report a distinct maximum-base-profit leader when applicable. DD/minimum equity
+remain disclosed diagnostics. Predeclared final raw/cent daily-loss guard review
+and full-result repeats assess accounting sensitivity. The bounded search cannot
+prove a global optimum, untouched holdout, future profit or target-account parity.
+Campaign artifacts: ignored`runs/c22-terminal-growth-2026-10-24/`. Completed74configs,
+234economiccells (222raw-counter plus12cent-counter sensitivity),24fresh whole-result
+repeats. Independent all-cell cash/swap/risk/daily-counter/DD/input/source/completion
+audits PASS. Incumbent full results match all3 original costviews exactly. Final
+context-prefix/guard-boundary/ranking checks passed. No DD/minimum-balance gate.
+
+Maximum-base-profit case`646690b541405adf`, adapterconfig`9e511d195c52ef3d`:
+`config/research-c22-terminal-profit-9e511d195c52ef3d.json`. RSI7cross30,BUYEMA50,
+SELL48/EMA50,closedH4EMA200;BUYSL2ATR/TP2R/BE1R;SELLSL2.5ATR/TP1.35R/BE1R;
+daily10%/max2losingexits,static10%cap,fixed0.01,cooldown0,all sessions. Full raw
+base/stress/fee finalUSD1697.5772/1263.0998/1315.2210, net1497.5772/1063.0998/
+1115.2210. Cent-counter stressnet1091.2444;other2netunchanged. No context filter.
+
+Maximum-conservative-terminal-profit finalist`06392009f347ec4a`,adapterconfig
+`63062bbbb767a576`: `config/research-c22-terminal-robust-63062bbbb767a576.json`.
+Same research rules exceptmax1losingexit/day. Raw base/stress/fee finalUSD1553.0902/
+1303.6344/1320.4940;net1353.0902/1103.6344/1120.4940. Cent counterparts final1555.2274/
+1310.9580/1316.0938. This maximizes minimum base/price-stress net acrossraw/cent among
+the reviewedfinalists;maximum-base-profit case is separately retained because owner
+prioritizes endpointgrowth. Worst6view net1103.6344 versus1063.0998 forbaseleader.
+These are different cost assumptions/accountpaths,not isolated fee effects.
+
+Both researchleaders remain modeledsolvent/netpositive inall6reviewed scenarios,
+trade through2026-10-23, and have noforced END_OF_SAMPLE closes. They keepfixedlot,
+10%ceiling,daily10%,singleposition/norecovery. RecordedDD/minimumequity are disclosed
+inresults,not used as rankingcutoffs. Retrospectivecatalog74 is not globalmaximum,
+newholdout,actualbrokerPnL or guaranteedfutureprofit. Report:
+`docs/reviews/2026-10-24-c22-terminal-growth.md`. ActiveDemo6.33/sourcepins/config,
+account state and executionauthorization remain unchanged;neitherresearchconfig
+isacceptedbyfrozenDemo detector withoutaseparate approvedreplacementreview.
+
+### 6.47 Research downside/performance qualification (2026-10-25)
+
+Owner now requires maximum observed equity DD<=40% for new research selection,
+with base and price-stress terminal net no lower than the maximum-base-profit
+research contract9e511d195c52ef3d in the corresponding cost/guard scenario.
+This supersedes the no-DD-cutoff preference for future research only; archived
+6.46 results and active Demo6.33 are unchanged. Fixed0.01, singleposition,
+initial cost-inclusive cap10%, daily10%, no recovery and no lot increases remain.
+The40% ceiling is a backtest eligibility condition, not a guaranteed loss limit.
+
+Authorized finite18case campaign: specs/c22-performance-2026-10-25.md,
+scripts/research/c22_performance_campaign.py, outputs under ignored
+runs/c22-performance-2026-10-25. Uses existing full history through2026-10-23;
+all economic scenarios include modeled swap, costs remain COST_INCONCLUSIVE,
+no untouched holdout is claimed. Investigate losing-run severity/side, minimum
+equity and completed versus ongoing recovery before bounded entry/exit/risk-gate
+changes. New filters use completed-bar features; canonical replay remains frozen.
+Selection fails closed with NO_QUALIFIER if profit/DD/survival conditions fail.
+Any selected improvement still needs a matching bot adapter and separate
+broker/forward evidence and execution-time approval before Demo adoption.
+
+Completed first-stage18cases/57cells/6fresh repeats, then five predeclared
+adaptive combinations/21newcells/6fresh repeats;23distinct research cases,
+78new economic cells total including9cent sensitivities,12fresh repeats.
+Stage2protocol: specs/c22-performance-refine-2026-10-25.md; harness
+scripts/research/c22_performance_refine.py; outputs under ignored
+runs/c22-performance-refine-2026-10-25. All views include modeled swap.
+Only research outputs changed; active Demo6.33 and frozen source pins remain.
+
+The maximum-base-net qualifying discovery candidate changes BUY SL2 to2.5ATR
+and cooldown0 to4M15bars after any net losing exit; other original research
+seed9e511d195c52ef3d rules remain. Cooldown does not force an exit or impose a
+four-hour/multi-day pause. It uses elapsed4*15minutes, including market closures.
+Raw base/stress/fee net1652.2064/1242.2616/1231.6576USD; observed equity DD
+31.6581/35.7268/36.7085%. Cent base/stress match raw; fee net1199.9536USD.
+Each of six paths passesDD<=40%, matched base/stress profit floors and modeled
+survival. Independent78cell accounting/calendar/daily-admission audit covers
+34,146entries; independent all-observed-quote reconstruction matches all six
+selected DD/min-equity/final-cash paths.44existing replay regressions pass.
+
+Trade-offs remain: longest raw loss streak increases9 to11, base completed
+closing recovery stays~100.40days while stress rises101.10 to133.30days.
+Do not describe this as eliminating the original streak/recovery weaknesses.
+The owner is being asked whether those two metrics should become additional
+hard gates; no answer or adoption is inferred. These are exposed-history,
+COST_INCONCLUSIVE discovery results, not broker/forward qualification.
+
+### 6.48 Matrix-guided iterative tuning (2026-10-25)
+
+Owner authorized continued offline optimization from the matrix. New harness
+`scripts/research/c22_matrix_tuning.py`, protocol
+`specs/c22-matrix-tuning-2026-10-25.md`, ignored outputs
+`runs/c22-matrix-tuning-2026-10-25`. Starts from6.47's SL2.5/cooldown4 research
+candidate; at most two coordinate rounds with18native one-factor neighbors each.
+Round2 adapts to Round1's fully qualified winner; deduplicate full Rules and stop
+if no qualified rank improvement. Domains cover BUY/SELL targets, cooldown,
+BUY/SELL stops, global BE activation and BUY protection. Every raw-qualified
+candidate receives all three cent-counter sensitivities before final ranking.
+No top2-only cent shortcut. Original matched base/stress floors and all-path
+positive net/survival/DD<=40% remain; primary rank maximum base net, then stress
+net, then smaller maximum DD. Streak/recovery remain explicit diagnostics.
+
+Same continuous200USD, fixed0.01, cap10%, daily10%/count2, single position, no
+recovery/lot increases. All scenarios include existing named modeled swap;
+unverified historical broker costs/calendar remain COST_INCONCLUSIVE. All source
+history was already exposed. No untouched validation or global optimum claim.
+True closing-recovery diagnostics require an actual below-peak closing cash
+episode, retaining the legacy peak-interval metric separately. Native Rules
+outside existing adapter domains export only a research descriptor and require
+a separate adapter review. Demo6.33, production sources and execution approval
+remain unchanged. Completion metrics and independent audit follow below.
+
+Completed two rounds:18then15unseen campaign-local neighbors,34distinct Rules
+including incumbent (some profiles reproduce earlier matrix rows),153economic
+cells (102raw/51cent) and6fresh final full-result repeats. All16changed raw-pass
+candidates pass the complete cent review;17fully reviewed qualifiers including
+incumbent. Stop reason ROUND_BUDGET_REACHED: Round2still improves the declared
+rank, so this is not coordinate convergence or proof of global optimality.
+
+Selected research Rules ID`26b8bcd69e043653`: versus6.47, BUY target2R→3R and
+cooldown4→2elapsedM15periods (60→30minutes). Other rules unchanged. Raw base/
+stress/fee final2145.3340/1671.8700/1664.5920USD,net1945.3340/1471.8700/
+1464.5920USD;equityDD34.2750/37.7301/38.6710%. Cent base/stress match raw;
+centfee final1616.9940/net1416.9940USD,same38.6710%DD. Every path meets original
+matched floors and DD40. Base/stress net improve17.74%/18.48% versus6.47.
+
+Counter-evidence: DD increases~2pp;stress minimum equity falls159.272→146.974USD,
+fee158.849→146.481USD. Longest loss streak remains11;actual completed closing
+recovery base100.40→125.20days,stress133.30→130.30days. No changed qualifying
+case simultaneously avoids worsening streak/recovery versus6.47in all sixviews.
+Alternative Round1BUYTP3R/cooldown4earns base1943.7560USD (only1.5780less) with
+worst6DD36.2963%, but lower stressnet1350.1932USD. These are material trade-offs,
+not an across-all-risks improvement. The new descriptor still requires an
+adapter; it is not accepted by the frozen Demo contract.
+
+Independent153cell audit covers72,899entries: cash/swap/calendar/initialrisk/
+daily10%/count2/cooldown/nonoverlap,cent coverage and strict round rank PASS.
+All six selected full-tick DD/minimum-equity/final-cash paths match independently.
+Incumbent six results reproduce their parent exactly;selected six fresh repeats
+match.61existing replay/adapter tests pass. Report:
+`docs/reviews/2026-10-25-c22-matrix-tuning.md`. Historical cost assumptions,
+source completeness and broker/forward profitability remain unqualified.
+
+### 6.49 Learning loop with conditional block closure (2026-10-25)
+
+Owner requests continued tuning until a defined search converges, learning from
+the observed disadvantages and comparing every stage to old contracts. Protocol
+`specs/c22-learning-loop-2026-10-25.md`;runner
+`scripts/research/c22_learning_loop.py`;compressed store/workers
+`scripts/research/c22_loop_store.py`;ignored outputs
+`runs/c22-learning-loop-2026-10-25`. Frozen native domain5184combinations,
+searched through full conditional core96and management54blocks. Alternate both
+blocks until neither improves its lane; reopen when the other lane discovers a
+better eligible case. No arbitrary two-round stopping condition. This is block
+closure at final incumbents,not global enumeration of the5184combinations.
+
+Primary profit lane keeps6.48's agreed original matched floors/all6DD40/survival
+and raw base→stress→DD ranking. Separate exploratory repair lane additionally
+keeps latest26b8base/stress profits and each matched path's DD,recovery,worst-run
+severity and streak no worse. Its declared priority minimizes worst6DD,then
+recovery,severity,streak,before profit ties. It does not supersede the owner's
+primary ranking or authorize adoption. Report strict risk reduction only when
+at least one matched risk metric falls;otherwise NO_STRICT_DOWNSIDE_IMPROVEMENT.
+
+Severity uses worst losing-run loss% rather than the longest-count run. Recovery
+includes the maximum of actual completed closing recovery and ongoing censored
+drawdown age,with both displayed. Every slice freezes all96or54profiles before
+outcomes. Raw all3views;cent every raw-qualified profile. Parent153cells may be
+hash-reused because their detector/frame,input and costs match;filtered or active
+Demo archives are not interchangeable solely by Rules ID. New outcomes stored
+as deterministic gzip with atomic hashes,checkpoint/resume and explicit PARTIAL
+on resource failure. Fullresult repeats and independent audits remain required.
+
+Same continuous200USD,fixed0.01,cap10%,daily10%/count2,single position,no recovery
+or lot growth. Every economic view includes the existing named modeled swap;
+all historical cost/calendar/source/forward limitations remain. Active Demo,
+broker state and execution authorization are not changed by this work.
+
+Completed conditional loop:163visited profiles (34parent+129new),570saved/ref
+paths (417new+153reused;489raw/81cent),6fresh full-result repeats.27raw-pass
+profiles,26fully reviewed qualifiers. Four complete core96/management54phases
+across two lanes close in one cycle;both keep26b8bcd69e043653. No strict downside
+repair found. Independent570cell/278,132entry audit and selected6full-tick DD
+PASS. This is conditional closure,not proof of global5184optimum.
+
+Lone raw-pass/cent-fail56f2812d652b9898(globalBE0.5) lowers rawbaseDD to24.4641%
+but centstressDD41.6795% fails40. LowerworstDD/recovery alternativec7b1539e4f54c3e3
+has32.0826%/100.4001days,whileworststreak20andbase/stressnet1547.3816/1153.9632
+are worse than latest. Minseverity82501178a9a10372has18.6395% but lowerprofits.
+Latest worst-runseverity23.9695% differs from its longest11-run's severity;
+do not substitute count-severity for worst-loss severity. Matrix/source reports
+retain these separate trade-offs,completed versus ongoing recovery and witnesses.
+
+### 6.50 Exhaustive continuation of the frozen5184-grid (2026-10-25)
+
+To cover remaining joint cross-block possibilities,owner's continual-search
+request proceeds to the full5184cartesian grid from6.49,not only local closure.
+Protocol`specs/c22-exhaustive-loop-2026-10-25.md`;new runner
+`scripts/research/c22_exhaustive_loop.py`;outputs
+`runs/c22-exhaustive-loop-2026-10-25`. Reuse the570verified identical-context
+parent paths;declare the full catalog before new outcomes. Deterministic batches,
+rawall3views/centallrawqualifiers,compressedatomiccells,checkpointresume and
+periodic local follow-up support the long run. Partial coverage never means best
+in grid. Fullcoverage+selectedfreshrepeats+independentall-cell/finaltick audit
+are mandatory before an EXHAUSTIVE_COMPLETE research verdict.
+
+Primary profit and separately labeled exploratory repair objectives remain6.49;
+source/input/swap assumptions,fixed0.01,cap10%,daily10%/count2,singleposition,
+no recovery/lotgrowth and Demo/real-money restrictions remain. The best complete
+grid outcome still does not establish best among all conceivable strategies or
+future profitability. Local follow-up may only resume offline research,update
+comparisons,verify artifacts and report completion or actionable failures.
+
+Full catalog and protocol frozen;metadata-only resume bound570parentpaths/
+163evaluatedprofiles with0newcells before launch. Detached offline runner
+started2026-10-25T03:29:25UTC with2workers. Completion on2026-10-25 covers
+all5184profiles/162batches:15552raw paths plus174cent paths for58raw qualifiers;
+54profiles pass all matched conditions and4fail at the cent stage. Total15726
+economic paths=15156new+570hash-verified reused. Six distinct selected-path
+fresh repeats match. All101source pins remain unchanged. The process exited
+normally;no duplicate runner or live/Demo actions were used.
+
+Final independent verification PASS:15726paths/7764913accounting entries,
+exact162batch transitions/global-grid ranking,allrequiredcent tests and selected
+sixfull-tickDD reconstructions. Resumable accounting reused14600hash-bound audit
+cache entries while rechecking immutable payload bindings;it is not a claim
+that every accounting path was recalculated afresh. Audit performed0economic
+replays;the runner's6fresh repeats are separate evidence. Canonical proofs:
+`runs/c22-exhaustive-loop-2026-10-25/{COMPLETE.json,independent-verification.json}`.
+
+Both final lanes retain26b8bcd69e043653. Best qualified within this frozen grid
+under the agreed primary rank,not a new higher-profit strategy. Rawbase net
+1945.3340/final2145.3340USD/DD34.274997%;rawstress1471.8700/final1671.8700/
+DD37.730125%;rawfee1464.5920/final1664.5920/DD38.671021%. Centbase/stress match;
+centfee net1416.9940/final1616.9940,DD38.671021%. All six loss streaks11;
+worst financial losing-run severity23.9695% across six;completed closing-DD
+recovery125.2020days base/130.2986stress+fee;ongoing age60.7781days,censored.
+Fixed0.01 and200USDinitial capital remain;retained profits do not increase lots.
+
+Strict downside improvers0: no profile retains latest matched base/stress profit
+while every matched DD/recovery/severity/streak is no worse and at least one is
+better. Lower-risk trade-offs do exist. Minworst6DD32940ec6ebadbb6c has27.888706%
+DD but rawbase1541.1008/stress1319.6844 and streak21. Minseverity7dec196ddfe25dcf
+hasworstseverity17.271666%,DD31.994273%,streak11,completedrecovery115.8967days/
+ongoing50.3469days,but lowerrawbase1532.7850/stress1357.1226. They are alternatives,
+not replacements for the agreed maximum-terminal-profit choice.
+
+Final Matrix statusAUDITED_EXHAUSTIVE_RESULT includes all5184profiles and old
+Demo/original9e/row20/latest references. Matched comparison and remaining
+cost/forward limitations: `docs/reviews/2026-10-25-c22-exhaustive-tuning.md`.
+All history remains exposed,holdout=false,COST_INCONCLUSIVE;historical broker
+rates/calendar/margin/fills and provider completeness remain unqualified.
+DD<=40% is observed model qualification,not a guaranteed future loss limit.
+Native selected Rules still require a separately reviewed compatible adapter,
+fresh broker/cost/feed evidence and prospective shadow before any Demo decision.
+Demo6.33 and execution-time owner approval stay intact;no real money authorized.
+Heartbeat`c22-exhaustive-tuning-continuation` was deleted after verified closure
+on2026-10-25;all run artifacts are retained. No further continuation is scheduled.
+
 ### 6.51 Owner-selected26b8 bot test adapter (2026-10-25)
 
 Owner now selects26b8bcd69e043653 for bot testing because its audited historical
@@ -992,6 +1316,7 @@ not broker/forwardprofit qualification. Handoff:
 `docs/ops/c22-selected-demo.md`;spec:
 `specs/c22-selected-demo-adapter-2026-10-25.md`.
 
+
 ### 6.52 Selected26b8 actual Demo execution request (2026-10-25)
 
 Owner explicitly requests replacing old C22 with selected26b8 and actual broker
@@ -1018,6 +1343,7 @@ waiver transfers. No credential update, actual order or automaticactivation.
 Runbook docs/ops/c22-selected-demo.md;review
 `docs/reviews/2026-10-25-c22-selected-execution-preparation.md`.
 
+
 ### 6.53 Explicit selected26b8 duration waiver (2026-10-25)
 
 Owner explicitly selects beginning Demo trial once evidence is ready with
@@ -1038,6 +1364,7 @@ Execution unit remains not installed/inactive;terminalconfigurationunchanged.
 Broker costs remain
 COST_INCONCLUSIVE; actual order sending remains off until missing evidence.
 See `docs/reviews/2026-10-25-c22-selected-duration-waiver.md`.
+
 
 ### 6.54 Monday actual Demo armed trial (2026-10-25)
 
@@ -1081,3 +1408,308 @@ and selectedexecution+shadow MacrestorePASS. Native28Rules and frozen101 unchang
 full1152testsPASS(skip2), independentreviewsPASS. Costassumptions expireNov1
 13:25UTC; exactobservedcostdrift remains. Executionnotbootenabled; VMreboot needs
 reviewedmanager restoration. NoSundayorder/fill/profit is claimed.
+
+### 6.55 Selected26b8 lifecycle and boot recovery fixes (2026-10-26)
+
+Owner requests fixing the five-point execution verdict. Native28Rules,
+fixed0.01,costinclusive10% equitycap,daily10%/loss2,cooldown and SLTP/BE thresholds
+remain unchanged. BE10008 retains persisted pending intent until actual broker
+SL confirmation, with no blind resend. Complete owned exit reconciliation uses
+strict read-only Demo identity/exposure/history before mutation prerequisites;
+every actual send/modify/close retains strict permission/spec/freshquote checks.
+
+Daily equity math remains unchanged. A verified account_info request that starts
+and completes inside the existing first UTC second is persisted as a dated,
+account-bound equity mark before slower history/quote/strategy work. A later
+baseline can reuse this genuine mark after restart. Polling aligns to midnight;
+the cycle clock is read after policy-file IO. Late/missing/malformed proof still
+blocks admission, never latches later equity or expands daily allowance. Invalid
+sampling cannot stop an owned manager. CLOSED events retain prior numeric fields
+and add baseline day/source/validity, making an unproved current-day baseline
+explicit. No historical tick/cost or midnight equity is fabricated.
+
+Persistent dedicated terminal plus selected execution units prepare recovery of
+the same journal after boot. The boot-registration helper only enables/disables
+reviewed registrations; it never starts/stops/restarts a financial manager.
+Actual cutover requires fresh flat/empty-outbox evidence, restored backup,
+immutable release, exclusive SDK Demo smoke and exact current-cohort review under
+the owner's existing permission. Active/UNKNOWN exposure defers the switch.
+
+An independent service/journal watchdog uses a separate SQLite database, rejects
+financial-journal aliases/hardlinks, records durable incidents and reports flat
+stale quotes as WAITING_MARKET_DATA without asserting a known market session.
+Owner explicitly chooses monitor preparation with no external sends. Notification
+delivery remains disabled; no external channel or test message is activated.
+
+Frozen101research source pins and current cost policy bytes/expiry are preserved.
+Operational specification: specs/c22-verdict-fixes-2026-10-26.md. Local tests and
+actual VM deployment/reboot/fill evidence are separate; deployment status is
+recorded in docs/reviews/2026-10-26-c22-verdict-fixes.md when observed.
+
+Profile-guided follow-up: repeated unchanged-prefix CSV exports caused measurable
+file/formatting work. The selected cache already replaces its DataFrame on growth
+or reset; normal cycle export may skip the same prefix only when output file
+identity,size,mtime/ctime also match the last successful atomic export. Missing
+or externally changed files and new destinations/prefixes still write; a failed
+write never marks success. Explicit export remains a forced full write. This
+changes no detector, order, risk or research calculation; the mutable Demo source
+binding is updated only for scripts/c22_selected/runner.py, with new runtime
+cohort review. Local timing improvements are export/fixture measurements, never
+forward fill latency, economic improvement or higher expected profit.
+
+### 6.56 Selected26b8 rule-review clarification (2026-10-26)
+
+Documentation only; no runtime/rule/source-pin change. Daily10% is an observed
+equity entry-stop threshold, not a reserved loss budget including the next
+trade's SL risk or a forced closure. A day already−9% can still admit nearly10%
+of remaining equity, so realized daily loss may exceed10%. Initial cost-inclusive
+cap and BE cover declared commission/slippage but do not budget future/accumulated
+holding swap. ResearchDD≤40% is not a live portfolio-DD kill switch. Fixed0.01
+does not compound lot size. No news/ADX filter, reverse/time exit or automatic
+live retuning is enabled. Exact source-grounded entry/exits and40-scenario
+inventory: docs/reviews/2026-10-26-c22-26b8-rules-and-scenarios.md.
+
+### 6.57 Selected26b8 startup history and H4-gap diagnostics (2026-10-26)
+
+Native26b8 Rules, signal prices, costs, SL/TP/BE, fixed0.01, daily/cooldown and
+10% risk admission are unchanged. Startup already fetched the most recent100,000
+M1 in two50,000 pages; it did not require201 newly observed live H4 bars. The VM
+snapshot has6,588 complete BidM15 bars from15July2026 and361 complete H4 bars.
+Its prior Sunday20:00UTC H4 has only7of16 M15, so the frozen closed-H4 mapper
+intentionally yields NaN. The former macro_warmup_insufficient label conflated
+this latest-bucket condition with having fewer than201 complete historical H4.
+
+Selected runtime now distinguishes macro_latest_h4_incomplete from genuine
+macro_warmup_insufficient and reports complete/required H4 counts, the prior
+bucket's observed M15 count and the next scheduled H4 close. A forming current
+H4 does not itself invalidate a preceding complete H4. The first complete Monday
+00:00–04:00UTC bucket can supply the next macro at11:00Asia/Bangkok if all16 M15
+are present. No incomplete bucket is filled, fabricated or replaced by an older
+valid EMA; weekend/rollover gating remains identical to archived research.
+
+The existing exported CSV gains an atomic metadata sidecar binding the exact
+account fingerprint, symbol, Rules ID, aggregation version, current runtime
+config/source digest, content hash, UTC range and row count. Restart reuses it
+only after validating chronology, OHLC, completion and exact overlap with fresh
+broker M1-derived M15. Otherwise it falls back to the existing full M1 bootstrap.
+Cache reuse never replays historical orders or resets the financial journal.
+True insufficient-history startup retries broker backfill no more than once
+per60seconds; known overlap changes/missing bars cause an explicit blocked reset
+before a fresh rebuild. Enough history with an invalid latest H4 does not trigger
+unnecessary full-history retries. Metadata write failure cannot stop an owned
+active/UNKNOWN manager. Frozen101 research source pins remain unchanged.
+
+This is an operational source/cohort update, not a new economic strategy result.
+The selected Rules ID remains26b8bcd69e043653; deployment requires the same verified
+flat/single-sender/journal, immutable-release and current Demo-review controls.
+Deployment observed26October2026 13:30:55Asia/Bangkok on immutable release
+selected-98c2c73ed40ae408: actual sender reports history_seed_status=restored,
+361/201 complete H4 and WAIT/duplicate_bar,execute=true. No warmup wait remains
+in that snapshot. Real Windows SDK cold/warm comparison and current-cohort Mac
+backup restore are recorded in docs/reviews/2026-10-26-c22-history-bootstrap.md.
+
+### 6.58 Selected26b8 quote-observation clock repair (2026-10-26)
+
+Operational implementation only. Native Rules26b8bcd69e043653, fixed0.01,
+signal/H4 timing, SL/TP/BE and daily/cost/risk policies remain unchanged. Initial
+quote validation now includes elapsed SDK work before the quote call; each quote
+read additionally includes its own monotonic elapsed time. Freshness is judged
+against this post-read UTC observation, preserving strict rejection of actual
+future quotes and observed age over60seconds. The canonical cycle timestamp
+continues to define causal bars and the UTC-day accounting context.
+
+Pre-send admission re-samples elapsed time after fresh-quote reading before its
+existing90second entry-window check. Quote rejections disclose request/observation/
+tick timestamps, computed age and future/stale/invalid reason in the cycle record.
+No additional broker read, forced order or cost-policy renewal is introduced.
+Regression and actual deployment evidence are separate in
+docs/reviews/2026-10-26-c22-quote-clock-fix.md.
+Demo deployment observed15:32–15:35Asia/Bangkok on selected-9cfc54a3dc78f0ae:
+new-cohort sender active/execute=true,exact source/config/review validated and
+unchanged native cache binding,financial state/day baseline and cost-policy bytes.
+The first post-approval M15 at15:45
+is still an admission gate in that observation; no forced fill is inferred.
+
+Owner selected isolated next-version risk policies: reserve planned SL liability
+before adding an entry under the daily10% floor and the cohort-equity DD40% floor;
+evaluate automatic resume with at least24hours pause as a separate candidate;
+start with accrued-cost Net BE at the first successful adjustment while keeping
+native1R/M15 activation. These are research design decisions,not silently enabled
+runtime changes. Owner confirmed the exact timer/accounting/matrix via continue
+after Q6. Peak,resume and net-BE decisions and evaluation gates are tracked in
+specs/c22-risk-closure-2026-10-26.md. Neither a sampled admission floor nor the
+existing broker SL guarantees realized losses through gaps or outages.
+
+### 6.59 Selected26b8 risk-overlay matrix closure (2026-10-26)
+
+Research only; active Demo Rules/config/source remain the operational26b8 cohort.
+The owner-confirmed D1daily SL budget,P1equity-DD budget,B1first accrued-cost Net BE
+and optional24hour DD pause were implemented in separate versioned research
+policy/replay modules. All12 profiles across base/stress/fee+swap raw/cent views
+completed:72 paths,6fresh selected repeats,overlay-off exact parent parity in all6
+views,and independent source-tick accounting/DD/HWM/budget/BE audit PASS on all72.
+The original101 frozen source pins and original profit/DD<=40% gates remain.
+
+Native26b8 remains the declared profit winner among these12. Base+swap net
+$1,945.334,DD34.2750%;worst six-path DD38.6710%. B1base net$1,722.4984,DD32.4069%,
+worst six-path DD37.4692%:a lower-DD/lower-base-profit alternative. D1alone lowers
+base net and reaches40.7161% worst DD,failing the gate. D1+P1 combinations can
+remain stopped in stress/fee after the24hour timer expires because fixed0.01
+planned risk still cannot fit the unchanged peak floor;some paths finish below
+the original$200. No peak reset,top-up,forced winner or Demo promotion was used.
+
+Full details,matched streak/severity/minimum/completed and ongoing recovery and
+the12-profile Matrix are in docs/reviews/2026-10-26-c22-risk-closure.md. Historical
+input ends23October2026,uses previously exposed data and modeled swap assumptions;
+COST_INCONCLUSIVE remains. This does not demonstrate future profitability or a
+realized daily/DD ceiling. Research protection code has not been installed in
+the running broker sender;native Demo behavior remains unchanged by this study.
+
+### 6.60 Selected26b8 operational incident and availability repairs (2026-10-27)
+
+Local implementation/staged release only; deployment is a separate operation.
+Native Rules26b8bcd69e043653, fixed0.01, signal/SL/TP/BE, daily10%/loss2,
+30minute cooldown, risk10%, UNKNOWN/no-blind-resend and cost authority remain.
+No new DD40% live breaker, Net BE, macro carry rule or cost renewal is installed.
+
+The observer retains an incident across brief healthy samples and changing
+blockers. Recovery requires a continuous issue-free interval equal to the
+existing problem grace (default180seconds). A recovering announced incident
+remains critical until that interval completes. This is a monitoring policy,
+not a trading cooldown. Corrupt/future/inconsistent observer timestamps surface
+watchdog_state_invalid rather than silently suppress alerts. Financial journal
+remains read-only to the observer; external delivery remains opt-in/OFF.
+
+Flat quote_stale is a bounded initial wait, not evidence the market is closed.
+Age over the existing heartbeat stale threshold, or continuous wait reaching the
+existing grace, reports market_data_wait_session_unverified. No account-specific
+session schedule is fabricated and the execution quote<=60second gate is intact.
+
+ExecutionReview.inspect shares the exact approval validator without accepting or
+writing an approval. Safe diagnostics expose finite failure causes, expiry and
+due72/24/6hour metadata, plus bound approval/arm UTC times after validation.
+Runtime entry_availability reports KNOWN_BLOCKERS_ONLY, conditional resume times,
+operator actions and NOT_PROVEN for unreached financial admission. Inspection
+occurs after the existing trading/protection cycle; its failure cannot replace
+an owned-management result. No extra SDK read, auto-resend, policy refresh or
+halt clearing occurs. See docs/reviews/2026-10-27-c22-operability-fixes.md.
+
+### 6.61 Selected26b8 failure attribution and optional-output isolation (2026-10-28)
+
+Local correction only; no VM activation or economic-rule change. Rules ID,
+fixed0.01, 10% cap, daily10%/loss2, elapsed30minute cooldown, native SL/TP/BE,
+source/account/policy admission and UNKNOWN/no-resend remain unchanged.
+
+The cost validator retains its existing tuple/status and exact rejection
+predicate, adding safe stage/code and field-level numeric expected/observed
+details from the same symbol-spec read. Raw `cost_policy_invalid_or_stale`
+remains compatible. Details distinguish time/evidence/spec causes; they cannot
+accept a changed tariff/spec, renew a policy or infer an old uncaptured value.
+The exact differing spec field at27Oct08:15/08:30UTC remains unobserved.
+
+Shared diagnostics record bounded exception types and repository-relative frame
+references, correlation, evidence reference and recovery guidance. Unknown SDK
+messages are not copied into reasons; fixed project refusal codes remain.
+Supplemental OPERATIONAL_FAILURE audits do not enter the notification outbox or
+change financial lifecycle events. Optional cache export/checkpoint/delivery
+failures retain the financial result and owned manager; diagnostic-write failure
+uses independent sanitized stderr. Financial journal failures still fail closed.
+CSV and metadata remain separate hash-bound files: a torn pair is rejected by
+the existing loader, not represented as an atomic generation.
+
+CLI startup/reload/cleanup failures retain stage/cause evidence. Invalid policy
+reload remains invalid for new entries while owned reconciliation still runs.
+Close and SDK shutdown are attempted independently; cleanup failure reports a
+nonzero exit without erasing the primary result. Native broker reconciliation,
+permissions and risk checks remain prerequisites.
+
+The diagnostic module is included in selected source binding and staged release;
+config changes affect source hashes only. Existing owner/source/config-bound
+review must be renewed through its genuine approval procedure before any later
+rollout. No cost attestation, forced order, auto-renewal, new DD40 live breaker,
+parameter tuning, notification activation or profitability qualification occurs.
+
+### 6.62 Selected26b8 condition visibility and renewal preparation (2026-10-28)
+
+Native26b8 Rules, signals, fixed0.01, SL/TP/BE, daily10%/loss2,30minute
+cooldown and cost-inclusive10% initial risk cap remain unchanged. Canonical
+geometry/M1 refusal reasons and fixed lifecycle reconciliation reasons now retain
+specific operator/resume hints; UNKNOWN still cannot resend or clear a halt.
+
+Optional `--broker-evidence-dir` adds a private request/receipt seam to the
+existing sender. It exports only already-read identity/exposure/epoch-history/spec
+facts after financial processing. No SDK session/read or synthetic order is added.
+Active/UNKNOWN, pending orders, incomplete/disconnected/unreconciled reads, or a
+same-cycle send defer capture; write faults retain financial outcome/management.
+Completed packets preserve their original observation time across retries/restart;
+stale packets cannot become fresh by rereading. Packets are observations, not cost
+attestations, owner approvals or entry authority. Standard account type is labelled
+from the existing policy, not inferred as an SDK tariff entitlement.
+
+Offline `scripts/c22_selected/renewal.py` encodes the confirmed exact-scope grant,
+trusted pin,72h preparation,168h policy lifetime, original freshness, flat/noorders/
+noactive/noUNKNOWN install window and old-valid fallback. It is not called by the
+sender; `REVIEW_CANDIDATE` always keeps `installation_authorized=false`. No real
+grant, scheduler, generation installer or durable incident/cutoff migration is
+installed. Those remaining seams must be verified before auto-renew activation.
+
+Native daily10% is observed-equity admission, not a next-SL reserve; DD40% is a
+research selection gate, not a live breaker; native BE excludes swap. The declined
+MM/DD/Net-BE research candidates are not silently promoted by operational fixes.
+See `docs/reviews/2026-10-28-c22-complete-conditions-and-closure.md` for the complete
+entry/exit/wait/resume/policy matrix and remaining23-ticket scope. Local work is
+not VM deployment, real-money permission or proof of future profitability.
+
+### 6.63 Selected26b8 coherent renewal and cost provenance (2026-10-28)
+
+Local implementation supersedes the preparation-only checkpoint in6.62. It is
+default OFF and has not been activated on the Demo VM. Native26b8 signals,
+fixed0.01, SL/TP/BE, daily10%/loss2,30minute cooldown, cost-inclusive10% initial
+risk cap and UNKNOWN/no-blind-resend remain unchanged. Config now binds25 source
+files. No new economic replay, cost acceptance or profitability claim is made.
+
+Explicit opt-in joins the original accepted execution review, independently
+pinned owner-issued exact-scope grant, source-content evidence, applicable-cost
+ledger and atomic generation store. The sender never creates a grant or a new
+human approved_utc. Changing source/config still requires genuine source-bound
+approval. Commission/slippage/swap/spec must remain exactly within the existing
+grant; lower observed swap is still drift, not permission to accept new costs.
+
+Preparation starts at policy age96hours,72hours before its unchanged168hour
+expiry. It consumes a local source bundle and already-read broker facts from the
+same sender; no HTTP client, extra SDK reader or trading pause is added. Actual
+official HTML bytes, source URL, hash and original retrieval times must prove the
+published claims. Missing/hidden/wrong-account/changed terms defer. Swap-Free
+remains UNKNOWN and economic qualification COST_INCONCLUSIVE. A dated regular
+calendar is a model, not account entitlement or holiday attestation.
+
+The durable cost ledger records the immutable original review cutoff, retained
+policy generations and factual position-to-generation bindings. Complete epoch
+history/count/cash/volume reconciliation precedes applicable-generation charge
+checks. Late old exits are audited; moving reviewed_utc cannot skip an incident.
+Incidents remain across renewal/restart; mutable-KV erasure/rewind is detected
+against append-only audit state. A decision reference does not clear an incident.
+Pre-original-review exits remain explicitly unqualified; missing provenance blocks.
+
+Seven sealed documents (policy, broker, sources, review, grant, context, cost_audit)
+switch through one guarded atomic pointer. Install requires the actual exposure
+read to be no older than5seconds, flat/noorders/noactive/noUNKNOWN/no same-cycle
+send, broker evidence<=5minutes, source review<=24hours and fresh final authority.
+Slow history cannot re-date cached flatness. Failed preparation keeps the whole
+old valid generation; expiry blocks new entries while owned management continues.
+Grant revocation or corrupt auxiliary evidence cannot abandon an owned manager.
+
+Pointer lineage is checked against durable adoption/installation-intent events;
+an ancestor/unrelated pointer or deleted adopted pointer fails closed. Crash
+recovery accepts only the validated, previously authorized direct child. Expired
+sealed context is usable for historical integrity/CAS planning only, never entry.
+CLI reload/startup cannot replace that context with an unreadable legacy file.
+Post-replace fsync ambiguity remains explicit. Windows directory fsync and hard
+power-loss durability are not claimed by the POSIX test results.
+
+Source/ledger/generation failures retain finite safe cause, stage and recovery
+guidance. Raw SDK errors/secrets are excluded; deeper unknown causes remain
+UNKNOWN. Current verification and residual AP/source/VM/forward evidence are in
+`docs/reviews/2026-10-28-c22-root-cause-closure.md`. No installed grant, auto-renew
+activation, external alert delivery, forced order or real-money authority follows
+from this local implementation.

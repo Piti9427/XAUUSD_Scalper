@@ -62,7 +62,7 @@ class Journal:
         if prior == value:
             return
         with self.conn:
-            if key in ("active", "day", "safety_halt", "last_bar", "identity", "strategy_snapshot"):
+            if key in ("active", "day", "utc_boundary_mark", "safety_halt", "last_bar", "identity", "strategy_snapshot"):
                 self._audit("STATE", expected={key: prior}, observed={key: value})
             self.conn.execute(
                 "INSERT INTO kv VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",

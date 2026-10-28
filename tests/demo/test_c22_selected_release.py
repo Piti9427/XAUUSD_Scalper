@@ -28,6 +28,11 @@ class SelectedReleaseTests(unittest.TestCase):
                 "scripts/ops/mt5_wine_c22_selected.py": b'"""Shadow entry fixture."""\n',
                 "scripts/ops/c22h4_readiness.py": b'"""Shared readiness fixture."""\n',
                 "scripts/ops/c22_selected_readiness.py": b'"""Selected readiness fixture."""\n',
+                "scripts/ops/c22_selected_watchdog.py": b'"""Read-only health fixture."""\n',
+                "scripts/demo_runtime/boundary.py": b'"""Boundary observer fixture."""\n',
+                "scripts/demo_runtime/diagnostics.py": b'"""Safe diagnostic contract fixture."""\n',
+                "deploy/c22-demo/launch_selected_terminal.py": b'"""Terminal launcher fixture."""\n',
+                "deploy/c22-demo/enable_selected_boot.py": b'"""Boot registration fixture."""\n',
             }
             config = {
                 "contract_id": "26b8bcd69e043653", "volume": 0.01,
@@ -42,6 +47,7 @@ class SelectedReleaseTests(unittest.TestCase):
                                            for name, data in old_files.items()}}).encode(),
                 "config/private.env": b"SECRET_MUST_NOT_BE_BUNDLED=fixture\n",
                 "data/private.sqlite3": b"financial state fixture",
+                "deploy/c22-demo/c22-selected-terminal-execution.ini": b"[Experts]\nEnabled=1\nAllowLiveTrading=1\nAllowDllImport=0\nAccount=1\nProfile=1\n",
             }
             for name, data in files.items():
                 path = root / name
@@ -73,6 +79,7 @@ class SelectedReleaseTests(unittest.TestCase):
                 self.assertTrue(all(not name.startswith(("data/", "runs/")) and not name.endswith((".env", ".sqlite3")) for name in names))
                 self.assertIn("scripts/ops/c22h4_readiness.py", names)
                 self.assertIn("scripts/ops/c22_selected_readiness.py", names)
+                self.assertIn("scripts/demo_runtime/diagnostics.py", names)
                 stream = archive.extractfile("c22-selected-shadow.service")
                 self.assertIsNotNone(stream)
                 unit = stream.read().decode()
@@ -98,7 +105,13 @@ class SelectedReleaseTests(unittest.TestCase):
                 self.assertIn("UnsetEnvironment=DEMO_TELEGRAM_TOKEN DEMO_TELEGRAM_CHAT_ID DEMO_HEALTHCHECK_URL", execution)
                 self.assertIn("NoNewPrivileges=true", execution)
                 self.assertIn("Restart=on-failure", execution)
-                self.assertNotIn("[Install]", execution)
+                self.assertIn("[Install]\nWantedBy=multi-user.target", execution)
+                self.assertIn("After=network-online.target c22-selected-terminal.service", execution)
+                self.assertIn("Wants=network-online.target c22-selected-terminal.service", execution)
+                self.assertIn("StartLimitIntervalSec=0", execution)
+                self.assertIn("c22-selected-terminal.service", names)
+                self.assertIn("c22-selected-watchdog.service", names)
+                self.assertIn("c22-selected-watchdog.timer", names)
                 self.assertNotIn("Conflicts=", execution)
                 self.assertEqual((root / "runs/first/c22-selected-execution.service").read_text(), execution)
             with self.assertRaises(ValueError):

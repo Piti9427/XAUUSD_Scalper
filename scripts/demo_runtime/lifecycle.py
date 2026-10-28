@@ -1,6 +1,6 @@
 """Broker fill reconciliation, BE, complete close and safety containment."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from scripts.demo_runtime.broker import _finite, _cash
 from scripts.pure_b1.decision import round_level
@@ -13,9 +13,12 @@ class Lifecycle:
     def __init__(self, context):
         self.context = context
 
-    def _reconcile(self, positions, deals, tick, info, closed, now):
+    def reconcile_closed(self, positions, deals):
+        """Record a proven owned exit without requiring mutation prerequisites."""
         ctx = self.context
         active = ctx.journal.get("active")
+        if active is None:
+            return None
         ident = active.get("position_id")
         if ident is None:
             opening = [
@@ -39,6 +42,34 @@ class Lifecycle:
                 ident = ids.pop()
                 active["position_id"] = ident
                 ctx.journal.put("active", active)
+        if ident is None or any(int(p.identifier) == ident for p in positions):
+            return None
+        ledger = [d for d in deals if int(d.position_id) == ident and int(d.type) in (0, 1)]
+        net_volume = sum(float(d.volume) * (1 if int(d.type) == 0 else -1) for d in ledger)
+        if (
+            ledger
+            and any(
+                int(d.entry) == 0
+                and int(d.magic) == ctx.strategy.magic
+                and d.comment == active["comment"]
+                for d in ledger
+            )
+            and abs(net_volume) < 1e-8
+            and any(int(d.entry) in (1, 3) for d in ledger)
+        ):
+            safety = active.get("safety_close_reason")
+            if not safety and active.get("safety_close_pending"):
+                safety = ctx.journal.get("safety_halt") or "safety_close"
+            return ctx._record_closed(active, ledger, ident, safety_reason=safety)
+        return None
+
+    def _reconcile(self, positions, deals, tick, info, closed, now):
+        ctx = self.context
+        result = self.reconcile_closed(positions, deals)
+        if result is not None:
+            return result
+        active = ctx.journal.get("active")
+        ident = active.get("position_id")
         matches = [
             p
             for p in positions
@@ -55,25 +86,6 @@ class Lifecycle:
         ):
             return {"status": "UNKNOWN", "reason": "awaiting_fill_deal_costs"}
         if not matches:
-            if ident is not None:
-                ledger = [d for d in deals if int(d.position_id) == ident and int(d.type) in (0, 1)]
-                net_volume = sum(float(d.volume) * (1 if int(d.type) == 0 else -1) for d in ledger)
-                if (
-                    ledger
-                    and any(
-                        int(d.entry) == 0
-                        and int(d.magic) == ctx.strategy.magic
-                        and d.comment == active["comment"]
-                        for d in ledger
-                    )
-                    and not any(int(p.identifier) == ident for p in positions)
-                    and abs(net_volume) < 1e-8
-                    and any(int(d.entry) in (1, 3) for d in ledger)
-                ):
-                    safety = active.get("safety_close_reason")
-                    if not safety and active.get("safety_close_pending"):
-                        safety = ctx.journal.get("safety_halt") or "safety_close"
-                    return ctx._record_closed(active, ledger, ident, safety_reason=safety)
             ctx.journal.put("safety_halt", "position_identity_unresolved")
             return {"status": "UNKNOWN", "reason": "awaiting_broker_reconciliation"}
         if len(matches) != 1:
@@ -254,7 +266,7 @@ class Lifecycle:
         active["be_pending"] = candidate
         ctx.journal.put("active", active)
         sent = ctx.send(request, now)
-        if sent is not None and int(sent.retcode) not in (10009, 10012, 10031):
+        if sent is not None and int(sent.retcode) not in (10008, 10009, 10012, 10031):
             active.pop("be_pending")
             ctx.journal.put("active", active)
             return {"status": "MANAGING", "reason": "be_rejected", "retcode": int(sent.retcode)}
@@ -313,6 +325,23 @@ class Lifecycle:
         ctx = self.context
         exits = [deal for deal in ledger if int(deal.entry) in (1, 3)]
         last_exit = max(exits, key=lambda deal: int(deal.time_msc))
+        baseline = ctx.journal.get("day")
+        exit_day = datetime.fromtimestamp(int(last_exit.time_msc) / 1000, timezone.utc).date().isoformat()
+        baseline_metadata = dict(
+            day_start=baseline["equity"] if baseline else None,
+            day_start_day=baseline.get("day") if baseline else None,
+            day_start_source=baseline.get("source") if baseline else None,
+            day_start_valid=bool(
+                baseline
+                and baseline.get("day") == exit_day
+                and baseline.get("source") in (
+                    "captured_at_utc_boundary",
+                    "reconstructed_flat_midnight_from_reconciled_history",
+                )
+                and baseline.get("account_fingerprint") == ctx.fingerprint
+                and _finite(baseline.get("equity"), positive=True)
+            ),
+        )
         components = {
             key: sum(float(getattr(deal, key)) for deal in ledger)
             for key in ("profit", "commission", "swap", "fee")
@@ -325,17 +354,17 @@ class Lifecycle:
             snapshot=ctx.strategy.snapshot,
             fill=active.get("fill"),
             exit_price=float(getattr(last_exit, "price", 0) or 0) or None,
+            **baseline_metadata,
             **components,
         )
         if safety_reason:
             event.update(reason=safety_reason, ticket=active.get("safety_close_ticket"))
         ctx.journal.transition("active", None, event)
-        baseline = ctx.journal.get("day")
         result = dict(
             status=kind,
             net=event["net"],
             exit_price=event["exit_price"],
-            day_start=baseline["equity"] if baseline else None,
+            **baseline_metadata,
             **components,
         )
         if safety_reason:

@@ -2,8 +2,10 @@
 
 from datetime import datetime, timedelta, timezone
 import math
+import time
 
 from scripts.smc.account_mode import verify_account_mode
+from scripts.demo_runtime.boundary import capture, read_mark
 
 
 def _finite(value, *, positive=False):
@@ -29,10 +31,35 @@ class BrokerView:
         self.journal = journal
         self.restart_unknown_baseline = restart_unknown_baseline
         self._restart_baseline_latched = False
+        self.identity_diagnostics = {}
 
-    def identity(self):
+    def identity(self, *, require_trade_permissions=True):
+        self.identity_diagnostics = {}
         account = self.mt5.account_info()
         terminal = self.mt5.terminal_info()
+
+        def flag(source, key):
+            try:
+                value = getattr(source, key, None)
+                return None if value is None else bool(value)
+            except Exception:
+                # Optional diagnostics cannot introduce a new admission/manager
+                # prerequisite. The original required checks still run below.
+                return None
+
+        # Reuse the exact reads checked below. Never log account/terminal objects
+        # or probe the SDK again to explain a failed mutation prerequisite.
+        self.identity_diagnostics = dict(
+            identity_account_present=account is not None,
+            identity_terminal_present=terminal is not None,
+            identity_require_trade_permissions=bool(require_trade_permissions),
+            identity_terminal_connected=flag(terminal, "connected"),
+            identity_terminal_trade_allowed=flag(terminal, "trade_allowed"),
+            identity_terminal_tradeapi_disabled=flag(terminal, "tradeapi_disabled"),
+            identity_account_trade_allowed=flag(account, "trade_allowed"),
+            identity_account_trade_expert=flag(account, "trade_expert"),
+            identity_blockers=[],
+        )
         if (
             account is None
             or int(account.login) != self.login
@@ -41,20 +68,48 @@ class BrokerView:
             or str(account.currency) != "USD"
             or not verify_account_mode(account_info=account).ok
         ):
+            self.identity_diagnostics["identity_blockers"] = [
+                "account_missing" if account is None else "demo_identity_mismatch"
+            ]
             raise ValueError("demo_identity_required")
         if (
             terminal is None
             or not terminal.connected
-            or not terminal.trade_allowed
-            or terminal.tradeapi_disabled
-            or not account.trade_allowed
-            or not account.trade_expert
+            or (
+                require_trade_permissions
+                and (
+                    not terminal.trade_allowed
+                    or terminal.tradeapi_disabled
+                    or not account.trade_allowed
+                    or not account.trade_expert
+                )
+            )
         ):
+            observed = self.identity_diagnostics
+            blockers = observed["identity_blockers"]
+            if terminal is None:
+                blockers.append("terminal_missing")
+            else:
+                if observed["identity_terminal_connected"] is False:
+                    blockers.append("terminal_disconnected")
+                if require_trade_permissions:
+                    if observed["identity_terminal_trade_allowed"] is False:
+                        blockers.append("terminal_trade_disabled")
+                    if observed["identity_terminal_tradeapi_disabled"] is True:
+                        blockers.append("external_trade_api_disabled")
+                    if observed["identity_account_trade_allowed"] is False:
+                        blockers.append("account_trade_disabled")
+                    if observed["identity_account_trade_expert"] is False:
+                        blockers.append("account_expert_disabled")
+            if not blockers:
+                blockers.append("permission_check_failed")
             raise ValueError("algo_permissions_required")
         if not all(_finite(getattr(account, k), positive=True) for k in ("equity", "balance")):
+            self.identity_diagnostics["identity_blockers"] = ["invalid_capital"]
             raise ValueError("invalid_capital")
         prior = self.journal.get("identity")
         if prior is not None and prior != self.fingerprint:
+            self.identity_diagnostics["identity_blockers"] = ["journal_account_mismatch"]
             raise ValueError("journal_account_mismatch")
         self.journal.put("identity", self.fingerprint)
         self.last_equity = float(account.equity)
@@ -95,6 +150,11 @@ class BrokerView:
             raise ValueError("invalid_history_volume")
         return deals
 
+    def capture_boundary(self, account, *, request_started, observed):
+        self._boundary_observed = observed
+        return capture(self.journal, account, fingerprint=self.fingerprint,
+                       request_started=request_started, observed=observed)
+
     def _baseline(self, account, positions, deals, now):
         midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         boundary = int(midnight.timestamp() * 1000)
@@ -132,10 +192,18 @@ class BrokerView:
             if not _finite(state["equity"], positive=True):
                 raise ValueError("invalid_day_baseline")
             return float(state["equity"])
+        boundary_proof = None
         if held:
-            if now - midnight >= timedelta(seconds=1):
+            boundary_proof = read_mark(self.journal, fingerprint=self.fingerprint, day=day)
+            if boundary_proof is None:
+                # Direct callers retain the existing first-second contract. The
+                # running sampler also bounds actual SDK response time.
+                capture(self.journal, account, fingerprint=self.fingerprint,
+                        request_started=now, observed=getattr(self, "_boundary_observed", now))
+                boundary_proof = read_mark(self.journal, fingerprint=self.fingerprint, day=day)
+            if boundary_proof is None:
                 raise ValueError("day_start_floating_unknown")
-            baseline = float(account.equity)
+            baseline = float(boundary_proof["equity"])
             source = "captured_at_utc_boundary"
         else:
             baseline = float(account.balance) - sum(
@@ -151,21 +219,40 @@ class BrokerView:
                 "equity": baseline,
                 "source": source,
                 "account_fingerprint": self.fingerprint,
+                **({"boundary_observed_utc": boundary_proof["observed_utc"]}
+                   if boundary_proof else {}),
             },
         )
         return baseline
 
     def _quote(self, now):
+        self.quote_diagnostics = {}
+        if now.tzinfo is None or now.utcoffset() != timedelta(0):
+            raise ValueError("quote_clock_invalid")
+        started = time.monotonic()
         tick = self.mt5.symbol_info_tick(self.symbol)
+        elapsed = time.monotonic() - started
+        if not math.isfinite(elapsed) or elapsed < 0:
+            raise ValueError("quote_clock_invalid")
+        # `now` is the caller's current UTC observation, not a broker timestamp.
+        # Include time spent inside the SDK before judging future/stale quotes.
+        observed = now + timedelta(seconds=elapsed)
+        self.quote_diagnostics = dict(quote_requested_utc=now.isoformat(),
+                                      quote_observed_utc=observed.isoformat())
         if tick is None:
+            self.quote_diagnostics["quote_rejection"] = "missing"
             raise ValueError("quote_unknown")
         stamp = datetime.fromtimestamp(int(tick.time_msc) / 1000, timezone.utc)
+        age = (observed - stamp).total_seconds()
+        self.quote_diagnostics.update(quote_time_utc=stamp.isoformat(), quote_age_seconds=age)
         if (
             not all(_finite(getattr(tick, k), positive=True) for k in ("bid", "ask"))
             or tick.ask < tick.bid
         ):
+            self.quote_diagnostics["quote_rejection"] = "invalid_bid_ask"
             raise ValueError("quote_invalid")
-        if not timedelta(0) <= now - stamp <= timedelta(seconds=60):
+        if not 0 <= age <= 60:
+            self.quote_diagnostics["quote_rejection"] = "future" if age < 0 else "stale"
             raise ValueError("quote_stale")
         return tick
 

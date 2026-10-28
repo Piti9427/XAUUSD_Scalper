@@ -8,7 +8,7 @@ import time
 import pandas as pd
 
 from scripts.demo_runtime.broker import _finite, _cash
-from scripts.demo_runtime.costs import validate_policy, validate_observed_costs
+from scripts.demo_runtime.costs import CostPolicyError, validate_policy, validate_observed_costs
 from scripts.smc.mt5_filling import resolve_type_filling
 from scripts.smc.risk import check_fixed_lot_risk
 
@@ -58,15 +58,17 @@ class Admission:
         first = ctx._first_quote(closed, now)
         if int(first.time_msc) > int((closed + timedelta(seconds=90)).timestamp() * 1000):
             raise ValueError("first_quote_late")
+        cost_diagnostics = {}
         cost, status = validate_policy(
             ctx.policy,
             fingerprint=ctx.fingerprint,
             now=now,
             strategy="c22h4" if ctx.strategy.prefix == "C22_" else "trial30",
             spec=info,
+            diagnostics=cost_diagnostics,
         )
         if not cost:
-            raise ValueError("cost_policy_" + status)
+            raise CostPolicyError("cost_policy_" + status, cost_diagnostics)
         validate_observed_costs(cost, deals, magic=ctx.strategy.magic, now=now)
         if baseline - float(account.equity) >= baseline * ctx.strategy.daily_loss_limit:
             ctx.journal.put("last_bar", bar)
@@ -150,6 +152,7 @@ class Admission:
         fresh_account = ctx.broker.identity()
         send_now = now + timedelta(seconds=time.monotonic() - ctx._started)
         fresh_tick = ctx.broker._quote(send_now)
+        send_now = ctx._send_clock(now)
         if send_now - closed > timedelta(seconds=90):
             raise ValueError("entry_window_expired")
         if abs(float(fresh_tick.ask if direction == 1 else fresh_tick.bid) - entry) > allowance:

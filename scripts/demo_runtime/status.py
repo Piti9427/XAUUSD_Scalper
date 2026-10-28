@@ -8,6 +8,7 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 
 from scripts.demo_runtime.costs import validate_policy
+from scripts.demo_runtime.diagnostics import RESUME
 
 
 STATUS_TEXT = {
@@ -28,6 +29,105 @@ REASON_TEXT = {
     "another trial30 writer owns journal": "มี watcher อีกตัวถือ journal อยู่",
     "day_start_floating_unknown": "baseline equity ต้นวัน UTC ไม่ครบตาม account-bound UTC policy",
 }
+
+
+def entry_availability(*, result, values, now, review=None, cooldown_minutes=None):
+    """Explain known blockers only; never query a broker or grant admission.
+
+    This is observational. Short-circuited signal/risk/ledger checks are not
+    claimed to pass. Previous observations supply timestamps, never permission.
+    """
+    if now.tzinfo is None or now.utcoffset() != timedelta(0):
+        raise ValueError("availability_clock_must_be_aware_utc")
+    waits = {"no_signal", "no_sell_signal", "duplicate_bar", "macro_gate"}
+    resume = RESUME
+    previous = values.get("last_result", {})
+    previous = previous.get("entry_availability", {}) if isinstance(previous, dict) else {}
+    previous = previous if isinstance(previous, dict) else {}
+    prior_items = previous.get("known_blockers", [])
+    since = {}
+    for item in prior_items if isinstance(prior_items, list) else []:
+        try:
+            code = item["code"]
+            stamp = datetime.fromisoformat(item["since_utc"])
+            if (isinstance(code, str) and stamp.tzinfo is not None
+                    and stamp.utcoffset() == timedelta(0) and stamp <= now):
+                since[code] = stamp.isoformat()
+        except (KeyError, TypeError, ValueError, OverflowError):
+            pass
+    blockers = {}
+
+    def add(code, *, operator=None, condition=None):
+        action, text = resume.get(code, (True, "restore_valid_source_bound_owner_review"))
+        blockers[code] = dict(code=code, since_utc=since.get(code) or now.isoformat(),
+            requires_operator=action if operator is None else operator,
+            resume_condition=text if condition is None else condition, resume_not_before_utc=None,
+            next_check="NEXT_SENDER_CYCLE")
+
+    reason = result.get("reason")
+    if result.get("status") in {"BLOCKED", "REJECTED", "UNKNOWN"}:
+        identity = result.get("identity_blockers")
+        if reason == "algo_permissions_required" and isinstance(identity, list) and identity:
+            for code in identity:
+                add(code if code in resume else "algo_permissions_required")
+        elif reason not in waits:
+            add(reason if reason in resume else "runtime_blocked")
+    if values.get("safety_halt"):
+        add("safety_halt")
+    active = values.get("active") is not None
+    if active:
+        add("active_reconciliation")
+    if result.get("execute") is not True:
+        add("shadow_mode")
+    if review and review.get("status") == "BLOCKED":
+        code = review.get("code")
+        # Only validator-owned finite codes; never reflect arbitrary file text.
+        allowed = {"review_missing", "review_unreadable", "review_oversized", "review_malformed",
+            "review_binding_mismatch", "review_input_binding_invalid", "cost_policy_changed",
+            "cost_policy_invalid", "cost_policy_expired", "cost_policy_future", "review_initial_stale",
+            "review_acceptance_unavailable", "review_inspection_unavailable", "review_time_invalid"}
+        add(code if code in allowed else "selected_execution_review_invalid")
+    if "armed_trial_not_started" in blockers and review:
+        try:
+            stamp = datetime.fromisoformat(review["arm_not_before_utc"])
+            if stamp.tzinfo is not None and stamp.utcoffset() == timedelta(0):
+                blockers["armed_trial_not_started"]["resume_not_before_utc"] = stamp.isoformat()
+        except (KeyError, TypeError, ValueError, OverflowError):
+            pass
+    if "armed_trial_new_closed_m15_required" in blockers and review:
+        try:
+            approved = datetime.fromisoformat(review["approved_utc"])
+            arm = datetime.fromisoformat(review["arm_not_before_utc"])
+            if all(stamp.tzinfo is not None and stamp.utcoffset() == timedelta(0)
+                   for stamp in (approved, arm)):
+                next_close = approved.replace(minute=approved.minute // 15 * 15,
+                    second=0, microsecond=0) + timedelta(minutes=15)
+                arm_close = arm.replace(minute=arm.minute // 15 * 15, second=0, microsecond=0)
+                if arm_close < arm:
+                    arm_close += timedelta(minutes=15)
+                blockers["armed_trial_new_closed_m15_required"]["resume_not_before_utc"] = max(
+                    next_close, arm_close).isoformat()
+        except (KeyError, TypeError, ValueError, OverflowError):
+            pass
+    if "max_daily_losses" in blockers:
+        blockers["max_daily_losses"]["resume_not_before_utc"] = (
+            now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
+    loss_ms = values.get("selected_last_loss_ms")
+    if ("cooldown" in blockers and type(loss_ms) is int and loss_ms > 0
+            and type(cooldown_minutes) in (int, float) and 0 <= cooldown_minutes <= 1440):
+        try:
+            blockers["cooldown"]["resume_not_before_utc"] = (
+                datetime.fromtimestamp(loss_ms / 1000, now.tzinfo)
+                + timedelta(minutes=cooldown_minutes)).isoformat()
+        except (ValueError, OSError, OverflowError):
+            pass
+    admitted = result.get("status") in {"SHADOW_ADMIT", "FILLED"}
+    state = ("MANAGING" if active else "SHADOW_ONLY" if result.get("status") == "SHADOW_ADMIT"
+             else "BLOCKED" if blockers else "ORDER_CONFIRMED" if result.get("status") == "FILLED"
+             else "WAITING_SIGNAL" if result.get("status") == "WAIT" else "UNVERIFIED")
+    return dict(status=state, coverage="KNOWN_BLOCKERS_ONLY", known_blockers=list(blockers.values()),
+        requires_operator=any(item["requires_operator"] for item in blockers.values()),
+        downstream_admission="PASSED_THIS_CYCLE" if admitted else "NOT_PROVEN")
 
 
 def cost_report(values, path: Path, now: datetime, *, source: str) -> dict:

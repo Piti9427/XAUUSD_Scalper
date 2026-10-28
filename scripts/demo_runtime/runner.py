@@ -16,6 +16,8 @@ from scripts.demo_runtime.broker import BrokerView
 
 from scripts.demo_runtime.admission import Admission
 from scripts.demo_runtime.lifecycle import Lifecycle
+from scripts.demo_runtime.status import entry_availability
+from scripts.demo_runtime.diagnostics import failure_record, fallback, public_reason
 
 
 class DemoRunner:
@@ -103,23 +105,60 @@ class DemoRunner:
         self.journal.close()
         self.account_guard.close()
 
+    def record_operational_failure(self, result, *, now, stage, error, code):
+        """Supplemental evidence only; never mutate financial state or outbox.
+
+        This boundary is for optional outputs after financial processing. A
+        failure writing its diagnostics uses stderr; financial writes elsewhere
+        keep their existing fail-closed/exception behavior.
+        """
+        record = failure_record(error, stage=stage, code=code, now=now,
+            correlation_id=self.journal.audit_context.get("correlation_id"),
+            details=getattr(error, "diagnostics", None))
+        record["classification"] = "FAULT"
+        result.setdefault("operational_errors", []).append(record)
+        try:
+            self.journal.audit("OPERATIONAL_FAILURE", diagnostic=record,
+                               financial_status=result.get("status"))
+            self.journal.put("last_result", result)
+        except Exception as persistence_error:
+            fallback(record, persistence_error=persistence_error)
+        return record
+
     def cycle(self, *, now: datetime) -> dict:
         if now.tzinfo is None or now.utcoffset() != timedelta(0):
             raise ValueError("cycle clock must be aware UTC")
         self._started = time.monotonic()
+        self._cycle_send_attempted = False
         self.broker.position_count = None
         self.broker.last_equity = None
+        self.broker.quote_diagnostics = {}
+        self.broker.identity_diagnostics = {}
         self.journal.audit_context["correlation_id"] = uuid.uuid4().hex
+        self._diagnostic_stage = "cycle.financial"
         try:
             result = self._cycle(now)
-        except ValueError as exc:
-            result = {"status": "BLOCKED", "reason": str(exc)}
         except Exception as exc:
-            result = {"status": "BLOCKED", "reason": type(exc).__name__}
+            result = {"status": "BLOCKED", "reason": public_reason(exc),
+                "failure": failure_record(exc, stage=self._diagnostic_stage,
+                    now=now, correlation_id=self.journal.audit_context["correlation_id"],
+                    details=getattr(exc, "diagnostics", None))}
+        if result.get("reason") in ("quote_stale", "quote_invalid", "quote_unknown", "quote_clock_invalid"):
+            result.update(self.broker.quote_diagnostics)
+        if result.get("reason") in (
+            "demo_identity_required", "algo_permissions_required", "invalid_capital",
+            "journal_account_mismatch",
+        ):
+            result.update(self.broker.identity_diagnostics)
         result.update(
             snapshot=self.strategy.snapshot, execute=self.execute, captured_utc=now.isoformat()
         )
-        result.update(self.strategy.diagnostics())
+        try:
+            result.update(self.strategy.diagnostics())
+        except Exception as exc:
+            self.record_operational_failure(result, now=now, stage="strategy.diagnostics",
+                error=exc, code="strategy_diagnostics_failed")
+        self._diagnostic_stage = "journal.protection"
         active = self.journal.get("active")
         protected = result["status"] in ("FILLED", "MANAGING", "BE_MOVED", "SHADOW_BE")
         since = self.journal.get("protection_unknown_since")
@@ -149,6 +188,33 @@ class DemoRunner:
             observed_positions=exposure,
             critical=critical,
         )
+        # Independent read-only review inspection explains blockers hidden by an
+        # earlier quote/identity return. It neither grants entry nor stops an
+        # owned position's already completed reconciliation/protection cycle.
+        review = getattr(self._admission, "review", None)
+        if review is not None:
+            try:
+                result["execution_review"] = review.inspect(self, now)
+            except Exception as exc:
+                result["execution_review"] = dict(status="BLOCKED",
+                    code="review_inspection_unavailable", observational=True)
+                self.record_operational_failure(result, now=now, stage="review.inspect",
+                    error=exc, code="review_inspection_unavailable")
+        try:
+            result["entry_availability"] = entry_availability(
+                result=result, now=now, review=result.get("execution_review"),
+                cooldown_minutes=15 * self.strategy.cooldown_bars
+                    if hasattr(self.strategy, "cooldown_bars") else None,
+                values=dict(active=active, safety_halt=self.journal.get("safety_halt"),
+                    selected_last_loss_ms=self.journal.get("selected_last_loss_ms"),
+                    last_result=self.journal.get("last_result") or {}))
+        except Exception as exc:
+            result["entry_availability"] = dict(status="UNVERIFIED",
+                coverage="KNOWN_BLOCKERS_ONLY", known_blockers=[],
+                downstream_admission="NOT_PROVEN", requires_operator=True)
+            self.record_operational_failure(result, now=now, stage="status.availability",
+                error=exc, code="entry_availability_failed")
+        self._diagnostic_stage = "journal.cycle"
         if critical and not self.journal.get("protection_alerted"):
             self.journal.event(
                 dict(
@@ -182,26 +248,64 @@ class DemoRunner:
                     kinds=("HEALTH",),
                     latest=True,
                 )
-            except Exception:
+            except Exception as exc:
                 result["health_delivery"] = "pending_retry"
+                self.record_operational_failure(result, now=now, stage="delivery.health",
+                    error=exc, code="health_delivery_failed")
         if self.alert_notify is not None:
             try:
                 self.journal.consume("alerts_v1", self.alert_notify, kinds=("BLOCKER",), limit=1)
-            except Exception:
+            except Exception as exc:
                 result["alerts"] = "pending_retry"
+                self.record_operational_failure(result, now=now, stage="delivery.alert",
+                    error=exc, code="alert_delivery_failed")
         try:
             self.journal.flush(self.notify)
-        except Exception:
+        except Exception as exc:
             result["notification"] = "pending_retry"
+            self.record_operational_failure(result, now=now, stage="delivery.lifecycle",
+                error=exc, code="notification_failed")
         return result
 
     def _cycle(self, now):
-        account = self.broker.identity()
+        # A complete owned exit can be read even when trading is disabled.
+        # Mutation checks retain strict identity at the send/modify/close boundary.
+        active = self.journal.get("active")
+        self._diagnostic_stage = "broker.identity"
+        account = self.broker.identity(require_trade_permissions=self.execute and not active)
+        self._diagnostic_stage = "broker.boundary"
+        try:
+            self.broker.capture_boundary(account, request_started=now, observed=self._send_clock(now))
+        except ValueError as exc:
+            # Invalid entry-baseline evidence must not stop an owned close/BE
+            # manager. Admission still validates proof before using it.
+            self.journal.audit("BOUNDARY_CAPTURE_BLOCKED", reason=public_reason(exc),
+                failure=failure_record(exc, stage=self._diagnostic_stage, now=now,
+                    correlation_id=self.journal.audit_context.get("correlation_id")))
+        self._diagnostic_stage = "broker.exposure"
+        # Conservative observation time: a slow exposure/history/spec call must
+        # not turn an earlier flat read into fresh installation permission.
+        self._exposure_read_utc = self._send_clock(now) if getattr(self, "renewal_runtime", None) is not None else now
         positions, orders = self.broker._exposure()
+        self._diagnostic_stage = "broker.history"
         deals = self.broker._history(now)
+        if active:
+            try:
+                self.broker._baseline(account, positions, deals, now)
+            except ValueError:
+                pass
+            result = self._lifecycle.reconcile_closed(positions, deals)
+            if result is not None:
+                return result
+            if self.execute:
+                self._diagnostic_stage = "broker.identity"
+                account = self.broker.identity()
+        self._diagnostic_stage = "broker.spec"
         info = self.broker._spec()
-        tick = self.broker._quote(now)
-        if self.journal.get("active"):
+        self.observe_broker_reads(account, positions, orders, deals, info, now)
+        self._diagnostic_stage = "broker.quote"
+        tick = self.broker._quote(self._send_clock(now))
+        if active:
             # Source/cache warmup gates apply only to admission. Reconcile on restart
             # even if detector/history bootstrap fails; retain last BE bar then.
             active = self.journal.get("active")
@@ -214,14 +318,13 @@ class DemoRunner:
                 closed = bars.index[-1].to_pydatetime() + timedelta(minutes=15)
             except ValueError:
                 pass
-            try:
-                self.broker._baseline(account, positions, deals, now)
-            except ValueError:
-                pass
+            self._diagnostic_stage = "lifecycle.reconcile"
             return self._reconcile(positions, deals, tick, info, closed, now)
+        self._diagnostic_stage = "market.completed_m15"
         bars = completed_m15_from_m1(
             self.mt5.copy_rates_from_pos(self.symbol, self.mt5.TIMEFRAME_M1, 0, 5000), now=now
         )
+        self._diagnostic_stage = "admission.check"
         return self._admission.admit(account, positions, orders, deals, info, tick, bars, now)
 
     def send(self, request, now):
@@ -232,6 +335,7 @@ class DemoRunner:
             "REQUEST", request=request, request_id=request_id, expected=self.journal.get("active")
         )
         self.broker.identity()
+        self._cycle_send_attempted = True
         try:
             response = self.mt5.order_send(request)
         except Exception as exc:
@@ -240,6 +344,8 @@ class DemoRunner:
                 request=request,
                 response=None,
                 reason=type(exc).__name__,
+                failure=failure_record(exc, stage="broker.order_send", code="order_send_exception",
+                    now=now, correlation_id=self.journal.audit_context.get("correlation_id")),
                 request_id=request_id,
                 elapsed_ms=(time.monotonic() - started) * 1000,
             )
@@ -255,6 +361,9 @@ class DemoRunner:
 
     def _send_clock(self, now):
         return now + timedelta(seconds=time.monotonic() - self._started)
+
+    def observe_broker_reads(self, account, positions, orders, deals, info, now):
+        """Optional adapter observation of existing reads; no extra broker call."""
 
     def _daily_losses(self, deals, now):
         return self._admission._daily_losses(deals, now)

@@ -6,66 +6,129 @@ import hashlib
 import json
 
 
-def validate_policy(raw, *, fingerprint: str, now: datetime, strategy="trial30", spec=None):
+_SPEC_DIAGNOSTIC_FIELDS = frozenset({
+    "trade_contract_size", "trade_tick_size", "point", "volume_min", "volume_max",
+    "volume_step", "swap_mode", "swap_long", "swap_short", "swap_rollover3days",
+})
+
+
+class CostPolicyError(ValueError):
+    """Keep the legacy refusal text while carrying safe explanatory facts."""
+
+    def __init__(self, reason, diagnostics):
+        super().__init__(reason)
+        self.diagnostics = dict(diagnostics)
+
+
+def _diagnose(diagnostics, stage, code, **facts):
+    if isinstance(diagnostics, dict):
+        diagnostics.clear()
+        diagnostics.update(stage=stage, code=code, **facts)
+    return False
+
+
+def _safe_spec_number(value):
+    if value is None:
+        return {"state": "MISSING"}
+    if isinstance(value, (int, float)):
+        return value if math.isfinite(value) else {"state": "NONFINITE"}
+    return {"state": "INVALID"}
+
+
+def validate_policy(raw, *, fingerprint: str, now: datetime, strategy="trial30", spec=None,
+                    diagnostics=None):
+    """Original financial predicate with optional, non-authorizing diagnostics."""
+    if isinstance(diagnostics, dict):
+        diagnostics.clear()
     if not isinstance(raw, dict):
+        _diagnose(diagnostics, "cost.policy", "cost_policy_missing")
         return {}, "missing"
+
+    def failed(code):
+        return _diagnose(diagnostics, "cost.policy", code)
+
     try:
         reviewed = datetime.fromisoformat(raw["reviewed_utc"])
         commission = float(raw["commission_per_lot"])
         slippage = float(raw["slippage_allowance_price"])
         evidence = raw["account_evidence_sha256"]
         valid = (
-            (raw.get("version") == 1 or (raw.get("version") == 2 and strategy == "c22h4"))
-            and raw.get("account_fingerprint") == fingerprint
-            and raw.get("account_type") == "Standard Demo"
-            and raw.get("commission_unit") == "USD_per_lot_round_trip"
-            and raw.get("commission_from_symbol_info") is False
-            and raw.get("slippage_basis") == "declared_assumption"
-            and bool(str(raw.get("source") or "").strip())
-            and bool(str(raw.get("commission_source") or "").strip())
-            and isinstance(evidence, str)
-            and len(evidence) == 64
-            and all(c in "0123456789abcdef" for c in evidence)
-            and reviewed.tzinfo is not None
-            and reviewed.utcoffset() == timedelta(0)
-            and timedelta(0)
-            <= now - reviewed
-            <= timedelta(hours=168 if raw.get("version") == 2 else 24)
-            and math.isfinite(commission)
-            and commission >= 0
-            and math.isfinite(slippage)
-            and slippage > 0
-            and float(raw.get("spread_buffer", 0)) == 0
+            ((raw.get("version") == 1 or (raw.get("version") == 2 and strategy == "c22h4"))
+             or failed("cost_policy_version_unsupported"))
+            and (raw.get("account_fingerprint") == fingerprint
+                 or failed("cost_policy_account_mismatch"))
+            and (raw.get("account_type") == "Standard Demo"
+                 or failed("cost_policy_account_type_invalid"))
+            and (raw.get("commission_unit") == "USD_per_lot_round_trip"
+                 or failed("cost_policy_commission_unit_invalid"))
+            and (raw.get("commission_from_symbol_info") is False
+                 or failed("cost_policy_commission_basis_invalid"))
+            and (raw.get("slippage_basis") == "declared_assumption"
+                 or failed("cost_policy_slippage_basis_invalid"))
+            and (bool(str(raw.get("source") or "").strip())
+                 or failed("cost_policy_source_missing"))
+            and (bool(str(raw.get("commission_source") or "").strip())
+                 or failed("cost_policy_commission_source_missing"))
+            and (isinstance(evidence, str)
+                 or failed("cost_policy_account_evidence_invalid"))
+            and (len(evidence) == 64 or failed("cost_policy_account_evidence_invalid"))
+            and (all(c in "0123456789abcdef" for c in evidence)
+                 or failed("cost_policy_account_evidence_invalid"))
+            and (reviewed.tzinfo is not None
+                 or failed("cost_policy_review_timezone_invalid"))
+            and (reviewed.utcoffset() == timedelta(0)
+                 or failed("cost_policy_review_timezone_invalid"))
+            and (timedelta(0) <= now - reviewed
+                 <= timedelta(hours=168 if raw.get("version") == 2 else 24)
+                 or failed("cost_policy_review_future" if now < reviewed
+                           else "cost_policy_expired"))
+            and (math.isfinite(commission) or failed("cost_policy_commission_invalid"))
+            and (commission >= 0 or failed("cost_policy_commission_invalid"))
+            and (math.isfinite(slippage) or failed("cost_policy_slippage_invalid"))
+            and (slippage > 0 or failed("cost_policy_slippage_invalid"))
+            and (float(raw.get("spread_buffer", 0)) == 0
+                 or failed("cost_policy_spread_buffer_invalid"))
         )
         if valid and raw.get("version") == 2:
-            valid = validate_evidence(raw, spec=spec)
+            valid = validate_evidence(raw, spec=spec, diagnostics=diagnostics)
         if valid:
             return dict(
                 raw, commission_per_lot=commission, slippage_allowance_price=slippage
             ), "attested_demo_assumptions"
-    except (KeyError, TypeError, ValueError, OverflowError):
-        pass
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        if not diagnostics:
+            _diagnose(diagnostics, "cost.policy", "cost_policy_input_invalid",
+                      exception_class=type(exc).__name__)
     return {}, "invalid_or_stale"
 
 
-def validate_evidence(raw, *, spec=None):
+def validate_evidence(raw, *, spec=None, diagnostics=None):
     """v2 binds explicit tariff, broker spec and dated USD swap schedule."""
+    if isinstance(diagnostics, dict):
+        diagnostics.clear()
     evidence = raw.get("evidence", {})
+    stage = "cost.evidence"
     try:
         docs = {}
         for name in ("tariff", "spec", "swap_calendar"):
             item = evidence[name]
             doc = item["document"]
             encoded = json.dumps(doc, sort_keys=True, allow_nan=False).encode()
-            if hashlib.sha256(encoded).hexdigest() != item["sha256"] or not doc.get("source"):
-                return False
+            if hashlib.sha256(encoded).hexdigest() != item["sha256"]:
+                return _diagnose(diagnostics, stage, "cost_evidence_hash_mismatch",
+                                 document=name)
+            if not doc.get("source"):
+                return _diagnose(diagnostics, stage, "cost_evidence_source_missing",
+                                 document=name)
             docs[name] = doc
+        stage = "cost.tariff"
         tariff = docs["tariff"]
         if (
             tariff["commission_per_lot"] != raw["commission_per_lot"]
             or tariff["unit"] != "USD_per_lot_round_trip"
         ):
-            return False
+            return _diagnose(diagnostics, stage, "cost_tariff_contract_invalid")
+        stage = "cost.spec"
         fields = docs["spec"]["fields"]
         required = {
             "trade_contract_size",
@@ -79,26 +142,49 @@ def validate_evidence(raw, *, spec=None):
             "swap_rollover3days",
         }
         if not required.issubset(fields):
-            return False
+            return _diagnose(diagnostics, stage, "cost_spec_required_fields_missing")
         if any(not math.isfinite(float(v)) for v in fields.values()):
-            return False
-        if spec is not None and any(
-            getattr(spec, key, None) != value for key, value in fields.items()
-        ):
-            return False
+            return _diagnose(diagnostics, stage, "cost_spec_stored_value_invalid")
+        if spec is not None:
+            for key, value in fields.items():
+                try:
+                    observed = getattr(spec, key, None)
+                except Exception as exc:
+                    detail = {}
+                    _diagnose(detail, stage, "cost_spec_read_failed",
+                              field=key if key in _SPEC_DIAGNOSTIC_FIELDS
+                              else "UNRECOGNIZED_SPEC_FIELD",
+                              exception_class=type(exc).__name__)
+                    if isinstance(diagnostics, dict):
+                        diagnostics.update(detail)
+                    try:
+                        exc.diagnostics = detail
+                    except Exception:
+                        pass
+                    raise
+                if observed != value:
+                    facts = {"field": "UNRECOGNIZED_SPEC_FIELD"}
+                    if key in _SPEC_DIAGNOSTIC_FIELDS:
+                        facts = dict(field=key, expected=_safe_spec_number(value),
+                                     observed=_safe_spec_number(observed))
+                    return _diagnose(diagnostics, stage, "cost_spec_mismatch", **facts)
+        stage = "cost.calendar"
         calendar = docs["swap_calendar"]
         if calendar["unit"] != "USD_per_lot" or not calendar["days"]:
-            return False
+            return _diagnose(diagnostics, stage, "cost_calendar_contract_invalid")
         for day, row in calendar["days"].items():
             rollover = datetime.fromisoformat(row["rollover_utc"])
             if rollover.tzinfo is None or rollover.utcoffset() != timedelta(0):
-                return False
+                return _diagnose(diagnostics, stage, "cost_calendar_rollover_invalid")
             if rollover.date().isoformat() != day:
-                return False
+                return _diagnose(diagnostics, stage, "cost_calendar_rollover_invalid")
             if any(not math.isfinite(float(row[k])) for k in ("buy", "sell")):
-                return False
+                return _diagnose(diagnostics, stage, "cost_calendar_value_invalid")
         return True
-    except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as exc:
+        if not diagnostics:
+            _diagnose(diagnostics, stage, "cost_evidence_input_invalid",
+                      exception_class=type(exc).__name__)
         return False
 
 

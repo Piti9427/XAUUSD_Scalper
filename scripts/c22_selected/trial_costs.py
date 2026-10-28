@@ -112,6 +112,18 @@ def _build_trial_policy(broker_bytes, *, now, sources):
                 and timedelta(0) <= now - checked <= timedelta(hours=24)):
             raise ValueError("trial_cost_fresh_official_source_required")
         reviewed_sources[name] = dict(source=source["source"], checked_utc=checked.isoformat())
+        # Optional actual-content provenance is retained in the existing dated
+        # documents. No new tariff/swap math or entitlement is inferred here.
+        if "content_sha256" in source or "packet_sha256" in source:
+            for field in ("content_sha256", "packet_sha256"):
+                value = source.get(field)
+                if (not isinstance(value, str) or len(value) != 64
+                        or any(char not in "0123456789abcdef" for char in value)):
+                    raise ValueError("trial_cost_source_content_binding_invalid")
+                reviewed_sources[name][field] = value
+    pins = {source.get("packet_sha256") for source in reviewed_sources.values()}
+    if len(pins) != 1:
+        raise ValueError("trial_cost_source_packet_binding_mismatch")
     days = {}
     conversion = _number(spec["point"], positive=True) * _number(spec["trade_contract_size"], positive=True)
     for offset in range(8):
