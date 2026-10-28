@@ -1713,3 +1713,36 @@ UNKNOWN. Current verification and residual AP/source/VM/forward evidence are in
 `docs/reviews/2026-10-28-c22-root-cause-closure.md`. No installed grant, auto-renew
 activation, external alert delivery, forced order or real-money authority follows
 from this local implementation.
+
+### 6.64 Selected26b8 sender-only Demo cutover (2026-10-28)
+
+Owner explicitly approved `selected-1c0453dcf92db05d`. Sender-only cutover started
+the new execution service at08:46:31UTC; terminalPID116183/start06:49:04UTC and
+terminal/watchdog/backup unit bytes were retained. Admissions were quiesced for
+15.740seconds; fresh exclusive pre/post probes proved Demo/USD/hedging, flat/no
+orders and43 reconciled deals. No control/probe order was sent. Financial KV/cache
+were unchanged while stopped; no journal restore or metadata migration occurred.
+
+The genuinely new source review was accepted with approved_utc
+2026-10-28T08:46:31.842516Z; original Monday arm time and trial limitations remain.
+Fresh post-approval complete M15 is required from09:00UTC/16:00Asia/Bangkok.
+The new sender's observed cohort and persisted raw-review hash match this package.
+Native26b8 parameters/logic and all entry/owned-management gates remain unchanged.
+Generation/renewal code is packaged but not configured: auto-renew remains OFF.
+
+Exact policy SHA remains247cf2a51d96beb5c805aba2daba9e9c45d49cbff5645514e76811c5fd1babd0;
+expiry remains1November2026 13:25:18.050055UTC. The08:46:31UTC actual broker sample
+proves current `swap_long` drift: stored-490.8 versus observed-490.0 POINTS. This
+whole-policy spec check precedes either direction and remains blocking whenever
+the discrepancy persists. No new cost/spec was accepted and no policy timestamp
+was extended. It does not reconstruct the uncaptured27October differing field.
+
+This is an armed Demo source rollout with explicit limitations, not strict
+readiness, cost attestation, AP repair or prospective economic qualification.
+Post-approval09:00UTC M15 was actually evaluated: CYCLE09:00:57UTC returned
+WAIT/no_signal; subsequent cycles WAIT/duplicate_bar with last_bar09:00UTC. No
+financial lifecycle event was recorded through09:04UTC. Cost drift proof is the
+separate08:46 broker sample, not an observed09:00 native-signal rejection. Actual
+post-start observations,54second boundary-cycle latency limitation, rollback
+evidence and remaining cost/forward limits:
+`docs/reviews/2026-10-28-c22-sender-cutover.md`.

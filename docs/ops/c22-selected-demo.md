@@ -1,5 +1,13 @@
 # Selected26b8 shadow and Demo test
 
+Latest actual sender-only cutover28October2026: `selected-1c0453dcf92db05d`,
+execute=true, new source review accepted at08:46:31UTC. Terminal/watchdog/backup
+remain on their existing bindings; auto-renew remains OFF. Actual broker proof
+shows swap_long-490.8 stored versus-490.0 POINTS observed, so unchanged whole-policy
+cost checks still block affected admission. Policy bytes/expiry remain unchanged.
+See `docs/reviews/2026-10-28-c22-sender-cutover.md` and CORE6.64 for dated evidence.
+The earlier sections below retain historical preparation/activation checkpoints.
+
 Historical activation evidence2026-10-25: `c22-selected-execution.service` was active with
 execute=true/gate1 and verified Demo terminal AutoTrading. It is armed for Monday
 and new completed market bars under explicit Demo-trial limits. Shadow services
