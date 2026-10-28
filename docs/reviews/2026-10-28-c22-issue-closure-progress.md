@@ -1,6 +1,14 @@
 # Selected26b8 — verified GitHub closure progress,28October2026
 
-**10 of23 issues closed and read back;13 remain open. Goal not complete.**
+**Latest follow-up:12 of23 issues closed;11 remain open. Goal not complete.**
+#30 completed the bounded B2 replay/audit with NO_PROFIT_IMPROVEMENT; native26b8
+retained. #24 completed the incident-reviewed local operator implementation;
+no actual halt cleared or VM changed. Owner explicitly approved publishing
+both prepared summaries/closures after automatic approval review rejected the
+first write. Fresh fullsuite1471testsPASS/skip2. See
+`2026-10-28-c22-recovery-be-verdict.md` and `2026-10-28-c22-unknown-resolution.md`.
+
+The remainder below records the first closure wave:10closed/readback,13open.
 All23 were freshly fetched before work. Closures preserve original acceptance
 criteria and execution boundaries; they do not claim future profitability,
 unobserved fills, AP repair or permission to enable paused work. Existing dirty
@@ -67,7 +75,7 @@ optional same-sender ledger attachment is tested but not represented as actual
 captured broker evidence. `2026-10-28-c22-forward-ticket-frontier.md` contains
 exact lifecycle/baseline/collector limitations and original paused decisions.
 
-## Remaining13 and concrete next work
+## Wave1 remaining13 and concrete next work — historical checkpoint
 
 - #13/#14: AP timeline has real binary/profile/process/transport provenance and
   363native handoff→lost pairs,median5ms. Kernel causal timing/guest elapsed are
