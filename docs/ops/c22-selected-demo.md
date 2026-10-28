@@ -8,6 +8,14 @@ cost checks still block affected admission. Policy bytes/expiry remain unchanged
 See `docs/reviews/2026-10-28-c22-sender-cutover.md` and CORE6.64 for dated evidence.
 The earlier sections below retain historical preparation/activation checkpoints.
 
+Cost-blocker diagnosis completed28October2026: reproducible exact `swap_long`
+drift, confirmed again by exclusive09:37UTC broker capture. A rebuilt one-time
+changed-cost candidate was validated but has NOT been installed. Original policy
+and review were restored exactly; source remains1c0453 and auto-renew OFF.
+Changed economics require confirmed-Q4 review, fresh recapture and exact-policy
+approval before activation. See `docs/reviews/2026-10-28-c22-cost-blocker.md` for
+the concrete candidate, expiry effect, preserved cutoff and installation gates.
+
 Historical activation evidence2026-10-25: `c22-selected-execution.service` was active with
 execute=true/gate1 and verified Demo terminal AutoTrading. It is armed for Monday
 and new completed market bars under explicit Demo-trial limits. Shadow services
