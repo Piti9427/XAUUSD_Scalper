@@ -1,5 +1,14 @@
 # Selected26b8 shadow and Demo test
 
+Latest cost decision28October2026: owner approved one-time swap_long=-490.0POINTS.
+Fresh policy/spec/calendar and exact-policy review installed12:50:38UTC on the
+same1c0453 sender; no source/unit/terminal/runtime change or auto-renew activation.
+Policy expiry is now4November2026 12:50:38UTC/19:50:38Asia/Bangkok. Original policy,
+cutoff, review, journal and financial state were retained. See CORE6.65 and
+`docs/reviews/2026-10-28-c22-one-time-cost-install.md`. The earlier cost-blocked/
+candidate-only notes below are historical checkpoints, not current installation
+status. Exact future cost/spec drift remains blocking.
+
 Latest actual sender-only cutover28October2026: `selected-1c0453dcf92db05d`,
 execute=true, new source review accepted at08:46:31UTC. Terminal/watchdog/backup
 remain on their existing bindings; auto-renew remains OFF. Actual broker proof

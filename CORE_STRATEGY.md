@@ -1746,3 +1746,51 @@ separate08:46 broker sample, not an observed09:00 native-signal rejection. Actua
 post-start observations,54second boundary-cycle latency limitation, rollback
 evidence and remaining cost/forward limits:
 `docs/reviews/2026-10-28-c22-sender-cutover.md`.
+
+### 6.65 Selected26b8 one-time changed-cost approval (2026-10-28)
+
+Owner explicitly approved one-time `swap_long=-490.0 POINTS`, replacing the
+previous-490.8 value, with genuinely fresh broker/source review and the unchanged
+168hour policy lifetime. This supersedes the current-cost-blocked checkpoint in
+6.64 for this approved generation only. Other economics and native26b8/source/
+config/lot/risk/SL/TP/BE/day/loss/cooldown/UNKNOWN gates remain unchanged. No grant
+or auto-renew is activated; future exact spec/charge drift still blocks entry.
+
+Fresh exclusive pre/post broker probes proved flat/noorders,43 reconciled deals
+and zero selected-native opening deals. The previous policy was audited before
+creating the new dated policy; its raw bytes, original25Oct13:25:18.050055UTC
+cutoff, original review and transition provenance are retained. No old incident,
+journal, daily/loss state or cache was reset. Nonzero native openings would have
+deferred this simple transition pending applicable-generation provenance work.
+
+Both final spec and exposure reads retain original request/observation times;
+the installation checked age<=5seconds before switching and starting. Policy/
+calendar were rebuilt together by the native builder and independently checked
+through economic_scope; only approved swap_long differs. Manual review of the
+actual official pages supports unchanged tariff/calendar assumptions. It is not
+an automated raw-HTML source packet or account/holiday entitlement attestation.
+Swap-Free remains UNKNOWN and COST_INCONCLUSIVE remains.
+
+Installed policy raw SHA256:
+70cdd46bfb9da53663150ef867a494f50d721c83e967036f4e8d8f2dd3e3b3cc.
+Actual reviewed_utc2026-10-28T12:50:38.309115Z; expiry2026-11-04T12:50:38.309115Z
+(19:50:38Asia/Bangkok). Source-bound review raw SHA256:
+e3421d3d953173fa65da746171f6ded728e957a7fd9d55280652af40a8af454f;
+approved_utc12:50:38.324141UTC with the original Monday arm time retained.
+Runtime accepted this exact review and unchanged1c0453 source/config cohort.
+
+SenderPID126749 started12:50:38UTC after31.530seconds of maintenance. Terminal
+PID116183/start06:49:04UTC, sender unit and five terminal/watchdog/backup unit
+hashes were unchanged. No probe/control order was sent. Initial actual runtime
+waits for the next complete post-review M15 at13:00UTC/20:00Asia/Bangkok; this is
+the existing new-review rule, not another48hour shadow wait. It does not prove
+an eligible native signal/fill/BE/close or future economic performance. Actual
+post-bar status and independent proof:
+`docs/reviews/2026-10-28-c22-one-time-cost-install.md`.
+
+Post-review13:00UTC M15 was evaluated in a normal cycle captured13:00:05.434786UTC,
+audited13:00:13.575856UTC: WAIT/no_signal. Later duplicate_bar and last_bar13:00UTC
+confirm the new-review wait cleared. Initial13:00 permission failures also remain
+recorded; AP is not fixed. No financial lifecycle event existed through13:00:59UTC.
+The install-time actual spec validation is separate from this no-signal result;
+this bar does not prove execution of a qualifying native order or every gate.

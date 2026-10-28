@@ -5,6 +5,10 @@
 Exact-spec gate ทำงานตาม Q4; ไม่ใช่ float error, expiry หรือ bug ที่ควรถอด gate
 Evidence: `runs/c22-cost-blocker-2026-10-28/` (ignored/private)
 
+Later owner approval and actual one-time installation supersede this preparation
+checkpoint: `2026-10-28-c22-one-time-cost-install.md`, CORE6.65. Original diagnosis
+and candidate bytes remain retained; they were not re-dated into fresh evidence.
+
 ## Reproduce → debugger → disproof
 
 ใช้ policy เดิม SHA
