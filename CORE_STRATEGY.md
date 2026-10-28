@@ -1848,3 +1848,33 @@ unchanged. Notification backlog is not an execution-order queue and does not
 become an added trading cooldown. Fresh native signal/quote and all original
 entry gates still apply. No actual halt was cleared,SDK/order sent or VM changed
 in implementing/testing this tool. Runbook: `docs/ops/c22-unknown-resolution.md`.
+
+## 6.68 One joint BUY48 addon hypothesis —28October2026, research only
+
+T20/#31 preregisters exactly one addon J1/d6f493f5f0dbf8b7: completed Bid M15
+close above previous48observed high,above EMA50 with slope4up,and above the
+same complete closed H4EMA200 used by the frozen native research mapping.
+Native full signal always takes priority; no fallback after native rejection.
+One joint continuous200USD account shares fixed0.01,risk10%,daily10%/loss2/
+cooldown/native SLTPBE. No separate slot,profit addition,lot growth or Demo addon.
+
+Protocol `specs/c22-daily-addon-2026-10-28.md` freezes two profiles/six modeled
+swap-inclusive cost/accounting views each,matched native profit/risk ranking,
+DD<=40%,causal signal/capacity checks and daily MTM coverage definitions.
+Daily marks identify actual quote age; stale/carry marks remain explicit models,
+not observed midnight equity or guaranteed daily profits. Historical swap/data
+remain exposed/COST_INCONCLUSIVE. No economic result or promotion is asserted
+by preregistration,synthetic tests or real-bar signal-equation preflight.
+
+Follow-up verified outcome29October2026: all12primary paths,6fresh selected-native
+repeats and12independent full-tick/signal/capacity/daily-MTM audits PASS. J1 fails
+DD<=40% in every view and lowers all6matched nets: rawbase1778.0572 vs1945.3340USD,
+DD48.3198 vs34.2750%; worst6DD60.1861 vs38.6710%. Base lossstreak18 vs11,
+completedrecovery140.8073 vs125.2020days. VerdictNO_IMPROVEMENT,retain native26b8.
+Base249addon trades contribute654.0814USD inside the actual joint account but
+157control-native identities disappear,127strictly busy with addon. More modeled
+positive days224 vs206 also brings300 vs271negative days; daily profit is not
+guaranteed. Historical modeling remains COST_INCONCLUSIVE/reused history; no
+Demo addon,lot,policy or service change. See
+`docs/reviews/2026-10-29-c22-daily-addon-verdict.md` and frozen campaign artifacts
+`runs/c22-daily-addon-2026-10-28/`. Parent/source pins remain unchanged.
