@@ -1794,3 +1794,27 @@ confirm the new-review wait cleared. Initial13:00 permission failures also remai
 recorded; AP is not fixed. No financial lifecycle event existed through13:00:59UTC.
 The install-time actual spec validation is separate from this no-signal result;
 this bar does not prove execution of a qualifying native order or every gate.
+
+## 6.66 Observer rollout and bounded recovery-BE research —28October2026
+
+Owner explicitly approved watchdog-only rollout for selected-1c0453. Installed
+28Oct13:56:42UTC, unit SHA256
+9a66f9f0e7f008a2e1cbc8d5b86a302ef8c32068b57253997445334443b2a790.
+Sender126749 and terminal116183 were not restarted; source/config, cost/review
+hashes and financial keys remained unchanged across the switch. The observer
+reads the financial journal read-only; its own incident/outbox state was backed
+up separately. Actual timer results include HEALTHY, DEGRADED/entry_blocked and
+RECOVERING with180second stable-recovery semantics. Delivery remains disabled.
+These observations verify observer deployment, not AP repair or owner receipt.
+
+Distinct OFFLINE B2 hypothesis is preregistered in
+`specs/c22-next-risk-2026-10-28.md`: first accrued-cost NetBE only when admitted
+pre-entry-fee balance is strictly below the previously realized closing-balance
+peak. Freeze eligibility at entry; update peak after completed modeled net exits.
+Native1R/M15 cadence, fixed0.01, risk10%, daily10%/loss2/cooldown and native
+entries remain. Two profiles only, six swap-inclusive cost/accounting paths each;
+all original gates and matched-native profit superiority remain prerequisites.
+Historical parent swap convention is inherited exactly; it is not today's Demo
+rate or a newly inferred DST calendar. No economic verdict or Demo adoption is
+claimed by preregistration or deterministic tests. The completed12-profile
+study and its110source pins remain immutable.

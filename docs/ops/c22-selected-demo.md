@@ -1,5 +1,12 @@
 # Selected26b8 shadow and Demo test
 
+Latest observer decision28October2026: owner-approved watchdog-only rollout to
+selected-1c0453 completed13:56:42UTC. Timer active; actual HEALTHY, DEGRADED and
+RECOVERING records observed. Sender126749/terminal116183 were not restarted;
+cost/review/financial keys unchanged. External delivery remains OFF. See CORE6.66
+and `docs/reviews/2026-10-28-c22-issue-closure-progress.md`. Historical watchdog
+bindings below describe earlier checkpoints. AP itself remains unresolved.
+
 Latest cost decision28October2026: owner approved one-time swap_long=-490.0POINTS.
 Fresh policy/spec/calendar and exact-policy review installed12:50:38UTC on the
 same1c0453 sender; no source/unit/terminal/runtime change or auto-renew activation.
@@ -9,7 +16,7 @@ cutoff, review, journal and financial state were retained. See CORE6.65 and
 candidate-only notes below are historical checkpoints, not current installation
 status. Exact future cost/spec drift remains blocking.
 
-Latest actual sender-only cutover28October2026: `selected-1c0453dcf92db05d`,
+Historical sender-only cutover28October2026: `selected-1c0453dcf92db05d`,
 execute=true, new source review accepted at08:46:31UTC. Terminal/watchdog/backup
 remain on their existing bindings; auto-renew remains OFF. Actual broker proof
 shows swap_long-490.8 stored versus-490.0 POINTS observed, so unchanged whole-policy
@@ -17,7 +24,7 @@ cost checks still block affected admission. Policy bytes/expiry remain unchanged
 See `docs/reviews/2026-10-28-c22-sender-cutover.md` and CORE6.64 for dated evidence.
 The earlier sections below retain historical preparation/activation checkpoints.
 
-Cost-blocker diagnosis completed28October2026: reproducible exact `swap_long`
+Historical cost-blocker diagnosis28October2026: reproducible exact `swap_long`
 drift, confirmed again by exclusive09:37UTC broker capture. A rebuilt one-time
 changed-cost candidate was validated but has NOT been installed. Original policy
 and review were restored exactly; source remains1c0453 and auto-renew OFF.
