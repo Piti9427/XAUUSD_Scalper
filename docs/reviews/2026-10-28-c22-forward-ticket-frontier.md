@@ -192,3 +192,14 @@ prospective data; no performance holdout or qualifying trade sample is claimed.
 No REQUEST/RESPONSE/LIFECYCLE was in the batch. Broker fills/net/full cashflows
 and raw tick coverage remain unknown; #27 stays OPEN for those coverage inputs.
 Original v1/failing artifacts are retained; none was relabelled as a v2 pass.
+
+## Later T13/#24 implementation follow-up —28October2026
+
+The T13 missing-interface statements above describe the earlier checkpoint.
+The later incident-bound operator tool and10public tests now satisfy the local
+implementation criteria; owner explicitly approved the sanitized public summary
+and #24 closure. See `2026-10-28-c22-unknown-resolution.md`. No actual halt was
+cleared,broker evidence fabricated or VM changed. A future real incident still
+requires its own exact fresh broker proof and independently pinned owner review.
+The operator implementation closure does not change T12 midnight semantics,
+T16 missing collector dimensions or T23 deferred external delivery.

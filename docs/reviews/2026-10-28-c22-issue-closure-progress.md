@@ -1,6 +1,90 @@
 # Selected26b8 — verified GitHub closure progress,28October2026
 
-**Latest follow-up:12 of23 issues closed;11 remain open. Goal not complete.**
+**Latest follow-up29October2026:13 of23 issues closed;10 remain open. Goal not complete.**
+#31 completed one preregistered shared-account BUY48addon:12paths+6repeats+
+12independent full-tick audits. NO_IMPROVEMENT/DD_GATE_FAILED; native retained.
+Fullsuite1484testsPASS/skipped2. GitHub closure readback28Oct18:19:44UTC;
+local commit51dca9a. See `2026-10-29-c22-daily-addon-verdict.md` and managed
+`C22-daily-addon-2026-10-28.canvas.tsx` Matrix. No VM/strategy change.
+Open now:#13,#14,#22,#23,#25,#26,#27,#28,#32,#34.
+
+Owner follow-up29October2026 explicitly approved the exact10file local commit,
+prepared public#22summary/closure and the bounded existing-owner VM exporter
+activation. These supersede the unanswered-approval checkpoints below. This
+checkpoint precedes execution/readback; it does not yet claim#22closed or the
+exporter installed. Actual VM gates,backup and original-cost/source preservation
+still apply. No push or additional maintenance/strategy authority was granted.
+
+Final resumed-run audit29October2026: fresh GitHub state-filtered searches still
+prove13closed/10open. The same execution-approval/missing-evidence boundary has
+persisted across3resumed goal turns. Independent frontier review found no further
+necessary local implementation work that can satisfy those remaining criteria
+within current authority. Blocked-status audit is satisfied; completion is not.
+The approved local Canvas is complete. Prepared commit/public#22 and VM exporter
+activation approvals remain pending; separate AP/reboot/policy/forward/alert
+evidence remains required. Goal-work status does not stop or change the bot.
+Exact audit receipts: `runs/c22-goal-resume-2026-10-29/`.
+
+## Resumed-goal observation —29October2026,12:56Asia/Bangkok
+
+Fresh state-filtered GitHub searches still verify13closed/10open within#12–34.
+The prior Canvas-only approval has been executed; the separate commit/public#22
+and VM evidence-export requests remain unanswered. No authority is inferred from
+the automatic goal continuation.
+
+A new read-only VM transaction at05:56:56UTC/12:56:56Thai selected all15,158new
+audit records,IDs128279–143436,with contiguous coverage and one exact cohort.
+There are17new SIGNAL records,all finaldirection0; one rawBUY at28Oct23:15UTC
+was rejected by the native H4macro rule. Historical7FULL refusals remain distinct.
+The complete sender-journal kind counts still contain no REQUEST/RESPONSE/
+LIFECYCLE. This proves no recorded native lifecycle,not absence of account-wide
+or manual trading. No fill/BE/close or lost-profit estimate is fabricated.
+
+Observed macro_latest_h4_incomplete repeats3,544times from29Oct00:00:13.539461
+through03:59:59.909442UTC,then current native H4data become available. Latest
+cycle05:56:54UTC reports WAIT/duplicate_bar and WAITING_SIGNAL,reviewVALID,
+knownblockers empty but downstreamadmissionNOT_PROVEN. Sender/terminal units
+remain active with their same PID/start and the sender unit's original hash;
+no service restart,SDK call,policy edit or VM file write occurred in this read.
+
+The delayed native logs retain647handoff and647lost events after the preceding
+20:58UTC checkpoint through23:59:59UTC. The29October log's latest event is a
+00:00:15UTCscan completion,with no subsequent handoff/lost in the captured bytes.
+Log silence and current availability do not establish a causal APfix,clock/flow
+coverage or the required confirmed-fix1h/24h proof. #13/#14/#25/#28 stay OPEN.
+Private exact-source receipts and the bounded observation audit are retained in
+`runs/c22-goal-resume-2026-10-29/`; independent read-only recomputation passed
+the counts/source/identity/scope checks. No financial/native rules were changed.
+
+Later29OctoberThai local progress: #22 classifier/report13focused tests and #27
+coverage companion10tests PASS. Fullsuite1507tests/266.355s PASS/skipped2.
+Actual new13,693record source-backed batch and6,632bar paired cache verified;
+broker ledger/rawM1/ticks remain missing. No extra GitHub closure claimed.
+New AGENTS.md requires explicit commit/public/VM approvals; exact local10file
+commit scope,#22sanitized closure draft and same-source argument-only evidence
+activation proposal are prepared. Owner answers pending. No new commit/public
+write or VM change after those instructions. AP clock protocol has local-only
+smoke proof; no guest probe or APfix. See29October session/feed review reports
+and `docs/ops/c22-forward-evidence-activation-proposal.md`.
+
+Further29October synthesis: completed-study artifact audit verifies121unique
+source pins/114payload hashes,96primary and18repeat evaluations from3studies,
+14policy identities after native-control deduplication. Native full result
+dictionaries match across all6views. No strict matched-current-native profit
+improvement exists within those completed studies. This is a source/artifact
+recheck,not new economics or rerun full-tick audits. #32 remains OPEN for its
+other dependencies/prospective protocol. New report:
+`2026-10-29-c22-completed-study-synthesis.md`. Owner subsequently approved only
+the local managed Matrix. Its exact draft was installed29October2026,
+01:36:16UTC/08:36:16Asia/Bangkok; source/destination SHA256
+e5f86dabcec10f8d3a521f07e19f04f63913b095c38311d52bb8589f37b54012 match.
+Actual managed-file strictTypeScript check passed with0errors; read-only
+independent review verified14policies/3studies and exact embedded-data equality.
+Managed artifact: [completed-study Matrix](</Users/nopparuj/.cursor/projects/Users-nopparuj-my-agents-XAUUSD-Scalper/canvases/C22-study-synthesis-2026-10-29.canvas.tsx>).
+This approval does not cover the still-pending commit/public#22 or VM evidence
+export requests. No commit/public write/VM change occurred in this follow-up.
+
+Earlier follow-up12of23closed:
 #30 completed the bounded B2 replay/audit with NO_PROFIT_IMPROVEMENT; native26b8
 retained. #24 completed the incident-reviewed local operator implementation;
 no actual halt cleared or VM changed. Owner explicitly approved publishing
