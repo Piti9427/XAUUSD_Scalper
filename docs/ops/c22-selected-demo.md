@@ -273,6 +273,17 @@ Daily boundary sampling persists verified account equity only when the request
 starts and completes inside the existing first UTC second. Missing/late proof
 still blocks entries; restart/current equity must never reset daily allowance.
 
+30October local-only correction: the measured interval now brackets the one
+existing `account_info` read,then finishes terminal/identity/permission/capital
+validation before persisting. Terminal latency after a genuine fast account
+response no longer makes that account interval late. The one-second predicate,
+first-proof immutability and financial math are unchanged. Failure diagnostics
+retain original account request/return UTC times without supplying a mark.
+Account reads themselves outside the window remain unproved; no later equity
+reset or synthetic midnight baseline is allowed. This source change is locally
+approved/tested and is not installed on the Demo VM. Do not infer new VM
+activation or a policy expiry extension from this runbook update.
+
 ## Startup history/cache clarification — 2026-10-26
 
 The initial100,000M1 request is historical, paged50,000 at a time, anchored at the

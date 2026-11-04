@@ -1878,3 +1878,156 @@ guaranteed. Historical modeling remains COST_INCONCLUSIVE/reused history; no
 Demo addon,lot,policy or service change. See
 `docs/reviews/2026-10-29-c22-daily-addon-verdict.md` and frozen campaign artifacts
 `runs/c22-daily-addon-2026-10-28/`. Parent/source pins remain unchanged.
+
+## 6.69 Selected26b8 one-time −492 cost review and sender evidence export —29October2026
+
+Owner explicitly approved one-time SDK `swap_long=-492.0 POINTS`, replacing the
+immediately previous−490.0generation,and continuing the previously approved
+argument-only exporter activation. This supersedes6.65only for this actual
+generation. Native26b8/rules26b8bcd69e043653,selected1c0453source/config,fixed0.01,
+cost-inclusive10%cap,daily10%/loss2/cooldown and nativeSLTPBE remain unchanged.
+No real-money,forced order,auto-renew,external notification or terminal change.
+
+Fresh exclusive Demo proof verified flat/noorders,complete43deal epoch history,
+zero native openings and exact other-field agreement. Old observed-cost audit
+ran before rebuilding; original25October13:25:18.050055UTC and immediately prior
+28October12:50:38.309115UTC cutoff/provenance remain separately retained.
+No financial database was restored or acceptance marker reset.
+
+Actual reviewed/approved29October09:20:46.969923UTC;168hpolicy expiry
+5November09:20:46.969923UTC/16:20:46Asia/Bangkok. Published Standard/POINTS and
+regular NY17:00/Wed3/weekend0 calendar formulas were re-reviewed,including DST;
+Swap-Free entitlement and dated account holiday exceptions remain UNKNOWN.
+Research economic qualification stays COST_INCONCLUSIVE. No archived backtest
+was repriced or promoted from this operational update.
+
+Installed raw policy SHA25607513b047e2aafe0ab227026494e7620753d7800f1c48385abbb6262aa7e6985;
+review1726e848809920770eda905e9340d65d0b66bb3641779da20e536b8383ec3a95.
+Sender unit2764cc011add28bd4c25a9aef5a34b4962d270982aba6d70e125f6524ddc8040
+adds only `--broker-evidence-dir` to the same immutable sender. Maintenance
+33.2332seconds; actual entry pause29.2320seconds. Terminal PID/start unchanged.
+New approval retains the existing requirement for a complete closed M15 after
+the actual approval timestamp; no48hshadow or new strategy cooldown was added.
+
+One request produced an original existing-sender packet at09:21:05.210710UTC.
+The immutable18,396record batch sealed09:24:04.380070UTC covers original source
+history-end and two partial UTC days. Source/coverage/backup integrity checks
+pass; observed epoch cashflows are distinct from native PnL. The window spans
+old/new policy generations and is PROSPECTIVE_COLLECTION_ONLY. The6,679bar
+cache is REUSED_CACHE_NOT_HOLDOUT; independent rawM1/ticks remain NOT_CAPTURED.
+Native fill/BE/close and prospective profitability remain unproved. Exporter
+completion itself grants no further request,policy change or research promotion.
+See `docs/reviews/2026-10-29-c22-cost-export-install.md` and private artifacts in
+`runs/c22-cost-export-2026-10-29/`.
+
+## 6.70 Selected26b8 account-read boundary timing —30October2026, local only
+
+Owner approved local implementation/tests for the reproduced first-second
+capture loss. `BrokerView.identity` now brackets its existing single
+`account_info` call using the cycle's aware UTC/monotonic clock. It retains that
+returned account and original request/response times while the existing terminal,
+Demo identity,permissions,finite capital and journal binding checks complete.
+`DemoRunner._cycle` attempts boundary persistence only after those checks pass.
+The later terminal response is not relabelled as the earlier account response.
+
+The accepted predicate in `boundary.py` is unchanged: request and return must
+both fall inside the existing first UTC second. A response exactly at1second,
+slow/missing account read,wrong account,disconnected terminal,invalid capital,
+missed prior midnight or stale/corrupt proof still cannot supply a baseline.
+First valid proof remains immutable and account/day bound after restart. No
+window widening,current-equity reset,interpolation,cashflow/sizing/risk arithmetic
+change,second SDK reader or extra account read is introduced.
+
+Example: an actual request00:00:00.020/return00:00:00.040UTC can remain eligible
+even if terminal validation ends00:00:01.140. The mark is written after validation
+with the original account-read times. Failed identity/capture retains original
+times as diagnostics only; no mark is manufactured or reused for another day.
+Slow account reads themselves remain an explicit availability limitation.
+
+Held-management results now retain only the original account-read timestamps
+and the success/reason from their existing baseline check, including
+`day_start_valid=False/day_start_reason=day_start_floating_unknown`. This
+diagnostic survives a later mutation identity check and normal last_result
+persistence; it adds no account/baseline read or financial prerequisite. A closed
+lifecycle's own exit-day validity remains authoritative and is never replaced
+by current-cycle diagnostics. Every cycle resets its diagnostic cache.
+
+Local tests include the real SelectedDemoRunner with an existing held position:
+fast account/slow terminal retains197USD proof through restart despite later
+150USD equity; slow account creates no proof and still retains owned management.
+These are deterministic fake-broker fixtures,not broker observations or profit.
+Native26b8/rules,0.01lot,cost-inclusive10%,daily10%/loss2,cooldown and protection
+remain unchanged. This is not installed on the VM and grants no new deployment,
+renewal,notification,forced order or real-money authority.
+
+Evidence: `runs/c22-midnight-implementation-2026-10-30/`; proposal and original
+RED/control sources remain in `runs/c22-midnight-frontier-2026-10-30/`.
+
+## 6.71 Owner-selected strict H4 bounded-carry hypothesis —30October2026
+
+Owner selected optionB for the next offline H4 study. Native full16/16M15 H4
+closes and their exact observed-close EMA200 sequence remain unchanged. At the
+canonical completed-M15 decision `d=bar_open+15minutes`,the candidate may use
+the latest finite closed-H4 EMA published atE only while `0<=d-E<8hours`.
+Exactly8hours refuses the old context; a newly complete H4 published then may
+supply its own fresh EMA. An incomplete bucket never adds an EMA observation,
+resetsE or becomes a synthetic candle. No weekend/holiday age subtraction.
+
+The carry gate is applied to the canonical raw direction before the final macro
+mask; raw setup and all other native rules remain unchanged. Missing-session
+cause stays UNKNOWN. The full candidate descriptor/ID must bind the changed H4
+availability policy independently of the unchanged native28field Rules hash.
+Native Demo bootstrap201H4 is not replaced by the research EMA200 requirement.
+
+This selection authorizes offline implementation/preregistration and matched
+swap-inclusive base/stress/fee ×raw/cent comparisons on the original exposed
+2024-09-01→2026-10-24exclusive inputs. It does not select optionA's retrospective
+calendar proxy,extend inputs with the new public26October snapshot,change native
+VM strategy or assert an economic improvement. Freeze source/data/cost/domain
+before outcomes; verify fresh native six-view parity,DD<=40%,original matched
+profit/risk floors and independent full-tick accounting. Ties/no improvement
+retain native. Prospective qualification and any Demo cutover remain separate.
+
+Protocol: `specs/c22-h4-carry-2026-10-30.md`. Candidate freeze,economic outcomes
+and final verdict are not yet complete at this entry.
+
+## 6.72 Completed strict H4 carry study and retained research verdict —30October2026
+
+The owner-selected B candidate `cbc135c0102a8f92` completed its frozen domain:
+12primary paths and6new selected-native repeats, all with modeled swap.
+Independent reconstruction verified H4 publication/age/raw signals, actual
+admission identities, accounting/cost components, completed/ongoing closing
+recovery and full-tick DD/minimum/HWM for all12cells. Native full result
+dictionaries match the existing six references exactly. Protocol SHA256:
+`b14e46f2dd549cb1dd7bfe64f194984e174f6410203615a08b91b032ec4d5465`;
+independent audit SHA256:
+`c62e696123cfbb33cc6a40d8061e7cba702ea00d06400fa60d1169b7cddb0c7e`.
+
+Verdict: **RETAIN_NATIVE_NO_IMPROVEMENT**. Raw-base native net1945.334USD,
+DD34.274997%,460trades contrasts with B net1243.398USD,DD43.935501%,500trades.
+Native worst-six DD38.671021% contrasts with B50.370508%. B fails the unchanged
+DD<=40% gate in every view and has lower matched net in every view. Base streak
+increases11to14; minimum falls187.6636to177.9976. Longest completed closing-peak
+recovery increases125.2020to143.8958days; ongoing closing-peak age increases
+60.7781to214.6008days, each censored from its own peak at the last source quote.
+These are not continuous tick-equity underwater durations or future guarantees.
+
+The base identity comparison retains419native entries, loses41 and newly admits
+81;151additional signal IDs become visible. This is one shared position with
+the original capacity/daily/cooldown/equity path, not additive isolated PnL.
+More trades do not establish improved performance. B is not adopted and its8h
+bound is not changed after seeing outcomes.
+
+All four completed studies now cover15distinct policies,108primary-path and
+24repeat evaluations on the same exposed historical tape/cost/accounting
+coordinates. Native remains the bounded profit-first selection; B1/B2 remain
+lower-base-profit risk alternatives. No changed candidate is selected for
+prospective validation. A future candidate still requires an exact prospective
+protocol before unopened observations; none of these reused paths is holdout.
+
+Historical swap−567.4POINTS long/0short and the original dated convention remain
+modeled; COST_INCONCLUSIVE, broker/forward limitations and real-money prohibition
+remain. No source/policy grant, VM deployment, native rule/lot change, notification
+or automatic adoption follows from this verdict. Raw artifacts:
+`runs/c22-h4-carry-2026-10-30/`; merged proof:
+`runs/c22-research-synthesis-2026-10-30/four-studies.json`.

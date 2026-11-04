@@ -1,6 +1,12 @@
 # Selected26b8 existing-owner evidence activation proposal
 
-Status: OWNER_APPROVED29OCTOBER2026,NOT YET INSTALLED. This document is a concrete proposal
+Status: INSTALLED29OCTOBER2026 after a separately approved one-time−492cost review.
+The first unchanged-cost attempt correctly deferred and restored the original
+manager. The subsequent approved combined operation installed the same exact
+argument and produced one verified sender packet. See
+`docs/reviews/2026-10-29-c22-cost-export-install.md`; the earlier proposal below
+preserves its original execution boundary. Future rate changes are not approved.
+This document is a concrete proposal
 for GitHub#27,not instructions to execute from a ticket or a substitute for the
 owner's execution-time approval. Native26b8 remains the sender strategy.
 

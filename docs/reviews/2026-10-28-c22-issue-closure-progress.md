@@ -1,6 +1,211 @@
 # Selected26b8 — verified GitHub closure progress,28October2026
 
-**Latest follow-up29October2026:13 of23 issues closed;10 remain open. Goal not complete.**
+## 31 October read-only follow-up: BE and close observed
+
+Original scope remains **19 of 23 closed**; #13/#14/#25/#34 stay open. Authorized
+SSH collection now succeeds. All 48,900 audit IDs 154942–203841 are retained with
+matching hashes and no gaps. The native SELL has broker-confirmed BE and a close
+record reporting net +$33.84. #25 still needs independent opening/closing deal
+ledger verification; the two existing exporter packets both predate the fill.
+
+Fresh source/status evidence also records continuing sender restarts, historical
+terminal disconnection/account-trade refusal, and swap-long drift from −492 to
+−488 POINTS. No broker SDK reader, new export request, cost acceptance, service
+change, strategy change, GitHub write or commit accompanied this collection.
+See [the current lifecycle/runtime review](2026-10-31-c22-native-lifecycle-and-runtime-frontier.md).
+The no-BE/no-close and unavailable-SSH statements below are dated history.
+
+##30October16:51UTC approved publication and closure
+
+Owner approved the exact prepared comments for23,28,32. Publication and closure
+succeeded; every complete comment body and closed/completed state was read back.
+Original scope now19of23closed;4remain13,14,25,34. Issue23is local implementation
+acceptance;28is H4B NO_IMPROVEMENT;32retains native under the unchanged research
+gates. No new candidate, future-profit claim, VM change or commit follows.
+Exact receipt: `runs/c22-closure-delivery-2026-10-30/approved-execution-receipt.json`.
+Standard full1620tests pass/skipped2;327app/203test sources stable. H412primary,
+6fresh selected-native repeats and independent12cell full-tick/causal accounting
+audit pass. Four-study Matrix is updated with15policies/108primary/24repeat paths.
+Earlier disk/partial/pending-publication entries below are dated history.
+
+##30October12:56UTC local checkpoint
+
+Fresh read of all original23tickets retains16closed/7open:
+#13,#14,#23,#25,#28,#32,#34. C-v2 corrections pass50focused and1,565full tests,
+skipped2, with independent defect review and stable325application hashes.
+Owner-approved #23local timing fix plus diagnostic continuation pass76focused
+tests and8additional controls; expanded124focused tests pass. Combined regression
+remains unqualified: the first full run found two old fixture assumptions, then
+the rerun encountered disk exhaustion and97errors. No VM deployment
+or new public closure occurred. H4B candidatecbc135c0102a8f92passes34synthetic
+producer/verifier tests and preflight, but freeze stopped for insufficient disk
+before any protocol or economic cell. Required2GiB reserve remains unchanged.
+Evidence: `runs/c22-local-combined-validation-2026-10-30/` and
+`runs/c22-h4-carry-2026-10-30-preparation/freeze-blocker.json`.
+
+##30October C-v2 local implementation checkpoint
+
+The owner approved C-v2 local source/tests. The new attended-maintenance module
+covers AP/reboot/cost with typed plans,durable same-operation handles,strict-zero
+compatibility and exact OFF notification handoff.39focused tests and the final
+1,554test standard suite pass/skipped2;325application hashes remain frozen.
+The first failed full run and isolated legacy rollover-clock failure are retained.
+See `2026-10-30-c22-attended-maintenance-local.md` for exact requirement mapping,
+source/SQL proof and independent-review limitations. No VM/SDK/order/renewal/
+delivery/public write/commit occurred. Existing VM approvals remain unchanged.
+
+A separately downloaded public archive now verifies13/15minutes in26October's
+20:45M15 and0in the next four bars; it does not attest Trial7's missing accountM1.
+See `2026-10-30-c22-session-forward-evidence.md`. The original23issue scope remains
+16closed/7open:#13,#14,#23,#25,#28,#32,#34. Architecture and unit tests do not
+close those remaining original acceptance requirements. The overall goal stays
+incomplete; no global-best or prospective-profit verdict was added.
+
+##30October local continuation
+
+Final read29October17:32UTC/30October00:32Thai retains4,433contiguous records,
+exact prior prefixes and the same active sender/terminal. One first_quote_unknown
+cycle at17:30 is retained; final cycle returns MANAGING/protectionconfirmed.
+No new native BE/close/send exists. See the final observation in
+`2026-10-30-c22-maintenance-and-diagnostic-frontier.md`.
+
+Fresh GitHub state-filtered reads retain16closed/7open in the original23issue
+scope. The owner selected Attended maintenance covering AP/reboot/cost with
+separate adapters,then C:typed plans/durable operation handle. Local design
+contract review remains separate from implementation and VM execution approval.
+The new glossary/spec and exact frozen-source AST comparison are retained.
+
+Source-backed offline reproductions demonstrated collapsed preflight causes,
+three uncaught real ConfigParser failure classes and two injected exec failures.
+The local launcher now adds safe code/stage/type/errno while retaining guards,
+directexec and ordergate0. Eight new tests plus existing boot/release regressions
+total17PASS; compile,Ruff and whitespace checks pass. No VM rollout or actual AP
+repair is claimed. Xvfb/xauth error-file capture remains a separate proposal.
+
+Latest actual native read at29October16:53UTC still shows the same owned SELL
+MANAGING with confirmed initial protection;184new records contain no BE/close.
+#25 stays OPEN. A source recheck also corrects reboot timing terminology:
+258.638816s is host UTC across reboot,not a proven clock-independent upper bound.
+No actual clock jump was observed; reboot/recovery/Journal evidence is unchanged.
+Public timing clarification is prepared separately; no unauthorized GitHub write.
+
+## Latest native entry —29October2026,23:42Asia/Bangkok
+
+Native26b8 SELL0.01 filled at16:15:20.530UTC. Actual broker position/ledger
+reconciliation confirms initial SL4039.710/TP3982.396. Two earlier
+quote_changed_before_send refusals and the single successful request remain
+preserved. At16:42:11UTC the owned position is MANAGING/protectionconfirmed;
+no BE_MOVED or completed net close is observed. #25 remains OPEN. Original
+scope remains16closed/7open; all-issue closure and profitability are incomplete.
+
+The3,598record contiguous batch and all22cycles captured within the signal's
+90second window passed root and independent read-only audits. Audit persistence
+time and cycle capture time windows are distinguished. No secondSDK reader,
+export request,service stop or other VM mutation accompanied collection.
+See `2026-10-29-c22-native-entry-partial.md`. Earlier no-native-fill checkpoints
+below are dated history,not the current native lifecycle status.
+
+## Latest public closure —29October2026,22:56Asia/Bangkok
+
+Owner approved the exact sanitized#26payload. GitHub publication/closure and
+exact-body readback succeeded at15:56:35UTC. Originalscope now16of23closed;
+7open:#13,#14,#23,#25,#28,#32,#34. Receipt:
+`runs/c22-approved-reboot-2026-10-29/github26-closed-receipt.json`.
+No VM change or commit accompanied publication. The earlier pending#26and
+15closed/8open checkpoints below are historical. Full23issuegoal is not complete.
+
+## Latest T15 proof —29October2026,20:02Asia/Bangkok
+
+Owner approved one actual reboot plus bounded fallback. One reboot completed;
+the original review artifact was restored after a deliberate admission hold and
+the existing systemd retry recovered senderPID2603 automatically. Fallback was
+not used. Source/unit/permissions/cache/accountguard/cohort,actual Demo packet
+and independent raw-SQL continuity checks pass. Entry-pause upper bound is
+258.638816seconds. Actual watchdog/backup jobs also succeeded after boot.
+
+An initial bar/data refusal cleared by the next observed cycle; cache seed is
+restored. Current20:02Thai observation is active sender/terminal,execute=true,
+WAITING_SIGNAL,knownblockers empty and downstreamadmissionNOT_PROVEN. A first
+terminal invocation exited1 and auto-restarted once; deepest cause is UNKNOWN,
+not silently assigned to AP/cwd/audio. #13/#14,#25 and profitability remain open.
+
+Original#26acceptance audit passes; its sanitized exact public summary/closure
+still needs a separate owner payload approval. Reboot approval excluded GitHub
+writes and commits. Therefore GitHub remains15closed/8open,not16closed yet.
+See `2026-10-29-c22-attended-reboot-verdict.md` and
+`runs/c22-approved-reboot-2026-10-29/`. Earlier PID176044 and AP-only observations
+below are dated history. No native/risk/cost/lot change or real-money activity.
+
+## Latest approved measurement —29October2026,19:04Asia/Bangkok
+
+Owner approved option1 APmeasurement,emphasizing long-term operation and profit
+without changing26b8. Actual bounded retry captured90Windows clock samples plus
+89socket snapshots. Independent raw/source/timing/account/restore audits passed.
+No clock regression was observed in that window,but no native APevent occurred;
+transport causality and a confirmed repaired trigger remain unproved. #13/#14
+stay OPEN. Initial protocol failure and its safe recovery are preserved; the
+measurement helper's strict stdout framing and cleanup were corrected locally,
+with15independently observed testsPASS. No native/runtime/cost logic changed.
+
+Both entry pauses total175.363194seconds. Fresh post-run read12:04:19UTC confirms
+senderPID176044 active,execute=true,WAITING_SIGNAL,reviewVALID,knownblockers empty,
+terminalPID116183 unchanged and watchdogtimer active. Unit/policy/review hashes
+and six protected financial keys remain pinned. No native REQUEST/RESPONSE/
+LIFECYCLE exists; #25 still needs genuine signal-to-close evidence. The previous
+PID172292 observation below is historical. Exact evidence and trade-offs:
+`2026-10-29-c22-ap-measurement-plan.md` and ignored
+`runs/c22-ap-approved-measurement-2026-10-29-r2/`. No new GitHub write or commit.
+Original23issue scope remains15closed/8open; full goal not complete.
+
+## Current follow-up —29October2026,18:35Asia/Bangkok
+
+Fresh GitHub state-filtered reads retain15closed/8open within the original#12–34
+scope. A bounded read-only VM transaction at11:35:13.944712UTC captured every
+auditID146675–148792:2,118records with contiguous IDs and one account/source/config
+cohort. Nine new SIGNAL records have raw and final direction0; no new FULLsignal
+or any journal REQUEST/RESPONSE/LIFECYCLE exists. #25 remains NOT_OBSERVED rather
+than inferred from service health or account-wide/manual trading.
+
+The latest observed cycle11:35:08.723432UTC is WAIT/duplicate_bar,
+execute=true,WAITING_SIGNAL,reviewVALID,knownblockers empty and downstreamadmission
+NOT_PROVEN. SenderPID172292,terminalPID116183 and installed senderunitSHA remain
+unchanged; watchdogtimer is active. NoSDK,service mutation,credentialfile read or
+VMfilewrite occurred. Quiet captured native logs do not establish an APfix.
+Exact original payloads,hashes and root recomputation are retained under
+`runs/c22-goal-followup-2026-10-29/`. An independent recomputation was attempted
+but its agent could not execute because of a usage limit; no independent PASS
+is claimed for this follow-up. Existing completed#27review remains separate.
+
+Remaining originalcriteria still require APcausal measurement/fix,held-midnight
+broker proof or reviewed baseline semantics,genuine native lifecycle,approved
+actualreboot,distinct H4rules/data,prospective evaluation criteria and owner
+opt-in for externaldelivery. No additionalissueclosure or fullgoalcompletion
+is claimed. The status below preserves earlier dated checkpoints.
+
+**Latest follow-up29October2026:15 of23 issues closed;8 remain open. Goal not complete.**
+Owner authorized the exact prepared#27summary/closure; publicwrite and exactbody
+readback succeeded29October11:23:18UTC/18:23:18Asia/Bangkok. Source/coverage/
+integrity and boundedcollector criteria are complete; native lifecycle and
+qualification remain unproved. Currentopen:#13,#14,#23,#25,#26,#28,#32,#34.
+No VM,strategy or additional commit change accompanied this publication.
+The14closed/9open and pending#27 statements below are earlier checkpoints.
+Owner subsequently approved the exact one-time−492cost review. Combined cost/
+exporter installation and real sender packet succeeded in33.23seconds. The new
+18,396record/twopartialday batch,actual epochledger/source/coverage/integrity
+checks and independent acceptance review pass. #27is ready for bounded
+implementation closure,but its public publication/closure is not yet authorized.
+Native lifecycle/rawticks/qualification remain unproved or explicitly missing.
+See `2026-10-29-c22-cost-export-install.md` and CORE_STRATEGY6.69. The earlier
+cost-defer and approval checkpoints below are historical; no new commit/push.
+Owner-approved exact10file commit `f4ab13b` completed locally; public#22closure
+read back06:56:24UTC. The approved exporter activation then deferred on actual
+swap_long−492.0versus policy−490.0. Original manager/source/unit/policy/review
+restored and verified after34.44seconds; terminal unchanged. Exporter not
+installed. See `2026-10-29-c22-exporter-activation-verdict.md`. Fresh cost
+acceptance is a separate pending decision; prior exporter approval remains
+bounded by its unchanged-cost/defer condition. No push or#27closure claimed.
+
+The checkpoints below preserve earlier progress and then-pending approvals.
 #31 completed one preregistered shared-account BUY48addon:12paths+6repeats+
 12independent full-tick audits. NO_IMPROVEMENT/DD_GATE_FAILED; native retained.
 Fullsuite1484testsPASS/skipped2. GitHub closure readback28Oct18:19:44UTC;

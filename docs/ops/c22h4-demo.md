@@ -35,6 +35,24 @@ Collect >=48 hours and >=96 completed M15 bars spanning >=1 UTC midnight, no une
 
 ## Cutover: owner approval at execution time
 
+Current attended-trial procedure and owner-approved operating scope:
+[attended market-open trial](c22-attended-market-open.md). It supersedes the
+earlier mandatory Telegram/private-bucket requirements only for a trial with
+an operator present and verified off-VM Mac snapshots. Unattended cutover still
+requires external monitoring and private recovery. Both Oracle units use
+`state/cost-policy-runtime.json`; it remains COST_INCONCLUSIVE until actual review.
+
+Oracle market-open preparation and actual broker check results are recorded in
+[market-open preparation](../reviews/2026-10-24-c22-market-open-preparation.md).
+The manual VM helper `/home/ubuntu/c22-demo/preparation/prepare_market_open.py`
+refreshes read-only evidence, restores shadow and creates a conservative report;
+it never activates sending. Run it before the chosen soak window because its
+exclusive broker probe deliberately interrupts shadow. Pass an aware UTC
+`--since` and, after supported attestation, an explicit `--cost-policy` path.
+The staged execution service is a template only, without automatic boot enablement.
+Neither a clean readiness report nor the opening of the market replaces owner
+review/approval, supported cost evidence or the48h/96prospective-bar requirement.
+
 1. Confirm trial30 journal `active=None`, no halt, empty pending outbox; live broker has no trial30-magic position/order; watcher stopped. Local status is not live broker proof.
 2. Start at/after UTC midnight with no trial30 trade that UTC day. Candidate one-loss circuit counts candidate positions only.
 3. Verify history/parity and shadow review accepted, explicit Demo identity, fresh cost policy, unchanged hashes.
@@ -138,21 +156,109 @@ missing swap metadata means COST_INCONCLUSIVE and no run.
 
 ## Oracle compatibility, soak and cutover
 
-Templates: `deploy/c22-demo/`. Not installed or enabled. Zero additional spend.
-First verify actual free OCI entitlement and existing private bucket permissions.
-No OCI CLI/config or usable SSH target was available in this local task; this
-is missing access evidence, not proof that Oracle works or is free.
+The existing Oracle ARM VM now runs an isolated C22 **shadow** deployment.
+`c22-demo-shadow.service` was enabled and started on2026-10-24 at04:41:37UTC;
+first-cycle readiness and recovery checks are recorded in the
+[compatibility/deployment record](../reviews/2026-10-24-oracle-wine-compatibility.md).
+Sending remains disabled. No new paid cloud resource was created; the owner confirmed Free Tier selection in Oracle's web console. Billing entitlement was not independently queried; existing
+private-bucket permissions remain unverified.
+
+The owner supplied SSH access after earlier Termius probes. Strict host checking
+is retained; private keys are never copied into releases or the VM. The working
+stack uses privately wrapped Wine11.0 plus source-built QEMU at upstream commit
+`586284af4c2cfa90fd61cff414b0deb77acd70f7`. Both MT5 and Python use QEMU; the
+experimental binary prints11.1.50. Original Box64 startup still fails and is not
+used by this service. The strict Windows read/write SEH controls pass after the
+upstream trap-number correction. NumPy2.5.3/pandas3.0.5/MetaTrader5 5.0.6231 are
+pinned in a separate Windows Python3.13.17 venv using hash-required wheels.
+
+Dedicated terminal/account identity, connected state and flat exposure were
+verified through the SDK, including a cold automatic terminal launch without
+GUI interaction. AutoTrading remains off. C22 shadow may read with trading
+permissions disabled; execution and every mutation retain strict permissions.
+Oracle uses `--initialize-timeout-ms 90000`; default10000 remains unchanged for
+other callers. Values outside1000..120000 fail before initialization.
+
+The actual service definition is
+[`c22-oracle-shadow.service`](../../deploy/c22-demo/c22-oracle-shadow.service).
+It invokes the Windows C22 entrypoint directly under Xvfb, without `--execute`,
+and forces the environment gate to0. The generic native host wrapper was observed
+waiting on stdout inherited by MT5 after a once-run; it is not used here.
+Runtime paths on the VM:
+
+- `/home/ubuntu/c22-demo/current` -> verified release `d091bc6b810e792c`.
+- `/home/ubuntu/c22-demo/state/c22h4-shadow.sqlite3`: durable shadow audit/state.
+- `/home/ubuntu/c22-private/c22-shadow.env`: mode0600, dedicated credentials/paths.
+- `/home/ubuntu/c22-qemu-demo._g86ow9b`: dedicated Wine prefix.
+- `C:\tools\c22-runtime\Scripts\python.exe`: pinned Windows venv.
+- `C:\tools\mt5-c22-demo\terminal64.exe`: dedicated terminal.
+
+Do not launch another sender or another SDK probe while this service owns the
+terminal. Stop only this unit before exclusive broker diagnostics:
+
+```bash
+sudo systemctl status c22-demo-shadow.service --no-pager
+sudo journalctl -u c22-demo-shadow.service -n 40 --no-pager
+sudo systemctl stop c22-demo-shadow.service
+sudo systemctl start c22-demo-shadow.service
+```
+
+Observed connected service cycles confirm execute=false and flat broker exposure.
+An owner-approved VM reboot on2026-10-24 at05:28UTC verified automatic startup
+of C22, nginx and the existing Next.js application; local ports80/3000 returned200.
+Kernel is now7.0.0-1013-oracle. All1866 pre-boot audit rows survived unchanged.
+The first three-minute observation still contained18 connection-unknown samples
+out of90. Short host uptime alone therefore does not guarantee connection
+stability. Preserve those failures when reviewing subsequent observations;
+process-alive and boot recovery do not qualify the48-hour soak. An unchanged
+extension at05:34:54–05:37:54UTC passed90/90 fresh/flat samples; the initial
+failures remain part of the qualification record. Telegram was
+explicitly deferred by the owner; no Telegram/Healthchecks delivery is configured.
+
+A fresh source/config SHA256 check runs before every start. Restart is bounded
+at3 starts/300s with10s delay; stop covers the entire control group. This is a
+shadow deployment, not sending cutover. Keep the existing local journal/history
+and rollback files; the VM shadow journal does not replace their financial audit.
+
+Initial broker history fetched100000M1 in49.4s, yielding6588completeM15 and
+362completeH4: history gate passed. Terminal returned no200000-bar response;
+that is not proof of unlimited/deeper history. Feed parity failed:40signal bars,
+3direction/admission divergences,8geometry and40indicator divergences. Review
+and explain these before any sending approval; never retune or accept them by
+changing assertions. This parity probe compares feed/decision geometry only,
+not new economic performance. Cost policy remains explicitly
+`COST_INCONCLUSIVE`; do not re-attest by changing its timestamp.
+
+The exact initialization correction is retained as
+[`box64-wine-prereserve.patch`](../../deploy/c22-demo/box64-wine-prereserve.patch),
+SHA256 `61e5ad7286a67016ea6ce08bcbfc67209b86dbaf3931f38057288c77efbc4a25`,
+against Box64 commit `2f130fab1d6e1a4ee8a71dc60cfdfcc839ad192a`.
+It corrects default reservation granularity and `start-end` parsing, without
+removing Wine assertions. It is an initialization fix, not an MT5 compatibility
+qualification. A fresh apply reproduced the exact VM source; parser cases went
+from 11 mismatches out of13 to zero. Preserve the original binary for rollback.
+Do not apply this patch to another Box64 version without checking its source and
+rerunning the parser, fresh-prefix and child-process controls.
+
 Timebox Box64/Wine/MT5/Windows Python on the actual VM to one engineering day.
-If compatibility fails, stop Oracle attempt and use existing Windows fallback.
+Owner clarified on 2026-10-24 that no Windows machine or Windows VPS is
+available. If compatibility fails within the timebox, stop this attempt and
+record a host-compatibility blocker. Do not assume a Windows fallback, provision
+a paid VPS or expand cloud spend without a separate owner decision.
 
 After compatibility passes and original sender is stopped/account flat, run
 shadow >=48h and >=96 complete M15 bars across UTC midnight. Exercise disconnect,
 restart and boot recovery. Retain timestamps, exact cache, commands and broker
 identity/history/parity; no evidence manufactured from local synthetic tests.
 Templates bound restart to3 starts/300s, restart delay10s; systemd starts shadow.
-Daily SQLite backup uses SQLite online backup, integrity/checksum and local
-restore verification, retaining7 cumulative snapshots without pruning source
-financial history. Upload option requires an existing `NoPublicAccess` bucket;
+The installed `c22-demo-backup.service`/timer uses Windows SQLite online backup,
+integrity/checksum and local restore verification, retaining up to7 cumulative
+snapshots without pruning source financial history. The real oneshot passed
+while shadow ran, including a post-boot snapshot with2350 audit rows and a
+separately verified restore/checksum. Daily schedule is02:10UTC with up to300s
+jitter. Backup and
+watcher share the dedicated Wine namespace; do not add PrivateTmp to either
+without qualifying their Wine-server ownership again. Upload option requires an existing `NoPublicAccess` bucket;
 credentials stay in private environment/OCI files. Configure and verify remote
 7-snapshot retention and perform an actual bucket download/restore before approval;
 local restore test alone does not prove cloud recovery. Bucket creation/ACL,

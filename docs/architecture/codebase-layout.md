@@ -1,11 +1,14 @@
 # Codebase layout and module interfaces
 
-C22H4 is the active Demo interface. `scripts/demo_runtime` owns shared execution;
-C22 and trial30 supply their existing strategy interfaces. Trading contract remains
+Selected26b8 in `scripts/c22_selected` is the active Demo interface.
+`scripts/demo_runtime` owns shared execution; selected, legacy C22H4 and trial30
+supply their strategy interfaces. Legacy launch targets remain rollback-only.
+Trading contract remains
 [CORE_STRATEGY.md](../../CORE_STRATEGY.md). Domain terms: [CONTEXT.md](../../CONTEXT.md).
 
 ```text
 scripts/
+  c22_selected/         Current26b8 detector, verified restart history and owner review
   c22h4/                 Frozen detector adapter, notes and causal cache export
   demo_runtime/
     runner.py            DemoRunner orchestration, UTC clock and cycle envelope
@@ -37,9 +40,8 @@ runs/                    Ignored generated evidence, logs and checkpoints
 
 ```mermaid
 flowchart TD
-    Make[make bot-run / bot-execute] --> Host[ops entrypoint → demo_runtime.host]
-    Host --> CLI[ops entrypoint → demo_runtime.cli]
-    CLI --> C22[C22H4DemoRunner]
+    Service[c22-selected-execution.service] --> CLI[selected entrypoint → shared CLI]
+    CLI --> C22[SelectedDemoRunner + ReviewedAdmission]
     C22 --> Runner[DemoRunner.cycle]
     Runner --> Broker[BrokerView reads]
     Broker --> Data[pure_b1.broker_data: completed M15]
