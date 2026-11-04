@@ -42,7 +42,7 @@
     "scripts/research/breakout_signals.py": "63c40e0917f118bd96a4ba4c14254e5af594e8861deda21d7358e1fb724d9e92",
     "scripts/pure_b1/broker_data.py": "bd46a464cc1611918144696aab9755316e3b05a70bc401e820491d32a542e0eb",
     "scripts/demo_runtime/market_data.py": "a86faf2f24e32347aa096050ab820c4a04bf8a78fac02b8b9e245f4e135884a9",
-    "scripts/demo_runtime/diagnostics.py": "e5e2a1466d37dee4c8f403cc858d3621c20fd76672254dc2a391324af4143cc4",
+    "scripts/demo_runtime/diagnostics.py": "162f597f97a0680f04b60f6a5327ee5fd86ad72aeacde70f4e4b0d16da267603",
     "scripts/c22h4/runner.py": "7bcd71a166480385597599c0425009e233ec7701528909ad3d5649a7783c4897",
     "scripts/c22_selected/__init__.py": "6cdb9dcc34c2547734128941dda6dcf37042db8973494e784e6841b5064a0f9e",
     "scripts/c22_selected/strategy.py": "c84b6f1c4197c191754ccace678fe70a5c53bbd970c0ea535f18097a4b831c82",

@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import re
 import sys
+import sqlite3
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -374,11 +375,40 @@ def exception_chain(error):
     return chain
 
 
+SQLITE_PRIMARY_NAMES = frozenset("ERROR INTERNAL PERM ABORT BUSY LOCKED NOMEM READONLY INTERRUPT IOERR CORRUPT NOTFOUND FULL CANTOPEN PROTOCOL EMPTY SCHEMA TOOBIG CONSTRAINT MISMATCH MISUSE NOLFS AUTH FORMAT RANGE NOTADB NOTICE WARNING".split())
+
+SQLITE_RESULT_NAMES = {
+    name: value for name, value in vars(sqlite3).items()
+    if name.startswith("SQLITE_") and type(value) is int
+    and name.split("_", 2)[1] in SQLITE_PRIMARY_NAMES
+    and re.fullmatch(r"SQLITE_[A-Z0-9_]{1,64}", name)
+}
+
+def _error_attribute(error, name, default=None):
+    try:
+        return getattr(error, name, default)
+    except Exception:
+        return default
+
+def _sqlite_failure_fields(error):
+    if not isinstance(error, sqlite3.Error):
+        return {}
+    raw_code = _error_attribute(error, "sqlite_errorcode")
+    result_code = raw_code if type(raw_code) is int and 0 < raw_code <= 0x7fffffff else None
+    raw_name = _error_attribute(error, "sqlite_errorname")
+    result_name = (raw_name if type(raw_name) is str and result_code is not None
+                   and SQLITE_RESULT_NAMES.get(raw_name) == result_code else "UNKNOWN")
+    return dict(sqlite_errorcode=result_code, sqlite_errorname=result_name,
+                sqlite_primary_code=(result_code & 0xff) if result_code is not None else None)
+
+
 def failure_record(error, *, stage, code=None, correlation_id=None, now=None, details=None):
     """Mechanical failure evidence only; deeper unproved triggers stay UNKNOWN."""
     reason = public_reason(error)
     known = reason in RESUME
     clean = safe_details(details)
+    # Native SQLite metadata is useful for runtime writes too. It grants no retry or entry authority.
+    clean.update(_sqlite_failure_fields(error))
     stage = clean.get("stage", stage)
     code = clean.get("code", code or (reason if known else "runtime_exception"))
     operator, resume = RESUME.get(code, RESUME.get(reason, (True, "inspect_recorded_runtime_failure")))
@@ -403,7 +433,8 @@ def fallback(record, *, persistence_error=None):
     payload = dict(kind="DIAGNOSTIC_FALLBACK", diagnostic=record)
     if persistence_error is not None:
         payload["persistence_failure"] = dict(exception_type=type(persistence_error).__name__,
-                                             cause_chain=exception_chain(persistence_error))
+                                             cause_chain=exception_chain(persistence_error),
+                                             **_sqlite_failure_fields(persistence_error))
     try:
         print(json.dumps(payload, sort_keys=True, allow_nan=False), file=sys.stderr, flush=True)
     except Exception:
