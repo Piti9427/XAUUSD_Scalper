@@ -134,6 +134,7 @@ class DemoRunner:
         self.broker.last_equity = None
         self.broker.quote_diagnostics = {}
         self.broker.identity_diagnostics = {}
+        self._baseline_diagnostics = {}
         self.journal.audit_context["correlation_id"] = uuid.uuid4().hex
         self._diagnostic_stage = "cycle.financial"
         try:
@@ -148,8 +149,20 @@ class DemoRunner:
         if result.get("reason") in (
             "demo_identity_required", "algo_permissions_required", "invalid_capital",
             "journal_account_mismatch",
-        ):
+        ) or self._diagnostic_stage in ("broker.identity", "broker.boundary"):
+            # Preserve actual timing metadata on identity/capture failure.
+            # This creates no mark and cannot supply a later/restart baseline.
             result.update(self.broker.identity_diagnostics)
+        # Supplemental evidence from the initial account read/baseline check.
+        # Later mutation identity checks may clear broker timing. A closed
+        # lifecycle's exit-day validity still takes precedence over this cycle.
+        for key, value in self._baseline_diagnostics.items():
+            if key not in ("day_start_valid", "day_start_reason"):
+                result.setdefault(key, value)
+        if "day_start_valid" not in result:
+            for key in ("day_start_valid", "day_start_reason"):
+                if key in self._baseline_diagnostics:
+                    result[key] = self._baseline_diagnostics[key]
         result.update(
             snapshot=self.strategy.snapshot, execute=self.execute, captured_utc=now.isoformat()
         )
@@ -272,10 +285,23 @@ class DemoRunner:
         # Mutation checks retain strict identity at the send/modify/close boundary.
         active = self.journal.get("active")
         self._diagnostic_stage = "broker.identity"
-        account = self.broker.identity(require_trade_permissions=self.execute and not active)
+        account = self.broker.identity(
+            require_trade_permissions=self.execute and not active,
+            observation_clock=lambda: self._send_clock(now),
+        )
+        self._baseline_diagnostics = {
+            key: self.broker.identity_diagnostics[key]
+            for key in ("account_read_request_started_utc", "account_read_observed_utc")
+            if key in self.broker.identity_diagnostics
+        }
         self._diagnostic_stage = "broker.boundary"
         try:
-            self.broker.capture_boundary(account, request_started=now, observed=self._send_clock(now))
+            observation = self.broker.account_observation
+            if observation is not None:
+                self.broker.capture_boundary(
+                    observation["account"], request_started=observation["request_started"],
+                    observed=observation["observed"],
+                )
         except ValueError as exc:
             # Invalid entry-baseline evidence must not stop an owned close/BE
             # manager. Admission still validates proof before using it.
@@ -292,8 +318,12 @@ class DemoRunner:
         if active:
             try:
                 self.broker._baseline(account, positions, deals, now)
-            except ValueError:
-                pass
+            except ValueError as exc:
+                self._baseline_diagnostics.update(
+                    day_start_valid=False, day_start_reason=public_reason(exc)
+                )
+            else:
+                self._baseline_diagnostics["day_start_valid"] = True
             result = self._lifecycle.reconcile_closed(positions, deals)
             if result is not None:
                 return result

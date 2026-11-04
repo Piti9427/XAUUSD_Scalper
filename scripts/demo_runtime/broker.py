@@ -33,9 +33,19 @@ class BrokerView:
         self._restart_baseline_latched = False
         self.identity_diagnostics = {}
 
-    def identity(self, *, require_trade_permissions=True):
+    def identity(self, *, require_trade_permissions=True, observation_clock=None):
         self.identity_diagnostics = {}
+        self.account_observation = None
+        requested = observation_clock() if observation_clock is not None else None
+        if requested is not None:
+            self.identity_diagnostics["account_read_request_started_utc"] = requested.isoformat()
+            self.identity_diagnostics["account_read_observed_utc"] = None
         account = self.mt5.account_info()
+        observed = observation_clock() if observation_clock is not None else None
+        if observed is not None:
+            self.identity_diagnostics["account_read_observed_utc"] = observed.isoformat()
+        # Preserve the actual account return interval while terminal/identity
+        # checks complete. No baseline proof is accepted or persisted yet.
         terminal = self.mt5.terminal_info()
 
         def flag(source, key):
@@ -49,7 +59,7 @@ class BrokerView:
 
         # Reuse the exact reads checked below. Never log account/terminal objects
         # or probe the SDK again to explain a failed mutation prerequisite.
-        self.identity_diagnostics = dict(
+        self.identity_diagnostics.update(dict(
             identity_account_present=account is not None,
             identity_terminal_present=terminal is not None,
             identity_require_trade_permissions=bool(require_trade_permissions),
@@ -59,7 +69,7 @@ class BrokerView:
             identity_account_trade_allowed=flag(account, "trade_allowed"),
             identity_account_trade_expert=flag(account, "trade_expert"),
             identity_blockers=[],
-        )
+        ))
         if (
             account is None
             or int(account.login) != self.login
@@ -113,6 +123,12 @@ class BrokerView:
             raise ValueError("journal_account_mismatch")
         self.journal.put("identity", self.fingerprint)
         self.last_equity = float(account.equity)
+        if requested is not None and observed is not None:
+            # AccountInfo is the same returned named tuple checked above.
+            # Only verified identity/terminal/capital reaches this candidate.
+            self.account_observation = dict(
+                request_started=requested, observed=observed, account=account,
+            )
         return account
 
     def _exposure(self):

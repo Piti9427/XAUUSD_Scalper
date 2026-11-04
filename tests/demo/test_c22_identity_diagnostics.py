@@ -129,10 +129,21 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         first = runner.cycle(now=sdk.now)
         self.assertEqual(first["identity_blockers"], ["terminal_disconnected"])
         sdk.account_info = Mock(side_effect=RuntimeError("fixture SDK read failed"))
-        second = runner.cycle(now=sdk.now + timedelta(seconds=1))
+        now = sdk.now + timedelta(seconds=1)
+        with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100.0):
+            second = runner.cycle(now=now)
         self.assertEqual(second["reason"], "RuntimeError")
-        self.assertEqual(runner.broker.identity_diagnostics, {})
+        self.assertEqual(runner.broker.identity_diagnostics, dict(
+            account_read_request_started_utc=now.isoformat(), account_read_observed_utc=None,
+        ))
+        self.assertEqual(second["account_read_request_started_utc"], now.isoformat())
+        self.assertIsNone(second["account_read_observed_utc"])
+        self.assertIsNone(runner.broker.account_observation)
+        self.assertNotIn("day_start_valid", second)
+        self.assertNotIn("day_start_reason", second)
         self.assertFalse(any(key.startswith("identity_") for key in second))
+        sdk.account_info.assert_called_once()
+        self.assertEqual(sdk.terminal_info.call_count, 1)
         sdk.order_send.assert_not_called()
 
     def test_active_close_read_does_not_require_trading_permission(self):

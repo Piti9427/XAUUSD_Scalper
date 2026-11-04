@@ -62,11 +62,13 @@ class DemoRuntimeCompatibilityTests(unittest.TestCase):
         for mode in ("shadow", "fill", "rejected", "ambiguous", "blocked"):
             observations = []
             for direct in (False, True):
-                # IDs are new audit metadata; pin entropy to compare adapter behavior.
+                # Pin entropy and observation clocks, retaining exact comparison
+                # of result timestamps, financial state and persisted events.
                 with (
                     self.subTest(mode=mode, direct=direct),
                     TemporaryDirectory() as directory,
                     patch("uuid.uuid4", side_effect=(uuid.UUID(int=i) for i in range(1, 1000))),
+                    patch("scripts.demo_runtime.runner.time.monotonic", return_value=100.0),
                 ):
                     broker = Broker()
                     if mode == "ambiguous":
