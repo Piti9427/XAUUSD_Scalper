@@ -10,6 +10,27 @@ import re
 
 
 WINDOWS_TERMINAL = r"C:\tools\mt5-c22-demo\terminal64.exe"
+PREFLIGHT_CODES = frozenset({
+    "terminal_environment_invalid", "dedicated_terminal_prefix_required",
+    "dedicated_wine_binary_required", "dedicated_terminal_missing",
+    "attached_ea_blocks_terminal", "saved_chart_inventory_required",
+    "terminal_permission_config_invalid",
+})
+
+
+def _failure(reason: str, stage: str, code: str, error: Exception) -> dict:
+    """Publish only known codes/types; exception text can contain private inputs."""
+    safe_types = (
+        json.JSONDecodeError, FileNotFoundError, PermissionError,
+        configparser.MissingSectionHeaderError, configparser.ParsingError,
+        configparser.DuplicateOptionError, configparser.DuplicateSectionError,
+        configparser.Error, OSError, KeyError, ValueError,
+    )
+    kind = next(cls.__name__ for cls in safe_types if isinstance(error, cls))
+    failure = {"code": code, "stage": stage, "exception_type": kind}
+    if isinstance(error, OSError) and type(error.errno) is int:
+        failure["errno"] = error.errno
+    return {"status": "BLOCKED", "reason": reason, "failure": failure}
 
 
 def launch_options(home: Path, release: Path, inherited: dict[str, str]) -> tuple[list[str], dict[str, str]]:
@@ -64,10 +85,29 @@ def main() -> int:
     release = Path(__file__).resolve().parents[2]
     try:
         arguments, environment = launch_options(Path.home(), release, dict(os.environ))
-    except (OSError, ValueError, KeyError):
-        print(json.dumps({"status": "BLOCKED", "reason": "selected_terminal_preflight_failed"}), flush=True)
+    except (OSError, ValueError, KeyError, configparser.Error) as error:
+        if isinstance(error, configparser.Error):
+            code = "terminal_permission_config_parse_failed"
+        elif isinstance(error, OSError):
+            code = "terminal_preflight_io_failed"
+        elif isinstance(error, KeyError):
+            code = "terminal_preflight_key_error"
+        elif isinstance(error, json.JSONDecodeError):
+            code = "terminal_environment_invalid"
+        else:
+            candidate = error.args[0] if error.args else None
+            code = candidate if isinstance(candidate, str) and candidate in PREFLIGHT_CODES else "terminal_preflight_value_error"
+        print(json.dumps(_failure(
+            "selected_terminal_preflight_failed", "terminal.preflight", code, error
+        )), flush=True)
         return 2
-    os.execvpe(arguments[0], arguments, environment)
+    try:
+        os.execvpe(arguments[0], arguments, environment)
+    except OSError as error:
+        print(json.dumps(_failure(
+            "selected_terminal_exec_failed", "terminal.exec", "terminal_exec_os_error", error
+        )), flush=True)
+        return 1
     return 0
 
 
