@@ -24,19 +24,25 @@ def minute_fixture(*, future_jump=False):
         price = 3004 + number / 1000
         if future_jump and stamp >= RECOVERY:
             price += 500
-        rates.append(dict(time=int(stamp.timestamp()), open=price,
-                          high=price + 0.05, low=price - 0.05, close=price + 0.01))
+        rates.append(
+            dict(
+                time=int(stamp.timestamp()),
+                open=price,
+                high=price + 0.05,
+                low=price - 0.05,
+                close=price + 0.01,
+            )
+        )
     return rates
 
 
 def warmed_prefix(now, *, future_jump=False):
-    index = pd.date_range(end=BUCKET - pd.Timedelta(minutes=15),
-                          periods=205 * 16, freq="15min")
+    index = pd.date_range(end=BUCKET - pd.Timedelta(minutes=15), periods=205 * 16, freq="15min")
     close = pd.Series(3000 + pd.RangeIndex(len(index)).to_numpy() / 1000, index=index)
-    history = pd.DataFrame(dict(open=close - 0.005, high=close + 0.02,
-                                low=close - 0.02, close=close))
-    recent = completed_m15_from_m1(minute_fixture(future_jump=future_jump),
-                                   now=now.to_pydatetime())
+    history = pd.DataFrame(
+        dict(open=close - 0.005, high=close + 0.02, low=close - 0.02, close=close)
+    )
+    recent = completed_m15_from_m1(minute_fixture(future_jump=future_jump), now=now.to_pydatetime())
     return pd.concat([history, recent])
 
 
@@ -52,14 +58,16 @@ class H4GapRootCauseTests(unittest.TestCase):
         events = m1_gap_events(observed, now=MIDNIGHT.to_pydatetime())
         self.assertEqual(len(events), 5)
         self.assertEqual([event["m1_count"] for event in events], [13, 0, 0, 0, 0])
-        self.assertEqual([event["bar_open_utc"] for event in events],
-                         [stamp.isoformat() for stamp in expected])
+        self.assertEqual(
+            [event["bar_open_utc"] for event in events], [stamp.isoformat() for stamp in expected]
+        )
         for event in events:
             self.assertEqual(event["type"], "incomplete_m1_interval")
             self.assertEqual(event["cause"], "missing_minutes")
             self.assertIs(event["late_entry"], False)
-            self.assertEqual(set(event),
-                             {"type", "bar_open_utc", "m1_count", "cause", "late_entry"})
+            self.assertEqual(
+                set(event), {"type", "bar_open_utc", "m1_count", "cause", "late_entry"}
+            )
 
     def test_partial_rollover_h4_blocks_until_exact_next_complete_h4_close(self):
         cache = SelectedBarCache()
@@ -70,8 +78,10 @@ class H4GapRootCauseTests(unittest.TestCase):
         self.assertTrue(pd.notna(previous_macro))
 
         for now in (MIDNIGHT, RECOVERY - pd.Timedelta(seconds=1)):
-            with self.subTest(now=now), self.assertRaisesRegex(
-                    ValueError, "^macro_latest_h4_incomplete$"):
+            with (
+                self.subTest(now=now),
+                self.assertRaisesRegex(ValueError, "^macro_latest_h4_incomplete$"),
+            ):
                 cache.append(warmed_prefix(now))
             self.assertTrue(pd.isna(cache.row.macro_ema))
             self.assertEqual(cache.h4_status["prior_h4_open_utc"], BUCKET.isoformat())
@@ -82,8 +92,12 @@ class H4GapRootCauseTests(unittest.TestCase):
         recovered = warmed_prefix(RECOVERY)
         cache.append(recovered)
         completed = recovered.close.resample("4h").agg(["last", "count"])
-        expected_macro = completed.loc[completed["count"] == 16, "last"].ewm(
-            span=200, adjust=False, min_periods=200).mean().iloc[-1]
+        expected_macro = (
+            completed.loc[completed["count"] == 16, "last"]
+            .ewm(span=200, adjust=False, min_periods=200)
+            .mean()
+            .iloc[-1]
+        )
         self.assertTrue(pd.notna(cache.row.macro_ema))
         self.assertAlmostEqual(float(cache.row.macro_ema), float(expected_macro), places=10)
         self.assertNotAlmostEqual(float(cache.row.macro_ema), previous_macro, places=8)
@@ -99,14 +113,17 @@ class H4GapRootCauseTests(unittest.TestCase):
         self.assertEqual(int(invalid_decisions.sum()), 16)
         pd.testing.assert_index_equal(
             before_recovery.index[invalid_decisions] + pd.Timedelta(minutes=15),
-            pd.date_range(MIDNIGHT, periods=16, freq="15min"), check_names=False)
+            pd.date_range(MIDNIGHT, periods=16, freq="15min"),
+            check_names=False,
+        )
         self.assertTrue(earlier.loc[invalid_decisions].isna().all())
         self.assertTrue(pd.notna(earlier.loc[~invalid_decisions].iloc[-1]))
 
         future = warmed_prefix(RECOVERY + pd.Timedelta(hours=4), future_jump=True)
         later = closed_h4_ema(future, 200)
-        pd.testing.assert_series_equal(later.loc[before_recovery.index], earlier,
-                                       check_exact=True, check_freq=False)
+        pd.testing.assert_series_equal(
+            later.loc[before_recovery.index], earlier, check_exact=True, check_freq=False
+        )
         publication_bar = RECOVERY - pd.Timedelta(minutes=15)
         at_recovery = closed_h4_ema(warmed_prefix(RECOVERY), 200)
         self.assertTrue(pd.notna(later.loc[publication_bar]))

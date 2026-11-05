@@ -27,8 +27,12 @@ def monday_broker(direction):
     for deal in broker.deals:
         deal.time_msc += milliseconds
         deal.time = deal.time_msc // 1000
-    for name, value in (("swap_mode", 1), ("swap_long", -490.8),
-                        ("swap_short", 0), ("swap_rollover3days", 3)):
+    for name, value in (
+        ("swap_mode", 1),
+        ("swap_long", -490.8),
+        ("swap_short", 0),
+        ("swap_rollover3days", 3),
+    ):
         setattr(broker.info, name, value)
     return broker
 
@@ -36,27 +40,47 @@ def monday_broker(direction):
 def armed_review(runner, now):
     approved = now - timedelta(seconds=60)
     report = {
-        "captured_utc": approved.isoformat(), "status": "ARMED_DEMO_TRIAL_WITH_LIMITATIONS",
-        "execution_authorized": False, "snapshot": SNAPSHOT,
-        "contract_id": CANDIDATE_ID, "magic": MAGIC, "account_fingerprint": runner.fingerprint,
-        "cohort": {"release_hash": runner.release_hash,
-                   "config_hash": runner.journal.audit_context["config_hash"]},
-        "input_sha256": {"policy": canonical_hash(runner.policy),
-                         "broker": "b" * 64, "parity": "c" * 64},
-        "limitations": ["COST_INCONCLUSIVE", "SWAP_ENTITLEMENT_UNKNOWN",
-                        "BROKER_FEED_PARITY_NOT_ESTABLISHED", "SHADOW_WAIT_WAIVED"],
+        "captured_utc": approved.isoformat(),
+        "status": "ARMED_DEMO_TRIAL_WITH_LIMITATIONS",
+        "execution_authorized": False,
+        "snapshot": SNAPSHOT,
+        "contract_id": CANDIDATE_ID,
+        "magic": MAGIC,
+        "account_fingerprint": runner.fingerprint,
+        "cohort": {
+            "release_hash": runner.release_hash,
+            "config_hash": runner.journal.audit_context["config_hash"],
+        },
+        "input_sha256": {
+            "policy": canonical_hash(runner.policy),
+            "broker": "b" * 64,
+            "parity": "c" * 64,
+        },
+        "limitations": [
+            "COST_INCONCLUSIVE",
+            "SWAP_ENTITLEMENT_UNKNOWN",
+            "BROKER_FEED_PARITY_NOT_ESTABLISHED",
+            "SHADOW_WAIT_WAIVED",
+        ],
     }
     return {
-        "version": 1, "scope": "SELECTED_DEMO_ARMED_TRIAL", "owner_authorized": True,
+        "version": 1,
+        "scope": "SELECTED_DEMO_ARMED_TRIAL",
+        "owner_authorized": True,
         "owner_instruction": "Synthetic owner authorization for actual Monday Demo trial",
-        "approved_utc": approved.isoformat(), "arm_not_before_utc": "2026-10-25T17:00:00+00:00",
-        "readiness": report, "readiness_sha256": canonical_hash(report),
-        "confirmations": {name: True for name in (
-            "exact_demo_identity_and_flat_verified",
-            "exact_strategy_sources_and_archive_agreement_reviewed",
-            "regular_swap_assumptions_and_cost_drift_guard_reviewed",
-            "single_sender_backup_restore_reviewed",
-        )},
+        "approved_utc": approved.isoformat(),
+        "arm_not_before_utc": "2026-10-25T17:00:00+00:00",
+        "readiness": report,
+        "readiness_sha256": canonical_hash(report),
+        "confirmations": {
+            name: True
+            for name in (
+                "exact_demo_identity_and_flat_verified",
+                "exact_strategy_sources_and_archive_agreement_reviewed",
+                "regular_swap_assumptions_and_cost_drift_guard_reviewed",
+                "single_sender_backup_restore_reviewed",
+            )
+        },
     }
 
 
@@ -69,12 +93,19 @@ class ArmedTrialTests(unittest.TestCase):
     def runner(self, broker, *, name="execution"):
         costs = policy_v2(broker.now, broker.info) | {
             "status": "CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS",
-            "swap_entitlement": "UNKNOWN", "research_economic_qualification": "COST_INCONCLUSIVE",
+            "swap_entitlement": "UNKNOWN",
+            "research_economic_qualification": "COST_INCONCLUSIVE",
             "execution_authorized": False,
         }
-        runner = SelectedDemoRunner(mt5=broker, expected_login=123, expected_server="Exness-Demo",
-            journal_path=self.root / (name + ".sqlite3"), cost_policy=costs,
-            config=selected_config(), execute=True)
+        runner = SelectedDemoRunner(
+            mt5=broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.root / (name + ".sqlite3"),
+            cost_policy=costs,
+            config=selected_config(),
+            execute=True,
+        )
         self.addCleanup(runner.close)
         return runner
 
@@ -95,7 +126,9 @@ class ArmedTrialTests(unittest.TestCase):
                 self.assertEqual(result["status"], "FILLED", result)
                 self.assertTrue(result["execute"])
                 self.assertEqual(broker.order_send.call_count, 1)
-                self.assertEqual(broker.order_send.call_args.args[0]["type"], 0 if direction == 1 else 1)
+                self.assertEqual(
+                    broker.order_send.call_args.args[0]["type"], 0 if direction == 1 else 1
+                )
                 runner.close()
 
     def test_armed_start_waits_for_window_and_same_review_restarts_after_six_minutes(self):
@@ -135,7 +168,15 @@ class ArmedTrialTests(unittest.TestCase):
         broker = monday_broker(1)
         runner = self.runner(broker)
         original = armed_review(runner, broker.now)
-        for failure in ("account", "policy", "entitlement", "qualification", "limitations", "confirmation", "naive_start"):
+        for failure in (
+            "account",
+            "policy",
+            "entitlement",
+            "qualification",
+            "limitations",
+            "confirmation",
+            "naive_start",
+        ):
             with self.subTest(failure=failure):
                 review = deepcopy(original)
                 policy = deepcopy(runner.policy)
@@ -152,7 +193,9 @@ class ArmedTrialTests(unittest.TestCase):
                 elif failure == "limitations":
                     review["readiness"]["limitations"].remove("BROKER_FEED_PARITY_NOT_ESTABLISHED")
                 elif failure == "confirmation":
-                    review["confirmations"]["regular_swap_assumptions_and_cost_drift_guard_reviewed"] = False
+                    review["confirmations"][
+                        "regular_swap_assumptions_and_cost_drift_guard_reviewed"
+                    ] = False
                 else:
                     review["arm_not_before_utc"] = broker.now.replace(tzinfo=None).isoformat()
                 review["readiness_sha256"] = canonical_hash(review["readiness"])
@@ -206,8 +249,11 @@ class ArmedTrialTests(unittest.TestCase):
         runner.policy["reviewed_utc"] = prior_day.isoformat()
         calendar = runner.policy["evidence"]["swap_calendar"]
         calendar["document"]["days"][prior_day.date().isoformat()] = {
-            "rollover_utc": prior_day.replace(hour=21, minute=0, second=0, microsecond=0).isoformat(),
-            "buy": 0.0, "sell": 0.0,
+            "rollover_utc": prior_day.replace(
+                hour=21, minute=0, second=0, microsecond=0
+            ).isoformat(),
+            "buy": 0.0,
+            "sell": 0.0,
         }
         calendar["sha256"] = canonical_hash(calendar["document"])
         # Closed selected SELL has a negative swap although this fixture's

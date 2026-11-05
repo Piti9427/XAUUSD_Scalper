@@ -18,7 +18,9 @@ from tests.research.test_breakout_logic import BROKER, START, END, sample
 class CatalogParityTests(unittest.TestCase):
     def test_all_catalogs_preserve_complete_ordered_contracts(self):
         frozen = json.loads(
-            (Path(__file__).resolve().parents[1] / "fixtures/research_catalog_hashes.json").read_text()
+            (
+                Path(__file__).resolve().parents[1] / "fixtures/research_catalog_hashes.json"
+            ).read_text()
         )
         for name, expected in frozen.items():
             with self.subTest(catalog=name):

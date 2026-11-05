@@ -24,23 +24,32 @@ class QuoteObservationClockTests(unittest.TestCase):
             "reviewed_utc": sdk.now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         }
         runner = SelectedDemoRunner(
-            mt5=sdk, expected_login=123, expected_server="Exness-Demo",
-            journal_path=Path(self.temp.name) / "clock.sqlite3", config=selected_config(),
-            cost_policy=costs, execute=execute,
+            mt5=sdk,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=Path(self.temp.name) / "clock.sqlite3",
+            config=selected_config(),
+            cost_policy=costs,
+            execute=execute,
         )
         self.addCleanup(runner.close)
         return runner
 
     def view(self, *, latency, age):
         observed = NOW + timedelta(seconds=latency)
-        tick = NS(bid=4000.0, ask=4000.24,
-                  time_msc=int((observed - timedelta(seconds=age)).timestamp() * 1000))
+        tick = NS(
+            bid=4000.0,
+            ask=4000.24,
+            time_msc=int((observed - timedelta(seconds=age)).timestamp() * 1000),
+        )
 
         def quote(_symbol):
             self.clock += latency
             return tick
 
-        view = BrokerView(NS(symbol_info_tick=quote), 123, "Exness-Demo", "XAUUSDm", "fixture", None)
+        view = BrokerView(
+            NS(symbol_info_tick=quote), 123, "Exness-Demo", "XAUUSDm", "fixture", None
+        )
         return view, tick, observed
 
     def test_sdk_read_latency_accepts_fresh_tick_after_request_started(self):
@@ -79,8 +88,11 @@ class QuoteObservationClockTests(unittest.TestCase):
             calls += 1
             if calls == 2:
                 self.clock += 0.25
-                return NS(time_msc=int((sdk.now + timedelta(milliseconds=200)).timestamp() * 1000),
-                          bid=sdk.tick.bid, ask=sdk.tick.ask)
+                return NS(
+                    time_msc=int((sdk.now + timedelta(milliseconds=200)).timestamp() * 1000),
+                    bid=sdk.tick.bid,
+                    ask=sdk.tick.ask,
+                )
             return sdk.tick
 
         sdk.symbol_info_tick = quote
@@ -101,8 +113,11 @@ class QuoteObservationClockTests(unittest.TestCase):
             calls += 1
             if calls == 2:
                 self.clock += 90
-                return NS(time_msc=int((sdk.now + timedelta(seconds=89.9)).timestamp() * 1000),
-                          bid=sdk.tick.bid, ask=sdk.tick.ask)
+                return NS(
+                    time_msc=int((sdk.now + timedelta(seconds=89.9)).timestamp() * 1000),
+                    bid=sdk.tick.bid,
+                    ask=sdk.tick.ask,
+                )
             return sdk.tick
 
         sdk.symbol_info_tick = quote
@@ -161,8 +176,11 @@ class QuoteObservationClockTests(unittest.TestCase):
 
         def quote(_symbol):
             self.clock += 0.25
-            return NS(time_msc=int((sdk.now + timedelta(milliseconds=200)).timestamp() * 1000),
-                      bid=sdk.tick.bid, ask=sdk.tick.ask)
+            return NS(
+                time_msc=int((sdk.now + timedelta(milliseconds=200)).timestamp() * 1000),
+                bid=sdk.tick.bid,
+                ask=sdk.tick.ask,
+            )
 
         sdk.symbol_info_tick = quote
         with patch("scripts.demo_runtime.runner.time.monotonic", side_effect=lambda: self.clock):

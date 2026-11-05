@@ -22,14 +22,34 @@ DOMAINS = {
     "buy_protect_mode": ["off", "break_even"],
 }
 RULES = dict(
-    failed_closes=0, reset_after_exit=False, stagnant_bars=0,
-    entry_mode="immediate", stop_mode="atr", protect_mode="break_even",
-    entry_guard="off", buy_pause_drawdown=0.0, risk_mode="static", risk_cap=0.1,
-    daily_loss_limit=0.1, target_atr=3.0, min_depth_atr=0.0, target_rr=1.35,
-    cooldown_bars=2, session_mode="all", max_daily_losses=2, protect_after_r=1.0,
-    stop_atr=2.5, buy_stop_atr=2.5, buy_target_rr=3.0,
-    buy_protect_mode="break_even", sizing_mode="fixed", holding_mode="legacy",
-    buy_stop_mode=None, buy_risk_cap=None, buy_sizing_mode=None, sell_stop_mode=None,
+    failed_closes=0,
+    reset_after_exit=False,
+    stagnant_bars=0,
+    entry_mode="immediate",
+    stop_mode="atr",
+    protect_mode="break_even",
+    entry_guard="off",
+    buy_pause_drawdown=0.0,
+    risk_mode="static",
+    risk_cap=0.1,
+    daily_loss_limit=0.1,
+    target_atr=3.0,
+    min_depth_atr=0.0,
+    target_rr=1.35,
+    cooldown_bars=2,
+    session_mode="all",
+    max_daily_losses=2,
+    protect_after_r=1.0,
+    stop_atr=2.5,
+    buy_stop_atr=2.5,
+    buy_target_rr=3.0,
+    buy_protect_mode="break_even",
+    sizing_mode="fixed",
+    holding_mode="legacy",
+    buy_stop_mode=None,
+    buy_risk_cap=None,
+    buy_sizing_mode=None,
+    sell_stop_mode=None,
 )
 
 
@@ -50,27 +70,68 @@ def events(role="research", source="1" * 64):
     return {
         "schema_version": 1,
         "candidate_id": identity(RULES),
-        "implementation": {"role": role, "source_sha256": source,
-                           "source_path": "research.py" if role == "research" else "runtime.py"},
-        "context": {key: "3" * 64 for key in (
-            "bars_sha256", "quotes_sha256", "spec_sha256", "costs_sha256",
-            "account_state_sha256", "day_state_sha256",
-        )},
+        "implementation": {
+            "role": role,
+            "source_sha256": source,
+            "source_path": "research.py" if role == "research" else "runtime.py",
+        },
+        "context": {
+            key: "3" * 64
+            for key in (
+                "bars_sha256",
+                "quotes_sha256",
+                "spec_sha256",
+                "costs_sha256",
+                "account_state_sha256",
+                "day_state_sha256",
+            )
+        },
         "events": [
-            dict(event_id="buy-entry", time_utc="2026-10-26T23:45:00+00:00",
-                 kind="admission", side="BUY", entry=3000.1, stop=2990.0,
-                 target=3030.4, admitted=True, reason="admitted", risk_usd=10.2,
-                 cooldown_until_utc=None, protection="inactive", net_usd=None),
-            dict(event_id="negative-be", time_utc="2026-10-27T00:00:00+00:00",
-                 kind="protection", side="BUY", entry=3000.1, stop=3000.2,
-                 target=3030.4, admitted=False, reason="negative_net_be",
-                 risk_usd=10.2, cooldown_until_utc="2026-10-27T00:30:00+00:00",
-                 protection="done", net_usd=-0.01),
-            dict(event_id="sell-rejected", time_utc="2026-10-27T00:15:00+00:00",
-                 kind="admission", side="SELL", entry=3005.0, stop=3015.0,
-                 target=2991.5, admitted=False, reason="cooldown", risk_usd=10.2,
-                 cooldown_until_utc="2026-10-27T00:30:00+00:00",
-                 protection="inactive", net_usd=None),
+            dict(
+                event_id="buy-entry",
+                time_utc="2026-10-26T23:45:00+00:00",
+                kind="admission",
+                side="BUY",
+                entry=3000.1,
+                stop=2990.0,
+                target=3030.4,
+                admitted=True,
+                reason="admitted",
+                risk_usd=10.2,
+                cooldown_until_utc=None,
+                protection="inactive",
+                net_usd=None,
+            ),
+            dict(
+                event_id="negative-be",
+                time_utc="2026-10-27T00:00:00+00:00",
+                kind="protection",
+                side="BUY",
+                entry=3000.1,
+                stop=3000.2,
+                target=3030.4,
+                admitted=False,
+                reason="negative_net_be",
+                risk_usd=10.2,
+                cooldown_until_utc="2026-10-27T00:30:00+00:00",
+                protection="done",
+                net_usd=-0.01,
+            ),
+            dict(
+                event_id="sell-rejected",
+                time_utc="2026-10-27T00:15:00+00:00",
+                kind="admission",
+                side="SELL",
+                entry=3005.0,
+                stop=3015.0,
+                target=2991.5,
+                admitted=False,
+                reason="cooldown",
+                risk_usd=10.2,
+                cooldown_until_utc="2026-10-27T00:30:00+00:00",
+                protection="inactive",
+                net_usd=None,
+            ),
         ],
     }
 
@@ -92,38 +153,71 @@ class ManifestTests(unittest.TestCase):
         self.patcher.start()
         self.addCleanup(self.patcher.stop)
         seed = self.root / "config/research-c22-terminal-profit-9e511d195c52ef3d.json"
-        save(seed, dict(strategy="reward156", formula="archived", rsi_period=7,
-                        rsi_threshold=30, sell_lookback=48, sell_ema=50,
-                        macro_span=200, entry_session="all"))
+        save(
+            seed,
+            dict(
+                strategy="reward156",
+                formula="archived",
+                rsi_period=7,
+                rsi_threshold=30,
+                sell_lookback=48,
+                sell_ema=50,
+                macro_span=200,
+                entry_session="all",
+            ),
+        )
         source = self.root / "scripts/c22h4/strategy.py"
         source.parent.mkdir(parents=True)
         source.write_text("# frozen source fixture\n")
         manifest = self.root / "runs/c22-real-data-audit-2026-10-24/input/manifest.json"
-        save(manifest, dict(first_quote_utc="2024-09-01T22:05:06.129Z",
-                            last_quote_utc="2026-10-23T20:57:59.517Z", ticks=171171013))
+        save(
+            manifest,
+            dict(
+                first_quote_utc="2024-09-01T22:05:06.129Z",
+                last_quote_utc="2026-10-23T20:57:59.517Z",
+                ticks=171171013,
+            ),
+        )
         catalog = dict(schema=1, axes=list(DOMAINS), finite_domain=5184, cases=self.cases)
         save(self.campaign / "catalog.json", catalog)
         self.protocol = dict(
-            schema=1, algorithm="exhaustive_native_grid_v1",
+            schema=1,
+            algorithm="exhaustive_native_grid_v1",
             sources={str(p.relative_to(self.root)): digest(p) for p in [seed, source]},
             input_hashes={"tape/time.npy": "4" * 64, "bars.csv": "5" * 64},
-            input_manifest_sha256=digest(manifest), parent_complete_sha256="6" * 64,
-            parent_results_sha256="7" * 64, parent_audit_sha256="8" * 64,
-            parent_cell_bindings={}, broker={"swap_mode": 1},
+            input_manifest_sha256=digest(manifest),
+            parent_complete_sha256="6" * 64,
+            parent_results_sha256="7" * 64,
+            parent_audit_sha256="8" * 64,
+            parent_cell_bindings={},
+            broker={"swap_mode": 1},
             views={"base": {}, "stress": {}, "fee": {}},
-            start="2024-09-01T00:00:00+00:00", end="2026-10-24T00:00:00+00:00",
-            original_floors={}, benchmark_hashes={}, domains=DOMAINS,
-            finite_domain=5184, initial=identity(RULES), lanes=["profit", "repair"],
+            start="2024-09-01T00:00:00+00:00",
+            end="2026-10-24T00:00:00+00:00",
+            original_floors={},
+            benchmark_hashes={},
+            domains=DOMAINS,
+            finite_domain=5184,
+            initial=identity(RULES),
+            lanes=["profit", "repair"],
             risk_fields=["dd", "recovery", "severity", "streak"],
-            catalog_sha256=digest(self.campaign / "catalog.json"), batch_size=32,
-            cost_status="COST_INCONCLUSIVE", holdout=False, claim="frozen grid only",
+            catalog_sha256=digest(self.campaign / "catalog.json"),
+            batch_size=32,
+            cost_status="COST_INCONCLUSIVE",
+            holdout=False,
+            claim="frozen grid only",
         )
         save(self.campaign / "protocol.json", self.protocol)
-        save(self.campaign / "checkpoint.json", dict(
-            protocol_sha256=digest(self.campaign / "protocol.json"),
-            selected={"profit": identity(RULES), "repair": identity(RULES)},
-            status="PARTIAL", visited_cases=123, finite_domain=5184,
-        ))
+        save(
+            self.campaign / "checkpoint.json",
+            dict(
+                protocol_sha256=digest(self.campaign / "protocol.json"),
+                selected={"profit": identity(RULES), "repair": identity(RULES)},
+                status="PARTIAL",
+                visited_cases=123,
+                finite_domain=5184,
+            ),
+        )
 
     def test_partial_manifest_preserves_native_rules_and_large_input_declarations(self):
         report = contract.build_manifest(self.campaign)
@@ -134,9 +228,16 @@ class ManifestTests(unittest.TestCase):
         self.assertFalse(manifest["runtime_qualified"])
         self.assertEqual(manifest["adapter_parity"], "NOT_TESTED")
         self.assertEqual(manifest["inputs"]["hash_status"], "DECLARED_NOT_REHASHED")
-        gaps = {row["capability"] for row in report["data"]["compatibility"] if row["status"] == "GAP"}
-        self.assertTrue({"candidate_contract", "daily_loss_count", "post_loss_cooldown", "buy_protection"} <= gaps)
-        self.assertTrue({"detector_rsi_period", "detector_rsi_threshold", "detector_sell_lookback"} <= gaps)
+        gaps = {
+            row["capability"] for row in report["data"]["compatibility"] if row["status"] == "GAP"
+        }
+        self.assertTrue(
+            {"candidate_contract", "daily_loss_count", "post_loss_cooldown", "buy_protection"}
+            <= gaps
+        )
+        self.assertTrue(
+            {"detector_rsi_period", "detector_rsi_threshold", "detector_sell_lookback"} <= gaps
+        )
 
     def test_source_drift_and_catalog_tamper_fail_closed(self):
         source = self.root / "scripts/c22h4/strategy.py"
@@ -145,8 +246,11 @@ class ManifestTests(unittest.TestCase):
             contract.build_manifest(self.campaign)
 
     def test_unknown_missing_and_wrong_type_rule_fields_fail_closed(self):
-        for change in (lambda r: r.update(unknown=1), lambda r: r.pop("cooldown_bars"),
-                       lambda r: r.update(max_daily_losses=True)):
+        for change in (
+            lambda r: r.update(unknown=1),
+            lambda r: r.pop("cooldown_bars"),
+            lambda r: r.update(max_daily_losses=True),
+        ):
             with self.subTest(change=change):
                 cases = deepcopy(self.cases)
                 target = next(c for c in cases if c["name"] == identity(RULES))
@@ -170,25 +274,43 @@ class ManifestTests(unittest.TestCase):
     def finish_fixture(self):
         selected = {"profit": identity(RULES), "repair": identity(RULES)}
         save(self.campaign / "results.json", dict(status="EXHAUSTIVE_COMPLETE", selected=selected))
-        complete = dict(status="EXHAUSTIVE_COMPLETE", visited_cases=5184,
-                        processed_batches=162, selected=selected, fresh_repeats=6,
-                        artifacts={name: digest(self.campaign / name) for name in (
-                            "protocol.json", "catalog.json", "results.json")})
+        complete = dict(
+            status="EXHAUSTIVE_COMPLETE",
+            visited_cases=5184,
+            processed_batches=162,
+            selected=selected,
+            fresh_repeats=6,
+            artifacts={
+                name: digest(self.campaign / name)
+                for name in ("protocol.json", "catalog.json", "results.json")
+            },
+        )
         save(self.campaign / "COMPLETE.json", complete)
         audit_source = self.root / "scripts/research/c22_exhaustive_verify.py"
         helper_source = self.root / "scripts/research/c22_learning_verify.py"
         audit_source.parent.mkdir(parents=True, exist_ok=True)
         audit_source.write_text("# independent audit fixture\n")
         helper_source.write_text("# independent helper fixture\n")
-        audit = dict(status="PASS", finite_domain=5184, visited_cases=5184,
-                     processed_batches=162, raw_cells=15552, raw_qualified=1,
-                     cent_cells=3, cells=15555, selected=selected,
-                     parent_completion_sha256=digest(self.campaign / "COMPLETE.json"),
-                     input_manifest_sha256=self.protocol["input_manifest_sha256"],
-                     source_sha256=digest(audit_source), helper_sha256=digest(helper_source),
-                     independent_full_tick_dd={f"{identity(RULES)}-{view}-{guard}": {"max_dd_pct": 1.0}
-                                              for view in ("base", "stress", "fee")
-                                              for guard in ("raw", "cent")})
+        audit = dict(
+            status="PASS",
+            finite_domain=5184,
+            visited_cases=5184,
+            processed_batches=162,
+            raw_cells=15552,
+            raw_qualified=1,
+            cent_cells=3,
+            cells=15555,
+            selected=selected,
+            parent_completion_sha256=digest(self.campaign / "COMPLETE.json"),
+            input_manifest_sha256=self.protocol["input_manifest_sha256"],
+            source_sha256=digest(audit_source),
+            helper_sha256=digest(helper_source),
+            independent_full_tick_dd={
+                f"{identity(RULES)}-{view}-{guard}": {"max_dd_pct": 1.0}
+                for view in ("base", "stress", "fee")
+                for guard in ("raw", "cent")
+            },
+        )
         save(self.campaign / "independent-verification.json", audit)
         return audit
 
@@ -202,9 +324,12 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(report["data"]["manifest"]["data_cutoff_utc"], "2026-10-24T00:00:00+00:00")
 
     def test_incomplete_or_stale_pass_audit_cannot_bind(self):
-        for key, value in (("raw_cells", 15551), ("cent_cells", 0),
-                           ("parent_completion_sha256", "0" * 64),
-                           ("independent_full_tick_dd", {})):
+        for key, value in (
+            ("raw_cells", 15551),
+            ("cent_cells", 0),
+            ("parent_completion_sha256", "0" * 64),
+            ("independent_full_tick_dd", {}),
+        ):
             with self.subTest(field=key):
                 audit = self.finish_fixture()
                 audit[key] = value
@@ -226,7 +351,7 @@ class ManifestTests(unittest.TestCase):
         with results.open("ab") as stream:
             block = b" " * (1024 * 1024)
             while remaining:
-                piece = block[:min(remaining, len(block))]
+                piece = block[: min(remaining, len(block))]
                 stream.write(piece)
                 remaining -= len(piece)
         complete_path = self.campaign / "COMPLETE.json"
@@ -243,7 +368,9 @@ class ManifestTests(unittest.TestCase):
         result_ref = next(ref for ref in refs if ref["path"] == str(results.resolve()))
         self.assertGreater(result_ref["size_bytes"], 32 * 1024 * 1024)
         self.assertEqual(result_ref["hash_status"], "VERIFIED")
-        self.assertEqual(report["data"]["manifest"]["inputs"]["hash_status"], "DECLARED_NOT_REHASHED")
+        self.assertEqual(
+            report["data"]["manifest"]["inputs"]["hash_status"], "DECLARED_NOT_REHASHED"
+        )
 
     def test_metadata_above_256_mib_is_rejected_before_json_read(self):
         catalog = self.campaign / "catalog.json"
@@ -285,9 +412,13 @@ class EventParityTests(unittest.TestCase):
 
     def test_changed_buy_sell_geometry_admission_risk_cooldown_or_protection_fails(self):
         for index, key, value in (
-            (0, "stop", 2989.99), (2, "target", 2991.49), (2, "admitted", True),
-            (0, "risk_usd", 10.21), (1, "cooldown_until_utc", "2026-10-27T00:15:00+00:00"),
-            (1, "protection", "inactive"), (1, "net_usd", 0.0),
+            (0, "stop", 2989.99),
+            (2, "target", 2991.49),
+            (2, "admitted", True),
+            (0, "risk_usd", 10.21),
+            (1, "cooldown_until_utc", "2026-10-27T00:15:00+00:00"),
+            (1, "protection", "inactive"),
+            (1, "net_usd", 0.0),
         ):
             with self.subTest(field=key):
                 self.obs = self.adapter_events()
@@ -297,7 +428,9 @@ class EventParityTests(unittest.TestCase):
                 self.assertTrue(report["data"]["mismatches"])
 
     def test_self_same_source_or_missing_adapter_never_passes(self):
-        self.assertEqual(contract.compare_events(self.reference, self.reference)["status"], "NOT_TESTED")
+        self.assertEqual(
+            contract.compare_events(self.reference, self.reference)["status"], "NOT_TESTED"
+        )
         self.obs["implementation"]["source_sha256"] = self.ref["implementation"]["source_sha256"]
         self.obs["implementation"]["source_path"] = self.ref["implementation"]["source_path"]
         self.assertEqual(self.compare()["status"], "NOT_TESTED")

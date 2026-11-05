@@ -10,7 +10,8 @@ from .artifacts import make_report, read_json, source_ref
 
 
 def build_dashboard(
-    report_paths: list[Path], demo_report_path: Path | None = None,
+    report_paths: list[Path],
+    demo_report_path: Path | None = None,
 ) -> dict[str, Any]:
     panels: list[dict[str, Any]] = []
     sources: list[dict[str, Any]] = []
@@ -43,24 +44,37 @@ def build_dashboard(
         for cohort in demo["cohorts"]:
             if not cohort.get("cohort_id"):
                 raise ValueError("Demo evidence requires explicit cohort identities")
-            panels.append({
-                "cohort_class": "existing_demo_broker_evidence",
-                "source": source,
-                "evidence": {
-                    "artifact_type": "existing_demo_evidence", "status": "INCONCLUSIVE",
-                    "cohort_id": cohort["cohort_id"], "candidate_id": None,
-                    "coverage": {"from_utc": demo.get("since_utc"), "until_utc": demo.get("until_utc")},
-                    "reasons": demo.get("limitations", []), "data": cohort,
-                    "dd_definition": "observed sampled-equity DD; not full-tick DD",
-                },
-            })
+            panels.append(
+                {
+                    "cohort_class": "existing_demo_broker_evidence",
+                    "source": source,
+                    "evidence": {
+                        "artifact_type": "existing_demo_evidence",
+                        "status": "INCONCLUSIVE",
+                        "cohort_id": cohort["cohort_id"],
+                        "candidate_id": None,
+                        "coverage": {
+                            "from_utc": demo.get("since_utc"),
+                            "until_utc": demo.get("until_utc"),
+                        },
+                        "reasons": demo.get("limitations", []),
+                        "data": cohort,
+                        "dd_definition": "observed sampled-equity DD; not full-tick DD",
+                    },
+                }
+            )
         sources.append(source)
     if not panels:
         raise ValueError("Dashboard needs actual evidence; empty panels are not reports")
     return make_report(
-        "preparation_dashboard", "PREPARATION_ONLY", sources=sources,
-        coverage={"panels": len(panels)}, reasons=list(dict.fromkeys(blockers)),
-        panels=panels, profitability="INCONCLUSIVE", real_money="PROHIBITED",
+        "preparation_dashboard",
+        "PREPARATION_ONLY",
+        sources=sources,
+        coverage={"panels": len(panels)},
+        reasons=list(dict.fromkeys(blockers)),
+        panels=panels,
+        profitability="INCONCLUSIVE",
+        real_money="PROHIBITED",
         limitations=[
             "Observed account-cost samples are not attributed candidate forward returns",
             "Existing Demo cohorts remain separate from research and future replacement cohorts",
@@ -74,7 +88,7 @@ def canvas_source(dashboard: dict[str, Any]) -> str:
     """Render the same snapshot as a self-contained managed Canvas source."""
     if dashboard.get("artifact_type") != "preparation_dashboard" or not dashboard["data"]["panels"]:
         raise ValueError("Canvas needs an actual preparation dashboard")
-    template = '''import {H1,H2,Text,Stack,Table,Select,Callout,Link,useState,useHostTheme} from "cursor/canvas";
+    template = """import {H1,H2,Text,Stack,Table,Select,Callout,Link,useState,useHostTheme} from "cursor/canvas";
 type Evidence={artifact_type:string;status:string;candidate_id?:string|null;cohort_id?:string|null;coverage:Record<string,unknown>;reasons?:string[];data:Record<string,unknown>;[field:string]:unknown};
 type Panel={cohort_class:string;source:{path:string;sha256:string|null;[field:string]:unknown};evidence:Evidence};
 type Snapshot={created_utc:string;status:string;data:{panels:Panel[];limitations:string[];[field:string]:unknown};[field:string]:unknown};
@@ -96,5 +110,7 @@ export default function C22PreparationEvidence(){
  <H2>ข้อจำกัดของหลักฐาน</H2><ul>{DATA.data.limitations.map(item=><li key={item}>{item}</li>)}</ul>
  </Stack></div>;
 }
-'''
-    return template.replace("__SNAPSHOT__", json.dumps(dashboard, ensure_ascii=False, allow_nan=False))
+"""
+    return template.replace(
+        "__SNAPSHOT__", json.dumps(dashboard, ensure_ascii=False, allow_nan=False)
+    )

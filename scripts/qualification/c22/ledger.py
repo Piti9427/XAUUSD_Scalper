@@ -108,16 +108,21 @@ def _position(
     else:
         status = "COMPLETE"
     return dict(
-        position_id=ident, status=status, reasons=sorted(set(reasons)),
+        position_id=ident,
+        status=status,
+        reasons=sorted(set(reasons)),
         symbol=deals[0]["symbol"] if deals else None,
         magic_values=sorted({row["magic"] for row in deals}),
         side={0: "BUY", 1: "SELL"}.get(side) if side is not None else None,
         deal_ids=[row["ticket"] for row in deals],
-        deal_count=len(deals), entry_volume=entry_volume, exit_volume=exit_volume,
+        deal_count=len(deals),
+        entry_volume=entry_volume,
+        exit_volume=exit_volume,
         outstanding_volume=entry_volume - exit_volume,
         opened_utc=entries[0]["utc"] if entries else None,
         closed_utc=exits[-1]["utc"] if status == "COMPLETE" else None,
-        observed=_cash(deals) if not invalid else None, currency=currency,
+        observed=_cash(deals) if not invalid else None,
+        currency=currency,
         comparison=dict(status="NOT_COMPARED", reasons=["position_not_complete"]),
         slippage=dict(status="NOT_MEASURED", reason="no_supported_contemporaneous_decision_quote"),
     )
@@ -150,7 +155,9 @@ def _policy_reasons(policy: Any, fingerprint: Any, currency: str | None) -> list
 
 
 def _compare(
-    position: dict[str, Any], rows: list[dict[str, Any]], policy: Any,
+    position: dict[str, Any],
+    rows: list[dict[str, Any]],
+    policy: Any,
     common_reasons: list[str],
 ) -> dict[str, Any]:
     if position["status"] != "COMPLETE":
@@ -182,11 +189,18 @@ def _compare(
                 # Runtime semantics: all fills at the rollover timestamp count.
                 held = math.fsum(
                     row["volume"] * (1 if row["entry"] == 0 else -1)
-                    for row in rows if row["time_msc"] <= rollover.timestamp() * 1000
+                    for row in rows
+                    if row["time_msc"] <= rollover.timestamp() * 1000
                 )
                 rate = float(item["buy" if position["side"] == "BUY" else "sell"])
-                rollovers.append(dict(rollover_utc=rollover.isoformat(), held_lots=held,
-                                      rate_usd_per_lot=rate, amount=rate * held))
+                rollovers.append(
+                    dict(
+                        rollover_utc=rollover.isoformat(),
+                        held_lots=held,
+                        rate_usd_per_lot=rate,
+                        amount=rate * held,
+                    )
+                )
         day += timedelta(days=1)
     if reasons:
         return dict(status="COST_INCONCLUSIVE", reasons=sorted(set(reasons)))
@@ -200,11 +214,17 @@ def _compare(
     if charges > allowance + 1e-8:
         reasons.append("charge_allowance_exceeded")
     return dict(
-        status="COST_DRIFT" if reasons else "OBSERVED_COSTS_MATCH", reasons=reasons,
-        modeled_swap=modeled, observed_swap=observed["swap"], swap_delta=delta,
-        observed_charges=charges, charge_allowance=allowance,
-        charge_test="UPPER_ALLOWANCE_NOT_EXACT_TARIFF_EQUALITY", rollovers=rollovers,
-        swap_tolerance_usd=SWAP_TOLERANCE, charge_tolerance_usd=1e-8,
+        status="COST_DRIFT" if reasons else "OBSERVED_COSTS_MATCH",
+        reasons=reasons,
+        modeled_swap=modeled,
+        observed_swap=observed["swap"],
+        swap_delta=delta,
+        observed_charges=charges,
+        charge_allowance=allowance,
+        charge_test="UPPER_ALLOWANCE_NOT_EXACT_TARIFF_EQUALITY",
+        rollovers=rollovers,
+        swap_tolerance_usd=SWAP_TOLERANCE,
+        charge_tolerance_usd=1e-8,
     )
 
 
@@ -221,11 +241,25 @@ def reconcile_export(export_path: Path, policy_path: Path | None = None) -> dict
     try:
         raw = read_json(export_path)
     except ValueError:
-        return make_report("observed_cost_reconciliation", "INVALID", sources=sources,
-                           coverage={}, reasons=["invalid_export_json"], positions=[], currency=None)
+        return make_report(
+            "observed_cost_reconciliation",
+            "INVALID",
+            sources=sources,
+            coverage={},
+            reasons=["invalid_export_json"],
+            positions=[],
+            currency=None,
+        )
     if not isinstance(raw, dict) or not isinstance(raw.get("history_deals"), list):
-        return make_report("observed_cost_reconciliation", "INVALID", sources=sources,
-                           coverage={}, reasons=["mt5_history_deals_array_missing"], positions=[], currency=None)
+        return make_report(
+            "observed_cost_reconciliation",
+            "INVALID",
+            sources=sources,
+            coverage={},
+            reasons=["mt5_history_deals_array_missing"],
+            positions=[],
+            currency=None,
+        )
     reasons = []
     stamps = {}
     for field in ("captured_utc", "history_start_utc"):
@@ -272,9 +306,17 @@ def reconcile_export(export_path: Path, policy_path: Path | None = None) -> dict
     if errors:
         reasons.append("invalid_deal_records")
     ordered = sorted(unique.values(), key=lambda row: (row["time_msc"], row["ticket"]))
-    if ordered and "captured_utc" in stamps and ordered[-1]["time_msc"] > stamps["captured_utc"].timestamp() * 1000:
+    if (
+        ordered
+        and "captured_utc" in stamps
+        and ordered[-1]["time_msc"] > stamps["captured_utc"].timestamp() * 1000
+    ):
         reasons.append("deal_after_export_capture")
-    if ordered and "history_start_utc" in stamps and ordered[0]["time_msc"] < stamps["history_start_utc"].timestamp() * 1000:
+    if (
+        ordered
+        and "history_start_utc" in stamps
+        and ordered[0]["time_msc"] < stamps["history_start_utc"].timestamp() * 1000
+    ):
         reasons.append("deal_before_requested_history_start")
     grouped: defaultdict[int, list[dict[str, Any]]] = defaultdict(list)
     nontrade: list[dict[str, Any]] = []
@@ -282,10 +324,19 @@ def reconcile_export(export_path: Path, policy_path: Path | None = None) -> dict
         if row["type"] in (0, 1):
             grouped[row["position_id"]].append(row)
         else:
-            nontrade.append(dict(deal_id=row["ticket"], utc=row["utc"], type=row["type"],
-                                 observed=_cash([row]), reason="nontrade_cash_excluded_from_position_pnl"))
-    positions = [_position(ident, deals, currency, ident in bad_positions)
-                 for ident, deals in sorted(grouped.items())]
+            nontrade.append(
+                dict(
+                    deal_id=row["ticket"],
+                    utc=row["utc"],
+                    type=row["type"],
+                    observed=_cash([row]),
+                    reason="nontrade_cash_excluded_from_position_pnl",
+                )
+            )
+    positions = [
+        _position(ident, deals, currency, ident in bad_positions)
+        for ident, deals in sorted(grouped.items())
+    ]
     # Preserve even positions whose every available deal was invalid.
     for ident in sorted(bad_positions - grouped.keys()):
         if ident > 0:
@@ -294,19 +345,33 @@ def reconcile_export(export_path: Path, policy_path: Path | None = None) -> dict
     for position in positions:
         if position["status"] == "COMPLETE" and isinstance(policy, dict):
             try:
-                position["pre_review"] = parse_utc(position["closed_utc"]) < parse_utc(policy["reviewed_utc"])
+                position["pre_review"] = parse_utc(position["closed_utc"]) < parse_utc(
+                    policy["reviewed_utc"]
+                )
                 pre_review += position["pre_review"]
             except (KeyError, TypeError, ValueError):
                 position["pre_review"] = None
         else:
             position["pre_review"] = None
-        position["comparison"] = _compare(position, grouped.get(position["position_id"], []), policy, common_reasons)
-    compared = [row for row in positions if row["comparison"]["status"] in ("OBSERVED_COSTS_MATCH", "COST_DRIFT")]
+        position["comparison"] = _compare(
+            position, grouped.get(position["position_id"], []), policy, common_reasons
+        )
+    compared = [
+        row
+        for row in positions
+        if row["comparison"]["status"] in ("OBSERVED_COSTS_MATCH", "COST_DRIFT")
+    ]
     complete = [row for row in positions if row["status"] == "COMPLETE"]
-    counts = {key: sum(row["status"] == status for row in positions) for key, status in (
-        ("complete_positions", "COMPLETE"), ("open_positions", "OPEN"),
-        ("orphan_positions", "ORPHAN"), ("unsupported_positions", "UNSUPPORTED"),
-        ("invalid_positions", "INVALID"))}
+    counts = {
+        key: sum(row["status"] == status for row in positions)
+        for key, status in (
+            ("complete_positions", "COMPLETE"),
+            ("open_positions", "OPEN"),
+            ("orphan_positions", "ORPHAN"),
+            ("unsupported_positions", "UNSUPPORTED"),
+            ("invalid_positions", "INVALID"),
+        )
+    }
     if reasons or counts["invalid_positions"]:
         status = "INVALID"
     elif any(row["comparison"]["status"] == "COST_DRIFT" for row in positions):
@@ -315,41 +380,80 @@ def reconcile_export(export_path: Path, policy_path: Path | None = None) -> dict
         status = "OBSERVED_COSTS_MATCH"
     else:
         status = "COST_INCONCLUSIVE"
-    report_reasons = sorted(set(reasons + common_reasons + [reason for row in positions
-        for reason in row["reasons"] + row["comparison"]["reasons"]]))
+    report_reasons = sorted(
+        set(
+            reasons
+            + common_reasons
+            + [
+                reason
+                for row in positions
+                for reason in row["reasons"] + row["comparison"]["reasons"]
+            ]
+        )
+    )
     if not positions:
         report_reasons.append("no_observed_trade_positions")
     coverage = dict(
-        input_records=len(raw["history_deals"]), unique_deals=len(unique), duplicates_dropped=duplicates,
-        trade_deals=sum(len(rows) for rows in grouped.values()), nontrade_deals=len(nontrade),
-        invalid_deals=len(errors), position_count=len(positions), **counts,
-        compared_positions=len(compared), unqualified_complete_positions=len(complete) - len(compared),
+        input_records=len(raw["history_deals"]),
+        unique_deals=len(unique),
+        duplicates_dropped=duplicates,
+        trade_deals=sum(len(rows) for rows in grouped.values()),
+        nontrade_deals=len(nontrade),
+        invalid_deals=len(errors),
+        position_count=len(positions),
+        **counts,
+        compared_positions=len(compared),
+        unqualified_complete_positions=len(complete) - len(compared),
         pre_review_positions=pre_review,
-        export_captured_utc=stamps["captured_utc"].isoformat() if "captured_utc" in stamps else None,
-        history_requested_since_utc=stamps["history_start_utc"].isoformat() if "history_start_utc" in stamps else None,
+        export_captured_utc=stamps["captured_utc"].isoformat()
+        if "captured_utc" in stamps
+        else None,
+        history_requested_since_utc=stamps["history_start_utc"].isoformat()
+        if "history_start_utc" in stamps
+        else None,
         observed_first_utc=ordered[0]["utc"] if ordered else None,
         observed_last_utc=ordered[-1]["utc"] if ordered else None,
-        provider_history_completeness="NOT_CERTIFIED", slippage="NOT_MEASURED",
+        provider_history_completeness="NOT_CERTIFIED",
+        slippage="NOT_MEASURED",
     )
     trade_rows = [row for rows in grouped.values() for row in rows]
     coverage.update(
-        observed_trade_first_utc=min(trade_rows, key=lambda row: row["time_msc"])["utc"] if trade_rows else None,
-        observed_trade_last_utc=max(trade_rows, key=lambda row: row["time_msc"])["utc"] if trade_rows else None,
+        observed_trade_first_utc=min(trade_rows, key=lambda row: row["time_msc"])["utc"]
+        if trade_rows
+        else None,
+        observed_trade_last_utc=max(trade_rows, key=lambda row: row["time_msc"])["utc"]
+        if trade_rows
+        else None,
         input_reordered=list(unique.values()) != ordered,
     )
-    totals = ({key: math.fsum(row["observed"][key] for row in complete)
-               for key in (*CASH_FIELDS, "net")} if complete else None)
+    totals = (
+        {key: math.fsum(row["observed"][key] for row in complete) for key in (*CASH_FIELDS, "net")}
+        if complete
+        else None
+    )
     return make_report(
-        "observed_cost_reconciliation", status, sources=sources, coverage=coverage,
-        reasons=report_reasons, currency=currency, account_fingerprint=fingerprint,
-        positions=positions, nontrade_records=nontrade, invalid_records=errors,
+        "observed_cost_reconciliation",
+        status,
+        sources=sources,
+        coverage=coverage,
+        reasons=report_reasons,
+        currency=currency,
+        account_fingerprint=fingerprint,
+        positions=positions,
+        nontrade_records=nontrade,
+        invalid_records=errors,
         scope="ALL_EXPORTED_POSITIONS_NO_STRATEGY_FILTER",
         strategy_attribution="NOT_INFERRED_FROM_ACCOUNT_TOTALS",
-        complete_position_cash=totals, policy_reviewed_utc=policy.get("reviewed_utc") if isinstance(policy, dict) else None,
+        complete_position_cash=totals,
+        policy_reviewed_utc=policy.get("reviewed_utc") if isinstance(policy, dict) else None,
         units=dict(cash=currency, volume="lot", price="symbol_price", timestamp="aware UTC"),
-        ordering="time_msc_then_ticket", profitability="INCONCLUSIVE", cost_attestation_created=False,
-        limitations=["Observed ledgers and supplied documents only; no historical completeness certification",
-                     "Charge comparison checks an upper allowance, not exact tariff equality",
-                     "Slippage requires a supported contemporaneous decision quote; none is inferred",
-                     "No source policy is attested, renewed or modified by this report"],
+        ordering="time_msc_then_ticket",
+        profitability="INCONCLUSIVE",
+        cost_attestation_created=False,
+        limitations=[
+            "Observed ledgers and supplied documents only; no historical completeness certification",
+            "Charge comparison checks an upper allowance, not exact tariff equality",
+            "Slippage requires a supported contemporaneous decision quote; none is inferred",
+            "No source policy is attested, renewed or modified by this report",
+        ],
     )

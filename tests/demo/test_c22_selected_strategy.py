@@ -10,8 +10,16 @@ import unittest
 import pandas as pd
 
 from scripts.c22_selected.strategy import (
-    CANDIDATE_ID, CONTRACT, MAGIC, ROOT, SNAPSHOT, SOURCE_PATHS,
-    SelectedBarCache, SelectedStrategy, decide, verify_sources,
+    CANDIDATE_ID,
+    CONTRACT,
+    MAGIC,
+    ROOT,
+    SNAPSHOT,
+    SOURCE_PATHS,
+    SelectedBarCache,
+    SelectedStrategy,
+    decide,
+    verify_sources,
 )
 from scripts.research.c22_frequency_adapter import prepare
 from tests.demo.test_c22h4_demo import buy_bars
@@ -19,16 +27,34 @@ from tests.demo.test_c22h4_strategy import bars
 
 
 EXPECTED_RULES = {
-    "failed_closes": 0, "reset_after_exit": False, "stagnant_bars": 0,
-    "entry_mode": "immediate", "stop_mode": "atr", "protect_mode": "break_even",
-    "entry_guard": "off", "buy_pause_drawdown": 0.0, "risk_mode": "static",
-    "risk_cap": 0.1, "daily_loss_limit": 0.1, "target_atr": 3.0,
-    "min_depth_atr": 0.0, "target_rr": 1.35, "cooldown_bars": 2,
-    "session_mode": "all", "max_daily_losses": 2, "protect_after_r": 1.0,
-    "stop_atr": 2.5, "buy_stop_atr": 2.5, "buy_target_rr": 3.0,
-    "buy_protect_mode": "break_even", "sizing_mode": "fixed",
-    "holding_mode": "legacy", "buy_stop_mode": None, "buy_risk_cap": None,
-    "buy_sizing_mode": None, "sell_stop_mode": None,
+    "failed_closes": 0,
+    "reset_after_exit": False,
+    "stagnant_bars": 0,
+    "entry_mode": "immediate",
+    "stop_mode": "atr",
+    "protect_mode": "break_even",
+    "entry_guard": "off",
+    "buy_pause_drawdown": 0.0,
+    "risk_mode": "static",
+    "risk_cap": 0.1,
+    "daily_loss_limit": 0.1,
+    "target_atr": 3.0,
+    "min_depth_atr": 0.0,
+    "target_rr": 1.35,
+    "cooldown_bars": 2,
+    "session_mode": "all",
+    "max_daily_losses": 2,
+    "protect_after_r": 1.0,
+    "stop_atr": 2.5,
+    "buy_stop_atr": 2.5,
+    "buy_target_rr": 3.0,
+    "buy_protect_mode": "break_even",
+    "sizing_mode": "fixed",
+    "holding_mode": "legacy",
+    "buy_stop_mode": None,
+    "buy_risk_cap": None,
+    "buy_sizing_mode": None,
+    "sell_stop_mode": None,
 }
 
 
@@ -39,10 +65,15 @@ def signal_bars(direction):
 
 def selected_config(root=ROOT):
     return {
-        "snapshot": SNAPSHOT, "contract_id": CANDIDATE_ID,
-        "contract": dict(CONTRACT), "symbol": "XAUUSDm", "volume": 0.01,
+        "snapshot": SNAPSHOT,
+        "contract_id": CANDIDATE_ID,
+        "contract": dict(CONTRACT),
+        "symbol": "XAUUSDm",
+        "volume": 0.01,
         "real_money": "PROHIBITED",
-        "source_hashes": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in SOURCE_PATHS},
+        "source_hashes": {
+            name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in SOURCE_PATHS
+        },
     }
 
 
@@ -53,18 +84,35 @@ class SelectedStrategyTests(unittest.TestCase):
         self.assertEqual(asdict(cache.rules), EXPECTED_RULES)
         self.assertEqual(CANDIDATE_ID, "26b8bcd69e043653")
         self.assertEqual(
-            hashlib.sha256(json.dumps(asdict(cache.rules), sort_keys=True).encode()).hexdigest()[:16],
+            hashlib.sha256(json.dumps(asdict(cache.rules), sort_keys=True).encode()).hexdigest()[
+                :16
+            ],
             "26b8bcd69e043653",
         )
 
     def test_both_signal_directions_match_frozen_research_seed(self):
         seed = {
-            "strategy": "reward156", "formula": "archived", "buy_pause_drawdown": 0.0,
-            "risk_cap": 0.1, "rsi_period": 7, "rsi_threshold": 30, "sell_lookback": 48,
-            "sell_ema": 50, "macro_span": 200, "buy_stop_atr": 2.0, "buy_target_rr": 2.0,
-            "buy_protect_mode": "break_even", "stop_atr": 2.5, "sell_target": "r1.35",
-            "protect_mode": "break_even", "daily_loss_limit": 0.1, "max_daily_losses": 2,
-            "cooldown_bars": 0, "entry_session": "all", "risk_mode": "static", "buy_ema": 50,
+            "strategy": "reward156",
+            "formula": "archived",
+            "buy_pause_drawdown": 0.0,
+            "risk_cap": 0.1,
+            "rsi_period": 7,
+            "rsi_threshold": 30,
+            "sell_lookback": 48,
+            "sell_ema": 50,
+            "macro_span": 200,
+            "buy_stop_atr": 2.0,
+            "buy_target_rr": 2.0,
+            "buy_protect_mode": "break_even",
+            "stop_atr": 2.5,
+            "sell_target": "r1.35",
+            "protect_mode": "break_even",
+            "daily_loss_limit": 0.1,
+            "max_daily_losses": 2,
+            "cooldown_bars": 0,
+            "entry_session": "all",
+            "risk_mode": "static",
+            "buy_ema": 50,
         }
         for direction in (-1, 1):
             with self.subTest(direction=direction):
@@ -77,8 +125,12 @@ class SelectedStrategyTests(unittest.TestCase):
 
     def test_rounded_buy_sell_geometry_and_cost_inclusive_cap(self):
         spec = {
-            "trade_tick_size": 0.001, "trade_contract_size": 100,
-            "volume_min": 0.01, "volume_max": 100, "volume_step": 0.01, "leverage": 2000,
+            "trade_tick_size": 0.001,
+            "trade_contract_size": 100,
+            "volume_min": 0.01,
+            "volume_max": 100,
+            "volume_step": 0.01,
+            "leverage": 2000,
         }
         costs = {"slippage_allowance_price": 0.1, "commission_per_lot": 7.0}
         for direction, expected in ((1, (100.5, 97.999, 108.003)), (-1, (100.1, 102.601, 96.724))):
@@ -128,11 +180,18 @@ class SelectedStrategyTests(unittest.TestCase):
             config = selected_config(root)
             verify_sources(config, root=root)
             for change in (
-                {"contract_id": "other"}, {"snapshot": "old-demo"}, {"volume": 0.02},
-                {"real_money": "ALLOWED"}, {"contract": dict(CONTRACT, risk_cap=0.2)},
-                {"contract": dict(CONTRACT, cooldown_bars=0)}, {"source_hashes": None},
+                {"contract_id": "other"},
+                {"snapshot": "old-demo"},
+                {"volume": 0.02},
+                {"real_money": "ALLOWED"},
+                {"contract": dict(CONTRACT, risk_cap=0.2)},
+                {"contract": dict(CONTRACT, cooldown_bars=0)},
+                {"source_hashes": None},
             ):
-                with self.subTest(change=change), self.assertRaisesRegex(ValueError, "source_drift"):
+                with (
+                    self.subTest(change=change),
+                    self.assertRaisesRegex(ValueError, "source_drift"),
+                ):
                     verify_sources(config | change, root=root)
             (root / SOURCE_PATHS[0]).write_text("# changed\n")
             with self.assertRaisesRegex(ValueError, "source_drift"):
@@ -145,7 +204,9 @@ class SelectedStrategyTests(unittest.TestCase):
         self.assertTrue(strategy.protects(1))
         self.assertTrue(strategy.protects(-1))
         self.assertFalse(strategy.protects(0))
-        self.assertEqual((strategy.magic, strategy.max_daily_losses, strategy.cooldown_bars), (MAGIC, 2, 2))
+        self.assertEqual(
+            (strategy.magic, strategy.max_daily_losses, strategy.cooldown_bars), (MAGIC, 2, 2)
+        )
 
     def test_native_rules_mutation_cannot_change_live_geometry(self):
         cache = SelectedBarCache()
@@ -159,5 +220,9 @@ class SelectedStrategyTests(unittest.TestCase):
         cache.append(full.iloc[:-8])
         earlier = cache.frame.copy()
         cache.append(full.iloc[-100:])
-        pd.testing.assert_series_equal(cache.frame.loc[earlier.index, "direction"], earlier.direction)
-        pd.testing.assert_series_equal(cache.frame.loc[earlier.index, "macro_ema"], earlier.macro_ema)
+        pd.testing.assert_series_equal(
+            cache.frame.loc[earlier.index, "direction"], earlier.direction
+        )
+        pd.testing.assert_series_equal(
+            cache.frame.loc[earlier.index, "macro_ema"], earlier.macro_ema
+        )

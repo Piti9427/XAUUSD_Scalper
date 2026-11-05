@@ -12,7 +12,9 @@ from scripts.research.param_sweep import audit_outputs, load_candidates
 
 class ParameterCandidatesTests(unittest.TestCase):
     def setUp(self):
-        self.path = Path(__file__).resolve().parents[2] / "docs/research/handoff-parameter-candidates.json"
+        self.path = (
+            Path(__file__).resolve().parents[2] / "docs/research/handoff-parameter-candidates.json"
+        )
         self.source = json.loads(self.path.read_text())
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

@@ -336,9 +336,11 @@ class H4CarryTests(unittest.TestCase):
 
     def test_empty_lock_resume_refuses_links_contents_or_unrelated_artifacts(self):
         for kind in ("symlink", "hardlink", "nonempty", "directory", "orphan"):
-            with self.subTest(kind=kind), tempfile.TemporaryDirectory(
-                dir=subject.ROOT / "runs"
-            ) as temp, tempfile.TemporaryDirectory(dir=subject.ROOT / "runs") as targets:
+            with (
+                self.subTest(kind=kind),
+                tempfile.TemporaryDirectory(dir=subject.ROOT / "runs") as temp,
+                tempfile.TemporaryDirectory(dir=subject.ROOT / "runs") as targets,
+            ):
                 out = Path(temp)
                 lock = out / "campaign.lock"
                 target = Path(targets) / "preserved"
@@ -353,8 +355,13 @@ class H4CarryTests(unittest.TestCase):
                     lock.write_bytes(b"unrelated" if kind == "nonempty" else b"")
                 if kind == "orphan":
                     (out / "catalog.json").write_text("{}")
-                with patch.object(subject, "_freeze_locked") as freeze, patch.object(
-                    subject.fcntl, "flock", side_effect=AssertionError("must_refuse_before_lock")
+                with (
+                    patch.object(subject, "_freeze_locked") as freeze,
+                    patch.object(
+                        subject.fcntl,
+                        "flock",
+                        side_effect=AssertionError("must_refuse_before_lock"),
+                    ),
                 ):
                     with self.assertRaises(ValueError):
                         subject.freeze(out, resume_empty_freeze=True)
@@ -371,9 +378,10 @@ class H4CarryTests(unittest.TestCase):
                 original(*args)
                 (out / "unexpected.json").write_text("preserve")
 
-            with patch.object(subject.fcntl, "flock", side_effect=acquire_and_inject), patch.object(
-                subject, "_freeze_locked"
-            ) as freeze:
+            with (
+                patch.object(subject.fcntl, "flock", side_effect=acquire_and_inject),
+                patch.object(subject, "_freeze_locked") as freeze,
+            ):
                 with self.assertRaisesRegex(ValueError, "nonempty_unrelated"):
                     subject.freeze(out, resume_empty_freeze=True)
                 freeze.assert_not_called()
@@ -384,11 +392,14 @@ class H4CarryTests(unittest.TestCase):
             with self.subTest(flag=flag), self.assertRaisesRegex(ValueError, "explicit_boolean"):
                 subject.safe_out(subject.DEFAULT_OUT, resume_empty_freeze=flag)
         for command in ("preflight", "run", "check"):
-            with self.subTest(command=command), patch(
-                "sys.argv", ["carry", command, "--resume-empty-freeze"]
-            ), patch.object(subject, "plan") as plan, patch.object(subject, "run") as run, patch.object(
-                subject, "validate"
-            ) as validate, redirect_stderr(StringIO()):
+            with (
+                self.subTest(command=command),
+                patch("sys.argv", ["carry", command, "--resume-empty-freeze"]),
+                patch.object(subject, "plan") as plan,
+                patch.object(subject, "run") as run,
+                patch.object(subject, "validate") as validate,
+                redirect_stderr(StringIO()),
+            ):
                 with self.assertRaises(SystemExit) as error:
                     subject.main()
                 self.assertEqual(error.exception.code, 2)

@@ -27,25 +27,56 @@ class SelectedCliTests(unittest.TestCase):
                 setattr(broker.info, name, 0)
             config, cost = selected_config(), policy_v2(broker.now, broker.info)
             journal, review = root / "journal.sqlite3", root / "review.json"
-            prepared = SelectedDemoRunner(mt5=broker, expected_login=123,
-                expected_server="Exness-Demo", journal_path=journal,
-                account_guard_dir=root, config=config, cost_policy=cost)
+            prepared = SelectedDemoRunner(
+                mt5=broker,
+                expected_login=123,
+                expected_server="Exness-Demo",
+                journal_path=journal,
+                account_guard_dir=root,
+                config=config,
+                cost_policy=cost,
+            )
             review.write_text(json.dumps(review_fixture(prepared, broker.now)))
             prepared.close()
             (root / "config.json").write_text(json.dumps(config))
             (root / "cost.json").write_text(json.dumps(cost))
+
             def runner(**kwargs):
                 kwargs["account_guard_dir"] = root
                 return SelectedDemoRunner(**kwargs)
+
             output = StringIO()
-            with patch.dict("os.environ", {
-                "XAUUSD_MT5_LOGIN": "123", "XAUUSD_MT5_SERVER": "Exness-Demo",
-                "XAUUSD_MT5_PASSWORD": "fixture", "MT5_ENABLE_DEMO_ORDER_SEND": "1",
-                "MT5_TERMINAL_PATH": r"C:\C22Demo\terminal64.exe",
-            }, clear=True), patch("scripts.demo_runtime.cli.clock_now", return_value=broker.now), redirect_stdout(output):
-                code = main(["--once", "--execute", "--execution-review", str(review),
-                             "--config", str(root / "config.json"), "--cost-policy", str(root / "cost.json"),
-                             "--journal", str(journal)], mt5=broker, runner_class=runner)
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "XAUUSD_MT5_LOGIN": "123",
+                        "XAUUSD_MT5_SERVER": "Exness-Demo",
+                        "XAUUSD_MT5_PASSWORD": "fixture",
+                        "MT5_ENABLE_DEMO_ORDER_SEND": "1",
+                        "MT5_TERMINAL_PATH": r"C:\C22Demo\terminal64.exe",
+                    },
+                    clear=True,
+                ),
+                patch("scripts.demo_runtime.cli.clock_now", return_value=broker.now),
+                redirect_stdout(output),
+            ):
+                code = main(
+                    [
+                        "--once",
+                        "--execute",
+                        "--execution-review",
+                        str(review),
+                        "--config",
+                        str(root / "config.json"),
+                        "--cost-policy",
+                        str(root / "cost.json"),
+                        "--journal",
+                        str(journal),
+                    ],
+                    mt5=broker,
+                    runner_class=runner,
+                )
             self.assertEqual(code, 0, output.getvalue())
             result = json.loads(output.getvalue().splitlines()[-1])
             self.assertEqual(result["status"], "FILLED", result)
@@ -58,7 +89,10 @@ class SelectedCliTests(unittest.TestCase):
             with self.subTest(argument=argument):
                 broker = Mock()
                 output = StringIO()
-                with patch.dict("os.environ", {"MT5_ENABLE_DEMO_ORDER_SEND": "1"}), redirect_stdout(output):
+                with (
+                    patch.dict("os.environ", {"MT5_ENABLE_DEMO_ORDER_SEND": "1"}),
+                    redirect_stdout(output),
+                ):
                     code = main([argument, "--once"], mt5=broker)
                 self.assertEqual(code, 2)
                 self.assertIn("selected_demo_readiness_pending", output.getvalue())
@@ -73,13 +107,32 @@ class SelectedCliTests(unittest.TestCase):
             broker, runner = Mock(), Mock()
             broker.initialize.return_value = True
             runner.return_value.cycle.return_value = {"status": "WAIT", "execute": False}
-            with patch.dict("os.environ", {
-                "XAUUSD_MT5_LOGIN": "123", "XAUUSD_MT5_SERVER": "Exness-Demo",
-                "XAUUSD_MT5_PASSWORD": "fixture", "MT5_ENABLE_DEMO_ORDER_SEND": "1",
-            }, clear=True), redirect_stdout(StringIO()):
-                code = main(["--once", "--config", str(root / "config.json"),
-                             "--cost-policy", str(root / "cost.json"), "--journal", str(root / "journal.sqlite3")],
-                            mt5=broker, runner_class=runner)
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "XAUUSD_MT5_LOGIN": "123",
+                        "XAUUSD_MT5_SERVER": "Exness-Demo",
+                        "XAUUSD_MT5_PASSWORD": "fixture",
+                        "MT5_ENABLE_DEMO_ORDER_SEND": "1",
+                    },
+                    clear=True,
+                ),
+                redirect_stdout(StringIO()),
+            ):
+                code = main(
+                    [
+                        "--once",
+                        "--config",
+                        str(root / "config.json"),
+                        "--cost-policy",
+                        str(root / "cost.json"),
+                        "--journal",
+                        str(root / "journal.sqlite3"),
+                    ],
+                    mt5=broker,
+                    runner_class=runner,
+                )
             self.assertEqual(code, 0)
             self.assertFalse(runner.call_args.kwargs["execute"])
             broker.order_send.assert_not_called()

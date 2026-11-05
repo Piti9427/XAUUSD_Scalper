@@ -12,12 +12,21 @@ class DashboardTests(unittest.TestCase):
     def test_observed_cost_sample_is_not_forward_profit(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "costs.json"
-            path.write_text(json.dumps({
-                "schema_version": 1, "artifact_type": "observed_cost_reconciliation",
-                "status": "COST_INCONCLUSIVE", "candidate_id": None, "cohort_id": None,
-                "coverage": {"complete_positions": 19}, "reasons": ["historical_calendar_missing"],
-                "data": {"net_pnl": -20.0}, "execution_authorized": False,
-            }))
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "artifact_type": "observed_cost_reconciliation",
+                        "status": "COST_INCONCLUSIVE",
+                        "candidate_id": None,
+                        "cohort_id": None,
+                        "coverage": {"complete_positions": 19},
+                        "reasons": ["historical_calendar_missing"],
+                        "data": {"net_pnl": -20.0},
+                        "execution_authorized": False,
+                    }
+                )
+            )
             report = build_dashboard([path])
             self.assertEqual(report["status"], "PREPARATION_ONLY")
             panel = report["data"]["panels"][0]

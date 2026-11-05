@@ -33,34 +33,86 @@ _DOMAINS = {
     "buy_protect_mode": ["off", "break_even"],
 }
 _FIXED = dict(
-    failed_closes=0, reset_after_exit=False, stagnant_bars=0,
-    entry_mode="immediate", stop_mode="atr", protect_mode="break_even",
-    entry_guard="off", buy_pause_drawdown=0.0, risk_mode="static", risk_cap=0.1,
-    daily_loss_limit=0.1, target_atr=3.0, min_depth_atr=0.0,
-    session_mode="all", max_daily_losses=2, sizing_mode="fixed", holding_mode="legacy",
-    buy_stop_mode=None, buy_risk_cap=None, buy_sizing_mode=None, sell_stop_mode=None,
+    failed_closes=0,
+    reset_after_exit=False,
+    stagnant_bars=0,
+    entry_mode="immediate",
+    stop_mode="atr",
+    protect_mode="break_even",
+    entry_guard="off",
+    buy_pause_drawdown=0.0,
+    risk_mode="static",
+    risk_cap=0.1,
+    daily_loss_limit=0.1,
+    target_atr=3.0,
+    min_depth_atr=0.0,
+    session_mode="all",
+    max_daily_losses=2,
+    sizing_mode="fixed",
+    holding_mode="legacy",
+    buy_stop_mode=None,
+    buy_risk_cap=None,
+    buy_sizing_mode=None,
+    sell_stop_mode=None,
 )
 _PROTOCOL_FIELDS = {
-    "schema", "algorithm", "sources", "input_hashes", "input_manifest_sha256",
-    "parent_complete_sha256", "parent_results_sha256", "parent_audit_sha256",
-    "parent_cell_bindings", "broker", "views", "start", "end", "original_floors",
-    "benchmark_hashes", "domains", "finite_domain", "initial", "lanes",
-    "risk_fields", "catalog_sha256", "batch_size", "cost_status", "holdout", "claim",
+    "schema",
+    "algorithm",
+    "sources",
+    "input_hashes",
+    "input_manifest_sha256",
+    "parent_complete_sha256",
+    "parent_results_sha256",
+    "parent_audit_sha256",
+    "parent_cell_bindings",
+    "broker",
+    "views",
+    "start",
+    "end",
+    "original_floors",
+    "benchmark_hashes",
+    "domains",
+    "finite_domain",
+    "initial",
+    "lanes",
+    "risk_fields",
+    "catalog_sha256",
+    "batch_size",
+    "cost_status",
+    "holdout",
+    "claim",
 }
 _CONTEXT_FIELDS = {
-    "bars_sha256", "quotes_sha256", "spec_sha256", "costs_sha256",
-    "account_state_sha256", "day_state_sha256",
+    "bars_sha256",
+    "quotes_sha256",
+    "spec_sha256",
+    "costs_sha256",
+    "account_state_sha256",
+    "day_state_sha256",
 }
 _EVENT_FIELDS = {
-    "event_id", "time_utc", "kind", "side", "entry", "stop", "target",
-    "admitted", "reason", "risk_usd", "cooldown_until_utc", "protection", "net_usd",
+    "event_id",
+    "time_utc",
+    "kind",
+    "side",
+    "entry",
+    "stop",
+    "target",
+    "admitted",
+    "reason",
+    "risk_usd",
+    "cooldown_until_utc",
+    "protection",
+    "net_usd",
 }
 
 
 def _keys(value: Any, expected: set[str], label: str) -> None:
     if not isinstance(value, dict) or set(value) != expected:
         actual = set(value) if isinstance(value, dict) else set()
-        raise ValueError(f"{label} fields: missing={sorted(expected - actual)}, unknown={sorted(actual - expected)}")
+        raise ValueError(
+            f"{label} fields: missing={sorted(expected - actual)}, unknown={sorted(actual - expected)}"
+        )
 
 
 def _sha(value: Any, label: str) -> str:
@@ -76,7 +128,11 @@ def _candidate(value: Any) -> str:
 
 
 def _local(relative: str) -> Path:
-    if not isinstance(relative, str) or Path(relative).is_absolute() or ".." in Path(relative).parts:
+    if (
+        not isinstance(relative, str)
+        or Path(relative).is_absolute()
+        or ".." in Path(relative).parts
+    ):
         raise ValueError("Unsafe campaign source/input path")
     path = (ROOT / relative).resolve()
     if not path.is_relative_to(ROOT.resolve()):
@@ -121,32 +177,68 @@ def _rules(values: dict) -> str:
 
 def _compatibility(rules: dict, seed: dict) -> list[dict]:
     # Verified current Demo semantics. No claim that candidate plumbing exists.
-    demo = dict(_FIXED, max_daily_losses=1, buy_target_rr=2.0, target_rr=0.0,
-                cooldown_bars=0, stop_atr=2.5, buy_stop_atr=1.5,
-                protect_after_r=1.0, buy_protect_mode="off")
-    names = {"max_daily_losses": "daily_loss_count", "cooldown_bars": "post_loss_cooldown",
-             "buy_protect_mode": "buy_protection", "protect_after_r": "protection_activation"}
-    rows = [dict(capability="candidate_contract", field=None, status="GAP",
-                 current="hardcoded Demo CONTRACT/CONTRACT_ID", candidate="native Rules manifest",
-                 reason="Candidate runtime adapter is not implemented or qualified")]
-    rows += [dict(capability=names.get(key, key), field=key,
-                  status="MATCH" if value == demo[key] else "GAP",
-                  current=demo[key], candidate=value,
-                  reason="Value agreement only; runtime adapter parity remains NOT_TESTED")
-             for key, value in rules.items()]
-    for key, current in dict(rsi_period=14, rsi_threshold=25, sell_lookback=96,
-                             sell_ema=50, macro_span=200).items():
+    demo = dict(
+        _FIXED,
+        max_daily_losses=1,
+        buy_target_rr=2.0,
+        target_rr=0.0,
+        cooldown_bars=0,
+        stop_atr=2.5,
+        buy_stop_atr=1.5,
+        protect_after_r=1.0,
+        buy_protect_mode="off",
+    )
+    names = {
+        "max_daily_losses": "daily_loss_count",
+        "cooldown_bars": "post_loss_cooldown",
+        "buy_protect_mode": "buy_protection",
+        "protect_after_r": "protection_activation",
+    }
+    rows = [
+        dict(
+            capability="candidate_contract",
+            field=None,
+            status="GAP",
+            current="hardcoded Demo CONTRACT/CONTRACT_ID",
+            candidate="native Rules manifest",
+            reason="Candidate runtime adapter is not implemented or qualified",
+        )
+    ]
+    rows += [
+        dict(
+            capability=names.get(key, key),
+            field=key,
+            status="MATCH" if value == demo[key] else "GAP",
+            current=demo[key],
+            candidate=value,
+            reason="Value agreement only; runtime adapter parity remains NOT_TESTED",
+        )
+        for key, value in rules.items()
+    ]
+    for key, current in dict(
+        rsi_period=14, rsi_threshold=25, sell_lookback=96, sell_ema=50, macro_span=200
+    ).items():
         candidate = seed.get(key)
-        rows.append(dict(capability="detector_" + key, field=key,
-                         status="MATCH" if candidate == current else "GAP",
-                         current=current, candidate=candidate,
-                         reason="Frozen Demo detector versus research entry seed"))
+        rows.append(
+            dict(
+                capability="detector_" + key,
+                field=key,
+                status="MATCH" if candidate == current else "GAP",
+                current=current,
+                candidate=candidate,
+                reason="Frozen Demo detector versus research entry seed",
+            )
+        )
     return rows
 
 
-def _final_binding(campaign: Path, protocol: dict, protocol_ref: dict,
-                   manifest_ref: dict, candidate_id: str) -> tuple[bool, list[dict], list[str]]:
-    paths = {name: campaign / name for name in ("COMPLETE.json", "results.json", "independent-verification.json")}
+def _final_binding(
+    campaign: Path, protocol: dict, protocol_ref: dict, manifest_ref: dict, candidate_id: str
+) -> tuple[bool, list[dict], list[str]]:
+    paths = {
+        name: campaign / name
+        for name in ("COMPLETE.json", "results.json", "independent-verification.json")
+    }
     if not all(path.exists() for path in paths.values()):
         return False, [], ["FINAL_AUDIT_NOT_BOUND"]
     values, refs = {}, {}
@@ -156,37 +248,55 @@ def _final_binding(campaign: Path, protocol: dict, protocol_ref: dict,
     if complete.get("status") != "EXHAUSTIVE_COMPLETE" or audit.get("status") != "PASS":
         return False, list(refs.values()), ["FINAL_AUDIT_NOT_BOUND"]
     checks = [
-        complete.get("visited_cases") == 5184, complete.get("processed_batches") == 162,
-        audit.get("finite_domain") == 5184, audit.get("visited_cases") == 5184,
-        audit.get("processed_batches") == 162, audit.get("raw_cells") == 15552,
+        complete.get("visited_cases") == 5184,
+        complete.get("processed_batches") == 162,
+        audit.get("finite_domain") == 5184,
+        audit.get("visited_cases") == 5184,
+        audit.get("processed_batches") == 162,
+        audit.get("raw_cells") == 15552,
         audit.get("parent_completion_sha256") == refs["COMPLETE.json"]["sha256"],
         audit.get("input_manifest_sha256") == manifest_ref["sha256"],
         complete.get("selected") == audit.get("selected") == result.get("selected"),
     ]
     raw_qualified, cent_cells = audit.get("raw_qualified"), audit.get("cent_cells")
-    checks += [type(raw_qualified) is int and 0 <= raw_qualified <= 5184,
-               type(cent_cells) is int and type(raw_qualified) is int and cent_cells == raw_qualified * 3,
-               type(cent_cells) is int and audit.get("cells") == 15552 + cent_cells]
-    for name, expected in (("protocol.json", protocol_ref["sha256"]),
-                           ("catalog.json", protocol["catalog_sha256"]),
-                           ("results.json", refs["results.json"]["sha256"])):
+    checks += [
+        type(raw_qualified) is int and 0 <= raw_qualified <= 5184,
+        type(cent_cells) is int and type(raw_qualified) is int and cent_cells == raw_qualified * 3,
+        type(cent_cells) is int and audit.get("cells") == 15552 + cent_cells,
+    ]
+    for name, expected in (
+        ("protocol.json", protocol_ref["sha256"]),
+        ("catalog.json", protocol["catalog_sha256"]),
+        ("results.json", refs["results.json"]["sha256"]),
+    ):
         checks.append(complete.get("artifacts", {}).get(name) == expected)
     selected = complete.get("selected", {})
     checks.append(isinstance(selected, dict) and set(selected) == {"profit", "repair"})
     selected_ids = set(selected.values()) if isinstance(selected, dict) else set()
-    expected_tick = {f"{name}-{view}-{guard}" for name in selected_ids
-                     for view in ("base", "stress", "fee") for guard in ("raw", "cent")}
-    checks += [set(audit.get("independent_full_tick_dd", {})) == expected_tick,
-               complete.get("fresh_repeats") == len(expected_tick)]
-    for relative, key in (("scripts/research/c22_exhaustive_verify.py", "source_sha256"),
-                          ("scripts/research/c22_learning_verify.py", "helper_sha256")):
+    expected_tick = {
+        f"{name}-{view}-{guard}"
+        for name in selected_ids
+        for view in ("base", "stress", "fee")
+        for guard in ("raw", "cent")
+    }
+    checks += [
+        set(audit.get("independent_full_tick_dd", {})) == expected_tick,
+        complete.get("fresh_repeats") == len(expected_tick),
+    ]
+    for relative, key in (
+        ("scripts/research/c22_exhaustive_verify.py", "source_sha256"),
+        ("scripts/research/c22_learning_verify.py", "helper_sha256"),
+    ):
         ref = source_ref(_local(relative))
         refs[relative] = ref
         checks.append(ref["hash_status"] == "VERIFIED" and audit.get(key) == ref["sha256"])
     if not all(checks):
         raise ValueError("Final audit/source/coverage binding mismatch")
-    return candidate_id in selected_ids, list(refs.values()), (
-        [] if candidate_id in selected_ids else ["CANDIDATE_NOT_FINAL_SELECTION"])
+    return (
+        candidate_id in selected_ids,
+        list(refs.values()),
+        ([] if candidate_id in selected_ids else ["CANDIDATE_NOT_FINAL_SELECTION"]),
+    )
 
 
 def build_manifest(campaign_dir: Path, candidate_id: str | None = None) -> dict:
@@ -196,13 +306,20 @@ def build_manifest(campaign_dir: Path, candidate_id: str | None = None) -> dict:
         raise ValueError("Campaign must remain under repository runs/")
     protocol, protocol_ref = _bound(campaign / "protocol.json")
     _keys(protocol, _PROTOCOL_FIELDS, "Frozen protocol")
-    if (protocol["algorithm"] != "exhaustive_native_grid_v1" or protocol["finite_domain"] != 5184
-            or protocol["domains"] != _DOMAINS or protocol["cost_status"] != "COST_INCONCLUSIVE"
-            or protocol["holdout"] is not False):
+    if (
+        protocol["algorithm"] != "exhaustive_native_grid_v1"
+        or protocol["finite_domain"] != 5184
+        or protocol["domains"] != _DOMAINS
+        or protocol["cost_status"] != "COST_INCONCLUSIVE"
+        or protocol["holdout"] is not False
+    ):
         raise ValueError("Unsupported frozen research protocol")
     if parse_utc(protocol["start"]) >= parse_utc(protocol["end"]):
         raise ValueError("Invalid campaign time interval")
-    tool_bindings = [source_ref(Path(__file__)), source_ref(Path(__file__).with_name("artifacts.py"))]
+    tool_bindings = [
+        source_ref(Path(__file__)),
+        source_ref(Path(__file__).with_name("artifacts.py")),
+    ]
     sources = [protocol_ref, *tool_bindings]
     source_bindings = []
     for relative, declared in protocol["sources"].items():
@@ -228,8 +345,12 @@ def build_manifest(campaign_dir: Path, candidate_id: str | None = None) -> dict:
     if catalog_ref["sha256"] != _sha(protocol["catalog_sha256"], "catalog"):
         raise ValueError("Catalog hash drift")
     _keys(catalog, {"schema", "axes", "finite_domain", "cases"}, "Catalog")
-    if (catalog["schema"] != 1 or catalog["finite_domain"] != 5184
-            or catalog["axes"] != list(_DOMAINS) or len(catalog["cases"]) != 5184):
+    if (
+        catalog["schema"] != 1
+        or catalog["finite_domain"] != 5184
+        or catalog["axes"] != list(_DOMAINS)
+        or len(catalog["cases"]) != 5184
+    ):
         raise ValueError("Incomplete frozen catalog")
     cases = {}
     for case in catalog["cases"]:
@@ -249,37 +370,68 @@ def build_manifest(campaign_dir: Path, candidate_id: str | None = None) -> dict:
     sources += [input_ref, catalog_ref, checkpoint_ref, *final_refs]
     compatibility = _compatibility(cases[chosen], seed)
     manifest = dict(
-        schema_version=1, candidate_id=chosen, rules=cases[chosen],
+        schema_version=1,
+        candidate_id=chosen,
+        rules=cases[chosen],
         detector_seed_descriptor=seed,
         detector_seed_note="Entry detector seed; all management Rules above override the seed Rules",
         data_cutoff_utc=parse_utc(protocol["end"]).isoformat(),
         observed_first_quote_utc=input_manifest.get("first_quote_utc"),
         observed_last_quote_utc=input_manifest.get("last_quote_utc"),
-        campaign_protocol=protocol_ref, catalog=catalog_ref,
-        checkpoint=checkpoint_ref, final_artifacts=final_refs,
-        source_bindings=source_bindings, tool_bindings=tool_bindings,
-        inputs=dict(manifest=input_ref, declared_hashes=protocol["input_hashes"],
-                    hash_status="DECLARED_NOT_REHASHED"),
-        modeled_costs=dict(broker=protocol["broker"], views=protocol["views"],
-                           status="COST_INCONCLUSIVE", swap_required=True),
-        accounting_conventions=dict(capital_usd=200, volume=0.01, raw_and_cent_loss_guards=True,
-                                    cent_rounding="ROUND_HALF_UP", time_basis="aware UTC"),
-        adapter_parity="NOT_TESTED", runtime_qualified=False,
-        research_audit_bound=bound, forward_evidence="NOT_TESTED", real_money="PROHIBITED",
+        campaign_protocol=protocol_ref,
+        catalog=catalog_ref,
+        checkpoint=checkpoint_ref,
+        final_artifacts=final_refs,
+        source_bindings=source_bindings,
+        tool_bindings=tool_bindings,
+        inputs=dict(
+            manifest=input_ref,
+            declared_hashes=protocol["input_hashes"],
+            hash_status="DECLARED_NOT_REHASHED",
+        ),
+        modeled_costs=dict(
+            broker=protocol["broker"],
+            views=protocol["views"],
+            status="COST_INCONCLUSIVE",
+            swap_required=True,
+        ),
+        accounting_conventions=dict(
+            capital_usd=200,
+            volume=0.01,
+            raw_and_cent_loss_guards=True,
+            cent_rounding="ROUND_HALF_UP",
+            time_basis="aware UTC",
+        ),
+        adapter_parity="NOT_TESTED",
+        runtime_qualified=False,
+        research_audit_bound=bound,
+        forward_evidence="NOT_TESTED",
+        real_money="PROHIBITED",
     )
     return make_report(
-        "candidate_manifest", "RESEARCH_BOUND" if bound else "PROVISIONAL",
-        sources=sources, coverage=dict(catalog_profiles=len(cases),
-            checkpoint_profiles=checkpoint.get("visited_cases"), finite_domain=5184,
-            large_input_hashes_reverified=False),
+        "candidate_manifest",
+        "RESEARCH_BOUND" if bound else "PROVISIONAL",
+        sources=sources,
+        coverage=dict(
+            catalog_profiles=len(cases),
+            checkpoint_profiles=checkpoint.get("visited_cases"),
+            finite_domain=5184,
+            large_input_hashes_reverified=False,
+        ),
         reasons=[*reasons, "RUNTIME_ADAPTER_NOT_QUALIFIED", "HISTORICAL_COSTS_INCONCLUSIVE"],
-        candidate_id=chosen, manifest=manifest, compatibility=compatibility,
+        candidate_id=chosen,
+        manifest=manifest,
+        compatibility=compatibility,
     )
 
 
 def _event_document(path: Path) -> tuple[dict, dict, dict]:
     value, ref = _bound(path)
-    _keys(value, {"schema_version", "candidate_id", "implementation", "context", "events"}, "Event document")
+    _keys(
+        value,
+        {"schema_version", "candidate_id", "implementation", "context", "events"},
+        "Event document",
+    )
     if type(value["schema_version"]) is not int or value["schema_version"] != 1:
         raise ValueError("Unsupported event schema")
     _candidate(value["candidate_id"])
@@ -294,8 +446,10 @@ def _event_document(path: Path) -> tuple[dict, dict, dict]:
     if not source_path.is_absolute():
         source_path = path.parent / source_path
     implementation_ref = source_ref(source_path)
-    if (implementation_ref["hash_status"] != "VERIFIED"
-            or implementation_ref["sha256"] != implementation["source_sha256"]):
+    if (
+        implementation_ref["hash_status"] != "VERIFIED"
+        or implementation_ref["sha256"] != implementation["source_sha256"]
+    ):
         raise ValueError("Implementation source hash drift")
     _keys(value["context"], _CONTEXT_FIELDS, "Event context")
     for key, digest in value["context"].items():
@@ -317,7 +471,14 @@ def _event_document(path: Path) -> tuple[dict, dict, dict]:
             parse_utc(event["cooldown_until_utc"])
         if event["side"] not in ("BUY", "SELL", "NONE") or type(event["admitted"]) is not bool:
             raise ValueError("Invalid event side/admission")
-        if event["kind"] not in ("signal", "admission", "protection", "close", "restart", "reconciliation"):
+        if event["kind"] not in (
+            "signal",
+            "admission",
+            "protection",
+            "close",
+            "restart",
+            "reconciliation",
+        ):
             raise ValueError("Unknown event kind")
         if not isinstance(event["reason"], str) or not event["reason"]:
             raise ValueError("Missing event reason")
@@ -325,28 +486,42 @@ def _event_document(path: Path) -> tuple[dict, dict, dict]:
             raise ValueError("Unknown protection state")
         for key in ("entry", "stop", "target", "risk_usd", "net_usd"):
             number = event[key]
-            if number is not None and (type(number) not in (int, float) or not math.isfinite(number)):
+            if number is not None and (
+                type(number) not in (int, float) or not math.isfinite(number)
+            ):
                 raise ValueError(f"Nonfinite/invalid event number: {key}")
         if event["risk_usd"] is not None and event["risk_usd"] < 0:
             raise ValueError("Negative event risk")
         if event["admitted"]:
-            if (event["kind"] != "admission" or event["side"] not in ("BUY", "SELL")
-                    or any(event[key] is None or event[key] <= 0
-                           for key in ("entry", "stop", "target", "risk_usd"))):
-                raise ValueError("Admitted event requires side, positive risk and complete geometry")
+            if (
+                event["kind"] != "admission"
+                or event["side"] not in ("BUY", "SELL")
+                or any(
+                    event[key] is None or event[key] <= 0
+                    for key in ("entry", "stop", "target", "risk_usd")
+                )
+            ):
+                raise ValueError(
+                    "Admitted event requires side, positive risk and complete geometry"
+                )
             direction = 1 if event["side"] == "BUY" else -1
-            if (direction * (event["entry"] - event["stop"]) <= 0
-                    or direction * (event["target"] - event["entry"]) <= 0):
+            if (
+                direction * (event["entry"] - event["stop"]) <= 0
+                or direction * (event["target"] - event["entry"]) <= 0
+            ):
                 raise ValueError("Invalid admitted stop/target geometry")
     return value, ref, implementation_ref
 
 
-def compare_events(reference_path: Path, observed_path: Path, *, candidate_id: str | None = None) -> dict:
+def compare_events(
+    reference_path: Path, observed_path: Path, *, candidate_id: str | None = None
+) -> dict:
     """Compare supplied event artifacts; never claim broker or economic parity."""
     reference_path, observed_path = Path(reference_path), Path(observed_path)
     sources, coverage, reasons, mismatches = [], {"events_compared": 0}, [], []
     details: dict[str, Any] = dict(
-        broker_fill_parity=False, economic_qualification=False,
+        broker_fill_parity=False,
+        economic_qualification=False,
         provenance_limit="Source hashes bind local files; log generation by those files is not attested",
     )
     chosen = candidate_id
@@ -357,12 +532,21 @@ def compare_events(reference_path: Path, observed_path: Path, *, candidate_id: s
         observed, observed_ref, obs_impl = _event_document(observed_path)
         sources = [reference_ref, observed_ref, ref_impl, obs_impl]
         chosen = chosen or reference["candidate_id"]
-        details.update(reference_implementation=reference["implementation"],
-                       observed_implementation=observed["implementation"],
-                       reference_context=reference["context"], observed_context=observed["context"])
-        if reference_path.resolve() == observed_path.resolve() or ref_impl["sha256"] == obs_impl["sha256"]:
+        details.update(
+            reference_implementation=reference["implementation"],
+            observed_implementation=observed["implementation"],
+            reference_context=reference["context"],
+            observed_context=observed["context"],
+        )
+        if (
+            reference_path.resolve() == observed_path.resolve()
+            or ref_impl["sha256"] == obs_impl["sha256"]
+        ):
             status, reasons = "NOT_TESTED", ["SELF_COMPARISON_OR_SAME_SOURCE"]
-        elif reference["implementation"]["role"] != "research" or observed["implementation"]["role"] != "runtime_adapter":
+        elif (
+            reference["implementation"]["role"] != "research"
+            or observed["implementation"]["role"] != "runtime_adapter"
+        ):
             status, reasons = "GAP", ["RUNTIME_ADAPTER_EVIDENCE_MISSING"]
         elif reference["candidate_id"] != chosen or observed["candidate_id"] != chosen:
             status, reasons = "GAP", ["CANDIDATE_ID_MISMATCH"]
@@ -372,25 +556,49 @@ def compare_events(reference_path: Path, observed_path: Path, *, candidate_id: s
             status, reasons = "NOT_TESTED", ["EVENT_COVERAGE_MISSING"]
         else:
             left, right = reference["events"], observed["events"]
-            coverage.update(reference_events=len(left), observed_events=len(right),
-                            events_compared=min(len(left), len(right)))
+            coverage.update(
+                reference_events=len(left),
+                observed_events=len(right),
+                events_compared=min(len(left), len(right)),
+            )
             if len(left) != len(right):
-                mismatches.append(dict(field="event_count", reference=len(left), observed=len(right)))
+                mismatches.append(
+                    dict(field="event_count", reference=len(left), observed=len(right))
+                )
             for index, (expected, actual) in enumerate(zip(left, right)):
                 for field in sorted(_EVENT_FIELDS):
                     first, second = expected[field], actual[field]
-                    if field in ("time_utc", "cooldown_until_utc") and first is not None and second is not None:
+                    if (
+                        field in ("time_utc", "cooldown_until_utc")
+                        and first is not None
+                        and second is not None
+                    ):
                         same = parse_utc(first) == parse_utc(second)
                     else:
                         same = first == second
                     if not same:
-                        mismatches.append(dict(index=index, event_id=expected["event_id"], field=field,
-                                               reference=first, observed=second))
+                        mismatches.append(
+                            dict(
+                                index=index,
+                                event_id=expected["event_id"],
+                                field=field,
+                                reference=first,
+                                observed=second,
+                            )
+                        )
             status = "PARITY_FAIL" if mismatches else "PARITY_PASS"
             reasons = ["EVENT_MISMATCH"] if mismatches else ["SUPPLIED_EVENT_AGREEMENT_ONLY"]
     except FileNotFoundError as exc:
         status, reasons = "NOT_TESTED", ["EVENT_OR_IMPLEMENTATION_EVIDENCE_MISSING", str(exc)]
     except (ValueError, OSError, KeyError, TypeError) as exc:
         status, reasons = "INVALID", [str(exc)]
-    return make_report("event_parity", status, sources=sources, coverage=coverage,
-                       reasons=reasons, candidate_id=chosen, mismatches=mismatches, **details)
+    return make_report(
+        "event_parity",
+        status,
+        sources=sources,
+        coverage=coverage,
+        reasons=reasons,
+        candidate_id=chosen,
+        mismatches=mismatches,
+        **details,
+    )

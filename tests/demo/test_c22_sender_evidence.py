@@ -23,22 +23,38 @@ class SenderEvidenceTests(unittest.TestCase):
         self.directory.mkdir()
         self.broker = SelectedBroker()
         self.broker.account.margin_mode = 2
-        for key, value in dict(currency_profit="USD", swap_mode=1, swap_long=-490.8,
-                               swap_short=0.0, swap_rollover3days=3).items():
+        for key, value in dict(
+            currency_profit="USD",
+            swap_mode=1,
+            swap_long=-490.8,
+            swap_short=0.0,
+            swap_rollover3days=3,
+        ).items():
             setattr(self.broker.info, key, value)
 
     def runner(self, *, execute=False, enabled=True, journal="selected.sqlite3"):
-        costs = policy() | {"reviewed_utc": self.broker.now.isoformat(), "account_type": "Standard Demo"}
+        costs = policy() | {
+            "reviewed_utc": self.broker.now.isoformat(),
+            "account_type": "Standard Demo",
+        }
         options = {"broker_evidence_dir": self.directory} if enabled else {}
-        runner = SelectedDemoRunner(mt5=self.broker, expected_login=123, expected_server="Exness-Demo",
-            journal_path=self.root / journal, config=selected_config(), cost_policy=costs,
-            execute=execute, **options)
+        runner = SelectedDemoRunner(
+            mt5=self.broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.root / journal,
+            config=selected_config(),
+            cost_policy=costs,
+            execute=execute,
+            **options,
+        )
         self.addCleanup(runner.close)
         return runner
 
     def request(self, ident="a" * 32):
-        (self.directory / "request.json").write_text(json.dumps({"request_id": ident,
-            "requested_utc": self.broker.now.isoformat()}))
+        (self.directory / "request.json").write_text(
+            json.dumps({"request_id": ident, "requested_utc": self.broker.now.isoformat()})
+        )
 
     def test_one_request_uses_existing_reads_and_packet_builds_regular_swap_policy(self):
         runner = self.runner()
@@ -56,9 +72,16 @@ class SenderEvidenceTests(unittest.TestCase):
         self.assertNotIn("login", packet["account"])
         self.assertNotIn("comment", packet["history_deals"][0])
         self.assertEqual(packet["source"], "existing_sender_reads")
-        self.assertEqual(result["broker_evidence"]["packet_sha256"], hashlib.sha256(raw).hexdigest())
-        sources = {k: {"source": "https://www.exness.com/standard-accounts/",
-                       "checked_utc": self.broker.now.isoformat()} for k in ("tariff", "swap", "calendar")}
+        self.assertEqual(
+            result["broker_evidence"]["packet_sha256"], hashlib.sha256(raw).hexdigest()
+        )
+        sources = {
+            k: {
+                "source": "https://www.exness.com/standard-accounts/",
+                "checked_utc": self.broker.now.isoformat(),
+            }
+            for k in ("tariff", "swap", "calendar")
+        }
         candidate = build_trial_policy(raw, now=self.broker.now, sources=sources)
         self.assertEqual(candidate["swap_entitlement"], "UNKNOWN")
         self.assertEqual(candidate["research_economic_qualification"], "COST_INCONCLUSIVE")
@@ -70,8 +93,18 @@ class SenderEvidenceTests(unittest.TestCase):
 
     def test_capture_adds_no_sdk_calls_compared_with_disabled_path(self):
         from unittest.mock import Mock
-        methods = ("account_info", "terminal_info", "positions_get", "orders_get", "history_deals_get",
-                   "history_deals_total", "symbol_info", "symbol_info_tick", "copy_rates_from_pos")
+
+        methods = (
+            "account_info",
+            "terminal_info",
+            "positions_get",
+            "orders_get",
+            "history_deals_get",
+            "history_deals_total",
+            "symbol_info",
+            "symbol_info_tick",
+            "copy_rates_from_pos",
+        )
         for name in methods:
             original = getattr(self.broker, name)
             setattr(self.broker, name, Mock(wraps=original))
@@ -97,7 +130,9 @@ class SenderEvidenceTests(unittest.TestCase):
                 self.request()
                 runner = self.runner(execute=True)
                 result = runner.cycle(now=self.broker.now)
-                self.assertEqual(result["status"], "FILLED" if response == "fill" else "UNKNOWN", result)
+                self.assertEqual(
+                    result["status"], "FILLED" if response == "fill" else "UNKNOWN", result
+                )
                 self.assertEqual(result["broker_evidence"]["status"], "DEFERRED")
                 self.assertEqual(result["broker_evidence"]["reason"], "owned_or_uncertain_exposure")
                 self.assertEqual(self.broker.order_send.call_count, 1)
@@ -110,7 +145,9 @@ class SenderEvidenceTests(unittest.TestCase):
         self.request()
         self.assertEqual(runner.cycle(now=self.broker.now)["broker_evidence"]["status"], "CAPTURED")
         self.request("b" * 32)
-        self.broker.terminal_info = lambda: type("Terminal", (), {"connected": False, "trade_allowed": True, "tradeapi_disabled": False})()
+        self.broker.terminal_info = lambda: type(
+            "Terminal", (), {"connected": False, "trade_allowed": True, "tradeapi_disabled": False}
+        )()
         result = runner.cycle(now=self.broker.now + timedelta(seconds=1))
         self.assertEqual(result["broker_evidence"]["status"], "DEFERRED")
         self.assertEqual(result["broker_evidence"]["reason"], "broker_reads_incomplete")
@@ -125,7 +162,9 @@ class SenderEvidenceTests(unittest.TestCase):
         self.assertEqual(result["broker_evidence"]["status"], "FAULT")
         self.assertEqual(result["operational_errors"][-1]["stage"], "evidence.export")
         self.request()
-        with patch("scripts.c22_selected.evidence._write_private", side_effect=OSError("secret value")):
+        with patch(
+            "scripts.c22_selected.evidence._write_private", side_effect=OSError("secret value")
+        ):
             failure = runner.cycle(now=self.broker.now + timedelta(seconds=1))
         self.assertEqual(failure["status"], "SHADOW_ADMIT", failure)
         self.assertEqual(failure["broker_evidence"]["status"], "FAULT")
@@ -171,14 +210,20 @@ class SenderEvidenceTests(unittest.TestCase):
         self.assertFalse(receipt["fresh_for_generation"])
         self.assertEqual(receipt["packet_sha256"], first["packet_sha256"])
         self.assertEqual((self.directory / ("broker-" + "a" * 32 + ".json")).read_bytes(), raw)
-        sources = {k: {"source": "https://www.exness.com/standard-accounts/",
-                       "checked_utc": now.isoformat()} for k in ("tariff", "swap", "calendar")}
+        sources = {
+            k: {
+                "source": "https://www.exness.com/standard-accounts/",
+                "checked_utc": now.isoformat(),
+            }
+            for k in ("tariff", "swap", "calendar")
+        }
         with self.assertRaisesRegex(ValueError, "fresh_broker_evidence_required"):
             build_trial_policy(raw, now=now, sources=sources)
         self.broker.order_send.assert_not_called()
 
     def test_request_after_read_start_and_slow_cycle_cannot_claim_fresh_capture(self):
         from scripts.c22_selected.evidence import export_requested
+
         runner = self.runner()
         runner.cycle(now=self.broker.now)
         self.request()
@@ -186,12 +231,20 @@ class SenderEvidenceTests(unittest.TestCase):
         value = json.loads(request.read_text())
         value["requested_utc"] = (self.broker.now + timedelta(seconds=1)).isoformat()
         request.write_text(json.dumps(value))
-        late = export_requested(runner, self.directory, runner._evidence_snapshot,
-            now=self.broker.now + timedelta(seconds=2))
+        late = export_requested(
+            runner,
+            self.directory,
+            runner._evidence_snapshot,
+            now=self.broker.now + timedelta(seconds=2),
+        )
         self.assertEqual(late["reason"], "await_next_complete_read_cycle")
         self.request()
-        stale = export_requested(runner, self.directory, runner._evidence_snapshot,
-            now=self.broker.now + timedelta(minutes=5, seconds=1))
+        stale = export_requested(
+            runner,
+            self.directory,
+            runner._evidence_snapshot,
+            now=self.broker.now + timedelta(minutes=5, seconds=1),
+        )
         self.assertEqual(stale["reason"], "evidence_read_window_stale")
         self.assertEqual(list(self.directory.glob("broker-*.json")), [])
         self.broker.order_send.assert_not_called()

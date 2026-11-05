@@ -21,23 +21,41 @@ def canonical_hash(value):
 
 def review_fixture(runner, now):
     report = {
-        "captured_utc": now.isoformat(), "status": "AWAITING_OPERATOR_REVIEW",
-        "execution_authorized": False, "blockers": [], "snapshot": SNAPSHOT,
-        "contract_id": CANDIDATE_ID, "magic": MAGIC,
+        "captured_utc": now.isoformat(),
+        "status": "AWAITING_OPERATOR_REVIEW",
+        "execution_authorized": False,
+        "blockers": [],
+        "snapshot": SNAPSHOT,
+        "contract_id": CANDIDATE_ID,
+        "magic": MAGIC,
         "account_fingerprint": runner.fingerprint,
-        "cohort": {"release_hash": runner.release_hash,
-                   "config_hash": runner.journal.audit_context["config_hash"]},
-        "input_sha256": {"policy": canonical_hash(runner.policy),
-                         "broker": "b" * 64, "parity": "c" * 64},
+        "cohort": {
+            "release_hash": runner.release_hash,
+            "config_hash": runner.journal.audit_context["config_hash"],
+        },
+        "input_sha256": {
+            "policy": canonical_hash(runner.policy),
+            "broker": "b" * 64,
+            "parity": "c" * 64,
+        },
     }
     return {
-        "version": 1, "scope": "SELECTED_DEMO_EXECUTION", "owner_authorized": True,
+        "version": 1,
+        "scope": "SELECTED_DEMO_EXECUTION",
+        "owner_authorized": True,
         "owner_instruction": "Synthetic explicit Demo execution authorization",
-        "approved_utc": now.isoformat(), "readiness": report,
+        "approved_utc": now.isoformat(),
+        "readiness": report,
         "readiness_sha256": canonical_hash(report),
-        "confirmations": {name: True for name in (
-            "selected_feed_and_prospective_shadow_reviewed", "cost_tariff_swap_calendar_reviewed",
-            "flat_single_sender_and_ledger_reviewed", "backup_restore_and_monitor_reviewed")},
+        "confirmations": {
+            name: True
+            for name in (
+                "selected_feed_and_prospective_shadow_reviewed",
+                "cost_tariff_swap_calendar_reviewed",
+                "flat_single_sender_and_ledger_reviewed",
+                "backup_restore_and_monitor_reviewed",
+            )
+        },
     }
 
 
@@ -53,9 +71,15 @@ class SelectedExecutionTests(unittest.TestCase):
         self.path = self.root / "review.json"
 
     def runner(self):
-        result = SelectedDemoRunner(mt5=self.broker, expected_login=123,
-            expected_server="Exness-Demo", journal_path=self.root / "execution.sqlite3",
-            cost_policy=self.cost, config=selected_config(), execute=True)
+        result = SelectedDemoRunner(
+            mt5=self.broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.root / "execution.sqlite3",
+            cost_policy=self.cost,
+            config=selected_config(),
+            execute=True,
+        )
         self.addCleanup(result.close)
         return result
 
@@ -83,7 +107,15 @@ class SelectedExecutionTests(unittest.TestCase):
     def test_unqualified_or_mismatched_review_never_grants_entry(self):
         runner = self.runner()
         original = review_fixture(runner, self.broker.now)
-        for failure in ("candidate", "account", "cohort", "blocker", "owner", "confirmation", "stale"):
+        for failure in (
+            "candidate",
+            "account",
+            "cohort",
+            "blocker",
+            "owner",
+            "confirmation",
+            "stale",
+        ):
             with self.subTest(failure=failure):
                 review = deepcopy(original)
                 report = review["readiness"]

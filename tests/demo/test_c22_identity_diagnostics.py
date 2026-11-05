@@ -19,20 +19,24 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
 
     def runner(self, sdk, name="identity", *, execute=True):
-        costs = policy() | {"reviewed_utc": sdk.now.replace(
-            hour=0, minute=0, second=0, microsecond=0).isoformat()}
+        costs = policy() | {
+            "reviewed_utc": sdk.now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        }
         runner = SelectedDemoRunner(
-            mt5=sdk, expected_login=123, expected_server="Exness-Demo",
+            mt5=sdk,
+            expected_login=123,
+            expected_server="Exness-Demo",
             journal_path=Path(self.temp.name) / name / "journal.sqlite3",
-            config=selected_config(), cost_policy=costs, execute=execute,
+            config=selected_config(),
+            cost_policy=costs,
+            execute=execute,
         )
         self.addCleanup(runner.close)
         return runner
 
     @staticmethod
     def terminal(**changes):
-        return NS(**(dict(connected=True, trade_allowed=True, tradeapi_disabled=False)
-                     | changes))
+        return NS(**(dict(connected=True, trade_allowed=True, tradeapi_disabled=False) | changes))
 
     def test_disconnected_cycle_reports_specific_flags_and_recovers_without_resend(self):
         sdk = SelectedBroker()
@@ -72,15 +76,27 @@ class IdentityDiagnosticsTests(unittest.TestCase):
             ("external_api", {"tradeapi_disabled": True}, {}, ["external_trade_api_disabled"]),
             ("account_trade", {}, {"trade_allowed": False}, ["account_trade_disabled"]),
             ("account_expert", {}, {"trade_expert": False}, ["account_expert_disabled"]),
-            ("combined", {"trade_allowed": False, "tradeapi_disabled": True},
-             {"trade_expert": False},
-             ["terminal_trade_disabled", "external_trade_api_disabled", "account_expert_disabled"]),
+            (
+                "combined",
+                {"trade_allowed": False, "tradeapi_disabled": True},
+                {"trade_expert": False},
+                [
+                    "terminal_trade_disabled",
+                    "external_trade_api_disabled",
+                    "account_expert_disabled",
+                ],
+            ),
         )
         expected_keys = {
-            "identity_account_present", "identity_terminal_present",
-            "identity_require_trade_permissions", "identity_terminal_connected",
-            "identity_terminal_trade_allowed", "identity_terminal_tradeapi_disabled",
-            "identity_account_trade_allowed", "identity_account_trade_expert", "identity_blockers",
+            "identity_account_present",
+            "identity_terminal_present",
+            "identity_require_trade_permissions",
+            "identity_terminal_connected",
+            "identity_terminal_trade_allowed",
+            "identity_terminal_tradeapi_disabled",
+            "identity_account_trade_allowed",
+            "identity_account_trade_expert",
+            "identity_blockers",
         }
         for name, terminal, account, blockers in cases:
             with self.subTest(name=name):
@@ -89,13 +105,16 @@ class IdentityDiagnosticsTests(unittest.TestCase):
                 for key, value in account.items():
                     setattr(sdk.account, key, value)
                 sdk.account_info = Mock(wraps=sdk.account_info)
-                sdk.terminal_info = Mock(return_value=None if name == "missing_terminal"
-                                         else self.terminal(**terminal))
+                sdk.terminal_info = Mock(
+                    return_value=None if name == "missing_terminal" else self.terminal(**terminal)
+                )
                 runner = self.runner(sdk, name)
                 result = runner.cycle(now=sdk.now)
                 self.assertEqual(result["reason"], "algo_permissions_required")
                 self.assertEqual(result["identity_blockers"], blockers)
-                self.assertEqual({key for key in result if key.startswith("identity_")}, expected_keys)
+                self.assertEqual(
+                    {key for key in result if key.startswith("identity_")}, expected_keys
+                )
                 self.assertEqual(sdk.account_info.call_count, 1)
                 self.assertEqual(sdk.terminal_info.call_count, 1)
                 text = json.dumps(result, allow_nan=False)
@@ -117,8 +136,10 @@ class IdentityDiagnosticsTests(unittest.TestCase):
                 runner = self.runner(sdk, name)
                 result = runner.cycle(now=sdk.now)
                 self.assertEqual(result["reason"], "demo_identity_required")
-                self.assertEqual(result["identity_blockers"], [
-                    "account_missing" if name == "missing" else "demo_identity_mismatch"])
+                self.assertEqual(
+                    result["identity_blockers"],
+                    ["account_missing" if name == "missing" else "demo_identity_mismatch"],
+                )
                 self.assertIs(result["identity_account_present"], name != "missing")
                 sdk.order_send.assert_not_called()
 
@@ -133,9 +154,13 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100.0):
             second = runner.cycle(now=now)
         self.assertEqual(second["reason"], "RuntimeError")
-        self.assertEqual(runner.broker.identity_diagnostics, dict(
-            account_read_request_started_utc=now.isoformat(), account_read_observed_utc=None,
-        ))
+        self.assertEqual(
+            runner.broker.identity_diagnostics,
+            dict(
+                account_read_request_started_utc=now.isoformat(),
+                account_read_observed_utc=None,
+            ),
+        )
         self.assertEqual(second["account_read_request_started_utc"], now.isoformat())
         self.assertIsNone(second["account_read_observed_utc"])
         self.assertIsNone(runner.broker.account_observation)
@@ -154,11 +179,14 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         sdk.send(dict(action=1, position=777, type=0, volume=0.01, price=sdk.tick.ask))
         sdk.account.trade_allowed = False
         sdk.account.trade_expert = False
-        sdk.terminal_info = Mock(return_value=self.terminal(
-            trade_allowed=False, tradeapi_disabled=True))
+        sdk.terminal_info = Mock(
+            return_value=self.terminal(trade_allowed=False, tradeapi_disabled=True)
+        )
         closed = runner.cycle(now=sdk.now)
         self.assertEqual(closed["status"], "CLOSED", closed)
-        self.assertIs(runner.broker.identity_diagnostics["identity_require_trade_permissions"], False)
+        self.assertIs(
+            runner.broker.identity_diagnostics["identity_require_trade_permissions"], False
+        )
         self.assertEqual(runner.broker.identity_diagnostics["identity_blockers"], [])
         self.assertIsNone(runner.journal.get("active"))
         self.assertEqual(sdk.order_send.call_count, 1)
@@ -169,8 +197,9 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         runner = self.runner(sdk)
         with self.assertRaisesRegex(ValueError, "algo_permissions_required"):
             runner.broker.identity(require_trade_permissions=False)
-        self.assertEqual(runner.broker.identity_diagnostics["identity_blockers"],
-                         ["terminal_disconnected"])
+        self.assertEqual(
+            runner.broker.identity_diagnostics["identity_blockers"], ["terminal_disconnected"]
+        )
         sdk.order_send.assert_not_called()
 
     def test_optional_diagnostic_field_failure_cannot_block_read_only_identity(self):
@@ -180,9 +209,9 @@ class IdentityDiagnosticsTests(unittest.TestCase):
                 raise RuntimeError("optional fixture field unavailable")
 
         sdk = SelectedBroker()
-        sdk.account = AccountWithUnavailablePermission(**{
-            key: value for key, value in vars(sdk.account).items() if key != "trade_expert"
-        })
+        sdk.account = AccountWithUnavailablePermission(
+            **{key: value for key, value in vars(sdk.account).items() if key != "trade_expert"}
+        )
         runner = self.runner(sdk)
         self.assertIs(runner.broker.identity(require_trade_permissions=False), sdk.account)
         self.assertIsNone(runner.broker.identity_diagnostics["identity_account_trade_expert"])
@@ -225,8 +254,10 @@ class IdentityDiagnosticsTests(unittest.TestCase):
         sdk.order_send.assert_not_called()
 
     def test_capital_and_journal_failures_remain_blocked_without_logging_values(self):
-        for name, reason in (("capital", "invalid_capital"),
-                             ("journal", "journal_account_mismatch")):
+        for name, reason in (
+            ("capital", "invalid_capital"),
+            ("journal", "journal_account_mismatch"),
+        ):
             with self.subTest(name=name):
                 sdk = SelectedBroker()
                 runner = self.runner(sdk, name)

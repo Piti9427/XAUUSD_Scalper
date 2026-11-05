@@ -31,9 +31,22 @@ def digest(value):
 def broker_packet(now):
     value = broker_fixture()
     value["captured_utc"] = value["history_end_utc"] = now.isoformat()
-    value["account"]["balance"] = value["account"]["equity"] = 200.
-    value["history_deals"] = [dict(ticket=1, position_id=0, magic=0, entry=0, type=2, volume=0.,
-        time_msc=int((NOW - timedelta(days=2)).timestamp() * 1000), profit=200., commission=0., swap=0., fee=0.)]
+    value["account"]["balance"] = value["account"]["equity"] = 200.0
+    value["history_deals"] = [
+        dict(
+            ticket=1,
+            position_id=0,
+            magic=0,
+            entry=0,
+            type=2,
+            volume=0.0,
+            time_msc=int((NOW - timedelta(days=2)).timestamp() * 1000),
+            profit=200.0,
+            commission=0.0,
+            swap=0.0,
+            fee=0.0,
+        )
+    ]
     value["history_deals_total"] = 1
     return value
 
@@ -54,35 +67,66 @@ class RenewalRuntimeTests(unittest.TestCase):
         self.journal = Journal(self.root / "journal.sqlite3")
         self.addCleanup(self.journal.close)
         self.base = build_trial_policy(raw(broker_packet(NOW)), now=NOW, sources=sources_fixture())
-        self.runner = NS(policy=deepcopy(self.base), fingerprint=self.base["account_fingerprint"],
-            release_hash="a" * 64, journal=self.journal, strategy=NS(magic=22261025), symbol="XAUUSDm")
+        self.runner = NS(
+            policy=deepcopy(self.base),
+            fingerprint=self.base["account_fingerprint"],
+            release_hash="a" * 64,
+            journal=self.journal,
+            strategy=NS(magic=22261025),
+            symbol="XAUUSDm",
+        )
         self.journal.audit_context = {"config_hash": "b" * 64}
         self.review = review_fixture(self.runner, NOW)
         self.review_path = self.root / "review.json"
         self.review_path.write_bytes(raw(self.review))
         self.original_hash = hashlib.sha256(self.review_path.read_bytes()).hexdigest()
         self.journal.put("selected_execution_review_sha256", self.original_hash)
-        self.grant = dict(version=1, scope="SELECTED_DEMO_SAME_ASSUMPTION_RENEWAL",
-            owner_authorized=True, owner_instruction="Synthetic test-only standing grant",
-            approved_utc=NOW.isoformat(), expires_utc=(NOW + timedelta(days=30)).isoformat(), revoked=False,
-            original_review_sha256=self.original_hash, original_policy_sha256=digest(self.base),
-            binding=_binding(dict(policy=self.base, source_sha256="a" * 64, config_sha256="b" * 64)),
-            limits=dict(policy_hours=168, prepare_hours=72, broker_fresh_seconds=300, official_fresh_seconds=86400))
+        self.grant = dict(
+            version=1,
+            scope="SELECTED_DEMO_SAME_ASSUMPTION_RENEWAL",
+            owner_authorized=True,
+            owner_instruction="Synthetic test-only standing grant",
+            approved_utc=NOW.isoformat(),
+            expires_utc=(NOW + timedelta(days=30)).isoformat(),
+            revoked=False,
+            original_review_sha256=self.original_hash,
+            original_policy_sha256=digest(self.base),
+            binding=_binding(
+                dict(policy=self.base, source_sha256="a" * 64, config_sha256="b" * 64)
+            ),
+            limits=dict(
+                policy_hours=168,
+                prepare_hours=72,
+                broker_fresh_seconds=300,
+                official_fresh_seconds=86400,
+            ),
+        )
         self.grant_path = self.root / "grant.json"
         self.grant_path.write_bytes(raw(self.grant))
         self.now = NOW + timedelta(hours=96)
 
     def runtime(self):
         from scripts.c22_selected.renewal_runtime import RenewalRuntime
-        return RenewalRuntime(self.runner, grant_path=self.grant_path,
-            trusted_grant_sha256=digest(self.grant), generation_root=self.root / "generations",
-            original_review_path=self.review_path)
+
+        return RenewalRuntime(
+            self.runner,
+            grant_path=self.grant_path,
+            trusted_grant_sha256=digest(self.grant),
+            generation_root=self.root / "generations",
+            original_review_path=self.review_path,
+        )
 
     def prepare(self, subject, *, now=None, state=None, broker=None):
         now = now or self.now
         value, packet = source_input(now)
-        return subject.prepare(raw(broker or broker_packet(now)), packet, value, now=now,
-            observe_state=lambda: FreshState(state or RenewalState(0, 0, False, False), now), clock=lambda: now)
+        return subject.prepare(
+            raw(broker or broker_packet(now)),
+            packet,
+            value,
+            now=now,
+            observe_state=lambda: FreshState(state or RenewalState(0, 0, False, False), now),
+            clock=lambda: now,
+        )
 
     def test_matching_renewal_and_restart_keeps_original_approval_after_base_expiry(self):
         subject = self.runtime()
@@ -93,7 +137,9 @@ class RenewalRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runner.policy["reviewed_utc"], self.now.isoformat())
         self.assertEqual(self.review_path.read_bytes(), before)
         self.assertEqual(self.journal.get("selected_execution_review_sha256"), self.original_hash)
-        self.runner.policy = deepcopy(self.base)  # Existing startup input remains the original file.
+        self.runner.policy = deepcopy(
+            self.base
+        )  # Existing startup input remains the original file.
         restored = self.runtime()
         later = NOW + timedelta(hours=169)
         self.assertEqual(restored.restore(later)["reviewed_utc"], self.now.isoformat())
@@ -119,11 +165,37 @@ class RenewalRuntimeTests(unittest.TestCase):
         active = {"cost_policy_hash": digest(self.base), "status": "UNKNOWN"}
         subject.bind_active(active, 7, self.now)
         rows = broker_packet(self.now)["history_deals"]
-        rows += [dict(ticket=2, position_id=7, magic=22261025, entry=0, type=0, volume=.01,
-            time_msc=int((NOW + timedelta(minutes=1)).timestamp() * 1000), profit=0., commission=0., swap=0., fee=0.),
-            dict(ticket=3, position_id=7, magic=0, entry=1, type=1, volume=.01,
-            time_msc=int((NOW + timedelta(hours=1)).timestamp() * 1000), profit=1., commission=0., swap=0., fee=0.)]
-        observed = subject.audit_existing_reads(NS(balance=201.), [], [NS(**item) for item in rows], self.now)
+        rows += [
+            dict(
+                ticket=2,
+                position_id=7,
+                magic=22261025,
+                entry=0,
+                type=0,
+                volume=0.01,
+                time_msc=int((NOW + timedelta(minutes=1)).timestamp() * 1000),
+                profit=0.0,
+                commission=0.0,
+                swap=0.0,
+                fee=0.0,
+            ),
+            dict(
+                ticket=3,
+                position_id=7,
+                magic=0,
+                entry=1,
+                type=1,
+                volume=0.01,
+                time_msc=int((NOW + timedelta(hours=1)).timestamp() * 1000),
+                profit=1.0,
+                commission=0.0,
+                swap=0.0,
+                fee=0.0,
+            ),
+        ]
+        observed = subject.audit_existing_reads(
+            NS(balance=201.0), [], [NS(**item) for item in rows], self.now
+        )
         self.assertEqual(observed["status"], "CLEAR")
         self.assertEqual(observed["checkpoint"]["audited_exit_deals"], 1)
         self.assertEqual(observed["generation_ids"], [digest(self.base)])
@@ -131,14 +203,24 @@ class RenewalRuntimeTests(unittest.TestCase):
 
     def test_before_prepare_window_needs_no_source_refresh_and_keeps_native_policy(self):
         subject = self.runtime()
-        result = subject.prepare(None, None, None, now=NOW,
-            observe_state=lambda: FreshState(RenewalState(0, 0, False, False), NOW), clock=lambda: NOW)
+        result = subject.prepare(
+            None,
+            None,
+            None,
+            now=NOW,
+            observe_state=lambda: FreshState(RenewalState(0, 0, False, False), NOW),
+            clock=lambda: NOW,
+        )
         self.assertEqual(result["status"], "NOT_DUE")
         self.assertEqual(self.runner.policy, self.base)
 
     def test_held_order_active_or_unknown_defers_without_switching_or_touching_manager(self):
-        for state in (RenewalState(1, 0, False, False), RenewalState(0, 1, False, False),
-                      RenewalState(0, 0, True, False), RenewalState(0, 0, False, True)):
+        for state in (
+            RenewalState(1, 0, False, False),
+            RenewalState(0, 1, False, False),
+            RenewalState(0, 0, True, False),
+            RenewalState(0, 0, False, True),
+        ):
             with self.subTest(state=state):
                 subject = self.runtime()
                 original = self.runner.policy
@@ -146,7 +228,9 @@ class RenewalRuntimeTests(unittest.TestCase):
                 result = self.prepare(subject, state=state)
                 self.assertEqual(result["status"], "DEFER", result)
                 self.assertIs(self.runner.policy, original)
-                self.assertEqual(self.journal.get("active"), {"status": "UNKNOWN", "must_reconcile": True})
+                self.assertEqual(
+                    self.journal.get("active"), {"status": "UNKNOWN", "must_reconcile": True}
+                )
                 self.assertFalse((self.root / "generations/current.json").exists())
         self.journal.put("active", None)
 
@@ -182,7 +266,9 @@ class RenewalRuntimeTests(unittest.TestCase):
         result = subject.inspect(self.runner, self.now)
         self.assertEqual(result["status"], "VALID")
         self.assertIs(self.runner.policy, original)
-        self.assertEqual(self.journal.conn.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0], rows)
+        self.assertEqual(
+            self.journal.conn.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0], rows
+        )
         (self.root / "generations/current.json").unlink()
         with self.assertRaises(ValueError):
             self.runtime().check(self.runner, NOW)
@@ -205,24 +291,53 @@ class RenewalRuntimeTests(unittest.TestCase):
 
     def test_existing_cost_drift_stays_blocked_after_candidate_renewal_attempt(self):
         subject = self.runtime()
-        subject.audit_existing_reads(NS(balance=200.), [], [NS(**broker_packet(NOW)["history_deals"][0])], NOW)
+        subject.audit_existing_reads(
+            NS(balance=200.0), [], [NS(**broker_packet(NOW)["history_deals"][0])], NOW
+        )
         active = {"cost_policy_hash": digest(self.base), "status": "UNKNOWN"}
         subject.bind_active(active, 7, NOW)
         open_at, exit_at = NOW + timedelta(minutes=1), NOW + timedelta(hours=1)
         data = broker_packet(self.now)
-        data["history_deals"] += [dict(ticket=2, position_id=7, magic=22261025, entry=0, type=0,
-            volume=.01, time_msc=int(open_at.timestamp() * 1000), profit=0., commission=0., swap=0., fee=0.),
-            dict(ticket=3, position_id=7, magic=0, entry=1, type=1, volume=.01,
-            time_msc=int(exit_at.timestamp() * 1000), profit=1., commission=0., swap=0., fee=-.01)]
+        data["history_deals"] += [
+            dict(
+                ticket=2,
+                position_id=7,
+                magic=22261025,
+                entry=0,
+                type=0,
+                volume=0.01,
+                time_msc=int(open_at.timestamp() * 1000),
+                profit=0.0,
+                commission=0.0,
+                swap=0.0,
+                fee=0.0,
+            ),
+            dict(
+                ticket=3,
+                position_id=7,
+                magic=0,
+                entry=1,
+                type=1,
+                volume=0.01,
+                time_msc=int(exit_at.timestamp() * 1000),
+                profit=1.0,
+                commission=0.0,
+                swap=0.0,
+                fee=-0.01,
+            ),
+        ]
         data["history_deals_total"] = 3
         data["account"]["balance"] = data["account"]["equity"] = 200.99
-        observed = subject.audit_existing_reads(NS(balance=200.99), [],
-            [NS(**item) for item in data["history_deals"]], self.now)
+        observed = subject.audit_existing_reads(
+            NS(balance=200.99), [], [NS(**item) for item in data["history_deals"]], self.now
+        )
         self.assertEqual(observed["status"], "BLOCKED")
         result = self.prepare(subject, broker=data)
         self.assertEqual(result["status"], "DEFER")  # Native builder also rejects the actual fee.
         self.assertEqual(subject.ledger.status()["status"], "BLOCKED")
-        self.assertEqual(subject.ledger.status()["unresolved_incidents"][0]["code"], "cost_broker_deal_drift")
+        self.assertEqual(
+            subject.ledger.status()["unresolved_incidents"][0]["code"], "cost_broker_deal_drift"
+        )
         self.assertEqual(self.runner.policy, self.base)
         self.assertEqual(self.journal.get("selected_execution_review_sha256"), self.original_hash)
 
@@ -241,14 +356,18 @@ class RenewalRuntimeTests(unittest.TestCase):
         context = json.loads(documents["context"])
         context["cost_audit_sha256"] = hashlib.sha256(documents["cost_audit"]).hexdigest()
         documents["context"] = raw(context)
-        manifest["files"] = {name: hashlib.sha256(value).hexdigest() for name, value in documents.items()}
+        manifest["files"] = {
+            name: hashlib.sha256(value).hexdigest() for name, value in documents.items()
+        }
         ident = digest(manifest)
         fake = self.root / "generations/objects" / ident
         fake.mkdir()
         for name, content in documents.items():
             (fake / (name + ".json")).write_bytes(content)
         (fake / "manifest.json").write_bytes(raw(manifest))
-        (self.root / "generations/current.json").write_bytes(raw({"schema": 1, "generation_id": ident}))
+        (self.root / "generations/current.json").write_bytes(
+            raw({"schema": 1, "generation_id": ident})
+        )
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid"):
             subject.restore(self.now)
         self.assertIs(self.runner.policy, original)
@@ -265,8 +384,14 @@ class RenewalRuntimeTests(unittest.TestCase):
             return self.now + timedelta(seconds=6 if len(ticks) >= 3 else 0)
 
         with self.assertRaisesRegex(ValueError, "fresh_flat_window_required"):
-            subject.prepare(raw(broker_packet(self.now)), packet, value, now=self.now,
-                observe_state=lambda: FreshState(RenewalState(0, 0, False, False), self.now), clock=clock)
+            subject.prepare(
+                raw(broker_packet(self.now)),
+                packet,
+                value,
+                now=self.now,
+                observe_state=lambda: FreshState(RenewalState(0, 0, False, False), self.now),
+                clock=clock,
+            )
         self.assertIs(self.runner.policy, original)
         self.assertFalse((self.root / "generations/current.json").exists())
         self.assertEqual(self.review["approved_utc"], NOW.isoformat())
@@ -314,8 +439,10 @@ class RenewalRuntimeTests(unittest.TestCase):
         restarted = self.runtime()
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid") as rejected:
             restarted.restore(later)
-        self.assertEqual(rejected.exception.diagnostics,
-            {"stage": "renewal.generation", "code": "renewal_runtime_generation_lineage_invalid"})
+        self.assertEqual(
+            rejected.exception.diagnostics,
+            {"stage": "renewal.generation", "code": "renewal_runtime_generation_lineage_invalid"},
+        )
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid"):
             restarted.policy_for_reload({}, later)
         self.assertEqual(restarted.inspect(self.runner, later)["status"], "BLOCKED")
@@ -349,7 +476,9 @@ class RenewalRuntimeTests(unittest.TestCase):
         restored = restarted.policy_for_reload(legacy, later)
         self.assertEqual(restored, sealed)
         self.assertIs(self.runner.policy, legacy)
-        self.assertEqual(self.journal.conn.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0], events)
+        self.assertEqual(
+            self.journal.conn.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0], events
+        )
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid"):
             restarted.check(self.runner, later)
         self.runner.policy = restored
@@ -358,6 +487,7 @@ class RenewalRuntimeTests(unittest.TestCase):
 
     def test_direct_child_with_durable_final_flat_intent_recovers_after_replace_crash(self):
         from scripts.c22_selected import generations
+
         subject = self.runtime()
         first = self.prepare(subject)
         original = self.runner.policy
@@ -369,7 +499,9 @@ class RenewalRuntimeTests(unittest.TestCase):
                 raise OSError("Synthetic post-replace sync fault")
             return sync(path)
 
-        with patch("scripts.c22_selected.generations._sync_directory", side_effect=fail_after_replace):
+        with patch(
+            "scripts.c22_selected.generations._sync_directory", side_effect=fail_after_replace
+        ):
             with self.assertRaisesRegex(RuntimeError, "durability_unknown"):
                 self.prepare(subject, now=later)
         pointer = json.loads((self.root / "generations/current.json").read_bytes())
@@ -385,6 +517,7 @@ class RenewalRuntimeTests(unittest.TestCase):
 
     def test_initial_switch_crash_can_recover_even_if_expired_before_next_prepare(self):
         from scripts.c22_selected import generations
+
         subject = self.runtime()
         sync = generations._sync_directory
 
@@ -393,7 +526,9 @@ class RenewalRuntimeTests(unittest.TestCase):
                 raise OSError("Synthetic first-switch sync fault")
             return sync(path)
 
-        with patch("scripts.c22_selected.generations._sync_directory", side_effect=fail_after_replace):
+        with patch(
+            "scripts.c22_selected.generations._sync_directory", side_effect=fail_after_replace
+        ):
             with self.assertRaisesRegex(RuntimeError, "durability_unknown"):
                 self.prepare(subject)
         later = self.now + timedelta(hours=168, seconds=1)
@@ -407,13 +542,18 @@ class RenewalRuntimeTests(unittest.TestCase):
         subject = self.runtime()
         first = self.prepare(subject)
         later = self.now + timedelta(hours=96)
-        with patch("scripts.c22_selected.generations.os.replace", side_effect=OSError("Synthetic replace fault")):
+        with patch(
+            "scripts.c22_selected.generations.os.replace",
+            side_effect=OSError("Synthetic replace fault"),
+        ):
             with self.assertRaises(OSError):
                 self.prepare(subject, now=later)
         self.assertEqual(subject.restore(later)["reviewed_utc"], self.now.isoformat())
         folders = {path.name for path in (self.root / "generations/objects").iterdir()}
-        child, = folders - {first["generation_id"]}
-        (self.root / "generations/current.json").write_bytes(raw({"schema": 1, "generation_id": child}))
+        (child,) = folders - {first["generation_id"]}
+        (self.root / "generations/current.json").write_bytes(
+            raw({"schema": 1, "generation_id": child})
+        )
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid"):
             self.runtime().restore(later)
 
@@ -425,15 +565,19 @@ class RenewalRuntimeTests(unittest.TestCase):
         self.grant_path.write_bytes(b"{}")
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid") as rejected:
             subject.restore(self.now)
-        self.assertEqual(rejected.exception.diagnostics,
-            {"stage": "renewal.generation", "code": "generation_trusted_binding_required"})
+        self.assertEqual(
+            rejected.exception.diagnostics,
+            {"stage": "renewal.generation", "code": "generation_trusted_binding_required"},
+        )
         self.assertIsNotNone(rejected.exception.__cause__)
         self.grant_path.write_bytes(grant_bytes)
         self.review_path.write_bytes(b"{}")
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid") as rejected:
             subject.policy_for_reload({}, self.now)
-        self.assertEqual(rejected.exception.diagnostics,
-            {"stage": "renewal.generation", "code": "renewal_runtime_original_proof_invalid"})
+        self.assertEqual(
+            rejected.exception.diagnostics,
+            {"stage": "renewal.generation", "code": "renewal_runtime_original_proof_invalid"},
+        )
         self.assertIs(self.runner.policy, original)
         self.review_path.unlink()
         with self.assertRaisesRegex(ValueError, "installed_generation_invalid") as rejected:

@@ -22,16 +22,23 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
         self.root = Path(self.temp.name)
 
     def runner(self, broker, name, *, policy=None, restart=False):
-        costs = policy or (policy_v2(broker.now, broker.info) | {
-            "status": "CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS",
-            "swap_entitlement": "UNKNOWN",
-            "research_economic_qualification": "COST_INCONCLUSIVE",
-            "execution_authorized": False,
-        })
+        costs = policy or (
+            policy_v2(broker.now, broker.info)
+            | {
+                "status": "CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS",
+                "swap_entitlement": "UNKNOWN",
+                "research_economic_qualification": "COST_INCONCLUSIVE",
+                "execution_authorized": False,
+            }
+        )
         runner = SelectedDemoRunner(
-            mt5=broker, expected_login=123, expected_server="Exness-Demo",
-            journal_path=self.root / name / "execution.sqlite3", cost_policy=costs,
-            config=selected_config(), execute=True,
+            mt5=broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.root / name / "execution.sqlite3",
+            cost_policy=costs,
+            config=selected_config(),
+            execute=True,
         )
         self.addCleanup(runner.close)
         review = self.root / (name + ".review.json")
@@ -51,17 +58,22 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
     def close_at_broker(broker, direction):
         broker.now += timedelta(seconds=15)
         broker.tick.time_msc = int(broker.now.timestamp() * 1000)
-        broker.send({
-            "action": 1, "position": 777, "type": 1 if direction == 1 else 0,
-            "volume": 0.01,
-            "price": broker.tick.bid if direction == 1 else broker.tick.ask,
-        })
+        broker.send(
+            {
+                "action": 1,
+                "position": 777,
+                "type": 1 if direction == 1 else 0,
+                "volume": 0.01,
+                "price": broker.tick.bid if direction == 1 else broker.tick.ask,
+            }
+        )
 
     @staticmethod
     def events(runner):
-        return [json.loads(row[0]) for row in runner.journal.conn.execute(
-            "SELECT payload FROM events ORDER BY id"
-        )]
+        return [
+            json.loads(row[0])
+            for row in runner.journal.conn.execute("SELECT payload FROM events ORDER BY id")
+        ]
 
     def test_be_placed_retains_pending_across_restart_until_broker_confirms_both_sides(self):
         for direction in (1, -1):
@@ -89,8 +101,9 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
                 self.assertEqual(confirmed["status"], "BE_MOVED", confirmed)
                 self.assertEqual(resumed.cycle(now=broker.now)["status"], "MANAGING")
                 self.assertEqual(broker.order_send.call_count, 2)
-                self.assertEqual([event["kind"] for event in self.events(resumed)],
-                                 ["FILLED", "BE_MOVED"])
+                self.assertEqual(
+                    [event["kind"] for event in self.events(resumed)], ["FILLED", "BE_MOVED"]
+                )
                 resumed.close()
 
     def test_done_be_with_delayed_broker_observation_is_already_no_resend_control(self):
@@ -115,16 +128,19 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
                 self.assertEqual(result["net"], -1.0)
                 self.assertTrue(result["day_start_valid"])
                 self.assertEqual(result["day_start_day"], broker.now.date().isoformat())
-                self.assertEqual(result["day_start_source"],
-                                 "reconstructed_flat_midnight_from_reconciled_history")
+                self.assertEqual(
+                    result["day_start_source"],
+                    "reconstructed_flat_midnight_from_reconciled_history",
+                )
                 self.assertIsNone(runner.journal.get("active"))
                 self.assertEqual(result["position_protection"], "flat")
                 self.assertFalse(result["critical"])
                 later = runner.cycle(now=broker.now + timedelta(minutes=6))
                 self.assertEqual(later["reason"], "quote_stale")
                 self.assertFalse(later["critical"])
-                self.assertEqual([event["kind"] for event in self.events(runner)],
-                                 ["FILLED", "CLOSED"])
+                self.assertEqual(
+                    [event["kind"] for event in self.events(runner)], ["FILLED", "CLOSED"]
+                )
                 self.assertTrue(self.events(runner)[-1]["day_start_valid"])
                 self.assertEqual(broker.order_send.call_count, 1)
                 runner.close()
@@ -135,15 +151,18 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
                 broker, runner = self.filled(direction, f"disabled-{direction}")
                 self.close_at_broker(broker, direction)
                 broker.terminal_info = lambda: NS(
-                    connected=True, trade_allowed=False, tradeapi_disabled=True,
+                    connected=True,
+                    trade_allowed=False,
+                    tradeapi_disabled=True,
                 )
                 result = runner.cycle(now=broker.now)
                 self.assertEqual(result["status"], "CLOSED", result)
                 self.assertIsNone(runner.journal.get("active"))
                 self.assertEqual(result["observed_positions"], 0)
                 self.assertFalse(result["critical"])
-                self.assertEqual(runner.cycle(now=broker.now)["reason"],
-                                 "algo_permissions_required")
+                self.assertEqual(
+                    runner.cycle(now=broker.now)["reason"], "algo_permissions_required"
+                )
                 self.assertEqual(broker.order_send.call_count, 1)
                 runner.close()
 
@@ -223,7 +242,9 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
         policy = deepcopy(runner.policy)
         runner.close()
         broker.terminal_info = lambda: NS(
-            connected=True, trade_allowed=False, tradeapi_disabled=True,
+            connected=True,
+            trade_allowed=False,
+            tradeapi_disabled=True,
         )
         resumed = self.runner(broker, name, policy=policy, restart=True)
         result = resumed.cycle(now=broker.now + timedelta(minutes=2))
@@ -236,7 +257,9 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
     def test_missing_owned_opening_never_infers_close_from_an_empty_account(self):
         broker, runner = self.filled(1, "opening")
         self.close_at_broker(broker, 1)
-        broker.deals = [deal for deal in broker.deals if int(deal.entry) != 0 or int(deal.type) == 2]
+        broker.deals = [
+            deal for deal in broker.deals if int(deal.entry) != 0 or int(deal.type) == 2
+        ]
         result = runner.cycle(now=broker.now)
         self.assertEqual(result["status"], "UNKNOWN", result)
         self.assertIsNotNone(runner.journal.get("active"))
@@ -254,7 +277,9 @@ class SelectedLifecycleRecoveryTests(unittest.TestCase):
                 expected = "algo_permissions_required"
                 if failure == "permissions":
                     broker.terminal_info = lambda: NS(
-                        connected=True, trade_allowed=False, tradeapi_disabled=False,
+                        connected=True,
+                        trade_allowed=False,
+                        tradeapi_disabled=False,
                     )
                 elif failure == "stale":
                     now += timedelta(minutes=2)

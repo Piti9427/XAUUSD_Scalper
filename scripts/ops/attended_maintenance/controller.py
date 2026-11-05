@@ -12,8 +12,17 @@ from typing import Protocol
 
 from .actions import action_adapter
 from .model import (
-    APMeasurement, Approval, CostInstallation, Handle, Observation, Reboot,
-    digest, plan_document, read_plan, utc, validate_observation,
+    APMeasurement,
+    Approval,
+    CostInstallation,
+    Handle,
+    Observation,
+    Reboot,
+    digest,
+    plan_document,
+    read_plan,
+    utc,
+    validate_observation,
 )
 from .proof import classify, continuity, read_journal, require_flat
 from .store import Store
@@ -42,7 +51,8 @@ class Host(Protocol):
     def start_sender(self, handle: Handle) -> None: ...
 
 
-SAFE_CODES = frozenset("""
+SAFE_CODES = frozenset(
+    """
 unknown_outbox_schema audit_prefix_gap duplicate_event_lineage
 notification_delivery_uncertain invalid_outbox_row unknown_notification_kind_or_schema
 notification_identity_invalid notification_cohort_drift notification_lineage_unverified
@@ -57,16 +67,35 @@ journal_account_or_strategy_drift
 invalid_journal_json
 invalid_host_observation invalid_clock_observation invalid_outside_clock
 owned_probe_identity_changed
-""".split())
+""".split()
+)
 
 
 def failure(error, stage, category):
     # Host exceptions are untrusted; only module-owned refusal strings escape.
-    code = str(error) if type(error) is ValueError and str(error) in SAFE_CODES else "observation_failed"
-    return {"stage": stage, "category": category, "code": code,
-            "exception_type": type(error).__name__ if type(error).__name__ in (
-                "ValueError", "TypeError", "KeyError", "TimeoutError", "OSError",
-                "OperationalError", "JSONDecodeError", "FileNotFoundError") else "Exception"}
+    code = (
+        str(error)
+        if type(error) is ValueError and str(error) in SAFE_CODES
+        else "observation_failed"
+    )
+    return {
+        "stage": stage,
+        "category": category,
+        "code": code,
+        "exception_type": type(error).__name__
+        if type(error).__name__
+        in (
+            "ValueError",
+            "TypeError",
+            "KeyError",
+            "TimeoutError",
+            "OSError",
+            "OperationalError",
+            "JSONDecodeError",
+            "FileNotFoundError",
+        )
+        else "Exception",
+    }
 
 
 class Maintenance:
@@ -91,18 +120,37 @@ class Maintenance:
             raise ValueError("source_or_cohort_drift")
         require_flat(baseline, observed.captured_utc, plan.freshness_seconds)
         classify(baseline, plan, observed)
-        frozen = {"plan": document, "baseline": baseline, "journal": str(self.journal),
-                  "prepared_utc": utc(observed.captured_utc)}
+        frozen = {
+            "plan": document,
+            "baseline": baseline,
+            "journal": str(self.journal),
+            "prepared_utc": utc(observed.captured_utc),
+        }
         handle = Handle(plan.operation, digest(frozen))
         with self.store.locked() as db:
-            prior = db.execute("SELECT document FROM operations WHERE id=?", (plan.operation,)).fetchone()
+            prior = db.execute(
+                "SELECT document FROM operations WHERE id=?", (plan.operation,)
+            ).fetchone()
             if prior is not None:
                 existing = self.store.load(db, handle)
                 self._frozen(existing, handle)
                 return handle
-            self.store.save(db, dict(frozen, operation=plan.operation, digest=handle.digest,
-                                    phase="NEW", status="PREPARED", effects={}, failures=[],
-                                    approval=None, hold=None, manual_fallback=False, timing=None))
+            self.store.save(
+                db,
+                dict(
+                    frozen,
+                    operation=plan.operation,
+                    digest=handle.digest,
+                    phase="NEW",
+                    status="PREPARED",
+                    effects={},
+                    failures=[],
+                    approval=None,
+                    hold=None,
+                    manual_fallback=False,
+                    timing=None,
+                ),
+            )
         return handle
 
     def inspect(self, handle):
@@ -120,18 +168,28 @@ class Maintenance:
             grant = self._approval(approval, state)
             if state["approval"] is not None and state["approval"] != grant:
                 raise ValueError("approval_drift")
-            if state["status"] in ("COMPLETE", "FAILED_RECOVERED", "DEFERRED") or state["phase"] == "END":
+            if (
+                state["status"] in ("COMPLETE", "FAILED_RECOVERED", "DEFERRED")
+                or state["phase"] == "END"
+            ):
                 # Reconcile a stranded same-operation claim from an older local
                 # receipt; this is operational metadata, never financial state.
                 with db:
-                    db.execute("DELETE FROM accounts WHERE account=? AND operation=?",
-                               (plan.cohort.account, plan.operation))
+                    db.execute(
+                        "DELETE FROM accounts WHERE account=? AND operation=?",
+                        (plan.cohort.account, plan.operation),
+                    )
                 return self._receipt(state)
-            owner = db.execute("SELECT operation FROM accounts WHERE account=?", (plan.cohort.account,)).fetchone()
+            owner = db.execute(
+                "SELECT operation FROM accounts WHERE account=?", (plan.cohort.account,)
+            ).fetchone()
             if owner is not None and owner[0] != handle.operation:
                 raise ValueError("account_operation_incomplete")
             with db:
-                db.execute("INSERT OR IGNORE INTO accounts VALUES (?,?)", (plan.cohort.account, handle.operation))
+                db.execute(
+                    "INSERT OR IGNORE INTO accounts VALUES (?,?)",
+                    (plan.cohort.account, handle.operation),
+                )
             state["approval"] = grant
             self.store.save(db, state)
             for _ in range(12):
@@ -142,28 +200,43 @@ class Maintenance:
                     if observed.captured_utc < approval.approved_utc:
                         raise ValueError("approval_expired")
                     expected = self._context(plan, observed)
-                    current = read_journal(self.journal, original_highwater=state["baseline"]["highwater"])
+                    current = read_journal(
+                        self.journal, original_highwater=state["baseline"]["highwater"]
+                    )
                     observed = host.observe(handle)
                     validate_observation(observed)
                     expected = self._context(plan, observed)
                     if phase in ("NEW", "HELD", "STOPPED"):
                         self._work_budget(plan, state, approval, observed)
-                    continuity(state["baseline"], current, allow_append=phase in ("RECOVERING", "RESTORED", "VERIFY"))
+                    continuity(
+                        state["baseline"],
+                        current,
+                        allow_append=phase in ("RECOVERING", "RESTORED", "VERIFY"),
+                    )
                     classify(current, plan, observed)
                     if phase in ("NEW", "HELD", "STOPPED"):
-                        require_flat(current, observed.captured_utc, plan.freshness_seconds,
-                                     after=state["hold"]["utc"] if phase == "HELD" else None)
+                        require_flat(
+                            current,
+                            observed.captured_utc,
+                            plan.freshness_seconds,
+                            after=state["hold"]["utc"] if phase == "HELD" else None,
+                        )
                     if phase == "NEW":
                         if state["hold"] is None:
-                            state["hold"] = {"utc": utc(observed.captured_utc), "boot": observed.boot,
-                                             "monotonic": observed.monotonic}
+                            state["hold"] = {
+                                "utc": utc(observed.captured_utc),
+                                "boot": observed.boot,
+                                "monotonic": observed.monotonic,
+                            }
                         self._effect(db, state, host, handle, "hold_review", "PRIMARY", retry=True)
                         state["phase"] = "HELD"
                     elif phase == "HELD":
                         if not observed.review_held or not observed.post_hold_cycle:
                             return self._wait(db, state, "WAITING_QUIESCENCE")
                         if observed.sender_running:
-                            self._effect(db, state, host, handle, "stop_sender", "PRIMARY", retry=True)
+                            self._effect(
+                                db, state, host, handle, "stop_sender", "PRIMARY", retry=True
+                            )
                             after = host.observe(handle)
                             validate_observation(after)
                             self._context(plan, after)
@@ -175,7 +248,9 @@ class Maintenance:
                             raise ValueError("reader_ownership_unverified")
                         if "prove_broker_flat" in state["effects"]:
                             raise ValueError("broker_flat_unverified")
-                        packet = self._effect(db, state, host, handle, "prove_broker_flat", "PRIMARY")
+                        packet = self._effect(
+                            db, state, host, handle, "prove_broker_flat", "PRIMARY"
+                        )
                         # Recheck journal/source/budget after the exclusive reader returns.
                         after = host.observe(handle)
                         validate_observation(after)
@@ -183,7 +258,9 @@ class Maintenance:
                         self._context(plan, after)
                         if after.sender_running or after.readers or after.owned_probe:
                             raise ValueError("reader_ownership_unverified")
-                        snapshot = read_journal(self.journal, original_highwater=state["baseline"]["highwater"])
+                        snapshot = read_journal(
+                            self.journal, original_highwater=state["baseline"]["highwater"]
+                        )
                         after = host.observe(handle)
                         validate_observation(after)
                         self._context(plan, after)
@@ -206,8 +283,14 @@ class Maintenance:
                         if state["effects"].get(name, {}).get("state") != "ACKED" and not any(
                             f["stage"] == name for f in state["failures"]
                         ):
-                            state["failures"].append({"stage": name, "category": "PRIMARY",
-                                                      "code": "effect_outcome_uncertain", "exception_type": None})
+                            state["failures"].append(
+                                {
+                                    "stage": name,
+                                    "category": "PRIMARY",
+                                    "code": "effect_outcome_uncertain",
+                                    "exception_type": None,
+                                }
+                            )
                         wait = adapter.after_action(plan, state, observed)
                         if wait:
                             return self._wait(db, state, wait)
@@ -216,8 +299,16 @@ class Maintenance:
                         step = action_adapter(plan).recovery(plan, state, observed, approval)
                         if step is not None:
                             name, args = step
-                            self._effect(db, state, host, handle, name,
-                                         "CLEANUP" if name == "cleanup_probe" else "RECOVERY", *args, retry=True)
+                            self._effect(
+                                db,
+                                state,
+                                host,
+                                handle,
+                                name,
+                                "CLEANUP" if name == "cleanup_probe" else "RECOVERY",
+                                *args,
+                                retry=True,
+                            )
                             observed = host.observe(handle)
                             validate_observation(observed)
                             expected = self._context(plan, observed)
@@ -227,7 +318,16 @@ class Maintenance:
                             if not observed.review_restore_safe:
                                 raise ValueError("review_destination_unverified")
                             state["restore_utc"] = utc(observed.captured_utc)
-                            self._effect(db, state, host, handle, "restore_review", "RECOVERY", expected, retry=True)
+                            self._effect(
+                                db,
+                                state,
+                                host,
+                                handle,
+                                "restore_review",
+                                "RECOVERY",
+                                expected,
+                                retry=True,
+                            )
                             after = host.observe(handle)
                             validate_observation(after)
                             self._context(plan, after)
@@ -248,7 +348,9 @@ class Maintenance:
                                 return self._wait(db, state, "WAITING_AUTOMATIC_RECOVERY")
                             if type(plan.action) is Reboot:
                                 state["manual_fallback"] = True
-                            self._effect(db, state, host, handle, "start_sender", "RECOVERY", retry=True)
+                            self._effect(
+                                db, state, host, handle, "start_sender", "RECOVERY", retry=True
+                            )
                         state["phase"] = "VERIFY"
                     elif phase == "VERIFY":
                         if observed.readers or observed.owned_probe:
@@ -260,14 +362,22 @@ class Maintenance:
                         last = current["values"].get("last_result") or {}
                         stamp = datetime.fromisoformat(last["captured_utc"])
                         utc(stamp)
-                        if not 0 <= (observed.captured_utc - stamp).total_seconds() < plan.freshness_seconds:
+                        if (
+                            not 0
+                            <= (observed.captured_utc - stamp).total_seconds()
+                            < plan.freshness_seconds
+                        ):
                             raise ValueError("cycle_not_fresh")
-                        if state.get("restore_utc") and stamp <= datetime.fromisoformat(state["restore_utc"]):
+                        if state.get("restore_utc") and stamp <= datetime.fromisoformat(
+                            state["restore_utc"]
+                        ):
                             return self._wait(db, state, "WAITING_RECOVERY_PROOF")
                         elapsed = self._elapsed(state, observed)
-                        state["timing"] = {"seconds": elapsed,
-                                           "status": "TIMING_UNVERIFIED" if elapsed is None else "VERIFIED",
-                                           "overrun": elapsed is not None and elapsed > plan.pause_seconds}
+                        state["timing"] = {
+                            "seconds": elapsed,
+                            "status": "TIMING_UNVERIFIED" if elapsed is None else "VERIFIED",
+                            "overrun": elapsed is not None and elapsed > plan.pause_seconds,
+                        }
                         state["status"] = "FAILED_RECOVERED" if state["failures"] else "COMPLETE"
                         if elapsed is None or elapsed > plan.pause_seconds:
                             state["status"] = "STATE_REVIEW_REQUIRED"
@@ -279,7 +389,15 @@ class Maintenance:
                     state["status"] = "RUNNING"
                     self.store.save(db, state)
                 except Exception as error:
-                    state["failures"].append(failure(error, phase, "PRIMARY" if phase in ("NEW", "HELD", "STOPPED", "ACTED") else "RECOVERY"))
+                    state["failures"].append(
+                        failure(
+                            error,
+                            phase,
+                            "PRIMARY"
+                            if phase in ("NEW", "HELD", "STOPPED", "ACTED")
+                            else "RECOVERY",
+                        )
+                    )
                     if phase == "NEW":
                         state["status"], state["phase"] = "DEFERRED", "END"
                         self._finish(db, state, plan)
@@ -293,11 +411,20 @@ class Maintenance:
             return self._wait(db, state, "OPERATOR_REQUIRED")
 
     def _effect(self, db, state, host, handle, name, category, *args, retry=False):
-        conditional = {"hold_review", "stop_sender", "cleanup_probe", "restore_cost", "restore_review", "start_sender"}
+        conditional = {
+            "hold_review",
+            "stop_sender",
+            "cleanup_probe",
+            "restore_cost",
+            "restore_review",
+            "start_sender",
+        }
         if retry and name not in conditional:
             raise ValueError("nonrepeatable_effect")
         previous = state["effects"].get(name)
-        arguments = [asdict(arg) if hasattr(type(arg), "__dataclass_fields__") else arg for arg in args]
+        arguments = [
+            asdict(arg) if hasattr(type(arg), "__dataclass_fields__") else arg for arg in args
+        ]
         argument_hash = digest(arguments)
         if previous is not None:
             if not retry or previous["state"] == "ACKED":
@@ -313,17 +440,23 @@ class Maintenance:
             if name == "cleanup_probe":
                 previous["target_sha256"] = argument_hash
         previous["state"] = "ATTEMPTED"
-        previous["attempts"].append({"state": "ATTEMPTED", "arguments": arguments,
-                                     "arguments_sha256": argument_hash})
+        previous["attempts"].append(
+            {"state": "ATTEMPTED", "arguments": arguments, "arguments_sha256": argument_hash}
+        )
         self.store.save(db, state)
         try:
             result = getattr(host, name)(handle, *args)
         except Exception as error:
             state["effects"][name]["state"] = "UNCERTAIN"
             previous["attempts"][-1]["state"] = "UNCERTAIN"
-            state["failures"].append({"stage": name, "category": category,
-                                      "code": "effect_outcome_uncertain",
-                                      "exception_type": failure(error, name, category)["exception_type"]})
+            state["failures"].append(
+                {
+                    "stage": name,
+                    "category": category,
+                    "code": "effect_outcome_uncertain",
+                    "exception_type": failure(error, name, category)["exception_type"],
+                }
+            )
             result = None
         else:
             state["effects"][name]["state"] = "ACKED"
@@ -333,9 +466,16 @@ class Maintenance:
 
     @staticmethod
     def _approval(approval, state):
-        if type(approval) is not Approval or approval.plan_digest != state["digest"] or not approval.owner_ref:
+        if (
+            type(approval) is not Approval
+            or approval.plan_digest != state["digest"]
+            or not approval.owner_ref
+        ):
             raise ValueError("exact_owner_approval_required")
-        if type(approval.allow_manager_recovery) is not bool or type(approval.allow_probe_cleanup) is not bool:
+        if (
+            type(approval.allow_manager_recovery) is not bool
+            or type(approval.allow_probe_cleanup) is not bool
+        ):
             raise ValueError("invalid_recovery_authority")
         stamp = utc(approval.approved_utc)
         if approval.approved_utc < datetime.fromisoformat(state["prepared_utc"]):
@@ -344,7 +484,9 @@ class Maintenance:
             raise ValueError("invalid_approval_interval")
         result = asdict(approval)
         result["approved_utc"] = stamp
-        result["valid_until"] = utc(approval.valid_until) if approval.valid_until is not None else None
+        result["valid_until"] = (
+            utc(approval.valid_until) if approval.valid_until is not None else None
+        )
         return result
 
     @staticmethod
@@ -355,7 +497,11 @@ class Maintenance:
 
     @staticmethod
     def _context(plan, observed):
-        if type(observed.sender_count) is not int or observed.sender_count not in (0, 1) or observed.sender_count != int(observed.sender_running):
+        if (
+            type(observed.sender_count) is not int
+            or observed.sender_count not in (0, 1)
+            or observed.sender_count != int(observed.sender_running)
+        ):
             raise ValueError("sender_ownership_unverified")
         expected = action_adapter(plan).cohort(plan, observed)
         if observed.cohort != expected:
@@ -366,8 +512,14 @@ class Maintenance:
 
     @staticmethod
     def _broker(packet, observed, plan):
-        if (not isinstance(packet, dict) or packet.get("account") != plan.cohort.account
-                or any(type(packet.get(key)) is not int or packet[key] != 0 for key in ("positions", "orders"))):
+        if (
+            not isinstance(packet, dict)
+            or packet.get("account") != plan.cohort.account
+            or any(
+                type(packet.get(key)) is not int or packet[key] != 0
+                for key in ("positions", "orders")
+            )
+        ):
             raise ValueError("broker_flat_unverified")
         stamp = datetime.fromisoformat(packet["captured_utc"])
         utc(stamp)
@@ -381,7 +533,10 @@ class Maintenance:
         ):
             raise ValueError("approval_expired")
         elapsed = Maintenance._elapsed(state, observed)
-        if elapsed is None or elapsed + plan.action_seconds + plan.recovery_seconds > plan.pause_seconds:
+        if (
+            elapsed is None
+            or elapsed + plan.action_seconds + plan.recovery_seconds > plan.pause_seconds
+        ):
             raise ValueError("work_budget_exhausted")
 
     @staticmethod
@@ -404,16 +559,34 @@ class Maintenance:
     def _finish(self, db, state, plan):
         with db:
             self.store.save(db, state, commit=False)
-            db.execute("DELETE FROM accounts WHERE account=? AND operation=?", (plan.cohort.account, plan.operation))
+            db.execute(
+                "DELETE FROM accounts WHERE account=? AND operation=?",
+                (plan.cohort.account, plan.operation),
+            )
 
     @staticmethod
     def _receipt(state):
-        result = {key: state[key] for key in ("operation", "digest", "status", "phase",
-                                            "failures", "manual_fallback", "timing")}
+        result = {
+            key: state[key]
+            for key in (
+                "operation",
+                "digest",
+                "status",
+                "phase",
+                "failures",
+                "manual_fallback",
+                "timing",
+            )
+        }
         # Raw argument evidence stays private in the operational database.
         result["effects"] = {
-            name: dict(effect, attempts=[{k: v for k, v in attempt.items() if k != "arguments"}
-                                         for attempt in effect.get("attempts", [])])
+            name: dict(
+                effect,
+                attempts=[
+                    {k: v for k, v in attempt.items() if k != "arguments"}
+                    for attempt in effect.get("attempts", [])
+                ],
+            )
             for name, effect in state["effects"].items()
         }
         return result

@@ -8,7 +8,14 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from scripts.c22_selected.runner import SelectedDemoRunner
-from scripts.c22_selected.strategy import CONTRACT, CANDIDATE_ID, MAGIC, ROOT, SNAPSHOT, SOURCE_PATHS
+from scripts.c22_selected.strategy import (
+    CONTRACT,
+    CANDIDATE_ID,
+    MAGIC,
+    ROOT,
+    SNAPSHOT,
+    SOURCE_PATHS,
+)
 from tests.demo.test_c22h4_demo import CandidateBroker
 from tests.demo.test_trial30_demo import policy
 from tests.demo.test_c22_selected_strategy import signal_bars
@@ -18,10 +25,17 @@ import pandas as pd
 
 def selected_config():
     return {
-        "snapshot": SNAPSHOT, "contract_id": CANDIDATE_ID, "contract": CONTRACT,
-        "symbol": "XAUUSDm", "volume": 0.01, "real_money": "PROHIBITED", "research_only": True,
+        "snapshot": SNAPSHOT,
+        "contract_id": CANDIDATE_ID,
+        "contract": CONTRACT,
+        "symbol": "XAUUSDm",
+        "volume": 0.01,
+        "real_money": "PROHIBITED",
+        "research_only": True,
         "commission_unit": "USD_per_lot_round_trip",
-        "source_hashes": {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCE_PATHS},
+        "source_hashes": {
+            name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in SOURCE_PATHS
+        },
     }
 
 
@@ -37,16 +51,38 @@ class SelectedBroker(CandidateBroker):
         self.deals[0].time = self.deals[0].time_msc // 1000
         self.rates = []
         for stamp, row in source.iterrows():
-            self.rates.extend(dict(time=int(stamp.timestamp()) + minute * 60,
-                                   open=row.open, high=row.high, low=row.low, close=row.close,
-                                   tick_volume=1) for minute in range(15))
+            self.rates.extend(
+                dict(
+                    time=int(stamp.timestamp()) + minute * 60,
+                    open=row.open,
+                    high=row.high,
+                    low=row.low,
+                    close=row.close,
+                    tick_volume=1,
+                )
+                for minute in range(15)
+            )
 
     def closed_loss(self, exit_ms, *, ident=99, net=-0.1):
         for number, entry, side, stamp in [(1, 0, 1, exit_ms - 60000), (2, 1, 0, exit_ms)]:
-            self.deals.append(NS(ticket=ident * 10 + number, position_id=ident, time_msc=stamp,
-                                 time=stamp // 1000, entry=entry, type=side, volume=0.01,
-                                 magic=MAGIC if entry == 0 else 0, comment="C22_fixture" if entry == 0 else "[be]",
-                                 price=self.tick.bid, profit=0.0, commission=0.0, swap=net if entry == 1 else 0.0, fee=0.0))
+            self.deals.append(
+                NS(
+                    ticket=ident * 10 + number,
+                    position_id=ident,
+                    time_msc=stamp,
+                    time=stamp // 1000,
+                    entry=entry,
+                    type=side,
+                    volume=0.01,
+                    magic=MAGIC if entry == 0 else 0,
+                    comment="C22_fixture" if entry == 0 else "[be]",
+                    price=self.tick.bid,
+                    profit=0.0,
+                    commission=0.0,
+                    swap=net if entry == 1 else 0.0,
+                    fee=0.0,
+                )
+            )
         self.account.balance += net
         self.account.equity = self.account.balance
 
@@ -58,10 +94,19 @@ class SelectedRunnerTests(unittest.TestCase):
         self.path = Path(self.temp.name) / "selected.sqlite3"
 
     def runner(self, broker, *, execute=False):
-        costs = policy() | {"reviewed_utc": broker.now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()}
+        costs = policy() | {
+            "reviewed_utc": broker.now.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ).isoformat()
+        }
         runner = SelectedDemoRunner(
-            mt5=broker, expected_login=123, expected_server="Exness-Demo", journal_path=self.path,
-            config=selected_config(), cost_policy=costs, execute=execute,
+            mt5=broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.path,
+            config=selected_config(),
+            cost_policy=costs,
+            execute=execute,
         )
         self.addCleanup(runner.close)
         return runner
@@ -74,7 +119,9 @@ class SelectedRunnerTests(unittest.TestCase):
         request = result["request"]
         self.assertEqual(request["magic"], MAGIC)
         self.assertEqual(request["volume"], 0.01)
-        self.assertAlmostEqual((request["price"] - request["tp"]) / (request["sl"] - request["price"]), 1.35, delta=0.2)
+        self.assertAlmostEqual(
+            (request["price"] - request["tp"]) / (request["sl"] - request["price"]), 1.35, delta=0.2
+        )
         broker.order_send.assert_not_called()
         self.assertEqual(runner.strategy.max_daily_losses, 2)
         self.assertTrue(runner.strategy.protects(1))
@@ -155,7 +202,10 @@ class SelectedRunnerTests(unittest.TestCase):
         runner = self.runner(broker)
         result = runner.cycle(now=broker.now)
         self.assertEqual(result.get("reason"), "cooldown", result)
-        self.assertLess(datetime.fromtimestamp(broker.deals[-1].time_msc / 1000, timezone.utc).date(), broker.now.date())
+        self.assertLess(
+            datetime.fromtimestamp(broker.deals[-1].time_msc / 1000, timezone.utc).date(),
+            broker.now.date(),
+        )
         broker.order_send.assert_not_called()
 
     def test_shadow_export_preserves_exact_causal_cache(self):
@@ -169,6 +219,7 @@ class SelectedRunnerTests(unittest.TestCase):
         expected = runner.strategy.cache.bars.copy()
         readback.index = readback.index.as_unit("ns")
         expected.index = expected.index.as_unit("ns")
-        pd.testing.assert_frame_equal(readback, expected, check_freq=False,
-                                      check_names=False, check_exact=False, rtol=1e-12)
+        pd.testing.assert_frame_equal(
+            readback, expected, check_freq=False, check_names=False, check_exact=False, rtol=1e-12
+        )
         broker.order_send.assert_not_called()

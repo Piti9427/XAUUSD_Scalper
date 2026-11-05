@@ -130,16 +130,23 @@ def validate(plan):
         raise ValueError("invalid_plan_contract")
     # DemoRunner/BrokerView persist the established 16-character fingerprint.
     # It is an identity token, not a full source/artifact SHA256.
-    if not isinstance(plan.cohort.account, str) or not re.fullmatch(r"[a-f0-9]{16}", plan.cohort.account):
+    if not isinstance(plan.cohort.account, str) or not re.fullmatch(
+        r"[a-f0-9]{16}", plan.cohort.account
+    ):
         raise ValueError("invalid_account_fingerprint")
-    hashes = [v for k, v in asdict(plan.cohort).items() if k not in ("snapshot", "account")] + [plan.backup_sha256]
+    hashes = [v for k, v in asdict(plan.cohort).items() if k not in ("snapshot", "account")] + [
+        plan.backup_sha256
+    ]
     if not isinstance(plan.cohort.snapshot, str) or not plan.cohort.snapshot:
         raise ValueError("invalid_strategy_snapshot")
     if type(plan.action) is APMeasurement:
         hashes.append(plan.action.probe_sha256)
     if type(plan.action) is CostInstallation:
         hashes.extend((plan.action.policy, plan.action.review))
-        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", plan.action.generation) or plan.action.generation == "original":
+        if (
+            not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", plan.action.generation)
+            or plan.action.generation == "original"
+        ):
             raise ValueError("invalid_generation")
     if any(not isinstance(h, str) or not re.fullmatch(r"[a-f0-9]{64}", h) for h in hashes):
         raise ValueError("invalid_source_binding")
@@ -149,7 +156,12 @@ def validate(plan):
     if plan.action_seconds + plan.recovery_seconds > plan.pause_seconds:
         raise ValueError("insufficient_recovery_reserve")
     for ident, payload_hash, reference in plan.reviewed_critical:
-        if type(ident) is not int or ident <= 0 or not re.fullmatch(r"[a-f0-9]{64}", payload_hash) or not reference:
+        if (
+            type(ident) is not int
+            or ident <= 0
+            or not re.fullmatch(r"[a-f0-9]{64}", payload_hash)
+            or not reference
+        ):
             raise ValueError("invalid_critical_review")
 
 
@@ -176,13 +188,23 @@ def read_plan(document):
 def validate_observation(value):
     if type(value) is not Observation:
         raise ValueError("invalid_host_observation")
-    flags = ("backup_restore_verified", "sender_running", "review_held",
-             "review_restore_safe", "post_hold_cycle", "delivery_off",
-             "delivery_inflight", "startup_verified", "recovered_cycle")
+    flags = (
+        "backup_restore_verified",
+        "sender_running",
+        "review_held",
+        "review_restore_safe",
+        "post_hold_cycle",
+        "delivery_off",
+        "delivery_inflight",
+        "startup_verified",
+        "recovered_cycle",
+    )
     if any(type(getattr(value, key)) is not bool for key in flags):
         raise ValueError("invalid_host_observation")
-    if type(value.cohort) is not Cohort or type(value.readers) is not tuple or any(
-        not isinstance(reader, str) or not reader for reader in value.readers
+    if (
+        type(value.cohort) is not Cohort
+        or type(value.readers) is not tuple
+        or any(not isinstance(reader, str) or not reader for reader in value.readers)
     ):
         raise ValueError("invalid_host_observation")
     if value.owned_probe is not None and type(value.owned_probe) is not OwnedProbe:
@@ -192,12 +214,17 @@ def validate_observation(value):
     ):
         raise ValueError("invalid_host_observation")
     utc(value.captured_utc)
-    if (not isinstance(value.boot, str) or not value.boot
-            or type(value.monotonic) not in (int, float)
-            or not math.isfinite(value.monotonic) or value.monotonic < 0):
+    if (
+        not isinstance(value.boot, str)
+        or not value.boot
+        or type(value.monotonic) not in (int, float)
+        or not math.isfinite(value.monotonic)
+        or value.monotonic < 0
+    ):
         raise ValueError("invalid_clock_observation")
     if value.outside_pause_seconds is not None and (
         type(value.outside_pause_seconds) not in (int, float)
-        or not math.isfinite(value.outside_pause_seconds) or value.outside_pause_seconds < 0
+        or not math.isfinite(value.outside_pause_seconds)
+        or value.outside_pause_seconds < 0
     ):
         raise ValueError("invalid_outside_clock")

@@ -17,10 +17,16 @@ class APAdapter:
     def recovery(self, plan, state, observed, approval):
         if observed.owned_probe:
             identity = observed.owned_probe
-            if (not approval.allow_probe_cleanup or type(identity) is not OwnedProbe
-                    or identity.operation != plan.operation or identity.boot != observed.boot
-                    or type(identity.pid) is not int or identity.pid <= 0 or not identity.started
-                    or identity.source != plan.action.probe_sha256):
+            if (
+                not approval.allow_probe_cleanup
+                or type(identity) is not OwnedProbe
+                or identity.operation != plan.operation
+                or identity.boot != observed.boot
+                or type(identity.pid) is not int
+                or identity.pid <= 0
+                or not identity.started
+                or identity.source != plan.action.probe_sha256
+            ):
                 raise ValueError("reader_ownership_unverified")
             return "cleanup_probe", (identity,)
         return None
@@ -38,8 +44,14 @@ class CostAdapter:
 
     def after_action(self, plan, state, observed):
         if observed.cost_marker != plan.action.generation:
-            state["failures"].append({"stage": self.effect, "category": "PRIMARY",
-                                      "code": "cost_installation_unverified", "exception_type": None})
+            state["failures"].append(
+                {
+                    "stage": self.effect,
+                    "category": "PRIMARY",
+                    "code": "cost_installation_unverified",
+                    "exception_type": None,
+                }
+            )
         return None
 
     def recovery(self, plan, state, observed, approval):

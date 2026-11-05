@@ -147,7 +147,9 @@ class PureB1ShadowTests(unittest.TestCase):
         shift = 12 * 3600
         for row in self.m1_rates:
             row["time"] += shift
-        self.mt5.positions_get.return_value = (SimpleNamespace(symbol="XAUUSDm", comment="FOREIGN"),)
+        self.mt5.positions_get.return_value = (
+            SimpleNamespace(symbol="XAUUSDm", comment="FOREIGN"),
+        )
         with TemporaryDirectory() as tmp:
             result = shadow_cycle(
                 self.mt5,
@@ -345,7 +347,9 @@ class PureB1ShadowTests(unittest.TestCase):
             for minute in range(15):
                 extra.append(
                     {
-                        "time": int(datetime(2026, 9, 29, 0, minute, tzinfo=timezone.utc).timestamp()),
+                        "time": int(
+                            datetime(2026, 9, 29, 0, minute, tzinfo=timezone.utc).timestamp()
+                        ),
                         "open": 103.0,
                         "high": 103.0,
                         "low": 102.0,

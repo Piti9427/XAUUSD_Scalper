@@ -23,6 +23,18 @@ exclude = [
     ".scratch",
     "docs",
     "data",
+    "scripts/c22_selected",
+    "scripts/c22h4",
+    "scripts/trial30",
+    "scripts/demo_runtime",
+    "scripts/pure_b1",
+    "scripts/research",
+    "scripts/strategy.py",
+    "scripts/ops/c22_forward_seal.py",
+    "scripts/ops/c22_selected_readiness.py",
+    "scripts/ops/c22_selected_watchdog.py",
+    "scripts/ops/c22h4_readiness.py",
+    "scripts/ops/mt5_wine_c22_selected.py",
 ]
 
 [tool.ruff.lint]
@@ -34,5 +46,5 @@ ignore = ["E501"]
 "scripts/smoke_broker_identity.py" = ["E402"]
 
 [tool.ruff.format]
-# Shadow-monitor qualification pins exact source bytes for these two modules.
-exclude = ["scripts/research/data.py", "scripts/research/strategies.py"]
+quote-style = "double"
+indent-style = "space"

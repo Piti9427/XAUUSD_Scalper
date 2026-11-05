@@ -50,8 +50,10 @@ class Store:
             with db:
                 Store.save(db, document, commit=False)
         else:
-            db.execute("INSERT INTO operations VALUES (?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
-                       (document["operation"], canonical(document)))
+            db.execute(
+                "INSERT INTO operations VALUES (?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
+                (document["operation"], canonical(document)),
+            )
 
     def read(self, handle):
         # inspect must not create a database, directory, schema or lock file.
@@ -62,7 +64,10 @@ class Store:
     @staticmethod
     def load(db, handle):
         import json
-        row = db.execute("SELECT document FROM operations WHERE id=?", (handle.operation,)).fetchone()
+
+        row = db.execute(
+            "SELECT document FROM operations WHERE id=?", (handle.operation,)
+        ).fetchone()
         if row is None:
             raise ValueError("operation_missing")
         result = json.loads(row[0])

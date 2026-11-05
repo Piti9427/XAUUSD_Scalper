@@ -32,8 +32,11 @@ def campaign_fixture(directory, *, wrong_stop=False):
     stamp = int(closed.timestamp() * 1000) + 288
     tape = bars.parent / "tape"
     tape.mkdir()
-    for name, values in (("time", np.array([stamp], dtype="int64")),
-                         ("bid", np.array([100.2])), ("ask", np.array([100.4]))):
+    for name, values in (
+        ("time", np.array([stamp], dtype="int64")),
+        ("bid", np.array([100.2])),
+        ("ask", np.array([100.4])),
+    ):
         np.save(tape / (name + ".npy"), values)
     out = directory / "campaign"
     views = {
@@ -42,45 +45,93 @@ def campaign_fixture(directory, *, wrong_stop=False):
         "fee": {"extra_spread": 0.2, "slippage": 0.1, "commission_per_lot": 7},
     }
     protocol = {
-        "broker": {"trade_tick_size": 0.001, "trade_contract_size": 100.0,
-                   "volume_min": 0.01, "volume_max": 200.0, "volume_step": 0.01, "leverage": 1000},
+        "broker": {
+            "trade_tick_size": 0.001,
+            "trade_contract_size": 100.0,
+            "volume_min": 0.01,
+            "volume_max": 200.0,
+            "volume_step": 0.01,
+            "leverage": 1000,
+        },
         "views": views,
         "sources": {},
-        "input_hashes": {"bars.csv": sha(bars)} | {f"tape/{name}.npy": sha(tape / (name + ".npy")) for name in ("time", "bid", "ask")},
+        "input_hashes": {"bars.csv": sha(bars)}
+        | {f"tape/{name}.npy": sha(tape / (name + ".npy")) for name in ("time", "bid", "ask")},
     }
     write_json(out / "protocol.json", protocol)
     artifacts = {"protocol.json": sha(out / "protocol.json")}
     audited = {}
     payload_hashes = {}
-    expected = {"base": (100.2, 103.149, 96.219, 2.949),
-                "stress": (100.0, 102.949, 96.019, 3.049),
-                "fee": (100.0, 102.949, 96.019, 3.119)}
+    expected = {
+        "base": (100.2, 103.149, 96.219, 2.949),
+        "stress": (100.0, 102.949, 96.019, 3.049),
+        "fee": (100.0, 102.949, 96.019, 3.119),
+    }
     for guard in ("raw", "cent"):
         for view, cost in views.items():
             entry, stop, target, risk = expected[view]
             if wrong_stop and guard == "cent" and view == "fee":
                 stop += 0.001
             entry_time = pd.Timestamp(stamp, unit="ms", tz="UTC").isoformat()
-            ledger = {"direction": -1, "entry": entry, "initial_stop": stop, "target": target,
-                      "entry_ms": stamp, "entry_time_utc": entry_time, "entry_equity": 200.0,
-                      "risk_usd": risk, "volume": 0.01}
-            cell = {"case": {"name": CANDIDATE_ID, "rules": EXPECTED_RULES}, "view": view,
-                    "guard": guard, "result": {"rules": EXPECTED_RULES, "costs": cost,
-                                                "ledger": [ledger], "context_events": [
-                                                    {"direction": -1, "reason": "admitted", "time_utc": entry_time,
-                                                     "signal_close_utc": closed.isoformat()}]}}
+            ledger = {
+                "direction": -1,
+                "entry": entry,
+                "initial_stop": stop,
+                "target": target,
+                "entry_ms": stamp,
+                "entry_time_utc": entry_time,
+                "entry_equity": 200.0,
+                "risk_usd": risk,
+                "volume": 0.01,
+            }
+            cell = {
+                "case": {"name": CANDIDATE_ID, "rules": EXPECTED_RULES},
+                "view": view,
+                "guard": guard,
+                "result": {
+                    "rules": EXPECTED_RULES,
+                    "costs": cost,
+                    "ledger": [ledger],
+                    "context_events": [
+                        {
+                            "direction": -1,
+                            "reason": "admitted",
+                            "time_utc": entry_time,
+                            "signal_close_utc": closed.isoformat(),
+                        }
+                    ],
+                },
+            }
             key = f"{CANDIDATE_ID}-{view}-{guard}"
             payload = out / "cells" / (key + ".json")
             write_json(payload, cell)
             proof = out / "cells-integrity" / (key + ".json")
-            write_json(proof, {"path": str(payload.relative_to(ROOT)), "sha256": sha(payload), "origin": "new"})
+            write_json(
+                proof,
+                {"path": str(payload.relative_to(ROOT)), "sha256": sha(payload), "origin": "new"},
+            )
             artifacts[str(payload.relative_to(out))] = sha(payload)
             artifacts[str(proof.relative_to(out))] = sha(proof)
             audited[str(proof.relative_to(ROOT))] = sha(proof)
             payload_hashes[str(payload.relative_to(ROOT))] = sha(payload)
-    write_json(out / "COMPLETE.json", {"status": "EXHAUSTIVE_COMPLETE", "selected": {"profit": CANDIDATE_ID, "repair": CANDIDATE_ID}, "artifacts": artifacts})
-    write_json(out / "independent-verification.json", {"status": "PASS", "selected": {"profit": CANDIDATE_ID, "repair": CANDIDATE_ID},
-               "parent_completion_sha256": sha(out / "COMPLETE.json"), "audited_cells": audited, "payload_hashes": payload_hashes})
+    write_json(
+        out / "COMPLETE.json",
+        {
+            "status": "EXHAUSTIVE_COMPLETE",
+            "selected": {"profit": CANDIDATE_ID, "repair": CANDIDATE_ID},
+            "artifacts": artifacts,
+        },
+    )
+    write_json(
+        out / "independent-verification.json",
+        {
+            "status": "PASS",
+            "selected": {"profit": CANDIDATE_ID, "repair": CANDIDATE_ID},
+            "parent_completion_sha256": sha(out / "COMPLETE.json"),
+            "audited_cells": audited,
+            "payload_hashes": payload_hashes,
+        },
+    )
     return bars, out
 
 
@@ -95,12 +146,18 @@ class SelectedParityTests(unittest.TestCase):
             self.assertFalse(report["execution_authorized"])
             self.assertFalse(report["data"]["broker_fill_parity"])
             self.assertFalse(report["data"]["economic_replay_performed"])
-            self.assertEqual(report["data"]["lifecycle_context_scope"], "NOT_TESTED_BY_PRICE_PARITY")
+            self.assertEqual(
+                report["data"]["lifecycle_context_scope"], "NOT_TESTED_BY_PRICE_PARITY"
+            )
 
     def test_cent_geometry_difference_is_not_substituted_from_raw(self):
         with TemporaryDirectory(dir=ROOT / "runs") as folder:
             bars, campaign = campaign_fixture(Path(folder), wrong_stop=True)
             report = run_parity(bars, campaign)
             self.assertEqual(report["status"], "PARITY_FAIL")
-            self.assertTrue(any(issue.get("field") == "initial_stop" and issue.get("guard") == "cent"
-                                for issue in report["data"]["mismatches"]))
+            self.assertTrue(
+                any(
+                    issue.get("field") == "initial_stop" and issue.get("guard") == "cent"
+                    for issue in report["data"]["mismatches"]
+                )
+            )

@@ -202,7 +202,9 @@ class PureB1CaptureTests(unittest.TestCase):
                 expected_server="Exness-Demo",
                 output=Path(tmp) / "capture",
             )
-        gaps = [event for event in manifest["bar_events"] if event["type"] == "incomplete_m1_interval"]
+        gaps = [
+            event for event in manifest["bar_events"] if event["type"] == "incomplete_m1_interval"
+        ]
         stale = [event for event in manifest["bar_events"] if event["type"] == "stale_quote"]
         self.assertEqual(manifest["m15_bars"], 1)
         self.assertEqual(len(gaps), 1)

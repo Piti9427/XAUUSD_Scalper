@@ -27,14 +27,18 @@ def _output_path(value: Path) -> Path:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    manifest = commands.add_parser("manifest", help="Bind complete Rules and current research evidence")
+    manifest = commands.add_parser(
+        "manifest", help="Bind complete Rules and current research evidence"
+    )
     manifest.add_argument("--campaign", type=Path, required=True)
     manifest.add_argument("--candidate")
     parity = commands.add_parser("parity", help="Compare independent bound event snapshots")
     parity.add_argument("--reference", type=Path, required=True)
     parity.add_argument("--observed", type=Path, required=True)
     parity.add_argument("--candidate")
-    costs = commands.add_parser("costs", help="Normalize exported broker history without connecting")
+    costs = commands.add_parser(
+        "costs", help="Normalize exported broker history without connecting"
+    )
     costs.add_argument("--export", type=Path, required=True)
     costs.add_argument("--policy", type=Path)
     data = commands.add_parser("data", help="Bounded, read-only data quality checks")
@@ -42,19 +46,29 @@ def _parser() -> argparse.ArgumentParser:
     data.add_argument("--bars", type=Path)
     data.add_argument("--ticks", type=Path)
     data.add_argument("--max-rows", type=int, default=10000)
-    protocol = commands.add_parser("protocol-template", help="Draft undecided criteria, without cohort activation")
+    protocol = commands.add_parser(
+        "protocol-template", help="Draft undecided criteria, without cohort activation"
+    )
     protocol.add_argument("--manifest", type=Path, required=True)
-    freeze = commands.add_parser("freeze-cohort", help="Bind reviewed version/criteria; never activate execution")
+    freeze = commands.add_parser(
+        "freeze-cohort", help="Bind reviewed version/criteria; never activate execution"
+    )
     freeze.add_argument("--manifest", type=Path, required=True)
     freeze.add_argument("--parity", type=Path, required=True)
     freeze.add_argument("--criteria", type=Path, required=True)
     freeze.add_argument("--cohort-dir", type=Path, required=True)
-    observe = commands.add_parser("record-evidence", help="Append candidate-bound prospective snapshots")
+    observe = commands.add_parser(
+        "record-evidence", help="Append candidate-bound prospective snapshots"
+    )
     observe.add_argument("--cohort-dir", type=Path, required=True)
     observe.add_argument("--evidence", type=Path, required=True)
-    observe.add_argument("--kind", choices=["shadow", "broker_demo", "operational_stop", "review"], required=True)
+    observe.add_argument(
+        "--kind", choices=["shadow", "broker_demo", "operational_stop", "review"], required=True
+    )
     observe.add_argument("--observed-utc", required=True)
-    review = commands.add_parser("review-cohort", help="Validate and read the preserved observation chain")
+    review = commands.add_parser(
+        "review-cohort", help="Validate and read the preserved observation chain"
+    )
     review.add_argument("--cohort-dir", type=Path, required=True)
     dashboard = commands.add_parser("dashboard", help="Join snapshots without mixing cohorts")
     dashboard.add_argument("--reports", type=Path, nargs="+", required=True)
@@ -85,12 +99,18 @@ def _prepare(args: argparse.Namespace) -> dict[str, Any]:
     manifest = build_manifest(args.campaign, args.candidate)
     write_json(directory / names[0], manifest)
     write_json(directory / names[1], reconcile_export(args.export, args.policy))
-    write_json(directory / names[2], audit_data(args.data_manifest, args.bars, max_rows=args.max_rows))
+    write_json(
+        directory / names[2], audit_data(args.data_manifest, args.bars, max_rows=args.max_rows)
+    )
     write_json(directory / names[3], draft_protocol(directory / names[0]))
     result = build_dashboard([directory / name for name in names[:-1]], args.demo_report)
     write_json(directory / names[4], result)
     write_text(directory / "canvas-source.txt", canvas_source(result))
-    return {"status": result["status"], "out_dir": str(directory), "artifacts": [*names, "canvas-source.txt"]}
+    return {
+        "status": result["status"],
+        "out_dir": str(directory),
+        "artifacts": [*names, "canvas-source.txt"],
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,11 +120,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "prepare":
             summary = _prepare(args)
         elif args.command == "freeze-cohort":
-            result = freeze_cohort(args.manifest, args.parity, args.criteria, _output_path(args.cohort_dir))
+            result = freeze_cohort(
+                args.manifest, args.parity, args.criteria, _output_path(args.cohort_dir)
+            )
             summary = {"status": result["status"], "cohort_id": result["cohort_id"]}
         elif args.command == "record-evidence":
-            result = record_evidence(_output_path(args.cohort_dir), args.evidence, kind=args.kind,
-                                     observed_utc=args.observed_utc)
+            result = record_evidence(
+                _output_path(args.cohort_dir),
+                args.evidence,
+                kind=args.kind,
+                observed_utc=args.observed_utc,
+            )
             summary = {"status": "EVIDENCE_RECORDED", "sequence": result["sequence"]}
         else:
             output = _output_path(args.out)

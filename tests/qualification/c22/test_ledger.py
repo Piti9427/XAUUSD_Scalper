@@ -12,9 +12,18 @@ from scripts.qualification.c22.ledger import reconcile_export
 
 def deal(ticket, position, side, entry, volume, stamp, **amounts):
     row = dict(
-        ticket=ticket, position_id=position, magic=22261004, type=side, entry=entry,
-        volume=volume, time_msc=int(datetime.fromisoformat(stamp).timestamp() * 1000),
-        price=2000.0, profit=0.0, commission=0.0, fee=0.0, swap=0.0,
+        ticket=ticket,
+        position_id=position,
+        magic=22261004,
+        type=side,
+        entry=entry,
+        volume=volume,
+        time_msc=int(datetime.fromisoformat(stamp).timestamp() * 1000),
+        price=2000.0,
+        profit=0.0,
+        commission=0.0,
+        fee=0.0,
+        swap=0.0,
         symbol="XAUUSDm",
     )
     row.update(amounts)
@@ -25,47 +34,81 @@ def export(deals, currency="USD"):
     return dict(
         captured_utc="2026-10-24T07:55:34+00:00",
         history_start_utc="2026-07-01T00:00:00+00:00",
-        account_fingerprint="test-account", account={"currency": currency},
+        account_fingerprint="test-account",
+        account={"currency": currency},
         history_deals=deals,
     )
 
 
 def policy():
     def bind(document):
-        return dict(document=document, sha256=hashlib.sha256(
-            json.dumps(document, sort_keys=True, allow_nan=False).encode()
-        ).hexdigest())
+        return dict(
+            document=document,
+            sha256=hashlib.sha256(
+                json.dumps(document, sort_keys=True, allow_nan=False).encode()
+            ).hexdigest(),
+        )
 
     period = dict(
         effective_from_utc="2026-10-01T00:00:00+00:00",
         effective_until_utc="2026-10-04T00:00:00+00:00",
     )
     return dict(
-        version=2, status="SUPPORTED_HISTORICAL_DOCUMENTS", pending_checks=[],
-        account_fingerprint="test-account", commission_per_lot=2.0,
+        version=2,
+        status="SUPPORTED_HISTORICAL_DOCUMENTS",
+        pending_checks=[],
+        account_fingerprint="test-account",
+        commission_per_lot=2.0,
         reviewed_utc="2026-10-03T00:00:00+00:00",
         evidence=dict(
-            tariff=bind(dict(source="fixture dated tariff", **period,
-                             commission_per_lot=2.0, unit="USD_per_lot_round_trip")),
-            spec=bind(dict(source="fixture dated spec", **period, fields=dict(
-                trade_contract_size=100, trade_tick_size=0.01, volume_min=0.01,
-                volume_max=100, volume_step=0.01, swap_mode=1, swap_long=-100,
-                swap_short=0, swap_rollover3days=3,
-            ))),
-            swap_calendar=bind(dict(source="fixture dated broker calendar",
-                unit="USD_per_lot", days={
-                    "2026-10-01": dict(rollover_utc="2026-10-01T00:00:00+00:00", buy=-10, sell=0),
-                    "2026-10-02": dict(rollover_utc="2026-10-02T00:00:00+00:00", buy=-10, sell=0),
-                })),
+            tariff=bind(
+                dict(
+                    source="fixture dated tariff",
+                    **period,
+                    commission_per_lot=2.0,
+                    unit="USD_per_lot_round_trip",
+                )
+            ),
+            spec=bind(
+                dict(
+                    source="fixture dated spec",
+                    **period,
+                    fields=dict(
+                        trade_contract_size=100,
+                        trade_tick_size=0.01,
+                        volume_min=0.01,
+                        volume_max=100,
+                        volume_step=0.01,
+                        swap_mode=1,
+                        swap_long=-100,
+                        swap_short=0,
+                        swap_rollover3days=3,
+                    ),
+                )
+            ),
+            swap_calendar=bind(
+                dict(
+                    source="fixture dated broker calendar",
+                    unit="USD_per_lot",
+                    days={
+                        "2026-10-01": dict(
+                            rollover_utc="2026-10-01T00:00:00+00:00", buy=-10, sell=0
+                        ),
+                        "2026-10-02": dict(
+                            rollover_utc="2026-10-02T00:00:00+00:00", buy=-10, sell=0
+                        ),
+                    },
+                )
+            ),
         ),
     )
 
 
 def rebind(raw, name):
     item = raw["evidence"][name]
-    item["sha256"] = hashlib.sha256(json.dumps(
-        item["document"], sort_keys=True, allow_nan=False
-    ).encode()).hexdigest()
+    item["sha256"] = hashlib.sha256(
+        json.dumps(item["document"], sort_keys=True, allow_nan=False).encode()
+    ).hexdigest()
 
 
 class LedgerTests(unittest.TestCase):
@@ -83,7 +126,17 @@ class LedgerTests(unittest.TestCase):
         return [
             deal(1, 10, 0, 0, 0.03, "2026-10-01T20:00:00+00:00", commission=-0.03),
             deal(2, 10, 1, 1, 0.01, "2026-10-02T00:00:00+00:00", profit=4, commission=-0.01),
-            deal(3, 10, 1, 1, 0.02, "2026-10-02T12:00:00+00:00", profit=6, commission=-0.02, swap=-0.2),
+            deal(
+                3,
+                10,
+                1,
+                1,
+                0.02,
+                "2026-10-02T12:00:00+00:00",
+                profit=6,
+                commission=-0.02,
+                swap=-0.2,
+            ),
         ]
 
     def test_partial_closes_preserve_signed_cash_and_expose_missing_cost_evidence(self):
@@ -120,8 +173,10 @@ class LedgerTests(unittest.TestCase):
         self.assertAlmostEqual(result["data"]["positions"][0]["comparison"]["modeled_swap"], -0.6)
 
     def test_entry_exactly_at_rollover_is_not_charged_that_rollover(self):
-        rows = [deal(1, 10, 0, 0, 0.01, "2026-10-02T00:00:00+00:00"),
-                deal(2, 10, 1, 1, 0.01, "2026-10-02T12:00:00+00:00")]
+        rows = [
+            deal(1, 10, 0, 0, 0.01, "2026-10-02T00:00:00+00:00"),
+            deal(2, 10, 1, 1, 0.01, "2026-10-02T12:00:00+00:00"),
+        ]
         result = self.run_report(export(rows), policy())
         self.assertEqual(result["status"], "OBSERVED_COSTS_MATCH")
         self.assertEqual(result["data"]["positions"][0]["comparison"]["modeled_swap"], 0)
@@ -175,10 +230,12 @@ class LedgerTests(unittest.TestCase):
         self.assertIsNone(result["data"]["positions"][0]["observed"])
 
     def test_open_orphan_unsupported_and_nontrade_records_have_explicit_coverage(self):
-        rows = [deal(1, 10, 0, 0, 0.03, "2026-10-01T20:00:00+00:00"),
-                deal(2, 20, 1, 1, 0.01, "2026-10-02T00:00:00+00:00", profit=-2),
-                deal(3, 30, 0, 2, 0.01, "2026-10-02T12:00:00+00:00", profit=3),
-                deal(4, 0, 2, 0, 0, "2026-10-02T13:00:00+00:00", profit=200)]
+        rows = [
+            deal(1, 10, 0, 0, 0.03, "2026-10-01T20:00:00+00:00"),
+            deal(2, 20, 1, 1, 0.01, "2026-10-02T00:00:00+00:00", profit=-2),
+            deal(3, 30, 0, 2, 0.01, "2026-10-02T12:00:00+00:00", profit=3),
+            deal(4, 0, 2, 0, 0, "2026-10-02T13:00:00+00:00", profit=200),
+        ]
         result = self.run_report(export(rows))
         self.assertEqual(result["status"], "COST_INCONCLUSIVE")
         self.assertEqual(result["coverage"]["open_positions"], 1)
@@ -256,8 +313,10 @@ class LedgerTests(unittest.TestCase):
         result = self.run_report(export(self.partial()), costs)
         self.assertEqual(result["status"], "COST_INCONCLUSIVE")
         self.assertEqual(result["coverage"]["compared_positions"], 0)
-        for field, value in (("captured_utc", "2026-10-01T00:00:00+00:00"),
-                             ("history_start_utc", "2026-10-03T00:00:00+00:00")):
+        for field, value in (
+            ("captured_utc", "2026-10-01T00:00:00+00:00"),
+            ("history_start_utc", "2026-10-03T00:00:00+00:00"),
+        ):
             with self.subTest(field=field):
                 raw = export(self.partial())
                 raw[field] = value

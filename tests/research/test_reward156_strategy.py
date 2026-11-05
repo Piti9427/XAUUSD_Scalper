@@ -29,7 +29,17 @@ class Reward156StrategyTests(unittest.TestCase):
     def test_detector_columns_present(self):
         bars = self.make_bars(80)
         frame = reward156_bars(bars)
-        for col in ("open", "high", "low", "close", "prior_low", "atr", "rsi7", "ema50", "direction"):
+        for col in (
+            "open",
+            "high",
+            "low",
+            "close",
+            "prior_low",
+            "atr",
+            "rsi7",
+            "ema50",
+            "direction",
+        ):
             self.assertIn(col, frame.columns)
 
     def test_sell_breakout_below_prior_48_low(self):
@@ -82,7 +92,11 @@ class Reward156StrategyTests(unittest.TestCase):
         base = df.copy()
         base["direction"] = np.where(base.close < base.low.rolling(48).min().shift(1), -1, 0)
         tr = pd.concat(
-            [base.high - base.low, (base.high - base.close.shift()).abs(), (base.low - base.close.shift()).abs()],
+            [
+                base.high - base.low,
+                (base.high - base.close.shift()).abs(),
+                (base.low - base.close.shift()).abs(),
+            ],
             axis=1,
         ).max(axis=1)
         base["atr"] = tr.rolling(14).mean()

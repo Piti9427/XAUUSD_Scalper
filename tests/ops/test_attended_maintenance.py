@@ -13,14 +13,21 @@ from unittest.mock import patch
 
 from scripts.demo_runtime.journal import Journal
 from scripts.ops.attended_maintenance import (
-    APMeasurement, Approval, Cohort, CostInstallation, Maintenance,
-    NotificationMode, Observation, OwnedProbe, Plan, Reboot,
+    APMeasurement,
+    Approval,
+    Cohort,
+    CostInstallation,
+    Maintenance,
+    NotificationMode,
+    Observation,
+    OwnedProbe,
+    Plan,
+    Reboot,
 )
 
 
 NOW = datetime(2026, 10, 30, tzinfo=timezone.utc)
-COHORT = Cohort(*("a" * 16, "b" * 64, "c" * 64, "d" * 64,
-                  "e" * 64, "f" * 64, "fixture26b8"))
+COHORT = Cohort(*("a" * 16, "b" * 64, "c" * 64, "d" * 64, "e" * 64, "f" * 64, "fixture26b8"))
 
 
 class RecordingHost:
@@ -39,8 +46,11 @@ class RecordingHost:
 
     def effect(self, name):
         self.calls.append(name)
-        self.state = replace(self.state, monotonic=self.state.monotonic + 1,
-                             captured_utc=self.state.captured_utc + timedelta(seconds=1))
+        self.state = replace(
+            self.state,
+            monotonic=self.state.monotonic + 1,
+            captured_utc=self.state.captured_utc + timedelta(seconds=1),
+        )
         if name in self.hooks:
             self.hooks[name]()
         if name in self.fail:
@@ -52,8 +62,15 @@ class RecordingHost:
         self.cycle()
 
     def cycle(self):
-        self.journal.put("last_result", dict(captured_utc=self.state.captured_utc.isoformat(),
-                                            execute=True, observed_positions=0, position_protection="flat"))
+        self.journal.put(
+            "last_result",
+            dict(
+                captured_utc=self.state.captured_utc.isoformat(),
+                execute=True,
+                observed_positions=0,
+                position_protection="flat",
+            ),
+        )
 
     def stop_sender(self, handle):
         self.effect("stop")
@@ -61,8 +78,12 @@ class RecordingHost:
 
     def prove_broker_flat(self, handle):
         self.effect("broker")
-        return {"account": self.state.cohort.account, "captured_utc": self.state.captured_utc.isoformat(),
-                "positions": 0, "orders": 0}
+        return {
+            "account": self.state.cohort.account,
+            "captured_utc": self.state.captured_utc.isoformat(),
+            "positions": 0,
+            "orders": 0,
+        }
 
     def measure_ap(self, handle, action):
         self.effect("ap")
@@ -73,8 +94,11 @@ class RecordingHost:
 
     def install_cost(self, handle, action):
         self.effect("cost")
-        self.state = replace(self.state, cost_marker=action.generation,
-                             cohort=replace(COHORT, policy=action.policy, review=action.review))
+        self.state = replace(
+            self.state,
+            cost_marker=action.generation,
+            cohort=replace(COHORT, policy=action.policy, review=action.review),
+        )
 
     def restore_cost(self, handle, generation):
         self.effect("recover_cost")
@@ -82,8 +106,13 @@ class RecordingHost:
     def reboot(self, handle, action):
         self.effect("reboot")
         if self.auto_boot:
-            self.state = replace(self.state, boot="boot-2", monotonic=10,
-                                 startup_verified=True, outside_pause_seconds=7)
+            self.state = replace(
+                self.state,
+                boot="boot-2",
+                monotonic=10,
+                startup_verified=True,
+                outside_pause_seconds=7,
+            )
 
     def restore_review(self, handle, cohort):
         self.effect("restore")
@@ -105,38 +134,66 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.addCleanup(self.journal.close)
         self.journal.audit_context = {
             "account_fingerprint": COHORT.account,
-            "release_hash": COHORT.source, "config_hash": COHORT.config,
+            "release_hash": COHORT.source,
+            "config_hash": COHORT.config,
         }
         self.journal.put("identity", COHORT.account)
         self.journal.put("strategy_snapshot", "fixture26b8")
-        self.journal.put("last_result", dict(captured_utc=NOW.isoformat(), execute=True,
-                                            observed_positions=0, position_protection="flat"))
+        self.journal.put(
+            "last_result",
+            dict(
+                captured_utc=NOW.isoformat(),
+                execute=True,
+                observed_positions=0,
+                position_protection="flat",
+            ),
+        )
         self.host = RecordingHost(self.journal)
         self.module = Maintenance(self.path)
 
     def plan(self, action=None, **changes):
-        return Plan("op-1", COHORT, "4" * 64, action or APMeasurement("1" * 64),
-                    mode=NotificationMode.OFF_NOTIFICATION_HANDOFF, **changes)
+        return Plan(
+            "op-1",
+            COHORT,
+            "4" * 64,
+            action or APMeasurement("1" * 64),
+            mode=NotificationMode.OFF_NOTIFICATION_HANDOFF,
+            **changes,
+        )
 
     def approve(self, handle):
-        return Approval(handle.digest, "owner-local-fixture", self.host.state.captured_utc,
-                        allow_manager_recovery=True, allow_probe_cleanup=True)
+        return Approval(
+            handle.digest,
+            "owner-local-fixture",
+            self.host.state.captured_utc,
+            allow_manager_recovery=True,
+            allow_probe_cleanup=True,
+        )
 
     def add_event(self, kind="FILLED"):
         self.journal.transition("active", None, {"kind": kind, "fixture": "original"})
 
     def rows(self):
-        return self.journal.conn.execute("SELECT id,payload,sent FROM events ORDER BY id").fetchall()
+        return self.journal.conn.execute(
+            "SELECT id,payload,sent FROM events ORDER BY id"
+        ).fetchall()
 
     def test_handoff_preserves_exact_rows_across_all_three_action_families(self):
         self.add_event()
         original = self.rows()
-        for index, action in enumerate((APMeasurement("1" * 64), Reboot(),
-                                       CostInstallation("generation-2", "2" * 64, "3" * 64))):
+        for index, action in enumerate(
+            (
+                APMeasurement("1" * 64),
+                Reboot(),
+                CostInstallation("generation-2", "2" * 64, "3" * 64),
+            )
+        ):
             with self.subTest(action=action):
                 self.host = RecordingHost(self.journal)
                 self.host.cycle()
-                handle = self.module.prepare(replace(self.plan(action), operation=f"op-{index}"), self.host)
+                handle = self.module.prepare(
+                    replace(self.plan(action), operation=f"op-{index}"), self.host
+                )
                 result = self.module.run(handle, self.approve(handle), self.host)
                 self.assertEqual(result["status"], "COMPLETE")
                 self.assertEqual(self.rows(), original)
@@ -152,9 +209,11 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_payload_change_with_same_count_is_detected_and_manager_preserved(self):
         self.add_event()
         handle = self.module.prepare(self.plan(), self.host)
+
         def alter():
             with self.journal.conn:
                 self.journal.conn.execute("UPDATE events SET payload=?", ('{"kind":"CLOSED"}',))
+
         self.host.hooks["start"] = alter
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
@@ -163,8 +222,12 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertIn("outbox_row_changed", json.dumps(result))
 
     def test_row_delete_renumber_sent_and_schema_changes_are_rejected(self):
-        for sql in ("DELETE FROM events", "UPDATE events SET id=id+10", "UPDATE events SET sent=1",
-                    "ALTER TABLE events ADD COLUMN extra TEXT"):
+        for sql in (
+            "DELETE FROM events",
+            "UPDATE events SET id=id+10",
+            "UPDATE events SET sent=1",
+            "ALTER TABLE events ADD COLUMN extra TEXT",
+        ):
             with self.subTest(sql=sql), TemporaryDirectory() as tmp:
                 # Independent fixtures avoid repairing or rewinding a financial journal.
                 path = Path(tmp) / "copy.sqlite3"
@@ -200,7 +263,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_reviewed_critical_requires_exact_payload_and_resolved_condition(self):
         self.add_event("CRITICAL")
         ident, raw, _ = self.rows()[0]
-        plan = self.plan(reviewed_critical=((ident, hashlib.sha256(raw.encode()).hexdigest(), "owner-review"),))
+        plan = self.plan(
+            reviewed_critical=((ident, hashlib.sha256(raw.encode()).hexdigest(), "owner-review"),)
+        )
         self.host.state = replace(self.host.state, unresolved_critical=(ident,))
         with self.assertRaisesRegex(ValueError, "critical_review_required"):
             self.module.prepare(plan, self.host)
@@ -214,7 +279,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.add_event()
         for values in ({"delivery_off": False}, {"delivery_inflight": True}):
             with self.subTest(values=values):
-                self.host.state = replace(self.host.state, delivery_off=True, delivery_inflight=False, **{})
+                self.host.state = replace(
+                    self.host.state, delivery_off=True, delivery_inflight=False, **{}
+                )
                 self.host.state = replace(self.host.state, **values)
                 with self.assertRaisesRegex(ValueError, "notification_delivery_uncertain"):
                     self.module.prepare(self.plan(), self.host)
@@ -222,8 +289,11 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_missing_wrong_or_drifted_approval_cannot_start_effect(self):
         handle = self.module.prepare(self.plan(), self.host)
-        for approval in (None, replace(self.approve(handle), plan_digest="0" * 64),
-                         replace(self.approve(handle), owner_ref="")):
+        for approval in (
+            None,
+            replace(self.approve(handle), plan_digest="0" * 64),
+            replace(self.approve(handle), owner_ref=""),
+        ):
             with self.subTest(approval=approval), self.assertRaises(ValueError):
                 self.module.run(handle, approval, self.host)
         self.assertEqual(self.host.calls, [])
@@ -242,7 +312,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
                 elif case == "backup":
                     self.host.state = replace(state, backup_restore_verified=False)
                 else:
-                    self.journal.put("active" if case == "active" else "safety_halt", {"state": "UNKNOWN"})
+                    self.journal.put(
+                        "active" if case == "active" else "safety_halt", {"state": "UNKNOWN"}
+                    )
                 result = self.module.run(handle, self.approve(handle), self.host)
                 self.assertEqual(result["status"], "DEFERRED")
                 self.assertEqual(self.host.calls, [])
@@ -268,7 +340,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_lingering_reader_prevents_sdk_and_start_but_preserves_primary_failure(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["stop"] = lambda: setattr(self.host, "state", replace(self.host.state, readers=("foreign-reader",)))
+        self.host.hooks["stop"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, readers=("foreign-reader",))
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "OPERATOR_REQUIRED")
         self.assertNotIn("broker", self.host.calls)
@@ -276,15 +350,23 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertIn("reader_ownership_unverified", json.dumps(result))
 
     def test_broker_foreign_exposure_stale_and_unknown_proofs_never_dispatch_action(self):
-        packets = ({"positions": 1}, {"orders": 1}, {"account": "foreign"},
-                   {"captured_utc": (NOW - timedelta(seconds=30)).isoformat()})
+        packets = (
+            {"positions": 1},
+            {"orders": 1},
+            {"account": "foreign"},
+            {"captured_utc": (NOW - timedelta(seconds=30)).isoformat()},
+        )
         for index, change in enumerate(packets):
             with self.subTest(change=change):
                 self.host = RecordingHost(self.journal)
                 self.host.cycle()
-                handle = self.module.prepare(replace(self.plan(), operation=f"broker-{index}"), self.host)
+                handle = self.module.prepare(
+                    replace(self.plan(), operation=f"broker-{index}"), self.host
+                )
                 original = self.host.prove_broker_flat
-                self.host.prove_broker_flat = lambda h, original=original, change=change: dict(original(h), **change)
+                self.host.prove_broker_flat = lambda h, original=original, change=change: dict(
+                    original(h), **change
+                )
                 result = self.module.run(handle, self.approve(handle), self.host)
                 self.assertEqual(result["status"], "FAILED_RECOVERED")
                 self.assertNotIn("ap", self.host.calls)
@@ -292,8 +374,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_ap_primary_and_cleanup_failures_are_both_retained(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["ap"] = lambda: setattr(self.host, "state", replace(
-            self.host.state, owned_probe=OwnedProbe("op-1", "boot-1", 123, "start-identity", "1" * 64)))
+        self.host.hooks["ap"] = lambda: setattr(
+            self.host,
+            "state",
+            replace(
+                self.host.state,
+                owned_probe=OwnedProbe("op-1", "boot-1", 123, "start-identity", "1" * 64),
+            ),
+        )
         self.host.fail = {"ap": TimeoutError("PRIVATE"), "cleanup": OSError("PRIVATE")}
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "OPERATOR_REQUIRED")
@@ -313,8 +401,13 @@ class AttendedMaintenanceTests(unittest.TestCase):
         module = Maintenance(self.path)
         module.run(handle, approval, self.host)
         self.assertEqual(self.host.calls.count("reboot"), 1)
-        self.host.state = replace(self.host.state, boot="boot-2", monotonic=5,
-                                  startup_verified=True, outside_pause_seconds=10)
+        self.host.state = replace(
+            self.host.state,
+            boot="boot-2",
+            monotonic=5,
+            startup_verified=True,
+            outside_pause_seconds=10,
+        )
         result = module.run(handle, approval, self.host)
         self.assertEqual(result["status"], "FAILED_RECOVERED")
         self.assertTrue(result["manual_fallback"])
@@ -323,7 +416,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_missing_outside_clock_never_claims_crossboot_budget_pass(self):
         handle = self.module.prepare(self.plan(Reboot()), self.host)
-        self.host.hooks["restore"] = lambda: setattr(self.host, "state", replace(self.host.state, outside_pause_seconds=None))
+        self.host.hooks["restore"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, outside_pause_seconds=None)
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
         self.assertEqual(result["timing"]["status"], "TIMING_UNVERIFIED")
@@ -332,9 +427,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_cost_accepted_marker_preserves_new_pair_after_lost_ack(self):
         action = CostInstallation("generation-2", "2" * 64, "3" * 64)
         handle = self.module.prepare(self.plan(action), self.host)
+
         def accepted():
-            self.host.state = replace(self.host.state, cost_marker=action.generation,
-                                      cohort=replace(COHORT, policy=action.policy, review=action.review))
+            self.host.state = replace(
+                self.host.state,
+                cost_marker=action.generation,
+                cohort=replace(COHORT, policy=action.policy, review=action.review),
+            )
+
         self.host.hooks["cost"] = accepted
         self.host.fail["cost"] = TimeoutError("PRIVATE")
         result = self.module.run(handle, self.approve(handle), self.host)
@@ -344,8 +444,12 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertEqual(self.host.calls.count("cost"), 1)
 
     def test_cost_unknown_marker_cannot_restore_guessed_generation(self):
-        handle = self.module.prepare(self.plan(CostInstallation("next", "2" * 64, "3" * 64)), self.host)
-        self.host.hooks["cost"] = lambda: setattr(self.host, "state", replace(self.host.state, cost_marker=None))
+        handle = self.module.prepare(
+            self.plan(CostInstallation("next", "2" * 64, "3" * 64)), self.host
+        )
+        self.host.hooks["cost"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, cost_marker=None)
+        )
         self.host.fail["cost"] = TimeoutError("PRIVATE")
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
@@ -355,7 +459,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_reserve_exhaustion_stops_work_and_recovers_review_without_action(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["stop"] = lambda: setattr(self.host, "state", replace(self.host.state, monotonic=800))
+        self.host.hooks["stop"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, monotonic=800)
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "FAILED_RECOVERED")
         self.assertNotIn("ap", self.host.calls)
@@ -369,7 +475,7 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.host.hooks["start"] = lambda: self.add_event("CLOSED")
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "COMPLETE")
-        self.assertEqual(self.rows()[:len(original)], original)
+        self.assertEqual(self.rows()[: len(original)], original)
         self.assertEqual(len(self.rows()), len(original) + 1)
 
     def test_held_midnight_protected_key_change_keeps_owned_manager_and_reports_unverified(self):
@@ -399,8 +505,13 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.host.fail["hold"] = KeyboardInterrupt()
         with self.assertRaises(KeyboardInterrupt):
             self.module.run(handle, approval, self.host)
-        self.host.state = replace(self.host.state, review_held=True, post_hold_cycle=True,
-                                  monotonic=800, captured_utc=NOW + timedelta(seconds=1))
+        self.host.state = replace(
+            self.host.state,
+            review_held=True,
+            post_hold_cycle=True,
+            monotonic=800,
+            captured_utc=NOW + timedelta(seconds=1),
+        )
         self.host.cycle()
         result = Maintenance(self.path).run(handle, approval, self.host)
         self.assertNotIn("ap", self.host.calls)
@@ -419,9 +530,13 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertIn("effect_outcome_uncertain", json.dumps(result))
 
     def test_cost_ack_without_acceptance_marker_cannot_report_success(self):
-        handle = self.module.prepare(self.plan(CostInstallation("next", "2" * 64, "3" * 64)), self.host)
+        handle = self.module.prepare(
+            self.plan(CostInstallation("next", "2" * 64, "3" * 64)), self.host
+        )
+
         def ineffective(handle, action):
             self.host.effect("cost")
+
         self.host.install_cost = ineffective
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "FAILED_RECOVERED")
@@ -430,7 +545,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_running_owned_manager_after_hold_is_never_stopped_for_maintenance(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["hold"] = lambda: self.journal.put("active", {"state": "FILLED", "fixture": "owned"})
+        self.host.hooks["hold"] = lambda: self.journal.put(
+            "active", {"state": "FILLED", "fixture": "owned"}
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertNotIn("stop", self.host.calls)
         self.assertNotIn("broker", self.host.calls)
@@ -442,9 +559,13 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_automatic_reboot_recovery_is_not_labelled_manual_fallback(self):
         handle = self.module.prepare(self.plan(Reboot()), self.host)
+
         def automatic():
-            self.host.state = replace(self.host.state, sender_running=True, sender_count=1, recovered_cycle=True)
+            self.host.state = replace(
+                self.host.state, sender_running=True, sender_count=1, recovered_cycle=True
+            )
             self.host.cycle()
+
         self.host.hooks["restore"] = automatic
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "COMPLETE")
@@ -469,7 +590,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertEqual(self.rows(), before)
         self.assertEqual(self.host.calls, [])
 
-    def test_financial_database_is_byte_identical_when_only_operation_is_prepared_and_inspected(self):
+    def test_financial_database_is_byte_identical_when_only_operation_is_prepared_and_inspected(
+        self,
+    ):
         self.add_event()
         before = self.path.read_bytes()
         handle = self.module.prepare(self.plan(), self.host)
@@ -478,7 +601,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertEqual(self.host.calls, [])
 
     def test_empty_strict_zero_and_exact_effect_order_remain_supported(self):
-        handle = self.module.prepare(replace(self.plan(), mode=NotificationMode.STRICT_ZERO), self.host)
+        handle = self.module.prepare(
+            replace(self.plan(), mode=NotificationMode.STRICT_ZERO), self.host
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "COMPLETE")
         self.assertEqual(self.host.calls, ["hold", "stop", "broker", "ap", "restore", "start"])
@@ -486,15 +611,24 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_foreign_probe_identity_cannot_be_signalled(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["ap"] = lambda: setattr(self.host, "state", replace(
-            self.host.state, owned_probe=OwnedProbe("foreign-op", "boot-1", 123, "start", "1" * 64)))
+        self.host.hooks["ap"] = lambda: setattr(
+            self.host,
+            "state",
+            replace(
+                self.host.state,
+                owned_probe=OwnedProbe("foreign-op", "boot-1", 123, "start", "1" * 64),
+            ),
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
         self.assertNotIn("cleanup", self.host.calls)
         self.assertNotIn("start", self.host.calls)
 
     def test_journal_account_and_snapshot_are_independently_bound(self):
-        for key, value in (("identity", "foreign-account"), ("strategy_snapshot", "foreign-strategy")):
+        for key, value in (
+            ("identity", "foreign-account"),
+            ("strategy_snapshot", "foreign-strategy"),
+        ):
             with self.subTest(key=key):
                 old = self.journal.get(key)
                 self.journal.put(key, value)
@@ -504,9 +638,13 @@ class AttendedMaintenanceTests(unittest.TestCase):
                 self.journal.put(key, old)
 
     def test_budget_source_time_and_typed_action_validation_precede_host_effects(self):
-        for changes in ({"pause_seconds": 901}, {"recovery_seconds": 800},
-                        {"action_seconds": True}, {"action": "arbitrary-command"},
-                        {"backup_sha256": "not-a-hash"}):
+        for changes in (
+            {"pause_seconds": 901},
+            {"recovery_seconds": 800},
+            {"action_seconds": True},
+            {"action": "arbitrary-command"},
+            {"backup_sha256": "not-a-hash"},
+        ):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 self.module.prepare(replace(self.plan(), **changes), self.host)
         self.host.state = replace(self.host.state, captured_utc=NOW.replace(tzinfo=None))
@@ -517,7 +655,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_competing_sender_and_nonboolean_recovery_authority_are_refused(self):
         handle = self.module.prepare(self.plan(), self.host)
         with self.assertRaisesRegex(ValueError, "invalid_recovery_authority"):
-            self.module.run(handle, replace(self.approve(handle), allow_manager_recovery="yes"), self.host)
+            self.module.run(
+                handle, replace(self.approve(handle), allow_manager_recovery="yes"), self.host
+            )
         self.host.state = replace(self.host.state, sender_count=2)
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "DEFERRED")
@@ -544,12 +684,17 @@ class AttendedMaintenanceTests(unittest.TestCase):
         action = CostInstallation("next", "2" * 64, "3" * 64)
         handle = self.module.prepare(self.plan(action), self.host)
         approval = self.approve(handle)
-        self.host.hooks["cost"] = lambda: setattr(self.host, "state", replace(self.host.state, cost_marker=None))
+        self.host.hooks["cost"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, cost_marker=None)
+        )
         self.host.fail["cost"] = TimeoutError("PRIVATE")
         first = self.module.run(handle, approval, self.host)
         self.assertEqual(first["status"], "STATE_REVIEW_REQUIRED")
-        self.host.state = replace(self.host.state, cost_marker=action.generation,
-                                  cohort=replace(COHORT, policy=action.policy, review=action.review))
+        self.host.state = replace(
+            self.host.state,
+            cost_marker=action.generation,
+            cohort=replace(COHORT, policy=action.policy, review=action.review),
+        )
         result = Maintenance(self.path).run(handle, approval, self.host)
         self.assertEqual(result["status"], "FAILED_RECOVERED")
         self.assertEqual(self.host.calls.count("cost"), 1)
@@ -557,13 +702,18 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_slow_proof_read_revalidates_freshness_before_hold(self):
         from scripts.ops.attended_maintenance import controller
+
         handle = self.module.prepare(self.plan(), self.host)
         approval = self.approve(handle)
         original = controller.read_journal
+
         def slow(*args, **kwargs):
             result = original(*args, **kwargs)
-            self.host.state = replace(self.host.state, captured_utc=self.host.state.captured_utc + timedelta(seconds=21))
+            self.host.state = replace(
+                self.host.state, captured_utc=self.host.state.captured_utc + timedelta(seconds=21)
+            )
             return result
+
         with patch.object(controller, "read_journal", side_effect=slow):
             result = self.module.run(handle, approval, self.host)
         self.assertEqual(result["status"], "DEFERRED")
@@ -573,10 +723,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.add_event()
         handle = self.module.prepare(self.plan(), self.host)
         before = self.rows()
+
         def corrupt_fixture():
             with self.journal.conn:
                 self.journal.conn.execute("DROP TRIGGER audit_no_update")
-                self.journal.conn.execute("UPDATE audit_events SET payload=? WHERE id=1", ('{"kind":"changed"}',))
+                self.journal.conn.execute(
+                    "UPDATE audit_events SET payload=? WHERE id=1", ('{"kind":"changed"}',)
+                )
+
         self.host.hooks["start"] = corrupt_fixture
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
@@ -591,15 +745,26 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
         broker = SelectedBroker()
         path = self.root / "real-contract.sqlite3"
-        runner = SelectedDemoRunner(mt5=broker, expected_login=123, expected_server="Exness-Demo",
-                                   journal_path=path, config=selected_config(), cost_policy=policy())
+        runner = SelectedDemoRunner(
+            mt5=broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=path,
+            config=selected_config(),
+            cost_policy=policy(),
+        )
         self.addCleanup(runner.close)
         runner.broker.identity()  # Real BrokerView identity path; SDK boundary is fake.
         context = runner.journal.audit_context
         self.assertEqual(len(runner.fingerprint), 16)
         self.assertEqual(runner.journal.get("identity"), runner.fingerprint)
-        cohort = replace(COHORT, account=runner.fingerprint, source=runner.release_hash,
-                         config=context["config_hash"], snapshot=runner.strategy.snapshot)
+        cohort = replace(
+            COHORT,
+            account=runner.fingerprint,
+            source=runner.release_hash,
+            config=context["config_hash"],
+            snapshot=runner.strategy.snapshot,
+        )
         host = RecordingHost(runner.journal)
         host.state = replace(host.state, cohort=cohort)
         host.cycle()  # Synthetic flat cycle, not claimed as actual native execution.
@@ -614,18 +779,26 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_terminal_receipt_and_account_release_are_one_atomic_operation(self):
         from scripts.ops.attended_maintenance.store import Store
+
         handle = self.module.prepare(self.plan(), self.host)
         approval = self.approve(handle)
         original = Store.save
+
         def interrupt_after_save(db, document, **kwargs):
             original(db, document, **kwargs)
             if document["phase"] == "END":
                 raise KeyboardInterrupt()
-        with patch.object(Store, "save", side_effect=interrupt_after_save), self.assertRaises(KeyboardInterrupt):
+
+        with (
+            patch.object(Store, "save", side_effect=interrupt_after_save),
+            self.assertRaises(KeyboardInterrupt),
+        ):
             self.module.run(handle, approval, self.host)
         result = Maintenance(self.path).run(handle, approval, self.host)
         self.assertEqual(result["status"], "COMPLETE")
-        next_handle = self.module.prepare(replace(self.plan(), operation="op-after-complete"), self.host)
+        next_handle = self.module.prepare(
+            replace(self.plan(), operation="op-after-complete"), self.host
+        )
         result = self.module.run(next_handle, self.approve(next_handle), self.host)
         self.assertEqual(result["status"], "COMPLETE")
         self.assertEqual(self.host.calls.count("ap"), 2)
@@ -648,8 +821,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_transient_cleanup_retries_only_same_owned_probe_without_repeating_ap(self):
         handle = self.module.prepare(self.plan(), self.host)
         approval = self.approve(handle)
-        self.host.hooks["ap"] = lambda: setattr(self.host, "state", replace(
-            self.host.state, owned_probe=OwnedProbe("op-1", "boot-1", 123, "same-start", "1" * 64)))
+        self.host.hooks["ap"] = lambda: setattr(
+            self.host,
+            "state",
+            replace(
+                self.host.state,
+                owned_probe=OwnedProbe("op-1", "boot-1", 123, "same-start", "1" * 64),
+            ),
+        )
         self.host.fail["cleanup"] = TimeoutError("PRIVATE")
         self.module.run(handle, approval, self.host)
         self.host.fail.clear()
@@ -661,8 +840,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
         self.assertTrue(self.host.state.sender_running)
 
     def test_truthy_unknown_host_flags_are_not_evidence(self):
-        for field in ("backup_restore_verified", "delivery_off", "delivery_inflight",
-                      "review_restore_safe", "sender_running", "post_hold_cycle"):
+        for field in (
+            "backup_restore_verified",
+            "delivery_off",
+            "delivery_inflight",
+            "review_restore_safe",
+            "sender_running",
+            "post_hold_cycle",
+        ):
             with self.subTest(field=field):
                 state = self.host.state
                 try:
@@ -675,8 +860,14 @@ class AttendedMaintenanceTests(unittest.TestCase):
 
     def test_probe_left_after_broker_proof_prevents_work_dispatch(self):
         handle = self.module.prepare(self.plan(), self.host)
-        self.host.hooks["broker"] = lambda: setattr(self.host, "state", replace(
-            self.host.state, owned_probe=OwnedProbe("op-1", "boot-1", 123, "same-start", "1" * 64)))
+        self.host.hooks["broker"] = lambda: setattr(
+            self.host,
+            "state",
+            replace(
+                self.host.state,
+                owned_probe=OwnedProbe("op-1", "boot-1", 123, "same-start", "1" * 64),
+            ),
+        )
         result = self.module.run(handle, self.approve(handle), self.host)
         self.assertNotEqual(result["status"], "COMPLETE")
         self.assertNotIn("ap", self.host.calls)
@@ -685,8 +876,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
     def test_late_reader_before_manager_start_prevents_overlapping_sdk_ownership(self):
         handle = self.module.prepare(self.plan(), self.host)
         approval = self.approve(handle)
-        self.host.hooks["restore"] = lambda: setattr(self.host, "state", replace(
-            self.host.state, readers=("late-reader",)))
+        self.host.hooks["restore"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, readers=("late-reader",))
+        )
         result = self.module.run(handle, approval, self.host)
         self.assertNotIn("start", self.host.calls)
         self.assertFalse(self.host.state.sender_running)
@@ -702,7 +894,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
             with self.subTest(stage=stage):
                 self.host = RecordingHost(self.journal)
                 self.host.cycle()
-                handle = self.module.prepare(replace(self.plan(), operation=f"retry-{index}"), self.host)
+                handle = self.module.prepare(
+                    replace(self.plan(), operation=f"retry-{index}"), self.host
+                )
                 approval = self.approve(handle)
                 self.host.fail[stage] = TimeoutError("PRIVATE")
                 first = self.module.run(handle, approval, self.host)
@@ -713,7 +907,9 @@ class AttendedMaintenanceTests(unittest.TestCase):
                 self.assertEqual(self.host.calls.count(stage), 2)
                 self.assertEqual(self.host.calls.count("ap"), 1)
                 effect = result["effects"]["stop_sender" if stage == "stop" else "start_sender"]
-                self.assertEqual([item["state"] for item in effect["attempts"]], ["UNCERTAIN", "ACKED"])
+                self.assertEqual(
+                    [item["state"] for item in effect["attempts"]], ["UNCERTAIN", "ACKED"]
+                )
                 self.assertTrue(self.host.state.sender_running)
 
     def test_terminal_reinspection_releases_only_a_stranded_same_operation_claim(self):
@@ -730,18 +926,24 @@ class AttendedMaintenanceTests(unittest.TestCase):
                 db.execute("INSERT INTO accounts VALUES (?,?)", (COHORT.account, "foreign-op"))
         self.module.run(handle, approval, self.host)
         with closing(sqlite3.connect(self.module.store.path)) as db:
-            self.assertEqual(db.execute("SELECT operation FROM accounts").fetchone()[0], "foreign-op")
+            self.assertEqual(
+                db.execute("SELECT operation FROM accounts").fetchone()[0], "foreign-op"
+            )
         self.assertEqual(self.host.calls.count("ap"), 1)
 
     def test_cleanup_retry_never_signals_reused_pid_with_a_different_start_identity(self):
         handle = self.module.prepare(self.plan(), self.host)
         approval = self.approve(handle)
         original = OwnedProbe("op-1", "boot-1", 123, "original-start", "1" * 64)
-        self.host.hooks["ap"] = lambda: setattr(self.host, "state", replace(self.host.state, owned_probe=original))
+        self.host.hooks["ap"] = lambda: setattr(
+            self.host, "state", replace(self.host.state, owned_probe=original)
+        )
         self.host.fail["cleanup"] = TimeoutError("PRIVATE")
         self.module.run(handle, approval, self.host)
         self.host.fail.clear()
-        self.host.state = replace(self.host.state, owned_probe=replace(original, started="replacement-start"))
+        self.host.state = replace(
+            self.host.state, owned_probe=replace(original, started="replacement-start")
+        )
         result = Maintenance(self.path).run(handle, approval, self.host)
         self.assertEqual(result["status"], "STATE_REVIEW_REQUIRED")
         self.assertEqual(self.host.calls.count("cleanup"), 1)
@@ -753,9 +955,19 @@ class AttendedMaintenanceTests(unittest.TestCase):
         # Inject malformed raw evidence: Journal.put's equality shortcut treats
         # Python False as equal to the existing numeric zero.
         with self.journal.conn:
-            self.journal.conn.execute("UPDATE kv SET value=? WHERE key='last_result'", (
-                json.dumps(dict(captured_utc=NOW.isoformat(), execute=True,
-                                observed_positions=False, position_protection="flat")),))
+            self.journal.conn.execute(
+                "UPDATE kv SET value=? WHERE key='last_result'",
+                (
+                    json.dumps(
+                        dict(
+                            captured_utc=NOW.isoformat(),
+                            execute=True,
+                            observed_positions=False,
+                            position_protection="flat",
+                        )
+                    ),
+                ),
+            )
         with self.assertRaisesRegex(ValueError, "flat_cycle_missing"):
             self.module.prepare(self.plan(), self.host)
         self.assertEqual(self.host.calls, [])

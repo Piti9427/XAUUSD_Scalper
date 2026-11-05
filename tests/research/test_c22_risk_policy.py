@@ -16,8 +16,9 @@ DAY_MS = 24 * 60 * 60 * 1000
 
 class RiskBudgetPolicyTests(unittest.TestCase):
     def decision(self, overlay=None, state=None, **changes):
-        values = dict(equity=200.0, day_start=200.0, peak=200.0,
-                      risk=10.0, stamp_ms=1000, signal_ms=1000)
+        values = dict(
+            equity=200.0, day_start=200.0, peak=200.0, risk=10.0, stamp_ms=1000, signal_ms=1000
+        )
         values.update(changes)
         return evaluate_budget(overlay or RiskOverlay(), state or BudgetPauseState(), **values)
 
@@ -37,12 +38,20 @@ class RiskBudgetPolicyTests(unittest.TestCase):
         self.assertTrue(self.decision(overlay, equity=130.0, risk=9.999).allowed)
         # Same closing balance cannot replace a larger executable floating peak.
         self.assertTrue(self.decision(overlay, equity=130.0, peak=150.0, risk=10.0).allowed)
-        self.assertIn("drawdown_budget", self.decision(overlay, equity=130.0, peak=200.0, risk=10.0).reasons)
+        self.assertIn(
+            "drawdown_budget", self.decision(overlay, equity=130.0, peak=200.0, risk=10.0).reasons
+        )
 
     def test_daily_and_drawdown_failures_are_independent_and_both_recorded(self):
         state = BudgetPauseState()
-        result = self.decision(RiskOverlay(daily_budget=True, drawdown_budget=True, dd_pause_hours=24),
-                               state, equity=190.0, day_start=220.0, peak=320.0, risk=10.0)
+        result = self.decision(
+            RiskOverlay(daily_budget=True, drawdown_budget=True, dd_pause_hours=24),
+            state,
+            equity=190.0,
+            day_start=220.0,
+            peak=320.0,
+            risk=10.0,
+        )
         self.assertFalse(result.allowed)
         self.assertIn("daily_budget", result.reasons)
         self.assertIn("drawdown_budget", result.reasons)
@@ -54,12 +63,18 @@ class RiskBudgetPolicyTests(unittest.TestCase):
             for value in (None, float("nan"), float("inf"), -1.0, 0.0):
                 with self.subTest(key=key, value=value):
                     with self.assertRaises(ValueError):
-                        self.decision(RiskOverlay(daily_budget=True, drawdown_budget=True), **{key: value})
+                        self.decision(
+                            RiskOverlay(daily_budget=True, drawdown_budget=True), **{key: value}
+                        )
 
     def test_invalid_overlay_combinations_and_non_boolean_flags_are_rejected(self):
-        for changes in ({"dd_pause_hours": 24}, {"dd_pause_hours": -1},
-                        {"drawdown_budget": True, "dd_pause_hours": 12},
-                        {"daily_budget": "true"}, {"net_be_first": 1}):
+        for changes in (
+            {"dd_pause_hours": 24},
+            {"dd_pause_hours": -1},
+            {"drawdown_budget": True, "dd_pause_hours": 12},
+            {"daily_budget": "true"},
+            {"net_be_first": 1},
+        ):
             with self.subTest(changes=changes):
                 with self.assertRaises(ValueError):
                     RiskOverlay(**changes)
@@ -72,8 +87,14 @@ class RiskBudgetPolicyTests(unittest.TestCase):
         self.assertEqual(state.pause_started_ms, 0)
         self.assertEqual(state.resume_not_before_ms, DAY_MS)
         for number, hour in enumerate((1, 12, 23), 1):
-            later = self.decision(overlay, state, equity=160.0, risk=5.0,
-                                  stamp_ms=hour * 3600000, signal_ms=hour * 3600000)
+            later = self.decision(
+                overlay,
+                state,
+                equity=160.0,
+                risk=5.0,
+                stamp_ms=hour * 3600000,
+                signal_ms=hour * 3600000,
+            )
             self.assertFalse(later.allowed)
             self.assertIn("dd_pause", later.reasons)
             self.assertFalse(later.started_pause)
@@ -83,15 +104,30 @@ class RiskBudgetPolicyTests(unittest.TestCase):
     def test_exact_24_hour_boundary_requires_new_signal_and_all_budgets(self):
         overlay = RiskOverlay(daily_budget=True, drawdown_budget=True, dd_pause_hours=24)
         state = BudgetPauseState()
-        self.decision(overlay, state, equity=130.0, day_start=130.0, risk=10.0,
-                      stamp_ms=0, signal_ms=0)
-        blocked = self.decision(overlay, state, equity=160.0, day_start=180.0, risk=5.0,
-                                stamp_ms=DAY_MS, signal_ms=DAY_MS)
+        self.decision(
+            overlay, state, equity=130.0, day_start=130.0, risk=10.0, stamp_ms=0, signal_ms=0
+        )
+        blocked = self.decision(
+            overlay,
+            state,
+            equity=160.0,
+            day_start=180.0,
+            risk=5.0,
+            stamp_ms=DAY_MS,
+            signal_ms=DAY_MS,
+        )
         self.assertFalse(blocked.allowed)
         self.assertIn("daily_budget", blocked.reasons)
         self.assertFalse(blocked.resumed)
-        resumed = self.decision(overlay, state, equity=160.0, day_start=160.0, risk=5.0,
-                                stamp_ms=DAY_MS + 900000, signal_ms=DAY_MS + 900000)
+        resumed = self.decision(
+            overlay,
+            state,
+            equity=160.0,
+            day_start=160.0,
+            risk=5.0,
+            stamp_ms=DAY_MS + 900000,
+            signal_ms=DAY_MS + 900000,
+        )
         self.assertTrue(resumed.allowed)
         self.assertTrue(resumed.resumed)
         self.assertEqual(state.resumes, 1)
@@ -100,23 +136,32 @@ class RiskBudgetPolicyTests(unittest.TestCase):
         overlay = RiskOverlay(drawdown_budget=True, dd_pause_hours=24)
         state = BudgetPauseState()
         self.decision(overlay, state, equity=130.0, risk=10.0, stamp_ms=0, signal_ms=0)
-        self.decision(overlay, state, equity=160.0, risk=5.0,
-                      stamp_ms=DAY_MS - 900000, signal_ms=DAY_MS - 900000)
-        old = self.decision(overlay, state, equity=160.0, risk=5.0,
-                            stamp_ms=DAY_MS, signal_ms=DAY_MS - 900000)
+        self.decision(
+            overlay,
+            state,
+            equity=160.0,
+            risk=5.0,
+            stamp_ms=DAY_MS - 900000,
+            signal_ms=DAY_MS - 900000,
+        )
+        old = self.decision(
+            overlay, state, equity=160.0, risk=5.0, stamp_ms=DAY_MS, signal_ms=DAY_MS - 900000
+        )
         self.assertFalse(old.allowed)
         self.assertIn("stale_signal", old.reasons)
         self.assertFalse(old.resumed)
-        fresh = self.decision(overlay, state, equity=160.0, risk=5.0,
-                              stamp_ms=DAY_MS + 1, signal_ms=DAY_MS + 1)
+        fresh = self.decision(
+            overlay, state, equity=160.0, risk=5.0, stamp_ms=DAY_MS + 1, signal_ms=DAY_MS + 1
+        )
         self.assertTrue(fresh.allowed)
 
     def test_flat_equity_below_dd_floor_remains_stopped_without_reset(self):
         overlay = RiskOverlay(drawdown_budget=True, dd_pause_hours=24)
         state = BudgetPauseState()
         self.decision(overlay, state, equity=119.0, risk=1.0, stamp_ms=0, signal_ms=0)
-        result = self.decision(overlay, state, equity=119.0, risk=0.01,
-                               stamp_ms=2 * DAY_MS, signal_ms=2 * DAY_MS)
+        result = self.decision(
+            overlay, state, equity=119.0, risk=0.01, stamp_ms=2 * DAY_MS, signal_ms=2 * DAY_MS
+        )
         self.assertFalse(result.allowed)
         self.assertIn("drawdown_budget", result.reasons)
         self.assertEqual(state.pause_started_ms, 0)
@@ -126,10 +171,19 @@ class RiskBudgetPolicyTests(unittest.TestCase):
         overlay = RiskOverlay(drawdown_budget=True, dd_pause_hours=24)
         state = BudgetPauseState()
         self.decision(overlay, state, equity=130.0, risk=10.0, stamp_ms=0, signal_ms=0)
-        self.assertTrue(self.decision(overlay, state, equity=160.0, risk=5.0,
-                                      stamp_ms=DAY_MS, signal_ms=DAY_MS).resumed)
-        again = self.decision(overlay, state, equity=130.0, risk=10.0,
-                              stamp_ms=DAY_MS + 900000, signal_ms=DAY_MS + 900000)
+        self.assertTrue(
+            self.decision(
+                overlay, state, equity=160.0, risk=5.0, stamp_ms=DAY_MS, signal_ms=DAY_MS
+            ).resumed
+        )
+        again = self.decision(
+            overlay,
+            state,
+            equity=130.0,
+            risk=10.0,
+            stamp_ms=DAY_MS + 900000,
+            signal_ms=DAY_MS + 900000,
+        )
         self.assertTrue(again.started_pause)
         self.assertEqual(state.episodes, 2)
         self.assertEqual(state.resumes, 1)
@@ -142,16 +196,24 @@ class RiskBudgetPolicyTests(unittest.TestCase):
         saved = original.snapshot()
         restored = BudgetPauseState.restore(saved)
         self.assertEqual(restored.snapshot(), saved)
-        result = self.decision(overlay, restored, equity=160.0, risk=5.0,
-                               stamp_ms=DAY_MS - 1, signal_ms=DAY_MS - 1)
+        result = self.decision(
+            overlay, restored, equity=160.0, risk=5.0, stamp_ms=DAY_MS - 1, signal_ms=DAY_MS - 1
+        )
         self.assertFalse(result.allowed)
         self.assertEqual(restored.resume_not_before_ms, DAY_MS)
 
 
 class NetBreakEvenPolicyTests(unittest.TestCase):
     def level(self, **changes):
-        values = dict(entry=100.0, direction=1, fee=0.2, factor=1.0,
-                      slippage=0.1, accrued_swap=-0.4, grid=0.01)
+        values = dict(
+            entry=100.0,
+            direction=1,
+            fee=0.2,
+            factor=1.0,
+            slippage=0.1,
+            accrued_swap=-0.4,
+            grid=0.01,
+        )
         values.update(changes)
         return net_break_even(**values)
 
@@ -182,9 +244,15 @@ class NetBreakEvenPolicyTests(unittest.TestCase):
         self.assertLess(later_net, 0.0)
 
     def test_invalid_net_be_geometry_or_cost_input_is_rejected(self):
-        for changes in ({"direction": 0}, {"factor": 0}, {"grid": 0},
-                        {"accrued_swap": math.nan}, {"entry": math.inf},
-                        {"fee": -1}, {"slippage": -0.1}):
+        for changes in (
+            {"direction": 0},
+            {"factor": 0},
+            {"grid": 0},
+            {"accrued_swap": math.nan},
+            {"entry": math.inf},
+            {"fee": -1},
+            {"slippage": -0.1},
+        ):
             with self.subTest(changes=changes):
                 with self.assertRaises(ValueError):
                     self.level(**changes)

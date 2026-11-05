@@ -17,7 +17,11 @@ import unittest
 
 from scripts.demo_runtime.delivery import TelegramDelivery
 from scripts.ops.c22_selected_watchdog import (
-    SNAPSHOT, check_once, main, read_journal, service_state,
+    SNAPSHOT,
+    check_once,
+    main,
+    read_journal,
+    service_state,
 )
 
 NOW = datetime(2026, 10, 26, 12, tzinfo=timezone.utc)
@@ -34,26 +38,41 @@ class SelectedWatchdogTests(unittest.TestCase):
         self.notify = Mock()
         self.unit = "active"
         self.values = dict(
-            identity=FINGERPRINT, strategy_snapshot=SNAPSHOT,
-            active=None, safety_halt=None,
-            last_result=dict(snapshot=SNAPSHOT, captured_utc=NOW.isoformat(),
-                             execute=True,
-                             status="BLOCKED", reason="quote_stale", critical=False,
-                             position_protection="flat", observed_positions=0),
+            identity=FINGERPRINT,
+            strategy_snapshot=SNAPSHOT,
+            active=None,
+            safety_halt=None,
+            last_result=dict(
+                snapshot=SNAPSHOT,
+                captured_utc=NOW.isoformat(),
+                execute=True,
+                status="BLOCKED",
+                reason="quote_stale",
+                critical=False,
+                position_protection="flat",
+                observed_positions=0,
+            ),
         )
         self.write_journal()
 
     def write_journal(self):
         with closing(sqlite3.connect(self.journal)) as conn:
             conn.execute("CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
-            conn.executemany("INSERT OR REPLACE INTO kv VALUES (?,?)",
-                             [(key, json.dumps(value)) for key, value in self.values.items()])
+            conn.executemany(
+                "INSERT OR REPLACE INTO kv VALUES (?,?)",
+                [(key, json.dumps(value)) for key, value in self.values.items()],
+            )
             conn.commit()
 
     def run_check(self, now=NOW, **changes):
-        options = dict(journal=self.journal, state=self.state, now=now,
-                       expected_fingerprint=FINGERPRINT, unit_reader=lambda: self.unit,
-                       notify=self.notify)
+        options = dict(
+            journal=self.journal,
+            state=self.state,
+            now=now,
+            expected_fingerprint=FINGERPRINT,
+            unit_reader=lambda: self.unit,
+            notify=self.notify,
+        )
         return check_once(**(options | changes))
 
     def test_flat_stale_quote_is_waiting_not_feed_health_or_alert_and_journal_unchanged(self):
@@ -79,8 +98,9 @@ class SelectedWatchdogTests(unittest.TestCase):
         self.unit = "active"
         for elapsed in (120, 299, 300, 301):
             now = NOW + timedelta(seconds=elapsed)
-            self.values["last_result"].update(captured_utc=now.isoformat(),
-                                              status="WAIT", reason="duplicate_bar")
+            self.values["last_result"].update(
+                captured_utc=now.isoformat(), status="WAIT", reason="duplicate_bar"
+            )
             self.write_journal()
             result = self.run_check(now=now)
             if elapsed < 300:
@@ -110,17 +130,31 @@ class SelectedWatchdogTests(unittest.TestCase):
 
     def test_unknown_position_alert_payload_never_includes_financial_or_secret_values(self):
         self.values["active"] = dict(ticket=777, price=999.0, token="private-secret")
-        self.values["last_result"].update(status="UNKNOWN", critical=True,
-                                          position_protection="unknown", observed_positions=1,
-                                          balance=1234.56, reason="secret-user-password")
+        self.values["last_result"].update(
+            status="UNKNOWN",
+            critical=True,
+            position_protection="unknown",
+            observed_positions=1,
+            balance=1234.56,
+            reason="secret-user-password",
+        )
         self.write_journal()
         result = self.run_check()
         self.assertIn("position_protection_critical", result["findings"])
         raw = json.dumps(self.notify.call_args.args[0])
-        for private in ("777", "999", "1234.56", "private-secret", "secret-user-password", FINGERPRINT):
+        for private in (
+            "777",
+            "999",
+            "1234.56",
+            "private-secret",
+            "secret-user-password",
+            FINGERPRINT,
+        ):
             self.assertNotIn(private, raw)
-        self.assertEqual(set(json.loads(raw)),
-                         {"kind", "snapshot", "captured_utc", "findings", "service_state", "event_id"})
+        self.assertEqual(
+            set(json.loads(raw)),
+            {"kind", "snapshot", "captured_utc", "findings", "service_state", "event_id"},
+        )
 
     def test_failed_delivery_survives_process_restart_retries_same_event_id_with_backoff(self):
         self.unit = "failed"
@@ -131,7 +165,9 @@ class SelectedWatchdogTests(unittest.TestCase):
         self.assertEqual(first["pending_notifications"], 1)
         self.assertNotIn("secret", json.dumps(first))
         self.notify.side_effect = None
-        self.assertEqual(self.run_check(now=NOW + timedelta(seconds=10))["delivery"], "retry_deferred")
+        self.assertEqual(
+            self.run_check(now=NOW + timedelta(seconds=10))["delivery"], "retry_deferred"
+        )
         self.assertEqual(self.notify.call_count, 1)
         retried = self.run_check(now=NOW + timedelta(seconds=30))
         self.assertEqual(retried["delivery"], "delivered")
@@ -202,12 +238,23 @@ class SelectedWatchdogTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(self.journal.read_bytes()).hexdigest(), digest)
 
     def test_cli_default_never_creates_delivery_and_notify_requires_explicit_channel(self):
-        args = ["--journal", str(self.journal), "--state", str(self.state),
-                "--expected-fingerprint", FINGERPRINT]
-        with patch("scripts.ops.c22_selected_watchdog.check_once", return_value={"status": "HEALTHY"}), \
-                patch("scripts.ops.c22_selected_watchdog.TelegramDelivery") as telegram, \
-                patch("scripts.ops.c22_selected_watchdog.HealthDelivery") as health, \
-                patch.dict("os.environ", {}, clear=True), redirect_stdout(StringIO()):
+        args = [
+            "--journal",
+            str(self.journal),
+            "--state",
+            str(self.state),
+            "--expected-fingerprint",
+            FINGERPRINT,
+        ]
+        with (
+            patch(
+                "scripts.ops.c22_selected_watchdog.check_once", return_value={"status": "HEALTHY"}
+            ),
+            patch("scripts.ops.c22_selected_watchdog.TelegramDelivery") as telegram,
+            patch("scripts.ops.c22_selected_watchdog.HealthDelivery") as health,
+            patch.dict("os.environ", {}, clear=True),
+            redirect_stdout(StringIO()),
+        ):
             self.assertEqual(main(args), 0)
             telegram.assert_not_called()
             health.assert_not_called()
@@ -216,14 +263,27 @@ class SelectedWatchdogTests(unittest.TestCase):
             health.assert_not_called()
 
     def test_cli_accepts_health_only_channel_and_never_prints_its_private_url(self):
-        args = ["--journal", str(self.journal), "--state", str(self.state),
-                "--expected-fingerprint", FINGERPRINT, "--notify"]
+        args = [
+            "--journal",
+            str(self.journal),
+            "--state",
+            str(self.state),
+            "--expected-fingerprint",
+            FINGERPRINT,
+            "--notify",
+        ]
         output = StringIO()
-        with patch("scripts.ops.c22_selected_watchdog.check_once", return_value={"status": "HEALTHY"}) as check, \
-                patch("scripts.ops.c22_selected_watchdog.TelegramDelivery") as telegram, \
-                patch("scripts.ops.c22_selected_watchdog.HealthDelivery") as health, \
-                patch.dict("os.environ", {"DEMO_HEALTHCHECK_URL": "https://private.example/secret"}, clear=True), \
-                redirect_stdout(output):
+        with (
+            patch(
+                "scripts.ops.c22_selected_watchdog.check_once", return_value={"status": "HEALTHY"}
+            ) as check,
+            patch("scripts.ops.c22_selected_watchdog.TelegramDelivery") as telegram,
+            patch("scripts.ops.c22_selected_watchdog.HealthDelivery") as health,
+            patch.dict(
+                "os.environ", {"DEMO_HEALTHCHECK_URL": "https://private.example/secret"}, clear=True
+            ),
+            redirect_stdout(output),
+        ):
             self.assertEqual(main(args), 0)
             telegram.assert_not_called()
             health.assert_called_once_with("https://private.example/secret")
@@ -231,11 +291,12 @@ class SelectedWatchdogTests(unittest.TestCase):
         self.assertNotIn("secret", output.getvalue())
 
     def test_service_reader_timeout_is_bounded_and_does_not_expose_command_output(self):
-        with patch("scripts.ops.c22_selected_watchdog.subprocess.run",
-                   side_effect=subprocess.TimeoutExpired("secret-command", 3)) as process:
+        with patch(
+            "scripts.ops.c22_selected_watchdog.subprocess.run",
+            side_effect=subprocess.TimeoutExpired("secret-command", 3),
+        ) as process:
             self.assertEqual(service_state(), "unknown")
             self.assertEqual(process.call_args.kwargs["timeout"], 3)
-
 
     def test_actual_bounded_telegram_client_retries_loopback_http_without_financial_mutation(self):
         received, mode = [], {"status": 503}
@@ -260,12 +321,16 @@ class SelectedWatchdogTests(unittest.TestCase):
             first = self.run_check(notify=TelegramDelivery("fixture", "owner", base_url=url))
             self.assertEqual(first["delivery"], "pending_retry")
             mode["status"] = 200
-            second = self.run_check(now=NOW + timedelta(seconds=60),
-                                    notify=TelegramDelivery("fixture", "owner", base_url=url))
+            second = self.run_check(
+                now=NOW + timedelta(seconds=60),
+                notify=TelegramDelivery("fixture", "owner", base_url=url),
+            )
             self.assertEqual(second["delivery"], "delivered")
             self.assertEqual(len(received), 2)
-            self.assertEqual(json.loads(received[0]["text"])["event_id"],
-                             json.loads(received[1]["text"])["event_id"])
+            self.assertEqual(
+                json.loads(received[0]["text"])["event_id"],
+                json.loads(received[1]["text"])["event_id"],
+            )
             self.assertEqual(hashlib.sha256(self.journal.read_bytes()).hexdigest(), digest)
         finally:
             server.shutdown()

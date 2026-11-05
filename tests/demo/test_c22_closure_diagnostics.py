@@ -29,9 +29,14 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
         self.assertEqual(result["reason"], reason)
         self.assertEqual(result["failure"]["code"], reason)
         self.assertEqual(result["failure"]["classification"], "GATE_BLOCK")
-        self.assertIn(origin_path, {
-            frame["path"] for cause in result["failure"]["cause_chain"]
-            for frame in cause["frames"]})
+        self.assertIn(
+            origin_path,
+            {
+                frame["path"]
+                for cause in result["failure"]["cause_chain"]
+                for frame in cause["frames"]
+            },
+        )
         item = result["entry_availability"]["known_blockers"][0]
         self.assertEqual(item["code"], reason)
         self.assertEqual(item["resume_condition"], RESUME[reason][1])
@@ -57,9 +62,11 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
                 self.assert_refusal(broker, name, name, "scripts/c22_selected/strategy.py")
 
     def test_real_m1_refusals_keep_exact_cause_and_never_send(self):
-        for name, reason in (("empty", "missing M1 bars"),
-                             ("one_minute", "no complete M15 bars from M1"),
-                             ("invalid_ohlc", "invalid_closed_M1_OHLC")):
+        for name, reason in (
+            ("empty", "missing M1 bars"),
+            ("one_minute", "no complete M15 bars from M1"),
+            ("invalid_ohlc", "invalid_closed_M1_OHLC"),
+        ):
             with self.subTest(name=name):
                 broker = SelectedBroker()
                 if name == "empty":
@@ -68,15 +75,19 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
                     broker.rates = broker.rates[-1:]
                 else:
                     broker.rates[-1]["high"] = 0
-                path = ("scripts/pure_b1/broker_data.py" if name == "one_minute"
-                        else "scripts/demo_runtime/market_data.py")
+                path = (
+                    "scripts/pure_b1/broker_data.py"
+                    if name == "one_minute"
+                    else "scripts/demo_runtime/market_data.py"
+                )
                 self.assert_refusal(broker, name, reason, path)
 
     def test_real_native_risk_refusal_recovers_only_when_original_geometry_passes(self):
         broker = SelectedBroker()
         broker.info.trade_contract_size = 1000
         runner, _ = self.assert_refusal(
-            broker, "risk-recovery", "risk_cap", "scripts/c22_selected/strategy.py")
+            broker, "risk-recovery", "risk_cap", "scripts/c22_selected/strategy.py"
+        )
         broker.info.trade_contract_size = 100
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             admitted = runner.cycle(now=broker.now)
@@ -96,16 +107,27 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
         codes = set()
         for relative, names in targets.items():
             tree = ast.parse((root / relative).read_text())
-            functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
-                         and node.name in names]
+            functions = [
+                node
+                for node in tree.body
+                if isinstance(node, ast.FunctionDef) and node.name in names
+            ]
             for node in (node for function in functions for node in ast.walk(function)):
-                if (isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call)
-                        and isinstance(node.exc.func, ast.Name) and node.exc.func.id == "ValueError"
-                        and node.exc.args and isinstance(node.exc.args[0], ast.Constant)
-                        and isinstance(node.exc.args[0].value, str)):
+                if (
+                    isinstance(node, ast.Raise)
+                    and isinstance(node.exc, ast.Call)
+                    and isinstance(node.exc.func, ast.Name)
+                    and node.exc.func.id == "ValueError"
+                    and node.exc.args
+                    and isinstance(node.exc.args[0], ast.Constant)
+                    and isinstance(node.exc.args[0].value, str)
+                ):
                     codes.add(node.exc.args[0].value)
-                elif (isinstance(node, ast.Return) and isinstance(node.value, ast.Constant)
-                      and isinstance(node.value.value, str)):
+                elif (
+                    isinstance(node, ast.Return)
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, str)
+                ):
                     codes.add(node.value.value)
         self.assertTrue({"risk_cap", "margin", "invalid_stop"}.issubset(codes))
         for code in sorted(codes):
@@ -116,7 +138,8 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
         self.assertEqual(public_reason(ValueError("password=PRIVATE-SDK-secret")), "ValueError")
         broker = SelectedBroker()
         broker.copy_rates_from_pos = lambda *args: (_ for _ in ()).throw(
-            ValueError("password=PRIVATE-SDK-secret"))
+            ValueError("password=PRIVATE-SDK-secret")
+        )
         runner, result = self.cycle(broker, "private-sdk")
         self.assertEqual(result["reason"], "ValueError")
         self.assertEqual(result["failure"]["classification"], "FAULT")
@@ -153,8 +176,12 @@ class CanonicalRefusalDiagnosticsTests(unittest.TestCase):
         for node in ast.walk(tree):
             if isinstance(node, ast.Dict):
                 for key, value in zip(node.keys, node.values):
-                    if (isinstance(key, ast.Constant) and key.value == "reason"
-                            and isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                    if (
+                        isinstance(key, ast.Constant)
+                        and key.value == "reason"
+                        and isinstance(value, ast.Constant)
+                        and isinstance(value.value, str)
+                    ):
                         reasons.add(value.value)
         self.assertIn("awaiting_fill_deal_costs", reasons)
         self.assertIn("safety_close_position_changed", reasons)

@@ -25,9 +25,16 @@ def m1_for_quarters(stamps):
     rates = []
     for number, stamp in enumerate(stamps):
         price = 3000.0 + number / 1000
-        rates.extend(dict(time=int(stamp.timestamp()) + minute * 60,
-                          open=price, high=price + 0.02, low=price - 0.02,
-                          close=price + 0.01) for minute in range(15))
+        rates.extend(
+            dict(
+                time=int(stamp.timestamp()) + minute * 60,
+                open=price,
+                high=price + 0.02,
+                low=price - 0.02,
+                close=price + 0.01,
+            )
+            for minute in range(15)
+        )
     return rates
 
 
@@ -35,13 +42,14 @@ def h4_input(*, prior_partial=False, forming_quarters=10):
     closed = pd.Timestamp("2026-10-26T00:00:00Z")
     if prior_partial:
         # 220 complete historical H4, then Sunday's incomplete20:00 bucket.
-        historical = pd.date_range(end=closed - pd.Timedelta(hours=4, minutes=15),
-                                   periods=220 * 16, freq="15min", tz="UTC")
-        previous = pd.date_range(closed - pd.Timedelta(hours=2), periods=7,
-                                 freq="15min", tz="UTC")
+        historical = pd.date_range(
+            end=closed - pd.Timedelta(hours=4, minutes=15), periods=220 * 16, freq="15min", tz="UTC"
+        )
+        previous = pd.date_range(closed - pd.Timedelta(hours=2), periods=7, freq="15min", tz="UTC")
     else:
-        historical = pd.date_range(end=closed - pd.Timedelta(minutes=15),
-                                   periods=220 * 16, freq="15min", tz="UTC")
+        historical = pd.date_range(
+            end=closed - pd.Timedelta(minutes=15), periods=220 * 16, freq="15min", tz="UTC"
+        )
         previous = pd.DatetimeIndex([], tz="UTC")
     forming = pd.date_range(closed, periods=forming_quarters, freq="15min", tz="UTC")
     stamps = historical.append(previous).append(forming)
@@ -68,13 +76,17 @@ class NativeH4AvailabilityTests(unittest.TestCase):
         cache.append(bars)
         self.assertTrue(pd.notna(cache.row.macro_ema))
         completed = bars.close.resample("4h").agg(["last", "count"])
-        expected = completed.loc[completed["count"] == 16, "last"].ewm(
-            span=200, adjust=False, min_periods=200).mean().iloc[-1]
+        expected = (
+            completed.loc[completed["count"] == 16, "last"]
+            .ewm(span=200, adjust=False, min_periods=200)
+            .mean()
+            .iloc[-1]
+        )
         self.assertAlmostEqual(float(cache.row.macro_ema), expected)
 
     def test_genuinely_short_history_keeps_count_warmup_blocker(self):
         bars, _ = h4_input(prior_partial=False, forming_quarters=1)
-        bars = bars.iloc[:200 * 16]
+        bars = bars.iloc[: 200 * 16]
         cache = SelectedBarCache()
         with self.assertRaisesRegex(ValueError, "^macro_warmup_insufficient$"):
             cache.append(bars)
@@ -90,13 +102,18 @@ class NativeH4AvailabilityTests(unittest.TestCase):
 
     def test_short_bootstrap_retries_after_60_seconds_when_sdk_history_expands(self):
         full, observed = h4_input(prior_partial=False)
-        short = full.iloc[:200 * 16]
+        short = full.iloc[: 200 * 16]
         strategy = SelectedStrategy(selected_config())
         clock = {"seconds": 0.0}
-        with patch("scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]), patch(
-            "scripts.c22_selected.strategy.copy_m1_rates",
-            side_effect=[m1_for_quarters(short.index), m1_for_quarters(full.index)],
-        ) as copy:
+        with (
+            patch(
+                "scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]
+            ),
+            patch(
+                "scripts.c22_selected.strategy.copy_m1_rates",
+                side_effect=[m1_for_quarters(short.index), m1_for_quarters(full.index)],
+            ) as copy,
+        ):
             with self.assertRaisesRegex(ValueError, "^macro_warmup_insufficient$"):
                 strategy.frame(short.iloc[-100:], NS(), "XAUUSDm", observed)
             clock["seconds"] = 59
@@ -114,10 +131,15 @@ class NativeH4AvailabilityTests(unittest.TestCase):
         completed, later = h4_input(prior_partial=True, forming_quarters=17)
         strategy = SelectedStrategy(selected_config())
         clock = {"seconds": 0.0}
-        with patch("scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]), patch(
-            "scripts.c22_selected.strategy.copy_m1_rates",
-            return_value=m1_for_quarters(partial.index),
-        ) as copy:
+        with (
+            patch(
+                "scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]
+            ),
+            patch(
+                "scripts.c22_selected.strategy.copy_m1_rates",
+                return_value=m1_for_quarters(partial.index),
+            ) as copy,
+        ):
             with self.assertRaisesRegex(ValueError, "^macro_latest_h4_incomplete$"):
                 strategy.frame(partial.iloc[-100:], NS(), "XAUUSDm", observed)
             clock["seconds"] = 120
@@ -130,7 +152,7 @@ class NativeH4AvailabilityTests(unittest.TestCase):
 
     def test_retry_bootstrap_rejects_known_overlap_omission_and_changed_price(self):
         full, observed = h4_input(prior_partial=False)
-        short = full.iloc[:200 * 16]
+        short = full.iloc[: 200 * 16]
         all_rates = m1_for_quarters(full.index)
         cutoff = int((short.index[-1] + pd.Timedelta(minutes=15)).timestamp())
         short_rates = [r for r in all_rates if r["time"] < cutoff]
@@ -139,7 +161,9 @@ class NativeH4AvailabilityTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 fresh = [dict(r) for r in all_rates]
                 if failure == "omission":
-                    fresh = [r for r in fresh if not changed_start <= r["time"] < changed_start + 900]
+                    fresh = [
+                        r for r in fresh if not changed_start <= r["time"] < changed_start + 900
+                    ]
                 else:
                     for row in fresh:
                         if changed_start <= row["time"] < changed_start + 900:
@@ -147,9 +171,16 @@ class NativeH4AvailabilityTests(unittest.TestCase):
                                 row[field] += 0.001
                 strategy = SelectedStrategy(selected_config())
                 clock = {"seconds": 0.0}
-                with patch("scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]), patch(
-                    "scripts.c22_selected.strategy.copy_m1_rates", side_effect=[short_rates, fresh],
-                ) as copy:
+                with (
+                    patch(
+                        "scripts.c22_selected.strategy.time.monotonic",
+                        side_effect=lambda: clock["seconds"],
+                    ),
+                    patch(
+                        "scripts.c22_selected.strategy.copy_m1_rates",
+                        side_effect=[short_rates, fresh],
+                    ) as copy,
+                ):
                     with self.assertRaisesRegex(ValueError, "^macro_warmup_insufficient$"):
                         strategy.frame(short.iloc[-100:], NS(), "XAUUSDm", observed)
                     clock["seconds"] = 60
@@ -161,7 +192,7 @@ class NativeH4AvailabilityTests(unittest.TestCase):
 
     def test_retry_bootstrap_retains_known_older_prefix_when_fresh_window_slides(self):
         full, observed = h4_input(prior_partial=False)
-        short = full.iloc[:200 * 16]
+        short = full.iloc[: 200 * 16]
         all_rates = m1_for_quarters(full.index)
         cutoff = int((short.index[-1] + pd.Timedelta(minutes=15)).timestamp())
         short_rates = [r for r in all_rates if r["time"] < cutoff]
@@ -169,9 +200,15 @@ class NativeH4AvailabilityTests(unittest.TestCase):
         fresh_rates = [r for r in all_rates if r["time"] >= fresh_start]
         strategy = SelectedStrategy(selected_config())
         clock = {"seconds": 0.0}
-        with patch("scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]), patch(
-            "scripts.c22_selected.strategy.copy_m1_rates", side_effect=[short_rates, fresh_rates],
-        ) as copy:
+        with (
+            patch(
+                "scripts.c22_selected.strategy.time.monotonic", side_effect=lambda: clock["seconds"]
+            ),
+            patch(
+                "scripts.c22_selected.strategy.copy_m1_rates",
+                side_effect=[short_rates, fresh_rates],
+            ) as copy,
+        ):
             with self.assertRaisesRegex(ValueError, "^macro_warmup_insufficient$"):
                 strategy.frame(short.iloc[-100:], NS(), "XAUUSDm", observed)
             clock["seconds"] = 60
@@ -195,18 +232,27 @@ class StartupHistoryTests(unittest.TestCase):
 
     def publish(self, bars=None, *, config=None, fingerprint=FINGERPRINT, observed=None):
         from scripts.c22_selected.history import save_manifest
+
         bars = self.seed if bars is None else bars
         bars.rename_axis("bar_open_utc").to_csv(self.path)
-        save_manifest(self.path, bars=bars, fingerprint=fingerprint,
-                      config=self.config if config is None else config,
-                      now=self.now if observed is None else observed)
+        save_manifest(
+            self.path,
+            bars=bars,
+            fingerprint=fingerprint,
+            config=self.config if config is None else config,
+            now=self.now if observed is None else observed,
+        )
 
     def load(self, *, recent=None, config=None, fingerprint=FINGERPRINT, observed=None):
         from scripts.c22_selected.history import load_seed
-        return load_seed(self.path, recent=self.recent if recent is None else recent,
-                         fingerprint=fingerprint,
-                         config=self.config if config is None else config,
-                         now=self.now if observed is None else observed)
+
+        return load_seed(
+            self.path,
+            recent=self.recent if recent is None else recent,
+            fingerprint=fingerprint,
+            config=self.config if config is None else config,
+            now=self.now if observed is None else observed,
+        )
 
     def rejected(self, **kwargs):
         restored, diagnostic = self.load(**kwargs)
@@ -219,12 +265,14 @@ class StartupHistoryTests(unittest.TestCase):
         self.assertTrue(self.path.with_suffix(".csv.meta.json").exists())
         restored, diagnostic = self.load()
         self.assertIsInstance(diagnostic, str)
-        pd.testing.assert_frame_equal(restored, self.full, check_names=False,
-                                      check_freq=False, check_exact=True)
+        pd.testing.assert_frame_equal(
+            restored, self.full, check_names=False, check_freq=False, check_exact=True
+        )
         self.assertFalse(restored.index.has_duplicates)
 
     def test_valid_seed_preserves_broker_datetime_resolution(self):
         from tests.demo.test_c22_selected_runner import SelectedBroker
+
         broker = SelectedBroker()
         recent = self.recent.copy()
         recent.index = recent.index.as_unit("s")
@@ -235,16 +283,21 @@ class StartupHistoryTests(unittest.TestCase):
         self.assertEqual(expected.index.unit, "s")
         self.publish(cold.cache.bars.iloc[:-4], observed=broker.now)
         warm = SelectedStrategy(self.config, cache_path=self.path, fingerprint=FINGERPRINT)
-        with patch("scripts.c22_selected.strategy.copy_m1_rates", side_effect=AssertionError("unexpected full fetch")) as copy:
+        with patch(
+            "scripts.c22_selected.strategy.copy_m1_rates",
+            side_effect=AssertionError("unexpected full fetch"),
+        ) as copy:
             actual = warm.frame(recent, broker, "XAUUSDm", broker.now)
         copy.assert_not_called()
         self.assertEqual(warm.history_seed_status, "restored")
         self.assertEqual(actual.index.dtype, expected.index.dtype)
         self.assertEqual(actual.index.name, expected.index.name)
-        pd.testing.assert_series_equal(actual.direction, expected.direction,
-                                       check_freq=False, check_exact=True)
-        pd.testing.assert_series_equal(actual.macro_ema, expected.macro_ema,
-                                       check_freq=False, check_exact=True)
+        pd.testing.assert_series_equal(
+            actual.direction, expected.direction, check_freq=False, check_exact=True
+        )
+        pd.testing.assert_series_equal(
+            actual.macro_ema, expected.macro_ema, check_freq=False, check_exact=True
+        )
 
     def test_missing_csv_or_manifest_falls_back_with_diagnostic(self):
         self.rejected()
@@ -329,14 +382,18 @@ class StartupHistoryTests(unittest.TestCase):
                 malformed.rename_axis("bar_open_utc").to_csv(self.path)
                 metadata_path = self.path.with_suffix(".csv.meta.json")
                 metadata = json.loads(metadata_path.read_text())
-                metadata.update(sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
-                                rows=len(malformed), first_bar_utc=malformed.index[0].isoformat(),
-                                last_bar_utc=malformed.index[-1].isoformat())
+                metadata.update(
+                    sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
+                    rows=len(malformed),
+                    first_bar_utc=malformed.index[0].isoformat(),
+                    last_bar_utc=malformed.index[-1].isoformat(),
+                )
                 metadata_path.write_text(json.dumps(metadata))
                 self.rejected()
 
     def test_submillisecond_offset_rejected_before_publishing_or_restoring_seed(self):
         from scripts.c22_selected.history import save_manifest
+
         self.publish()
         metadata_path = self.path.with_suffix(".csv.meta.json")
         metadata = json.loads(metadata_path.read_text())
@@ -344,35 +401,44 @@ class StartupHistoryTests(unittest.TestCase):
         shifted.index += pd.Timedelta(microseconds=500)
         shifted.rename_axis("bar_open_utc").to_csv(self.path)
         with self.assertRaisesRegex(ValueError, "unaligned M15"):
-            save_manifest(self.path, bars=shifted, fingerprint=FINGERPRINT,
-                          config=self.config, now=self.now)
-        metadata.update(sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
-                        rows=len(shifted), first_bar_utc=shifted.index[0].isoformat(),
-                        last_bar_utc=shifted.index[-1].isoformat())
+            save_manifest(
+                self.path, bars=shifted, fingerprint=FINGERPRINT, config=self.config, now=self.now
+            )
+        metadata.update(
+            sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
+            rows=len(shifted),
+            first_bar_utc=shifted.index[0].isoformat(),
+            last_bar_utc=shifted.index[-1].isoformat(),
+        )
         metadata_path.write_text(json.dumps(metadata))
         self.rejected()
 
     def test_manifest_publication_checks_actual_csv_and_preserves_old_metadata_on_failure(self):
         from scripts.c22_selected.history import save_manifest
+
         self.publish()
         metadata_path = self.path.with_suffix(".csv.meta.json")
         before = metadata_path.read_bytes()
         different = self.seed.copy()
         different.iloc[0] += 0.01
         with self.assertRaises(ValueError):
-            save_manifest(self.path, bars=different, fingerprint=FINGERPRINT,
-                          config=self.config, now=self.now)
+            save_manifest(
+                self.path, bars=different, fingerprint=FINGERPRINT, config=self.config, now=self.now
+            )
         self.assertEqual(metadata_path.read_bytes(), before)
         restored, _ = self.load()
         self.assertIsNotNone(restored)
 
     def test_invalid_seed_triggers_real_cold_bootstrap_instead_of_being_accepted(self):
         from tests.demo.test_c22_selected_runner import SelectedBroker
+
         self.publish()
         self.path.write_text(self.path.read_text() + "unverified edit\n")
         strategy = SelectedStrategy(self.config, cache_path=self.path, fingerprint=FINGERPRINT)
         broker = SelectedBroker()
-        with patch("scripts.c22_selected.strategy.copy_m1_rates", return_value=broker.rates) as copy:
+        with patch(
+            "scripts.c22_selected.strategy.copy_m1_rates", return_value=broker.rates
+        ) as copy:
             frame = strategy.frame(self.recent, broker, "XAUUSDm", broker.now)
         copy.assert_called_once_with(broker, "XAUUSDm")
         self.assertEqual(strategy.history_seed_status, "content_hash_mismatch")
@@ -380,8 +446,9 @@ class StartupHistoryTests(unittest.TestCase):
         actual, expected = strategy.cache.bars.copy(), self.full.copy()
         actual.index = actual.index.as_unit("ns")
         expected.index = expected.index.as_unit("ns")
-        pd.testing.assert_frame_equal(actual, expected,
-                                      check_names=False, check_freq=False, check_exact=True)
+        pd.testing.assert_frame_equal(
+            actual, expected, check_names=False, check_freq=False, check_exact=True
+        )
 
     def test_changed_or_missing_overlap_bar_rejected_without_merging(self):
         self.publish()
@@ -408,37 +475,68 @@ class StartupHistoryTests(unittest.TestCase):
 
     def test_restored_strategy_matches_native_full_frame_without_full_history_fetch(self):
         from scripts.c22_selected.history import load_seed
+
         self.publish()
         expected = SelectedBarCache()
         expected.append(self.full)
         strategy = SelectedStrategy(self.config, cache_path=self.path, fingerprint=FINGERPRINT)
         broker = NS(copy_rates_from_pos=Mock(side_effect=AssertionError("unexpected bootstrap")))
-        with patch("scripts.c22_selected.strategy.copy_m1_rates", side_effect=AssertionError("full fetch")) as copy, patch(
-            "scripts.c22_selected.strategy.load_seed", wraps=load_seed,
-        ) as restore:
+        with (
+            patch(
+                "scripts.c22_selected.strategy.copy_m1_rates",
+                side_effect=AssertionError("full fetch"),
+            ) as copy,
+            patch(
+                "scripts.c22_selected.strategy.load_seed",
+                wraps=load_seed,
+            ) as restore,
+        ):
             actual = strategy.frame(self.recent, broker, "XAUUSDm", self.now)
             again = strategy.frame(self.recent, broker, "XAUUSDm", self.now)
         copy.assert_not_called()
         restore.assert_called_once()
         broker.copy_rates_from_pos.assert_not_called()
-        pd.testing.assert_series_equal(actual.direction, expected.frame.direction,
-                                       check_names=False, check_freq=False, check_exact=True)
-        pd.testing.assert_series_equal(actual.macro_ema, expected.frame.macro_ema,
-                                       check_names=False, check_freq=False, check_exact=True)
+        pd.testing.assert_series_equal(
+            actual.direction,
+            expected.frame.direction,
+            check_names=False,
+            check_freq=False,
+            check_exact=True,
+        )
+        pd.testing.assert_series_equal(
+            actual.macro_ema,
+            expected.frame.macro_ema,
+            check_names=False,
+            check_freq=False,
+            check_exact=True,
+        )
         self.assertIs(actual, again)
 
     def test_checkpoint_write_failure_does_not_disable_owned_position_manager(self):
         from scripts.c22_selected.runner import SelectedDemoRunner
         from tests.demo.test_c22_selected_runner import SelectedBroker
         from tests.demo.test_trial30_demo import policy
+
         broker = SelectedBroker()
-        costs = policy() | {"reviewed_utc": broker.now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()}
-        runner = SelectedDemoRunner(mt5=broker, expected_login=123, expected_server="Exness-Demo",
-                                   journal_path=Path(self.temp.name) / "owned.sqlite3",
-                                   config=self.config, cost_policy=costs, execute=True,
-                                   cache_output=self.path)
+        costs = policy() | {
+            "reviewed_utc": broker.now.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            ).isoformat()
+        }
+        runner = SelectedDemoRunner(
+            mt5=broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=Path(self.temp.name) / "owned.sqlite3",
+            config=self.config,
+            cost_policy=costs,
+            execute=True,
+            cache_output=self.path,
+        )
         self.addCleanup(runner.close)
-        with patch("scripts.c22_selected.strategy.save_manifest", side_effect=OSError("disk failure")):
+        with patch(
+            "scripts.c22_selected.strategy.save_manifest", side_effect=OSError("disk failure")
+        ):
             filled = runner.cycle(now=broker.now)
             managed = runner.cycle(now=broker.now)
         self.assertEqual(filled["status"], "FILLED", filled)

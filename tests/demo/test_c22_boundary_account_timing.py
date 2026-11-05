@@ -177,17 +177,24 @@ class TimingRegressionControlTests(unittest.TestCase):
 class CandidatePersistenceTests(unittest.TestCase):
     def test_exit_day_validity_is_not_relabelled_by_current_cycle_diagnostics(self):
         for current_valid, exit_valid in ((True, False), (False, True), (False, False)):
-            with self.subTest(current_valid=current_valid, exit_valid=exit_valid), timing_fixture() as case:
+            with (
+                self.subTest(current_valid=current_valid, exit_valid=exit_valid),
+                timing_fixture() as case,
+            ):
                 runner = case["runner"]
                 runner.journal.put("active", {"request": {"magic": runner.strategy.magic}})
                 runner.broker._baseline = Mock(
                     return_value=197.0,
                     side_effect=None if current_valid else ValueError("day_start_floating_unknown"),
                 )
-                runner._lifecycle.reconcile_closed = Mock(return_value=dict(
-                    status="CLOSED", day_start_valid=exit_valid, day_start_day="2026-10-01",
-                    day_start_source="captured_at_utc_boundary",
-                ))
+                runner._lifecycle.reconcile_closed = Mock(
+                    return_value=dict(
+                        status="CLOSED",
+                        day_start_valid=exit_valid,
+                        day_start_day="2026-10-01",
+                        day_start_source="captured_at_utc_boundary",
+                    )
+                )
                 with patch("scripts.demo_runtime.runner.time.monotonic", return_value=30.0):
                     result = runner.cycle(now=MIDNIGHT + timedelta(seconds=30))
                 for payload in (result, runner.journal.get("last_result")):
@@ -261,18 +268,27 @@ class SelectedAccountTimingTests(unittest.TestCase):
         for account_delay, captured in ((0.02, True), (1.1, False)):
             with self.subTest(account_delay=account_delay), TemporaryDirectory() as directory:
                 broker = SelectedBroker()
-                costs = policy() | {"reviewed_utc": broker.now.replace(
-                    hour=0, minute=0, second=0, microsecond=0).isoformat()}
+                costs = policy() | {
+                    "reviewed_utc": broker.now.replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    ).isoformat()
+                }
                 path = Path(directory) / "held-selected.sqlite3"
                 runner = SelectedDemoRunner(
-                    mt5=broker, expected_login=123, expected_server="Exness-Demo",
-                    journal_path=path, config=selected_config(), cost_policy=costs, execute=True,
+                    mt5=broker,
+                    expected_login=123,
+                    expected_server="Exness-Demo",
+                    journal_path=path,
+                    config=selected_config(),
+                    cost_policy=costs,
+                    execute=True,
                 )
                 self.addCleanup(runner.close)
                 opened = runner.cycle(now=broker.now)
                 self.assertEqual(opened["status"], "FILLED", opened)
                 midnight = (broker.now + timedelta(days=1)).replace(
-                    hour=0, minute=0, second=0, microsecond=0)
+                    hour=0, minute=0, second=0, microsecond=0
+                )
                 now = midnight + timedelta(milliseconds=20)
                 broker.tick.time_msc = int(now.timestamp() * 1000)
                 broker.account.equity = 197.0
@@ -284,12 +300,15 @@ class SelectedAccountTimingTests(unittest.TestCase):
 
                 def terminal_read():
                     clock[0] += 1.1
-                    return SimpleNamespace(connected=True, trade_allowed=True,
-                                           tradeapi_disabled=False)
+                    return SimpleNamespace(
+                        connected=True, trade_allowed=True, tradeapi_disabled=False
+                    )
 
                 broker.account_info = Mock(side_effect=account_read)
                 broker.terminal_info = Mock(side_effect=terminal_read)
-                with patch("scripts.demo_runtime.runner.time.monotonic", side_effect=lambda: clock[0]):
+                with patch(
+                    "scripts.demo_runtime.runner.time.monotonic", side_effect=lambda: clock[0]
+                ):
                     managed = runner.cycle(now=now)
                 self.assertEqual(managed["status"], "MANAGING", managed)
                 self.assertIsNotNone(runner.journal.get("active"))
@@ -318,31 +337,45 @@ class SelectedAccountTimingTests(unittest.TestCase):
                     invalid = runner.cycle(now=next_now)
                 for payload in (invalid, runner.journal.get("last_result")):
                     self.assertEqual(payload["reason"], "demo_identity_required")
-                    self.assertEqual(payload["account_read_request_started_utc"], next_now.isoformat())
+                    self.assertEqual(
+                        payload["account_read_request_started_utc"], next_now.isoformat()
+                    )
                     self.assertEqual(payload["account_read_observed_utc"], next_now.isoformat())
                     self.assertNotIn("day_start_valid", payload)
                     self.assertNotIn("day_start_reason", payload)
                 self.assertEqual(runner.journal.get("utc_boundary_mark"), mark)
                 runner.close()
                 restarted = SelectedDemoRunner(
-                    mt5=broker, expected_login=123, expected_server="Exness-Demo",
-                    journal_path=path, config=selected_config(), cost_policy=costs, execute=True,
+                    mt5=broker,
+                    expected_login=123,
+                    expected_server="Exness-Demo",
+                    journal_path=path,
+                    config=selected_config(),
+                    cost_policy=costs,
+                    execute=True,
                 )
                 self.addCleanup(restarted.close)
                 broker.account.equity = 150.0
                 if captured:
                     baseline = restarted.broker._baseline(
-                        broker.account, broker.positions, broker.deals,
-                        midnight + timedelta(seconds=30))
+                        broker.account,
+                        broker.positions,
+                        broker.deals,
+                        midnight + timedelta(seconds=30),
+                    )
                     self.assertEqual(baseline, 197.0)
                     self.assertEqual(restarted.journal.get("utc_boundary_mark"), mark)
-                    self.assertEqual(mark["observed_utc"], (
-                        midnight + timedelta(milliseconds=40)).isoformat())
+                    self.assertEqual(
+                        mark["observed_utc"], (midnight + timedelta(milliseconds=40)).isoformat()
+                    )
                 else:
                     with self.assertRaisesRegex(ValueError, "day_start_floating_unknown"):
                         restarted.broker._baseline(
-                            broker.account, broker.positions, broker.deals,
-                            midnight + timedelta(seconds=30))
+                            broker.account,
+                            broker.positions,
+                            broker.deals,
+                            midnight + timedelta(seconds=30),
+                        )
                     self.assertIsNone(restarted.journal.get("utc_boundary_mark"))
                 self.assertEqual(broker.order_send.call_count, 1)
 

@@ -43,11 +43,16 @@ def commit_failure_journal(error):
         "CREATE TABLE audit_events(id INTEGER PRIMARY KEY,payload TEXT NOT NULL);"
     )
     block_key = NOW.date().isoformat() + "|quote_stale"
-    connection.executemany("INSERT INTO kv VALUES (?,?)", [
-        ("active", "null"), ("protection_unknown_since", "null"),
-        ("protection_alerted", "false"), ("last_alert_block", json.dumps(block_key)),
-        ("last_result", '{"status":"FIXTURE_OLD"}'),
-    ])
+    connection.executemany(
+        "INSERT INTO kv VALUES (?,?)",
+        [
+            ("active", "null"),
+            ("protection_unknown_since", "null"),
+            ("protection_alerted", "false"),
+            ("last_alert_block", json.dumps(block_key)),
+            ("last_result", '{"status":"FIXTURE_OLD"}'),
+        ],
+    )
     connection.commit()
     journal = Journal.__new__(Journal)
     journal.conn, journal.guard = connection, None
@@ -67,22 +72,38 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         self.assertNotIn("private_table", text)
 
     def test_runtime_native_codes_preserve_public_envelope_and_exception_identity(self):
-        for code, name in ((5, "SQLITE_BUSY"), (13, "SQLITE_FULL"),
-                           (10, "SQLITE_IOERR"), (266, "SQLITE_IOERR_READ")):
+        for code, name in (
+            (5, "SQLITE_BUSY"),
+            (13, "SQLITE_FULL"),
+            (10, "SQLITE_IOERR"),
+            (266, "SQLITE_IOERR_READ"),
+        ):
             with self.subTest(code=code):
                 error = sqlite_fault(code, name)
                 error.__cause__ = OSError(PRIVATE)
-                cause, traceback, attributes = error.__cause__, error.__traceback__, vars(error).copy()
+                cause, traceback, attributes = (
+                    error.__cause__,
+                    error.__traceback__,
+                    vars(error).copy(),
+                )
                 record = self.record(error, correlation_id="fixture-correlation")
-                self.assertEqual(record["details"], {"sqlite_errorcode": code,
-                    "sqlite_errorname": name, "sqlite_primary_code": code & 0xff})
+                self.assertEqual(
+                    record["details"],
+                    {
+                        "sqlite_errorcode": code,
+                        "sqlite_errorname": name,
+                        "sqlite_primary_code": code & 0xFF,
+                    },
+                )
                 self.assertEqual(record["code"], "runtime_exception")
                 self.assertEqual(record["stage"], "cli.cycle")
                 self.assertEqual(record["classification"], "FAULT")
                 self.assertEqual(record["root_cause_status"], "UNKNOWN")
                 self.assertEqual(record["evidence_ref"], "audit-correlation:fixture-correlation")
-                self.assertEqual([item["exception_type"] for item in record["cause_chain"]],
-                                 ["OperationalError", "OSError"])
+                self.assertEqual(
+                    [item["exception_type"] for item in record["cause_chain"]],
+                    ["OperationalError", "OSError"],
+                )
                 self.assertEqual(vars(error), attributes)
                 self.assertIs(error.__cause__, cause)
                 self.assertIs(error.__traceback__, traceback)
@@ -102,8 +123,14 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
                         record = self.record(error)
                     else:
                         self.fail("Expected real SQLite fixture error")
-                    self.assertEqual(record["details"], {"sqlite_errorcode": code,
-                        "sqlite_errorname": name, "sqlite_primary_code": code & 0xff})
+                    self.assertEqual(
+                        record["details"],
+                        {
+                            "sqlite_errorcode": code,
+                            "sqlite_errorname": name,
+                            "sqlite_primary_code": code & 0xFF,
+                        },
+                    )
                     self.assert_private(record)
 
     def test_missing_malformed_and_unknown_native_metadata_stays_honest(self):
@@ -112,20 +139,40 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         for index, error in enumerate(errors):
             with self.subTest(case=index):
                 record = self.record(error)
-                self.assertEqual(record["details"], {"sqlite_errorcode": None,
-                    "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": None})
+                self.assertEqual(
+                    record["details"],
+                    {
+                        "sqlite_errorcode": None,
+                        "sqlite_errorname": "UNKNOWN",
+                        "sqlite_primary_code": None,
+                    },
+                )
                 self.assert_private(record)
         record = self.record(sqlite_fault(123456, "SQLITE_UNVERIFIED"))
-        self.assertEqual(record["details"], {"sqlite_errorcode": 123456,
-            "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": 64})
+        self.assertEqual(
+            record["details"],
+            {"sqlite_errorcode": 123456, "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": 64},
+        )
 
     def test_mismatched_names_and_external_details_cannot_forge_native_fields(self):
         for name in (PRIVATE, "SQLITE_FULL", "SQLITE_BUSY\n" + PRIVATE, None, object(), 5):
             with self.subTest(name_type=type(name).__name__):
-                record = self.record(sqlite_fault(5, name), details={
-                    "sqlite_errorcode": 13, "sqlite_errorname": "SQLITE_FULL", "sql": PRIVATE})
-                self.assertEqual(record["details"], {"sqlite_errorcode": 5,
-                    "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": 5})
+                record = self.record(
+                    sqlite_fault(5, name),
+                    details={
+                        "sqlite_errorcode": 13,
+                        "sqlite_errorname": "SQLITE_FULL",
+                        "sql": PRIVATE,
+                    },
+                )
+                self.assertEqual(
+                    record["details"],
+                    {
+                        "sqlite_errorcode": 5,
+                        "sqlite_errorname": "UNKNOWN",
+                        "sqlite_primary_code": 5,
+                    },
+                )
                 self.assert_private(record)
 
     def test_faulting_native_properties_cannot_mask_the_original_error(self):
@@ -141,12 +188,17 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         error = Hostile(PRIVATE)
         record = self.record(error)
         self.assertEqual(record["exception_type"], "Hostile")
-        self.assertEqual(record["details"], {"sqlite_errorcode": None,
-            "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": None})
+        self.assertEqual(
+            record["details"],
+            {"sqlite_errorcode": None, "sqlite_errorname": "UNKNOWN", "sqlite_primary_code": None},
+        )
         self.assert_private(record)
 
     def test_non_sqlite_fault_and_known_gate_keep_existing_details_and_classification(self):
-        for error, classification in ((OSError(PRIVATE), "FAULT"), (ValueError("quote_stale"), "GATE_BLOCK")):
+        for error, classification in (
+            (OSError(PRIVATE), "FAULT"),
+            (ValueError("quote_stale"), "GATE_BLOCK"),
+        ):
             with self.subTest(error=type(error).__name__):
                 record = self.record(error)
                 self.assertEqual(record["details"], {})
@@ -163,15 +215,24 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         self.assertEqual(record, original)
         self.assertEqual(payload["diagnostic"], original)
         self.assertEqual(payload["kind"], "DIAGNOSTIC_FALLBACK")
-        self.assertEqual(payload["persistence_failure"], {"exception_type": "OperationalError",
-            "cause_chain": [{"exception_type": "OperationalError", "frames": []}],
-            "sqlite_errorcode": 13, "sqlite_errorname": "SQLITE_FULL", "sqlite_primary_code": 13})
+        self.assertEqual(
+            payload["persistence_failure"],
+            {
+                "exception_type": "OperationalError",
+                "cause_chain": [{"exception_type": "OperationalError", "frames": []}],
+                "sqlite_errorcode": 13,
+                "sqlite_errorname": "SQLITE_FULL",
+                "sqlite_primary_code": 13,
+            },
+        )
         self.assert_private(payload)
         output = StringIO()
         with redirect_stderr(output):
             diagnostics.fallback(record, persistence_error=OSError(PRIVATE))
-        self.assertEqual(set(json.loads(output.getvalue())["persistence_failure"]),
-                         {"exception_type", "cause_chain"})
+        self.assertEqual(
+            set(json.loads(output.getvalue())["persistence_failure"]),
+            {"exception_type", "cause_chain"},
+        )
 
     def test_actual_journal_context_exit_keeps_exception_cause_and_rollback(self):
         error = sqlite_fault(13, "SQLITE_FULL")
@@ -201,10 +262,15 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         self.addCleanup(journal.close)
         runner = selected_runner.SelectedDemoRunner.__new__(selected_runner.SelectedDemoRunner)
         runner.journal, runner.account_guard = journal, Mock()
-        runner.strategy = SimpleNamespace(snapshot="fixture", diagnostics=lambda: {},
-            config={"contract_id": "fixture"}, cooldown_bars=2)
-        runner.broker = SimpleNamespace(position_count=None, last_equity=None,
-            quote_diagnostics={}, identity_diagnostics={})
+        runner.strategy = SimpleNamespace(
+            snapshot="fixture",
+            diagnostics=lambda: {},
+            config={"contract_id": "fixture"},
+            cooldown_bars=2,
+        )
+        runner.broker = SimpleNamespace(
+            position_count=None, last_equity=None, quote_diagnostics={}, identity_diagnostics={}
+        )
         runner.execute = False
         runner._admission = SimpleNamespace(review=None)
         runner.renewal_runtime = None
@@ -222,23 +288,41 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         with ExitStack() as stack:
             stack.enter_context(patch.object(Path, "read_text", return_value="{}"))
             stack.enter_context(patch.object(cli, "clock_now", return_value=NOW))
-            stack.enter_context(patch("scripts.smc.mt5_init.resolve_mt5_account_kwargs",
-                return_value={"login": 123, "server": "fixture-Demo", "password": "PRIVATE-fixture"}))
+            stack.enter_context(
+                patch(
+                    "scripts.smc.mt5_init.resolve_mt5_account_kwargs",
+                    return_value={
+                        "login": 123,
+                        "server": "fixture-Demo",
+                        "password": "PRIVATE-fixture",
+                    },
+                )
+            )
             stack.enter_context(patch.dict("os.environ", {}, clear=True))
             export = stack.enter_context(patch.object(selected_runner, "export_requested"))
             stack.enter_context(redirect_stdout(output))
             stack.enter_context(redirect_stderr(errors))
-            result = cli.main(["--once", "--config", "fixture.json", "--cost-policy", "fixture-policy.json"],
-                mt5=sdk, runner_class=Mock(return_value=runner), expected_config={})
+            result = cli.main(
+                ["--once", "--config", "fixture.json", "--cost-policy", "fixture-policy.json"],
+                mt5=sdk,
+                runner_class=Mock(return_value=runner),
+                expected_config={},
+            )
         self.assertEqual(result, 1)
         payload = json.loads(output.getvalue())
         self.assertEqual(payload["failure"]["stage"], "cli.cycle")
         self.assertEqual(payload["failure"]["code"], "runtime_exception")
         self.assertEqual(payload["failure"]["origin"]["function"], "put")
         self.assertEqual(payload["failure"]["details"]["sqlite_errorcode"], 10)
-        self.assertEqual([frame["path"] for frame in payload["failure"]["cause_chain"][0]["frames"]], [
-            "scripts/demo_runtime/cli.py", "scripts/c22_selected/runner.py",
-            "scripts/demo_runtime/runner.py", "scripts/demo_runtime/journal.py"])
+        self.assertEqual(
+            [frame["path"] for frame in payload["failure"]["cause_chain"][0]["frames"]],
+            [
+                "scripts/demo_runtime/cli.py",
+                "scripts/c22_selected/runner.py",
+                "scripts/demo_runtime/runner.py",
+                "scripts/demo_runtime/journal.py",
+            ],
+        )
         export.assert_not_called()
         sdk.initialize.assert_called_once()
         sdk.shutdown.assert_called_once()
@@ -259,8 +343,10 @@ class RuntimeSqliteDiagnosticsTests(unittest.TestCase):
         receipt = {"status": "CAPTURED", "captured_utc": "2026-10-29T12:47:04+00:00"}
         runner._last_evidence_receipt = receipt
         result = {"status": "BLOCKED", "reason": "quote_stale"}
-        with patch.object(shared_runner.DemoRunner, "cycle", return_value=result), \
-                patch.object(selected_runner, "export_requested", return_value=receipt) as export:
+        with (
+            patch.object(shared_runner.DemoRunner, "cycle", return_value=result),
+            patch.object(selected_runner, "export_requested", return_value=receipt) as export,
+        ):
             actual = runner.cycle(now=NOW)
         export.assert_called_once()
         self.assertEqual(actual["broker_evidence"]["status"], "FAULT")

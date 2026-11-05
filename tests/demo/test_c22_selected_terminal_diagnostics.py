@@ -17,9 +17,7 @@ SPEC = importlib.util.spec_from_file_location(
 )
 LAUNCHER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(LAUNCHER)
-VALID_CONFIG = (
-    "[Experts]\nEnabled=1\nAllowLiveTrading=1\nAllowDllImport=0\nAccount=1\nProfile=1\n"
-)
+VALID_CONFIG = "[Experts]\nEnabled=1\nAllowLiveTrading=1\nAllowDllImport=0\nAccount=1\nProfile=1\n"
 PRIVATE_MARKER = "FIXTURE_PRIVATE_MUST_NOT_APPEAR"
 
 
@@ -41,24 +39,33 @@ class SelectedTerminalDiagnosticsTests(unittest.TestCase):
         self.wine.write_bytes(b"non-executable fixture")
         self.environment_file = self.home / "c22-private/c22-backup.env"
         self.environment_file.parent.mkdir()
-        self.environment_file.write_text("\n".join(
-            key + "=" + json.dumps(value)
-            for key, value in {
-                "WINEPREFIX": str(self.prefix), "DEMO_WINE_BIN": str(self.wine),
-                "FIXTURE_SECRET": PRIVATE_MARKER, "MT5_ENABLE_DEMO_ORDER_SEND": "1",
-            }.items()
-        ))
+        self.environment_file.write_text(
+            "\n".join(
+                key + "=" + json.dumps(value)
+                for key, value in {
+                    "WINEPREFIX": str(self.prefix),
+                    "DEMO_WINE_BIN": str(self.wine),
+                    "FIXTURE_SECRET": PRIVATE_MARKER,
+                    "MT5_ENABLE_DEMO_ORDER_SEND": "1",
+                }.items()
+            )
+        )
         self.config = self.release / "deploy/c22-demo/c22-selected-terminal-execution.ini"
         self.config.parent.mkdir(parents=True)
         self.config.write_text(VALID_CONFIG)
 
     def invoke(self, *, exec_error=None, preflight_error=None):
         stdout, stderr = io.StringIO(), io.StringIO()
-        with patch.object(Path, "home", return_value=self.home), patch.object(
-            LAUNCHER, "__file__", str(self.config.parent / "launch_selected_terminal.py")
-        ), patch.dict(LAUNCHER.os.environ, {}, clear=True), patch.object(
-            LAUNCHER.os, "execvpe", side_effect=exec_error
-        ) as execute, redirect_stdout(stdout), redirect_stderr(stderr):
+        with (
+            patch.object(Path, "home", return_value=self.home),
+            patch.object(
+                LAUNCHER, "__file__", str(self.config.parent / "launch_selected_terminal.py")
+            ),
+            patch.dict(LAUNCHER.os.environ, {}, clear=True),
+            patch.object(LAUNCHER.os, "execvpe", side_effect=exec_error) as execute,
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
             if preflight_error is None:
                 result = LAUNCHER.main()
             else:
@@ -106,12 +113,17 @@ class SelectedTerminalDiagnosticsTests(unittest.TestCase):
                 result, payload, execute = self.invoke()
                 self.assertEqual(result, 2)
                 self.assertEqual(payload["reason"], "selected_terminal_preflight_failed")
-                self.assertEqual(payload["failure"]["code"], "terminal_permission_config_parse_failed")
+                self.assertEqual(
+                    payload["failure"]["code"], "terminal_permission_config_parse_failed"
+                )
                 self.assertEqual(payload["failure"]["exception_type"], kind)
                 execute.assert_not_called()
 
     def test_exec_os_failures_report_errno_once_without_retry_or_raw_path(self):
-        for number, kind in ((errno.ENOENT, "FileNotFoundError"), (errno.EACCES, "PermissionError")):
+        for number, kind in (
+            (errno.ENOENT, "FileNotFoundError"),
+            (errno.EACCES, "PermissionError"),
+        ):
             with self.subTest(number=number):
                 failure = OSError(number, PRIVATE_MARKER, "/fixture/" + PRIVATE_MARKER)
                 result, payload, execute = self.invoke(exec_error=failure)
@@ -126,7 +138,7 @@ class SelectedTerminalDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(execute.call_args.args[2]["MT5_ENABLE_DEMO_ORDER_SEND"], "0")
 
     def test_malformed_environment_json_is_safe_and_never_executes(self):
-        self.environment_file.write_text('FIXTURE_SECRET="' + PRIVATE_MARKER + '\n')
+        self.environment_file.write_text('FIXTURE_SECRET="' + PRIVATE_MARKER + "\n")
         result, payload, execute = self.invoke()
         self.assertEqual(result, 2)
         self.assertEqual(payload["failure"]["code"], "terminal_environment_invalid")

@@ -117,7 +117,9 @@ class PureB1DecisionTests(unittest.TestCase):
 
         from scripts.smc.risk import check_fixed_lot_risk
 
-        with patch("scripts.pure_b1.decision.check_fixed_lot_risk", wraps=check_fixed_lot_risk) as gate:
+        with patch(
+            "scripts.pure_b1.decision.check_fixed_lot_risk", wraps=check_fixed_lot_risk
+        ) as gate:
             result = decide(**(self.inputs | {"commission_per_lot": 0.0}))
         self.assertTrue(result["admit"], result)
         self.assertEqual(gate.call_args.kwargs["spread_buffer"], 0.0)

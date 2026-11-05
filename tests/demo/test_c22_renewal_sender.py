@@ -34,18 +34,30 @@ class RenewalSenderTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.broker = SelectedBroker()
-        for key, value in dict(currency_profit="USD", swap_mode=1, swap_long=-490.8,
-                               swap_short=0.0, swap_rollover3days=3).items():
+        for key, value in dict(
+            currency_profit="USD",
+            swap_mode=1,
+            swap_long=-490.8,
+            swap_short=0.0,
+            swap_rollover3days=3,
+        ).items():
             setattr(self.broker.info, key, value)
         self.initial = self.broker.now
         packet = broker_fixture()
-        packet.update(account_fingerprint=hashlib.sha256(b"Exness-Demo:123").hexdigest()[:16],
-            captured_utc=self.initial.isoformat(), history_end_utc=self.initial.isoformat(),
-            history_deals_total=1, history_deals=[vars(self.broker.deals[0])])
-        packet["account"] = dict(currency="USD", balance=200., equity=200.)
+        packet.update(
+            account_fingerprint=hashlib.sha256(b"Exness-Demo:123").hexdigest()[:16],
+            captured_utc=self.initial.isoformat(),
+            history_end_utc=self.initial.isoformat(),
+            history_deals_total=1,
+            history_deals=[vars(self.broker.deals[0])],
+        )
+        packet["account"] = dict(currency="USD", balance=200.0, equity=200.0)
         for key in packet["spec"]:
             packet["spec"][key] = getattr(self.broker.info, key)
-        sources = {key: dict(source=url, checked_utc=self.initial.isoformat()) for key, url in OFFICIAL_URLS.items()}
+        sources = {
+            key: dict(source=url, checked_utc=self.initial.isoformat())
+            for key, url in OFFICIAL_URLS.items()
+        }
         self.base = build_trial_policy(raw(packet), now=self.initial, sources=sources)
         self.runner = self.new_runner()
         self.review_path = self.root / "review.json"
@@ -54,27 +66,55 @@ class RenewalSenderTests(unittest.TestCase):
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             self.assertEqual(self.runner.cycle(now=self.initial)["status"], "SHADOW_ADMIT")
         self.original_review_sha = hashlib.sha256(self.review_path.read_bytes()).hexdigest()
-        self.grant = dict(version=1, scope="SELECTED_DEMO_SAME_ASSUMPTION_RENEWAL", owner_authorized=True,
-            owner_instruction="Synthetic test-only standing grant; never installed on VM", revoked=False,
-            approved_utc=self.initial.isoformat(), expires_utc=(self.initial + timedelta(days=30)).isoformat(),
-            original_review_sha256=self.original_review_sha, original_policy_sha256=digest(self.base),
-            binding=_binding(dict(policy=self.base, source_sha256=self.runner.release_hash,
-                                  config_sha256=self.runner.journal.audit_context["config_hash"])),
-            limits=dict(policy_hours=168, prepare_hours=72, broker_fresh_seconds=300, official_fresh_seconds=86400))
+        self.grant = dict(
+            version=1,
+            scope="SELECTED_DEMO_SAME_ASSUMPTION_RENEWAL",
+            owner_authorized=True,
+            owner_instruction="Synthetic test-only standing grant; never installed on VM",
+            revoked=False,
+            approved_utc=self.initial.isoformat(),
+            expires_utc=(self.initial + timedelta(days=30)).isoformat(),
+            original_review_sha256=self.original_review_sha,
+            original_policy_sha256=digest(self.base),
+            binding=_binding(
+                dict(
+                    policy=self.base,
+                    source_sha256=self.runner.release_hash,
+                    config_sha256=self.runner.journal.audit_context["config_hash"],
+                )
+            ),
+            limits=dict(
+                policy_hours=168,
+                prepare_hours=72,
+                broker_fresh_seconds=300,
+                official_fresh_seconds=86400,
+            ),
+        )
         self.grant_path = self.root / "grant.json"
         self.grant_path.write_bytes(raw(self.grant))
 
     def new_runner(self):
-        runner = SelectedDemoRunner(mt5=self.broker, expected_login=123, expected_server="Exness-Demo",
-            journal_path=self.root / "journal.sqlite3", config=selected_config(), cost_policy=deepcopy(self.base), execute=False)
+        runner = SelectedDemoRunner(
+            mt5=self.broker,
+            expected_login=123,
+            expected_server="Exness-Demo",
+            journal_path=self.root / "journal.sqlite3",
+            config=selected_config(),
+            cost_policy=deepcopy(self.base),
+            execute=False,
+        )
         self.addCleanup(runner.close)
         return runner
 
     def enable(self, runner=None):
         runner = runner or self.runner
-        runner.configure_renewal(grant_path=self.grant_path, trusted_grant_sha256=digest(self.grant),
-            generation_root=self.root / "generations", original_review_path=self.review_path,
-            now=self.broker.now)
+        runner.configure_renewal(
+            grant_path=self.grant_path,
+            trusted_grant_sha256=digest(self.grant),
+            generation_root=self.root / "generations",
+            original_review_path=self.review_path,
+            now=self.broker.now,
+        )
 
     def shift(self, delta):
         count = len(self.broker.rates) // 15
@@ -82,9 +122,17 @@ class RenewalSenderTests(unittest.TestCase):
         start = self.broker.rates[-1]["time"] + 60
         for index in range(added):
             price = 200 - (count + index) * 0.01 - (3 if index == added - 1 else 0)
-            self.broker.rates.extend(dict(time=start + index * 900 + minute * 60,
-                open=price, high=price + 0.5, low=price - 0.5, close=price, tick_volume=1)
-                for minute in range(15))
+            self.broker.rates.extend(
+                dict(
+                    time=start + index * 900 + minute * 60,
+                    open=price,
+                    high=price + 0.5,
+                    low=price - 0.5,
+                    close=price,
+                    tick_volume=1,
+                )
+                for minute in range(15)
+            )
         self.broker.now += delta
         self.broker.tick.time_msc += int(delta.total_seconds() * 1000)
         self.broker.tick.bid = self.broker.rates[-1]["close"]
@@ -105,10 +153,14 @@ class RenewalSenderTests(unittest.TestCase):
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             before = self.runner.cycle(now=self.broker.now)
             values, packet = self.sources()
-            installed = self.runner.prepare_renewal(packet, values, now=self.broker.now, clock=lambda: self.broker.now)
+            installed = self.runner.prepare_renewal(
+                packet, values, now=self.broker.now, clock=lambda: self.broker.now
+            )
         self.assertEqual(before["status"], "SHADOW_ADMIT", before)
         self.assertEqual(installed["status"], "INSTALLED", installed)
-        self.assertEqual(self.runner.journal.get("selected_execution_review_sha256"), self.original_review_sha)
+        self.assertEqual(
+            self.runner.journal.get("selected_execution_review_sha256"), self.original_review_sha
+        )
         self.runner.close()
         self.shift(timedelta(days=4))
         restored = self.new_runner()
@@ -116,9 +168,13 @@ class RenewalSenderTests(unittest.TestCase):
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             result = restored.cycle(now=self.broker.now)
         self.assertEqual(result["status"], "SHADOW_ADMIT", result)
-        self.assertEqual(restored.policy["reviewed_utc"], (self.initial + timedelta(days=4)).isoformat())
+        self.assertEqual(
+            restored.policy["reviewed_utc"], (self.initial + timedelta(days=4)).isoformat()
+        )
         self.assertIsNone(restored.journal.get("active"))
-        self.assertEqual(restored.journal.get("selected_execution_review_sha256"), self.original_review_sha)
+        self.assertEqual(
+            restored.journal.get("selected_execution_review_sha256"), self.original_review_sha
+        )
         self.broker.order_send.assert_not_called()
 
     def installed(self):
@@ -129,7 +185,9 @@ class RenewalSenderTests(unittest.TestCase):
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             self.runner.cycle(now=self.broker.now)
             values, packet = self.sources()
-            result = self.runner.prepare_renewal(packet, values, now=self.broker.now, clock=lambda: self.broker.now)
+            result = self.runner.prepare_renewal(
+                packet, values, now=self.broker.now, clock=lambda: self.broker.now
+            )
         self.assertEqual(result["status"], "INSTALLED", result)
         return self.runner
 
@@ -178,12 +236,16 @@ class RenewalSenderTests(unittest.TestCase):
         from contextlib import redirect_stdout
         from io import StringIO
         from unittest.mock import Mock
+
         sdk = Mock()
         output = StringIO()
         with redirect_stdout(output):
             code = main(["--renewal-grant", "missing.json"], mt5=sdk)
         self.assertEqual(code, 2)
-        self.assertEqual(json.loads(output.getvalue())["reason"], "renewal_runtime_explicit_configuration_required")
+        self.assertEqual(
+            json.loads(output.getvalue())["reason"],
+            "renewal_runtime_explicit_configuration_required",
+        )
         sdk.initialize.assert_not_called()
         sdk.order_send.assert_not_called()
 
@@ -210,61 +272,95 @@ class RenewalSenderTests(unittest.TestCase):
         # A read-only authority inspection covers review/policy, not mutable
         # cost-state integrity. Restore records the latter independently.
         self.assertEqual(result["execution_review"]["coverage"], "review_and_policy_only")
-        self.assertTrue(any(error["stage"] == "renewal.generation"
-            and error["code"] == "cost_generation_state_audit_mismatch"
-            and error["details"]["code"] == "cost_generation_state_audit_mismatch"
-            for error in result["operational_errors"]))
+        self.assertTrue(
+            any(
+                error["stage"] == "renewal.generation"
+                and error["code"] == "cost_generation_state_audit_mismatch"
+                and error["details"]["code"] == "cost_generation_state_audit_mismatch"
+                for error in result["operational_errors"]
+            )
+        )
         self.assertEqual(self.broker.order_send.call_count, 2)
         self.assertIsNotNone(restored.journal.get("active"))
         from types import SimpleNamespace
+
         position = self.broker.positions.pop()
-        self.broker.deals.append(SimpleNamespace(ticket=999, position_id=position.identifier,
-            time_msc=self.broker.tick.time_msc, time=self.broker.tick.time_msc // 1000,
-            type=0, entry=1, volume=.01, magic=0, comment="[tp]", price=self.broker.tick.ask,
-            profit=10., commission=0., swap=0., fee=0.))
+        self.broker.deals.append(
+            SimpleNamespace(
+                ticket=999,
+                position_id=position.identifier,
+                time_msc=self.broker.tick.time_msc,
+                time=self.broker.tick.time_msc // 1000,
+                type=0,
+                entry=1,
+                volume=0.01,
+                magic=0,
+                comment="[tp]",
+                price=self.broker.tick.ask,
+                profit=10.0,
+                commission=0.0,
+                swap=0.0,
+                fee=0.0,
+            )
+        )
         self.broker.account.balance += 10
         self.broker.account.equity = self.broker.account.balance
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             closed = restored.cycle(now=self.broker.now)
             rejected = restored.cycle(now=self.broker.now + timedelta(seconds=1))
         self.assertEqual(closed["status"], "CLOSED", closed)
-        self.assertEqual(closed["net"], 10.)
+        self.assertEqual(closed["net"], 10.0)
         self.assertIsNone(restored.journal.get("active"))
         self.assertEqual(rejected["status"], "BLOCKED", rejected)
         self.assertEqual(self.broker.order_send.call_count, 2)
 
     def test_watching_local_source_bundle_installs_due_generation_without_sdk_side_reader(self):
         import base64
+
         self.runner.close()
         self.shift(timedelta(days=4))
         self.runner = self.new_runner()
         self.enable()
         values, packet = self.sources()
         path = self.root / "sources.json"
-        path.write_bytes(raw(dict(packet=packet, captures={role: dict(
-            {key: value for key, value in item.items() if key != "body"},
-            body_base64=base64.b64encode(item["body"]).decode()) for role, item in values.items()})))
+        path.write_bytes(
+            raw(
+                dict(
+                    packet=packet,
+                    captures={
+                        role: dict(
+                            {key: value for key, value in item.items() if key != "body"},
+                            body_base64=base64.b64encode(item["body"]).decode(),
+                        )
+                        for role, item in values.items()
+                    },
+                )
+            )
+        )
         self.runner.renewal_sources_path = path
         with patch("scripts.demo_runtime.runner.time.monotonic", return_value=100):
             result = self.runner.cycle(now=self.broker.now)
         self.assertEqual(result["status"], "SHADOW_ADMIT", result)
         self.assertEqual(result["renewal"]["status"], "INSTALLED", result)
         self.assertEqual(self.runner.policy["reviewed_utc"], self.broker.now.isoformat())
-        self.assertEqual(self.runner.journal.get("selected_execution_review_sha256"), self.original_review_sha)
+        self.assertEqual(
+            self.runner.journal.get("selected_execution_review_sha256"), self.original_review_sha
+        )
         self.broker.order_send.assert_not_called()
 
     def test_slow_history_cannot_relabel_cached_flat_exposure_as_fresh_for_install(self):
         from types import SimpleNamespace
+
         self.runner.close()
         self.shift(timedelta(days=4))
         self.runner = self.new_runner()
         self.enable()
-        elapsed = [0.]
+        elapsed = [0.0]
         original_history = self.broker.history_deals_get
 
         def delayed(*args, **kwargs):
             value = original_history(*args, **kwargs)
-            elapsed[0] = 180.
+            elapsed[0] = 180.0
             self.broker.orders = [SimpleNamespace(ticket=12345)]
             return value
 
@@ -273,11 +369,15 @@ class RenewalSenderTests(unittest.TestCase):
 
         def tick(*args, **kwargs):
             value = original_tick(*args, **kwargs)
-            value.time_msc = int((self.broker.now + timedelta(seconds=elapsed[0])).timestamp() * 1000)
+            value.time_msc = int(
+                (self.broker.now + timedelta(seconds=elapsed[0])).timestamp() * 1000
+            )
             return value
 
         self.broker.symbol_info_tick = tick
-        with patch("scripts.demo_runtime.runner.time.monotonic", side_effect=lambda: 100 + elapsed[0]):
+        with patch(
+            "scripts.demo_runtime.runner.time.monotonic", side_effect=lambda: 100 + elapsed[0]
+        ):
             self.runner.cycle(now=self.broker.now)
             end = self.broker.now + timedelta(seconds=180)
             values, _ = self.sources()
@@ -298,6 +398,7 @@ class RenewalSenderTests(unittest.TestCase):
         from io import StringIO
         from unittest.mock import Mock
         from scripts.c22_selected.__main__ import main
+
         self.installed().close()
         self.shift(timedelta(days=4))
         self.broker.initialize = Mock(return_value=True)
@@ -305,20 +406,53 @@ class RenewalSenderTests(unittest.TestCase):
         config = self.root / "config.json"
         config.write_bytes(raw(selected_config()))
         output = StringIO()
-        with patch("scripts.smc.mt5_init.resolve_mt5_account_kwargs", return_value={
-                "login": 123, "server": "Exness-Demo", "password": "synthetic-test-only"}), \
-                patch("scripts.demo_runtime.cli.clock_now", return_value=self.broker.now), \
-                patch("scripts.demo_runtime.runner.time.monotonic", return_value=100), redirect_stdout(output):
-            code = main(["--once", "--config", str(config), "--journal", str(self.root / "journal.sqlite3"),
-                "--cost-policy", str(self.root / "missing-legacy.json"), "--execution-review", str(self.review_path),
-                "--renewal-grant", str(self.grant_path), "--renewal-grant-sha256", digest(self.grant),
-                "--renewal-generation-root", str(self.root / "generations"),
-                "--renewal-sources", str(self.root / "missing-source.json")], mt5=self.broker,
-                runner_class=lambda **kwargs: SelectedDemoRunner(**(kwargs | {"account_guard_dir": self.root})))
+        with (
+            patch(
+                "scripts.smc.mt5_init.resolve_mt5_account_kwargs",
+                return_value={
+                    "login": 123,
+                    "server": "Exness-Demo",
+                    "password": "synthetic-test-only",
+                },
+            ),
+            patch("scripts.demo_runtime.cli.clock_now", return_value=self.broker.now),
+            patch("scripts.demo_runtime.runner.time.monotonic", return_value=100),
+            redirect_stdout(output),
+        ):
+            code = main(
+                [
+                    "--once",
+                    "--config",
+                    str(config),
+                    "--journal",
+                    str(self.root / "journal.sqlite3"),
+                    "--cost-policy",
+                    str(self.root / "missing-legacy.json"),
+                    "--execution-review",
+                    str(self.review_path),
+                    "--renewal-grant",
+                    str(self.grant_path),
+                    "--renewal-grant-sha256",
+                    digest(self.grant),
+                    "--renewal-generation-root",
+                    str(self.root / "generations"),
+                    "--renewal-sources",
+                    str(self.root / "missing-source.json"),
+                ],
+                mt5=self.broker,
+                runner_class=lambda **kwargs: SelectedDemoRunner(
+                    **(kwargs | {"account_guard_dir": self.root})
+                ),
+            )
         self.assertEqual(code, 0, output.getvalue())
         result = json.loads(output.getvalue().strip().splitlines()[-1])
         self.assertEqual(result["status"], "SHADOW_ADMIT", result)
-        self.assertEqual(result["execution_review"]["policy_reviewed_utc"], (self.initial + timedelta(days=4)).isoformat())
-        self.assertTrue(any(error["stage"] == "cli.policy_reload" for error in result["operational_errors"]))
+        self.assertEqual(
+            result["execution_review"]["policy_reviewed_utc"],
+            (self.initial + timedelta(days=4)).isoformat(),
+        )
+        self.assertTrue(
+            any(error["stage"] == "cli.policy_reload" for error in result["operational_errors"])
+        )
         self.assertEqual(self.broker.initialize.call_count, 1)
         self.broker.order_send.assert_not_called()

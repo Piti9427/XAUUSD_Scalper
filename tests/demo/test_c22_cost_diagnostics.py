@@ -18,30 +18,41 @@ from tests.demo.test_trial30_demo import policy
 
 NOW = datetime(2026, 10, 27, 8, 30, tzinfo=timezone.utc)
 FIELDS = dict(
-    trade_contract_size=100.0, trade_tick_size=0.001, point=0.001,
-    volume_min=0.01, volume_max=100.0, volume_step=0.01,
-    swap_mode=1, swap_long=-490.8, swap_short=0.0, swap_rollover3days=3,
+    trade_contract_size=100.0,
+    trade_tick_size=0.001,
+    point=0.001,
+    volume_min=0.01,
+    volume_max=100.0,
+    volume_step=0.01,
+    swap_mode=1,
+    swap_long=-490.8,
+    swap_short=0.0,
+    swap_rollover3days=3,
 )
 
 
 def rebind(raw, name):
     item = raw["evidence"][name]
-    item["sha256"] = hashlib.sha256(json.dumps(
-        item["document"], sort_keys=True, allow_nan=False
-    ).encode()).hexdigest()
+    item["sha256"] = hashlib.sha256(
+        json.dumps(item["document"], sort_keys=True, allow_nan=False).encode()
+    ).hexdigest()
 
 
 def v2_policy(now=NOW, fields=None):
     raw = policy() | dict(version=2, reviewed_utc=now.isoformat())
     fields = deepcopy(FIELDS if fields is None else fields)
     documents = dict(
-        tariff=dict(source="fixture", commission_per_lot=0.0,
-                    unit="USD_per_lot_round_trip"),
+        tariff=dict(source="fixture", commission_per_lot=0.0, unit="USD_per_lot_round_trip"),
         spec=dict(source="fixture", fields=fields),
-        swap_calendar=dict(source="fixture", unit="USD_per_lot", days={
-            now.date().isoformat(): dict(rollover_utc=now.replace(hour=21).isoformat(),
-                                        buy=-49.08, sell=0.0),
-        }),
+        swap_calendar=dict(
+            source="fixture",
+            unit="USD_per_lot",
+            days={
+                now.date().isoformat(): dict(
+                    rollover_utc=now.replace(hour=21).isoformat(), buy=-49.08, sell=0.0
+                ),
+            },
+        ),
     )
     raw["evidence"] = {name: dict(document=doc) for name, doc in documents.items()}
     for name in documents:
@@ -54,8 +65,13 @@ class CostDiagnosticsTests(unittest.TestCase):
         raw = v2_policy() if raw is None else raw
         diagnostic = {"prior_failure": "must_not_survive"}
         result = costs.validate_policy(
-            raw, fingerprint=policy()["account_fingerprint"], now=now,
-            strategy="c22h4", spec=spec, diagnostics=diagnostic, **overrides,
+            raw,
+            fingerprint=policy()["account_fingerprint"],
+            now=now,
+            strategy="c22h4",
+            spec=spec,
+            diagnostics=diagnostic,
+            **overrides,
         )
         return result, diagnostic
 
@@ -65,9 +81,16 @@ class CostDiagnosticsTests(unittest.TestCase):
                 fields = dict(FIELDS, **{key: expected + 1})
                 (cost, status), detail = self.validate(spec=NS(**fields))
                 self.assertEqual((cost, status), ({}, "invalid_or_stale"))
-                self.assertEqual(detail, dict(stage="cost.spec", code="cost_spec_mismatch",
-                                             field=key, expected=expected,
-                                             observed=expected + 1))
+                self.assertEqual(
+                    detail,
+                    dict(
+                        stage="cost.spec",
+                        code="cost_spec_mismatch",
+                        field=key,
+                        expected=expected,
+                        observed=expected + 1,
+                    ),
+                )
                 self.assertNotIn("prior_failure", detail)
 
     def test_equal_spec_and_optional_no_spec_preserve_original_valid_result(self):
@@ -81,7 +104,10 @@ class CostDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(detail, {})
         self.assertEqual(raw, before)
         legacy, legacy_status = costs.validate_policy(
-            raw, fingerprint=raw["account_fingerprint"], now=NOW, strategy="c22h4",
+            raw,
+            fingerprint=raw["account_fingerprint"],
+            now=NOW,
+            strategy="c22h4",
             spec=NS(**FIELDS),
         )
         self.assertEqual(legacy, raw)
@@ -97,9 +123,12 @@ class CostDiagnosticsTests(unittest.TestCase):
             with self.subTest(now=now):
                 (result, status), detail = self.validate(now=now, spec=NS(**FIELDS))
                 self.assertEqual(bool(result), accepted)
-                self.assertEqual(status, "attested_demo_assumptions" if accepted else "invalid_or_stale")
+                self.assertEqual(
+                    status, "attested_demo_assumptions" if accepted else "invalid_or_stale"
+                )
                 self.assertEqual(detail.get("code"), code)
-        raw = v2_policy(); raw["reviewed_utc"] = NOW.replace(tzinfo=None).isoformat()
+        raw = v2_policy()
+        raw["reviewed_utc"] = NOW.replace(tzinfo=None).isoformat()
         (result, status), detail = self.validate(raw)
         self.assertEqual((result, status), ({}, "invalid_or_stale"))
         self.assertEqual(detail["code"], "cost_policy_review_timezone_invalid")
@@ -114,7 +143,11 @@ class CostDiagnosticsTests(unittest.TestCase):
             ("slippage_basis", "private-fixture-basis", "cost_policy_slippage_basis_invalid"),
             ("source", "", "cost_policy_source_missing"),
             ("commission_source", "", "cost_policy_commission_source_missing"),
-            ("account_evidence_sha256", "private-fixture-hash", "cost_policy_account_evidence_invalid"),
+            (
+                "account_evidence_sha256",
+                "private-fixture-hash",
+                "cost_policy_account_evidence_invalid",
+            ),
             ("commission_per_lot", -0.1, "cost_policy_commission_invalid"),
             ("commission_per_lot", float("nan"), "cost_policy_commission_invalid"),
             ("slippage_allowance_price", 0, "cost_policy_slippage_invalid"),
@@ -124,17 +157,22 @@ class CostDiagnosticsTests(unittest.TestCase):
         )
         for key, value, code in cases:
             with self.subTest(key=key, value_type=type(value).__name__):
-                raw = v2_policy(); raw[key] = value
+                raw = v2_policy()
+                raw[key] = value
                 before = deepcopy(raw)
                 (result, status), detail = self.validate(raw)
                 self.assertEqual((result, status), ({}, "invalid_or_stale"))
                 self.assertEqual(detail["code"], code)
                 self.assertNotIn("private-fixture", json.dumps(detail, allow_nan=False))
                 # Use serialization for NaN fixture equality, not NaN != NaN.
-                self.assertEqual(json.dumps(raw, sort_keys=True), json.dumps(before, sort_keys=True))
+                self.assertEqual(
+                    json.dumps(raw, sort_keys=True), json.dumps(before, sort_keys=True)
+                )
         detail = {}
-        self.assertEqual(costs.validate_policy(None, fingerprint="private-fixture", now=NOW,
-                                               diagnostics=detail), ({}, "missing"))
+        self.assertEqual(
+            costs.validate_policy(None, fingerprint="private-fixture", now=NOW, diagnostics=detail),
+            ({}, "missing"),
+        )
         self.assertEqual(detail, {"stage": "cost.policy", "code": "cost_policy_missing"})
 
     def test_invalid_evidence_reports_stage_without_private_document_payload(self):
@@ -159,7 +197,9 @@ class CostDiagnosticsTests(unittest.TestCase):
                     del raw["evidence"]["spec"]["document"]["fields"]["volume_step"]
                     rebind(raw, "spec")
                 elif mode == "calendar_timezone":
-                    raw["evidence"]["swap_calendar"]["document"]["days"][NOW.date().isoformat()]["rollover_utc"] = "2026-10-27T21:00:00"
+                    raw["evidence"]["swap_calendar"]["document"]["days"][NOW.date().isoformat()][
+                        "rollover_utc"
+                    ] = "2026-10-27T21:00:00"
                     rebind(raw, "swap_calendar")
                 else:
                     raw["evidence"]["swap_calendar"]["document"]["unit"] = "private-fixture-unit"
@@ -195,11 +235,23 @@ class CostDiagnosticsTests(unittest.TestCase):
         spec = GetterFailure(**{k: v for k, v in FIELDS.items() if k != "swap_long"})
         detail = {}
         with self.assertRaisesRegex(RuntimeError, "secret-fixture-getter") as caught:
-            costs.validate_policy(v2_policy(), fingerprint=policy()["account_fingerprint"],
-                                  now=NOW, strategy="c22h4", spec=spec,
-                                  diagnostics=detail)
-        self.assertEqual(detail, dict(stage="cost.spec", code="cost_spec_read_failed",
-                                     field="swap_long", exception_class="RuntimeError"))
+            costs.validate_policy(
+                v2_policy(),
+                fingerprint=policy()["account_fingerprint"],
+                now=NOW,
+                strategy="c22h4",
+                spec=spec,
+                diagnostics=detail,
+            )
+        self.assertEqual(
+            detail,
+            dict(
+                stage="cost.spec",
+                code="cost_spec_read_failed",
+                field="swap_long",
+                exception_class="RuntimeError",
+            ),
+        )
         self.assertEqual(caught.exception.diagnostics, detail)
         self.assertNotIn("secret-fixture", json.dumps(detail, allow_nan=False))
 
@@ -218,6 +270,7 @@ class CostDiagnosticsTests(unittest.TestCase):
     def test_previously_caught_spec_getter_errors_keep_refusal_and_operation_detail(self):
         for error_type in (KeyError, TypeError, ValueError, AttributeError, OverflowError):
             with self.subTest(error_type=error_type.__name__):
+
                 class GetterFailure(NS):
                     @property
                     def swap_long(self):
@@ -228,12 +281,20 @@ class CostDiagnosticsTests(unittest.TestCase):
                 self.assertEqual((result, status), ({}, "invalid_or_stale"))
                 if error_type is AttributeError:
                     # getattr(spec, key, None) intentionally treats this as missing.
-                    expected = dict(stage="cost.spec", code="cost_spec_mismatch",
-                                    field="swap_long", expected=-490.8,
-                                    observed={"state": "MISSING"})
+                    expected = dict(
+                        stage="cost.spec",
+                        code="cost_spec_mismatch",
+                        field="swap_long",
+                        expected=-490.8,
+                        observed={"state": "MISSING"},
+                    )
                 else:
-                    expected = dict(stage="cost.spec", code="cost_spec_read_failed",
-                                    field="swap_long", exception_class=error_type.__name__)
+                    expected = dict(
+                        stage="cost.spec",
+                        code="cost_spec_read_failed",
+                        field="swap_long",
+                        exception_class=error_type.__name__,
+                    )
                 self.assertEqual(detail, expected)
                 self.assertNotIn("private-fixture", json.dumps(detail))
 
@@ -241,8 +302,10 @@ class CostDiagnosticsTests(unittest.TestCase):
         raw = v2_policy(fields=FIELDS | {"secret-fixture-key": 7.0})
         (result, status), detail = self.validate(raw, spec=NS(**FIELDS))
         self.assertEqual((result, status), ({}, "invalid_or_stale"))
-        self.assertEqual(detail, dict(stage="cost.spec", code="cost_spec_mismatch",
-                                     field="UNRECOGNIZED_SPEC_FIELD"))
+        self.assertEqual(
+            detail,
+            dict(stage="cost.spec", code="cost_spec_mismatch", field="UNRECOGNIZED_SPEC_FIELD"),
+        )
         self.assertNotIn("secret-fixture", json.dumps(detail))
 
     def test_public_admission_keeps_raw_reason_and_carries_same_read_spec_detail(self):
@@ -254,9 +317,13 @@ class CostDiagnosticsTests(unittest.TestCase):
             sdk.info.swap_long = -500.0
             sdk.symbol_info = Mock(wraps=sdk.symbol_info)
             runner = SelectedDemoRunner(
-                mt5=sdk, expected_login=123, expected_server="Exness-Demo",
-                journal_path=Path(tmp) / "journal.sqlite3", config=selected_config(),
-                cost_policy=raw, execute=True,
+                mt5=sdk,
+                expected_login=123,
+                expected_server="Exness-Demo",
+                journal_path=Path(tmp) / "journal.sqlite3",
+                config=selected_config(),
+                cost_policy=raw,
+                execute=True,
             )
             try:
                 runner._started = 100
@@ -264,10 +331,16 @@ class CostDiagnosticsTests(unittest.TestCase):
                     with self.assertRaises(ValueError) as caught:
                         runner._cycle(sdk.now)
                 self.assertEqual(str(caught.exception), "cost_policy_invalid_or_stale")
-                self.assertEqual(caught.exception.diagnostics, dict(
-                    stage="cost.spec", code="cost_spec_mismatch", field="swap_long",
-                    expected=-490.8, observed=-500.0,
-                ))
+                self.assertEqual(
+                    caught.exception.diagnostics,
+                    dict(
+                        stage="cost.spec",
+                        code="cost_spec_mismatch",
+                        field="swap_long",
+                        expected=-490.8,
+                        observed=-500.0,
+                    ),
+                )
                 self.assertEqual(sdk.symbol_info.call_count, 1)
                 sdk.order_check.assert_not_called()
                 sdk.order_send.assert_not_called()

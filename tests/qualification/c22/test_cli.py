@@ -21,7 +21,9 @@ class CliTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[3]
         with tempfile.TemporaryDirectory(dir=root / "runs") as folder:
             path = Path(folder) / "export.json"
-            path.write_text(json.dumps({"captured_utc": "2020-01-02T00:00:00Z", "history_deals": []}))
+            path.write_text(
+                json.dumps({"captured_utc": "2020-01-02T00:00:00Z", "history_deals": []})
+            )
             output = Path(folder) / "costs.json"
             self.assertEqual(main(["costs", "--export", str(path), "--out", str(output)]), 0)
             report = json.loads(output.read_text())

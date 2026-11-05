@@ -26,15 +26,21 @@ class ReviewDiagnosticsTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.now = datetime(2026, 10, 26, 12, tzinfo=timezone.utc)
         self.policy = policy_v2(self.now, Broker().info)
-        self.policy.update(status="CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS",
-                           swap_entitlement="UNKNOWN",
-                           research_economic_qualification="COST_INCONCLUSIVE",
-                           execution_authorized=False)
+        self.policy.update(
+            status="CONSERVATIVE_REGULAR_SWAP_DEMO_ASSUMPTIONS",
+            swap_entitlement="UNKNOWN",
+            research_economic_qualification="COST_INCONCLUSIVE",
+            execution_authorized=False,
+        )
         journal = Journal(self.root / "journal.sqlite3")
         self.addCleanup(journal.close)
         journal.audit_context = {"config_hash": "c" * 64}
-        self.ctx = NS(journal=journal, policy=self.policy,
-                      fingerprint=self.policy["account_fingerprint"], release_hash="r" * 64)
+        self.ctx = NS(
+            journal=journal,
+            policy=self.policy,
+            fingerprint=self.policy["account_fingerprint"],
+            release_hash="r" * 64,
+        )
         self.path = self.root / "review.json"
         self.review = ExecutionReview(self.path)
 
@@ -42,12 +48,18 @@ class ReviewDiagnosticsTests(unittest.TestCase):
         self.path.write_text(json.dumps(value))
 
     def state(self):
-        return (self.ctx.journal.conn.execute("SELECT * FROM kv").fetchall(),
-                self.ctx.journal.conn.execute("SELECT * FROM audit_events").fetchall())
+        return (
+            self.ctx.journal.conn.execute("SELECT * FROM kv").fetchall(),
+            self.ctx.journal.conn.execute("SELECT * FROM audit_events").fetchall(),
+        )
 
     def test_missing_and_malformed_review_have_finite_causes_and_policy_due(self):
-        for raw, code in ((None, "review_missing"), ("{sensitive-private-data", "review_malformed"),
-                          ("[]", "review_malformed"), ("{}", "review_malformed")):
+        for raw, code in (
+            (None, "review_missing"),
+            ("{sensitive-private-data", "review_malformed"),
+            ("[]", "review_malformed"),
+            ("{}", "review_malformed"),
+        ):
             with self.subTest(code=code, raw=raw):
                 if raw is not None:
                     self.path.write_text(raw)
@@ -56,7 +68,9 @@ class ReviewDiagnosticsTests(unittest.TestCase):
                 before = self.state()
                 result = self.review.inspect(self.ctx, self.now)
                 self.assertEqual((result["status"], result["code"]), ("BLOCKED", code))
-                self.assertEqual(result["policy_expires_utc"], (self.now + timedelta(hours=168)).isoformat())
+                self.assertEqual(
+                    result["policy_expires_utc"], (self.now + timedelta(hours=168)).isoformat()
+                )
                 self.assertTrue(result["observational"])
                 self.assertEqual(self.state(), before)
                 self.assertNotIn("sensitive-private-data", json.dumps(result))
@@ -93,7 +107,9 @@ class ReviewDiagnosticsTests(unittest.TestCase):
         self.assertEqual(self.state(), before)
         self.review.check(self.ctx, self.now, record=True)
         recorded = self.state()
-        self.assertEqual(self.review.inspect(self.ctx, self.now + timedelta(minutes=6))["status"], "VALID")
+        self.assertEqual(
+            self.review.inspect(self.ctx, self.now + timedelta(minutes=6))["status"], "VALID"
+        )
         self.assertEqual(self.state(), recorded)
 
     def test_exact_expiry_preserves_gate_and_due_thresholds_without_renewal(self):
@@ -102,8 +118,13 @@ class ReviewDiagnosticsTests(unittest.TestCase):
         expiry = self.now + timedelta(hours=168)
         before = self.state()
         frozen_policy = deepcopy(self.ctx.policy)
-        for hours, due in ((73, "CURRENT"), (72, "DUE_72H"), (24, "DUE_24H"),
-                           (6, "DUE_6H"), (0, "DUE_6H")):
+        for hours, due in (
+            (73, "CURRENT"),
+            (72, "DUE_72H"),
+            (24, "DUE_24H"),
+            (6, "DUE_6H"),
+            (0, "DUE_6H"),
+        ):
             with self.subTest(hours=hours):
                 result = self.review.inspect(self.ctx, expiry - timedelta(hours=hours))
                 self.assertEqual(result["status"], "VALID")
@@ -111,8 +132,10 @@ class ReviewDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(result["policy_seconds_remaining"], hours * 3600)
         after_expiry = expiry + timedelta(microseconds=1)
         result = self.review.inspect(self.ctx, after_expiry)
-        self.assertEqual((result["status"], result["code"], result["policy_due"]),
-                         ("BLOCKED", "cost_policy_expired", "EXPIRED"))
+        self.assertEqual(
+            (result["status"], result["code"], result["policy_due"]),
+            ("BLOCKED", "cost_policy_expired", "EXPIRED"),
+        )
         with self.assertRaisesRegex(ValueError, "^selected_execution_review_invalid$"):
             self.review.check(self.ctx, after_expiry)
         self.assertEqual(self.state(), before)
@@ -120,11 +143,13 @@ class ReviewDiagnosticsTests(unittest.TestCase):
 
     def test_binding_policy_and_initial_failures_keep_original_denial(self):
         original = review_fixture(self.ctx, self.now)
-        for case, code in (("cohort", "review_binding_mismatch"),
-                           ("owner", "review_binding_mismatch"),
-                           ("digest", "review_binding_mismatch"),
-                           ("input", "review_input_binding_invalid"),
-                           ("policy", "cost_policy_changed")):
+        for case, code in (
+            ("cohort", "review_binding_mismatch"),
+            ("owner", "review_binding_mismatch"),
+            ("digest", "review_binding_mismatch"),
+            ("input", "review_input_binding_invalid"),
+            ("policy", "cost_policy_changed"),
+        ):
             with self.subTest(case=case):
                 value = deepcopy(original)
                 if case == "cohort":
@@ -195,8 +220,9 @@ class ReviewDiagnosticsTests(unittest.TestCase):
         self.publish(armed_review(self.ctx, self.now))
         self.ctx.journal.get = Mock(side_effect=sqlite3.OperationalError("private-db-path"))
         result = self.review.inspect(self.ctx, self.now)
-        self.assertEqual((result["status"], result["code"]),
-                         ("BLOCKED", "review_inspection_unavailable"))
+        self.assertEqual(
+            (result["status"], result["code"]), ("BLOCKED", "review_inspection_unavailable")
+        )
         self.assertIsNone(result["approval_accepted"])
         self.assertNotIn("private", json.dumps(result))
 
