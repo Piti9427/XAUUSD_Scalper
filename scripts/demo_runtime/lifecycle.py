@@ -185,6 +185,10 @@ class Lifecycle:
             return {"status": "UNKNOWN", "reason": "awaiting_be_confirmation"}
         if active.get("be_done"):
             return {"status": "MANAGING", "ticket": int(position.ticket)}
+        intrabar = getattr(ctx.strategy, "intrabar_protect", None)
+        mode = intrabar(direction) if callable(intrabar) else None
+        if mode == "observe" and not active.get("protection_active"):
+            self._observe_intrabar_be(active, position, tick, info, now, direction)
         if bar != active["last_be_bar"] and int(closed.timestamp() * 1000) > active["entry_ms"]:
             first = ctx._first_quote(closed, now)
             active["be_activation_quote"] = dict(
@@ -272,6 +276,49 @@ class Lifecycle:
             return {"status": "MANAGING", "reason": "be_rejected", "retcode": int(sent.retcode)}
         positions, _ = ctx.broker._exposure()
         return ctx._reconcile(positions, deals, tick, info, closed, now)
+
+    def _observe_intrabar_be(self, active, position, tick, info, now, direction):
+        """Record (once) the first fresh intrabar quote at which the BE trigger is met.
+
+        Observe-only: never changes protection_active, SL or TP, and never raises, so the
+        existing bar-close protection path below runs exactly as before.
+        """
+        ctx = self.context
+        if active.get("intrabar_observed"):
+            return
+        try:
+            quote_ms = int(tick.time_msc)
+            age_ms = int(ctx._send_clock(now).timestamp() * 1000) - quote_ms
+            last = getattr(self, "_intrabar_last_quote", None)
+            if (
+                quote_ms <= int(active["entry_ms"])
+                or not 0 <= age_ms <= self._intrabar_max_age_ms()
+                or (last is not None and last[0] == active.get("position_id") and quote_ms <= last[1])
+            ):
+                return
+            self._intrabar_last_quote = (active.get("position_id"), quote_ms)
+            executable = float(tick.bid if direction == 1 else tick.ask)
+            profit = ctx.mt5.order_calc_profit(
+                ctx.mt5.ORDER_TYPE_BUY if direction == 1 else ctx.mt5.ORDER_TYPE_SELL,
+                ctx.symbol, 0.01, float(position.price_open), executable)
+            if profit is None or not _finite(profit):
+                return
+            net = (float(profit) - active["commission"]
+                   - active["slippage"] * 0.01 * info.trade_contract_size)
+        except (AttributeError, KeyError, TypeError, ValueError):
+            return
+        if net < active["risk"]:
+            return
+        active["intrabar_observed"] = dict(
+            source="intrabar", time_msc=quote_ms, executable=executable, net=net,
+            risk=active["risk"], age_ms=age_ms)
+        ctx.journal.transition("active", active, dict(
+            kind="BE_TRIGGER_INTRABAR_OBSERVED", ticket=int(position.ticket),
+            quote_time_msc=quote_ms, executable=executable, net=net, risk=active["risk"],
+            age_ms=age_ms, snapshot=ctx.strategy.snapshot))
+
+    def _intrabar_max_age_ms(self):
+        return int(getattr(self.context.strategy, "intrabar_quote_max_age_ms", 5000))
 
     def _contract_violation(self, position, active, info):
         """Revalidate every observation; confirmed protection can only tighten."""

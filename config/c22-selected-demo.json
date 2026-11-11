@@ -31,6 +31,9 @@
   "commission_unit": "USD_per_lot_round_trip",
   "default_mode": "shadow",
   "execution_readiness": "OWNER_AUTHORIZED_ARMED_DEMO_TRIAL",
+  "management": {
+    "buy_intrabar_be": "observe"
+  },
   "source_hashes": {
     "scripts/research/reward156_search.py": "33d80b8c6fe1f068d24210104d2e52e85aeeb11c11a3f2e3244daf7c62307f92",
     "scripts/research/reward156_tuning.py": "05b50e60796a60eed56e20de3ec4938b637b60b7f5e5effcecd696b547f6296f",
@@ -45,7 +48,7 @@
     "scripts/demo_runtime/diagnostics.py": "162f597f97a0680f04b60f6a5327ee5fd86ad72aeacde70f4e4b0d16da267603",
     "scripts/c22h4/runner.py": "7bcd71a166480385597599c0425009e233ec7701528909ad3d5649a7783c4897",
     "scripts/c22_selected/__init__.py": "6cdb9dcc34c2547734128941dda6dcf37042db8973494e784e6841b5064a0f9e",
-    "scripts/c22_selected/strategy.py": "c84b6f1c4197c191754ccace678fe70a5c53bbd970c0ea535f18097a4b831c82",
+    "scripts/c22_selected/strategy.py": "62abb7559437f00f6ef14f3c4c08b64c331abd87f0257250da2448dc283d9b70",
     "scripts/c22_selected/runner.py": "debf13c1b3f467660bc806d96a31e6c2c6b0eff7b49ca4ba0dece9c15357ecdf",
     "scripts/c22_selected/evidence.py": "4fa1caabdd8c7b82dc01d4130fead9ca88c3ee95ba92beabbfec9291fe75254b",
     "scripts/c22_selected/cost_generations.py": "c7faeebc10f42eeed7ecff47a11003da1977aa8186ffa30676520128e0f21a77",

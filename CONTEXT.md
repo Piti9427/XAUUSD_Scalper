@@ -26,6 +26,8 @@ Module/debug map: [architecture](docs/architecture/codebase-layout.md).
 | Market data | Complete UTC Bid M15 bars assembled from all 15 M1 minutes. Forming bars are excluded. |
 | Detection | Frozen strategy's candidate direction and levels. A signal alone is not a broker-approved order. |
 | Admission | Decision whether a new entry satisfies identity, costs, exposure, risk, daily-loss, margin and broker-check gates. |
+| Signal capture rate | Live owned fills divided by the model-admissible signals of the same strategy over the same window. Misses caused by the strategy's own rules (risk cap, daily loss, cooldown, open position) are excused. Misses caused by operations (cost policy, AutoTrading, review, sender outage, foreign exposure) count against it. |
+| Bot-only account | A Demo account used only by the strategy's sender during a measurement window: no manual trades and no deposits or withdrawals, so live results stay comparable with replay. |
 | Shadow | Admission and reconciliation without order sends. A shadow admission is not a fill. |
 | Order intent | Persisted request before dispatch; an ambiguous send remains unresolved until broker evidence arrives. |
 | Owned position | Position attributed to the selected strategy by its broker identity evidence. Foreign exposure blocks new entries. |

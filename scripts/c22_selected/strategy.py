@@ -34,6 +34,10 @@ CONTRACT = {
     "max_daily_losses": 2, "cooldown_bars": 2, "entry_session": "all",
     "risk_mode": "static", "risk_cap": 0.1,
 }
+# Optional runtime management under the native contract. Observe-only records when a BUY
+# position first reaches the 1R BE trigger on a fresh intrabar quote; it never changes SL/TP.
+MANAGEMENT_ALLOWED = ({"buy_intrabar_be": "observe"},)
+INTRABAR_QUOTE_MAX_AGE_MS = 5000
 SOURCE_PATHS = (
     "scripts/research/reward156_search.py",
     "scripts/research/reward156_tuning.py",
@@ -79,6 +83,9 @@ def verify_sources(config: dict, *, root: Path = ROOT) -> None:
         or config.get("volume") != 0.01
         or config.get("real_money") != "PROHIBITED"
     ):
+        raise ValueError("source_drift")
+    if "management" in config and config["management"] not in MANAGEMENT_ALLOWED:
+        # Native 26b8 may only observe the BUY intrabar BE trigger; acting needs its own contract.
         raise ValueError("source_drift")
     hashes = config.get("source_hashes")
     if not isinstance(hashes, dict) or set(hashes) != set(SOURCE_PATHS):
@@ -168,6 +175,7 @@ class SelectedStrategy:
     max_daily_losses = 2
     cooldown_bars = 2
     no_signal_reason = "no_signal"
+    intrabar_quote_max_age_ms = INTRABAR_QUOTE_MAX_AGE_MS
 
     def __init__(self, config, *, cache_path=None, fingerprint=None):
         self.config = config
@@ -263,6 +271,15 @@ class SelectedStrategy:
 
     def protects(self, direction):
         return direction in self.allowed_sides
+
+    def intrabar_protect(self, direction):
+        """Return the intrabar BE mode for this side, or None. BUY only; SELL keeps bar-close BE."""
+        if self.source_error or direction != 1:
+            return None
+        management = self.config.get("management")
+        if management not in MANAGEMENT_ALLOWED:
+            return None
+        return management["buy_intrabar_be"]
 
     def diagnostics(self):
         row = self.cache.row

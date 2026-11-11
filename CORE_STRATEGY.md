@@ -2031,3 +2031,34 @@ remain. No source/policy grant, VM deployment, native rule/lot change, notificat
 or automatic adoption follows from this verdict. Raw artifacts:
 `runs/c22-h4-carry-2026-10-30/`; merged proof:
 `runs/c22-research-synthesis-2026-10-30/four-studies.json`.
+
+### 6.66 Selected26b8 BUY intrabar BE observe-only (2026-11-11)
+
+Owner selected B2 (BUY-only intrabar break-even trigger) and contract route Option A
+(new runtime contract identity for the acting phase). Evidence:
+`docs/reviews/2026-11-11-c22-26b8-profit-leaks.md`. Design:
+`docs/specs/2026-11-11-c22-26b8-b2-buy-intrabar-be-design.md`.
+
+Phase 1 (this section) is **observe-only under native 26b8**. Trading behaviour is unchanged.
+- Config `management = {"buy_intrabar_be": "observe"}`. `verify_sources` accepts only this value or
+  no key; anything else is `source_drift` and blocks entries.
+- While a BUY position is open and BE is not yet active, each manager cycle evaluates the existing
+  BE trigger formula (`order_calc_profit` − commission − slippage ≥ risk) on the cycle's quote.
+  The quote must be ≤5 s old against the send clock and newer than the last evaluated quote.
+- The first hit journals `BE_TRIGGER_INTRABAR_OBSERVED` once per position. It never changes
+  `protection_active`, SL or TP.
+- SELL is never evaluated. The bar-close BE path, RulesID `26b8bcd69e043653`, entries, sizing,
+  cap, daily guards and cooldown are unchanged. Shared lifecycle adapters without the hook
+  (c22h4, trial30) are unaffected.
+
+Phase 2 (acting) is staged, not active. It needs:
+- at least 10 observed BUY triggers;
+- a VM cycle-latency measurement and gate;
+- a new runtime contract id = sha256(parent research RulesID 26b8bcd69e043653 + management
+  spec)[:16]. The research `Rules`/`CANDIDATE_ID` stays unchanged, so the 101 frozen research
+  pins and parity are preserved;
+- an owner-attended cost-generation review;
+- new execution approval.
+
+Research evidence is COST_INCONCLUSIVE and in-sample on 2024-26. Real money remains PROHIBITED.
+No VM deployment is implied by this section.
