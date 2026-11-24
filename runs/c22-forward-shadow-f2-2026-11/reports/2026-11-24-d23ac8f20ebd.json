@@ -1,0 +1,14 @@
+{
+ "protocol_sha256": "b911ca7a50102a826cfc281834e555446d1c876f5fe9b4b4759efe4c5d474965",
+ "input_manifest_sha256": "d23ac8f20ebdc175e680c0f89b39c3f4bada61c26a23539b7181d23ac11e4270",
+ "window": [
+  "2026-11-25 00:00:00+00:00",
+  "2026-11-24 00:00:00+00:00"
+ ],
+ "days": 0,
+ "mature": false,
+ "causality": {},
+ "verdict": "NO_DATA",
+ "rollback_watch": null,
+ "cells": {}
+}

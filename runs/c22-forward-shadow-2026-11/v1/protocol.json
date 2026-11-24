@@ -1,0 +1,71 @@
+{
+ "created": "2026-11-17",
+ "status": "FORWARD_SHADOW_RESEARCH_ONLY",
+ "cost_status": "COST_INCONCLUSIVE",
+ "profiles": {
+  "native": "26b8bcd69e043653 as replayed",
+  "candidate": "sell3R_risk25.0_BE05_veto: {\"sell_target_rr\": 3.0, \"min_sell_target_risk_usd\": 25.0, \"conditional_sell_protect_after_r\": 0.5} + NativeAdmissionVeto(native book same tape/view)",
+  "floor03": "candidate + reject if 2.5*atr/close*100 < 0.3 (both sides), veto first"
+ },
+ "account": {
+  "start_balance": 200.0,
+  "mode": "one continuous book per profile from window start, no reset; fixed 0.01; 10% cost-inclusive cap; daily10%/2 losses; cooldown2"
+ },
+ "window": {
+  "start": "2026-10-24 00:00:00+00:00",
+  "end_rule": "window_end(last_quote_utc): exclusive end at last complete UTC day",
+  "finalize": "True: open position at end liquidated END_OF_SAMPLE, reported separately"
+ },
+ "frame": "single frame from input/bars.csv starting 2026-08-02 22:15 UTC (Aug-Oct old forward zips + new monthly zips); EMA200 frame-start dependence disclosed",
+ "views": {
+  "costs": [
+   "base",
+   "stress"
+  ],
+  "swaps": {
+   "vm490": {
+    "swap_long": -490.0,
+    "swap_short": 0.0,
+    "point": 0.001,
+    "triple": "Wed->Thu"
+   },
+   "arch567": {
+    "swap_long": -567.4,
+    "swap_short": 0.0,
+    "point": 0.001,
+    "triple": "Wed->Thu"
+   }
+  },
+  "primary_swap": "vm490",
+  "swap_sources": {
+   "vm490": "docs/ops/c22-selected-demo.md:10 owner-approved 2026-10-28",
+   "arch567": "matrix protocol broker (archived)"
+  }
+ },
+ "maturity": {
+  "days": 28,
+  "native_trades_primary_base": 20,
+  "rule": "verdict only when (end-start)>=28d AND native trades in vm490|base >=20; earlier runs are INTERIM, no verdict"
+ },
+ "verdict": {
+  "per_profile_vs_native": "FORWARD_CONSISTENT iff in vm490|base AND vm490|stress: net>=native AND maxDD<=native; else FORWARD_INCONSISTENT. arch567 reported, not decisive.",
+  "floor_vs_candidate": "same rule floor03 vs candidate, reported separately",
+  "absolute": "final_balance vs $200 reported, no pass/fail"
+ },
+ "causality": "each run: native+candidate prefix checks at weekly cutoffs (finalize=False, ticks/bars truncated to cutoff) must reproduce full-run admission events before cutoff; any mismatch -> INVALID",
+ "prior_peek": "native/B2/AB were run on 2026-10-24..11-11 earlier (seen). candidate and floor03 never run on any data after 2026-10-24 before this freeze.",
+ "owner_constraints": "real money PROHIBITED; no VM change; criteria fixed, no post-hoc change; no reselection on forward data",
+ "hashes": {
+  "scripts/research/c22_profit_preservation.py": "43a011ac63e73d4b4b1e97368c51d4c06569b5ccedcffde9b835a17e0e91282e",
+  "scripts/research/c22_virtual_admission.py": "b7d7655e7016d11c7b0570c2936a959ed011fc61591194a427a0f729f24522e9",
+  "scripts/research/c22_profit_preservation_campaign.py": "7a6a03219925a268af1ee1a82b78cdbb13df8b089849c07f1e9048a9b1862355",
+  "scripts/research/breakout_replay.py": "130521dd86c258a9cb6936a9792f96bd10afff4d3ef770bd3b993f4aa8cbe99b",
+  "scripts/research/public_exness_archive.py": "663c80b225f4b5aa66a71fa2fb08ec5ef1aeb06d4764fd2debe60207d5e36cd6",
+  "scripts/research/rollover.py": "448a4a63331d4921882f69e501c0a8473669280c2c7a444072e8c760753e3cfb",
+  "scripts/research/c22_frequency_adapter.py": "20477307bfc684edd4cb4ed940310a91ee05fe6f5fec5b04de6dc5e63dc42fb1",
+  "runs/c22-matrix-tuning-2026-10-25/protocol.json": "23794a4dbbea0bbf23a3fb0cc1d4cce4b631c2b4992fb26e576c12b67be3c995",
+  "config/research-c22-terminal-profit-9e511d195c52ef3d.json": "c339746d947097a736d45f70bfcd55e726cf8eafc04d33264ffba3b9499bf051",
+  "runs/c22-matrix-tuning-2026-10-25/cells/26b8bcd69e043653-fee-raw.json": "edc3d341742deb124286c92657dd82fa49c96c9b29acecc8442ef63229135dc0",
+  "shadow.py": "d0fdb2592837fe5d620674153851adc6931e19acf874cfbbaf7f6c28688c9b0e"
+ }
+}

@@ -1,0 +1,1390 @@
+{
+ "protocol_sha256": "173c07a8cdc1ac40e244c50c1f794ec85f6b608ccd1dbc978a245eefa52a3fc7",
+ "input_manifest_sha256": "c708caa004b30248c620375031bd74471917308c03e59d91018c848cfc25bee1",
+ "window": [
+  "2026-10-24 00:00:00+00:00",
+  "2026-11-17 00:00:00+00:00"
+ ],
+ "days": 24,
+ "native_trades_primary_base": 8,
+ "mature": false,
+ "causality": {
+  "base": [
+   {
+    "cutoff": "2026-10-31 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   },
+   {
+    "cutoff": "2026-11-07 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   },
+   {
+    "cutoff": "2026-11-14 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   }
+  ],
+  "stress": [
+   {
+    "cutoff": "2026-10-31 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   },
+   {
+    "cutoff": "2026-11-07 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   },
+   {
+    "cutoff": "2026-11-14 00:00:00+00:00",
+    "native": true,
+    "candidate": true
+   }
+  ]
+ },
+ "verdict": "INTERIM",
+ "cells": {
+  "native|vm490|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 39,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0
+   },
+   "cap_rejection_span_days": 5.083332662037037,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "candidate|vm490|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "floor03|vm490|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "native|vm490|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 39,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0
+   },
+   "cap_rejection_span_days": 5.083332662037037,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  },
+  "candidate|vm490|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  },
+  "floor03|vm490|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  },
+  "native|arch567|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 39,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0
+   },
+   "cap_rejection_span_days": 5.083332662037037,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "candidate|arch567|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "floor03|arch567|base": {
+   "net": 27.677999999999884,
+   "dd": 28.5653682992674,
+   "minimum_equity": 148.18399999999974,
+   "final_balance": 227.67799999999988,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.677999999999884,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:40.171000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.64,
+     "swap": 0.0,
+     "net": -15.76
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.063000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.27,
+     "swap": 0.0,
+     "net": -13.29
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:39.419000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 16.95,
+     "swap": 0.0,
+     "net": -17.18
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:18.657000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.41,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.951000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 16.94,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:42:21.373000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.79,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.036000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.09,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:20.183000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.94,
+     "swap": 0.0,
+     "net": -14.14
+    }
+   ],
+   "end_of_sample": []
+  },
+  "native|arch567|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 39,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0
+   },
+   "cap_rejection_span_days": 5.083332662037037,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  },
+  "candidate|arch567|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  },
+  "floor03|arch567|stress": {
+   "net": 27.584000000002106,
+   "dd": 28.61108429081704,
+   "minimum_equity": 147.87500000000182,
+   "final_balance": 227.5840000000021,
+   "trades": 8,
+   "rejections": {
+    "risk_cap": 0,
+    "margin": 0,
+    "daily_loss": 0,
+    "day_start_unknown": 0,
+    "late_quote": 0,
+    "busy": 12,
+    "reset": 0,
+    "bankrupt": 0,
+    "invalid_stop": 0,
+    "entry_guard": 0,
+    "buy_pause": 0,
+    "cooldown": 0,
+    "session": 0,
+    "daily_loss_count": 0,
+    "shadow_native_risk_cap": 39
+   },
+   "cap_rejection_span_days": 0.0,
+   "cap_span_note": "consecutive observed risk-cap events only; not proof of continuous lock",
+   "buy_net": 0,
+   "sell_net": 27.584000000002106,
+   "swap": 0.0,
+   "ledger": [
+    {
+     "entry_utc": "2026-10-27T08:15:00.274000+00:00",
+     "exit_utc": "2026-10-27T10:45:39.064000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 15.74,
+     "swap": 0.0,
+     "net": -15.75
+    },
+    {
+     "entry_utc": "2026-10-28T04:15:00.223000+00:00",
+     "exit_utc": "2026-10-28T08:44:56.033000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 13.37,
+     "swap": 0.0,
+     "net": -13.43
+    },
+    {
+     "entry_utc": "2026-11-03T09:00:00.019000+00:00",
+     "exit_utc": "2026-11-03T12:24:29.448000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 17.05,
+     "swap": 0.0,
+     "net": -17.06
+    },
+    {
+     "entry_utc": "2026-11-11T13:45:00.081000+00:00",
+     "exit_utc": "2026-11-11T14:37:20.287000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 13.51,
+     "swap": 0.0,
+     "net": 18.1
+    },
+    {
+     "entry_utc": "2026-11-11T18:15:00.102000+00:00",
+     "exit_utc": "2026-11-12T00:10:08.974000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": false,
+     "risk_usd": 17.04,
+     "swap": 0.0,
+     "net": 22.87
+    },
+    {
+     "entry_utc": "2026-11-12T07:00:00.052000+00:00",
+     "exit_utc": "2026-11-12T08:43:25.182000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 16.89,
+     "swap": 0.0,
+     "net": 22.66
+    },
+    {
+     "entry_utc": "2026-11-12T13:15:00.086000+00:00",
+     "exit_utc": "2026-11-12T13:45:09.335000+00:00",
+     "side": "SELL",
+     "reason": "TP",
+     "protected": true,
+     "risk_usd": 18.19,
+     "swap": 0.0,
+     "net": 24.42
+    },
+    {
+     "entry_utc": "2026-11-13T13:30:00.096000+00:00",
+     "exit_utc": "2026-11-13T13:30:19.918000+00:00",
+     "side": "SELL",
+     "reason": "SL",
+     "protected": false,
+     "risk_usd": 14.04,
+     "swap": 0.0,
+     "net": -14.23
+    }
+   ],
+   "end_of_sample": []
+  }
+ }
+}

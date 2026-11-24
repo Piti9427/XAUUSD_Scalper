@@ -1,0 +1,86 @@
+{
+ "schema": "c22-forward-shadow-livebal-v1",
+ "frozen_utc": "2026-11-18T11:07:44.117901+00:00",
+ "owner_request": "2026-11-18 \"Freeze shadow ยอดจริง\"",
+ "research_only": true,
+ "profiles": {
+  "native": "26b8bcd69e043653 replay",
+  "candidate": {
+   "name": "sell3R_risk25.0_BE05_veto",
+   "knobs": {
+    "sell_target_rr": 3.0,
+    "min_sell_target_risk_usd": 25.0,
+    "conditional_sell_protect_after_r": 0.5
+   },
+   "veto": "native admission events of the same book"
+  }
+ },
+ "window": {
+  "start": "2026-11-17 00:00:00+00:00",
+  "seen_until": "2026-11-16T23:59:58.380000+00:00",
+  "end_rule": "shadow.window_end(last_quote_utc)",
+  "input": "runs/c22-forward-shadow-2026-11/input (monthly build; integrity per that protocol)"
+ },
+ "account": {
+  "balances": {
+   "live360": 360.0,
+   "live313": 313.0
+  },
+  "primary": "live360",
+  "mode": "one continuous book per (balance, view, profile) from window start; fixed 0.01; 10% cost-inclusive cap; daily10%/2 losses; cooldown2; no reset, no funding"
+ },
+ "swap": {
+  "key": "br474",
+  "value": {
+   "swap_long": -474.3
+  },
+  "views": [
+   "base",
+   "stress"
+  ]
+ },
+ "maturity": {
+  "days": 28,
+  "native_trades_primary_base": 20,
+  "native_sell_risk_ge_25_primary_base": 5,
+  "rule": "verdict only when (end-start)>=28d AND native trades >=20 AND native SELL trades with initial risk>=$25 >=5, all in live360|base; else INTERIM"
+ },
+ "verdict": {
+  "rule": "NOT_EXERCISED if candidate ledger == native ledger in live360 base AND stress; FORWARD_CONSISTENT iff in both views candidate net >= native net AND candidate maxDD <= native maxDD; else FORWARD_INCONSISTENT. live313 reported, not decisive.",
+  "decision_use": "CONSISTENT is evidence for an owner adoption decision only; it does not authorise runtime changes"
+ },
+ "causality": "each run, live360 base+stress: prefix runs at Sat 00:00 and Wed 12:00 cutoffs (ticks truncated, indicators re-prepared before cutoff) must reproduce admission events before cutoff for native and candidate; any mismatch or zero checked cutoffs once the window is mature -> INVALID",
+ "prior_peek": "candidate and native at $313/$360 were evaluated post-hoc on 2026-10-24..11-16 and 2020-2026 history (docs/reviews/2026-11-18-c22-candidate-live-balance.md). This protocol excludes all of that by starting at 2026-11-17.",
+ "owner_constraints": "real money PROHIBITED; no VM change; criteria fixed, no post-hoc change; no reselection on forward data",
+ "hashes": {
+  "shadow_livebal.py": "4aefac5d4ddba52a780de5711cf24b839e854c788ac34e5d2d6d8a1149cb532f",
+  "shadow.py": "2ab20a57bdda694dc14cc7729383542cefd2810bc1bcbfd01b9f8b9632c00d48",
+  "shadow-protocol.json": "15bda721c9bea40ea3992c0cd5bdac7e815fbdce2d4caf017e12c36c3299ac4d",
+  "scripts/__init__.py": "9ac22f9085dfe26b170b7faaf4d4b62e7e79e99b7d41097e950ebcf116099e30",
+  "scripts/research/__init__.py": "1aed5e1c4d2c8f4737456da362672bf8e96e02d8701855df21c299009451eda3",
+  "scripts/research/breakout_entry.py": "7459a3c6cbd0e8e3187de7658fb4eee82ca7daa4b51539a3a8cf83d606bd4b19",
+  "scripts/research/breakout_logic.py": "5224082a9c5bc8f8896131ec9fc60cc25dd9e145cffbd7f4c8ee2176a546a7fe",
+  "scripts/research/breakout_models.py": "a30abecb90bacdb88ee89c75add2e943dcf745cf18231242f86efd648a995f90",
+  "scripts/research/breakout_replay.py": "130521dd86c258a9cb6936a9792f96bd10afff4d3ef770bd3b993f4aa8cbe99b",
+  "scripts/research/breakout_signals.py": "63c40e0917f118bd96a4ba4c14254e5af594e8861deda21d7358e1fb724d9e92",
+  "scripts/research/c22_context.py": "013c3bc3ab707ebd407bbf12433c2586de3727aad59179d12069eacfbff0a0c1",
+  "scripts/research/c22_context_campaign.py": "d874c40a51cec66c705362a22bd63dfeeacde78cb7d98dc276d1f0b26bec014b",
+  "scripts/research/c22_frequency_adapter.py": "20477307bfc684edd4cb4ed940310a91ee05fe6f5fec5b04de6dc5e63dc42fb1",
+  "scripts/research/c22_frequency_data.py": "d5a49942f7aad72c2845249e73ef664e1eda086a2ebd8596c16134cfe354243e",
+  "scripts/research/c22_profit_preservation.py": "43a011ac63e73d4b4b1e97368c51d4c06569b5ccedcffde9b835a17e0e91282e",
+  "scripts/research/c22_profit_preservation_campaign.py": "7a6a03219925a268af1ee1a82b78cdbb13df8b089849c07f1e9048a9b1862355",
+  "scripts/research/c22_tuning_data.py": "dee384dec2557e9b45333956201b49849bb953b511edf27c2d5c2412dda9b41e",
+  "scripts/research/c22_virtual_admission.py": "b7d7655e7016d11c7b0570c2936a959ed011fc61591194a427a0f729f24522e9",
+  "scripts/research/campaign_signals.py": "cd1fbc9b5fec333171dc6b5baa0e2270716398c7e740606f126be1220b2eaebc",
+  "scripts/research/data.py": "541d00d3836454034ea77b9ed66b4a8386c391a0929ec87e013f502a4e8eeffe",
+  "scripts/research/public_exness_archive.py": "663c80b225f4b5aa66a71fa2fb08ec5ef1aeb06d4764fd2debe60207d5e36cd6",
+  "scripts/research/reward156_search.py": "33d80b8c6fe1f068d24210104d2e52e85aeeb11c11a3f2e3244daf7c62307f92",
+  "scripts/research/reward156_tuning.py": "05b50e60796a60eed56e20de3ec4938b637b60b7f5e5effcecd696b547f6296f",
+  "scripts/research/rollover.py": "448a4a63331d4921882f69e501c0a8473669280c2c7a444072e8c760753e3cfb",
+  "scripts/research/tune_breakout_logic.py": "75985c0dcc07555df4ff5a4ccbf955585ca0693006159160304fa53df870b24a",
+  "scripts/strategy.py": "a3aa1b61d1131880f3bd458225c0cf8a04cb1c49577dc3911684c5f5a0eb1bc5",
+  "runs/c22-matrix-tuning-2026-10-25/protocol.json": "23794a4dbbea0bbf23a3fb0cc1d4cce4b631c2b4992fb26e576c12b67be3c995",
+  "config/research-c22-terminal-profit-9e511d195c52ef3d.json": "c339746d947097a736d45f70bfcd55e726cf8eafc04d33264ffba3b9499bf051",
+  "runs/c22-matrix-tuning-2026-10-25/cells/26b8bcd69e043653-fee-raw.json": "edc3d341742deb124286c92657dd82fa49c96c9b29acecc8442ef63229135dc0"
+ }
+}

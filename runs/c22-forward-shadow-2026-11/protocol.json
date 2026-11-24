@@ -1,0 +1,96 @@
+{
+ "created": "2026-11-17",
+ "version": 3,
+ "status": "FORWARD_SHADOW_RESEARCH_ONLY",
+ "cost_status": "COST_INCONCLUSIVE",
+ "profiles": {
+  "native": "26b8bcd69e043653 as replayed",
+  "candidate": "sell3R_risk25.0_BE05_veto: {\"sell_target_rr\": 3.0, \"min_sell_target_risk_usd\": 25.0, \"conditional_sell_protect_after_r\": 0.5} + NativeAdmissionVeto(native book same tape/view)",
+  "floor03": "candidate + reject if 2.5*atr/close*100 < 0.3 (both sides), veto first"
+ },
+ "account": {
+  "start_balance": 200.0,
+  "mode": "one continuous book per profile from window start, no reset; fixed 0.01; 10% cost-inclusive cap; daily10%/2 losses; cooldown2"
+ },
+ "window": {
+  "start": "2026-10-24 00:00:00+00:00",
+  "end_rule": "window_end(last_quote_utc): exclusive end at last complete UTC day",
+  "finalize": "True: open position at end liquidated END_OF_SAMPLE, reported separately"
+ },
+ "frame": "single frame from input/bars.csv starting 2026-08-02 22:15 UTC (Aug-Oct old forward zips + new monthly zips); EMA200 frame-start dependence disclosed",
+ "views": {
+  "costs": [
+   "base",
+   "stress"
+  ],
+  "swaps": {
+   "br474": {
+    "swap_long": -474.3,
+    "swap_short": 0.0,
+    "point": 0.001,
+    "triple": "Wed->Thu"
+   },
+   "vm490": {
+    "swap_long": -490.0,
+    "swap_short": 0.0,
+    "point": 0.001,
+    "triple": "Wed->Thu"
+   },
+   "arch567": {
+    "swap_long": -567.4,
+    "swap_short": 0.0,
+    "point": 0.001,
+    "triple": "Wed->Thu"
+   }
+  },
+  "primary_swap": "br474",
+  "swap_sources": {
+   "br474": "broker probe 2026-11-17T11:19Z, owner-approved in cost renewal v4 (docs/reviews/2026-11-17-c22-cost-renewal-v4.md)",
+   "vm490": "docs/ops/c22-selected-demo.md:10 owner-approved 2026-10-28 (superseded)",
+   "arch567": "matrix protocol broker (archived)"
+  }
+ },
+ "maturity": {
+  "days": 28,
+  "native_trades_primary_base": 20,
+  "rule": "verdict only when (end-start)>=28d AND native trades in br474|base >=20; earlier runs are INTERIM, no verdict"
+ },
+ "verdict": {
+  "per_profile_vs_native": "NOT_EXERCISED if ledger identical to native in br474|base and br474|stress; else FORWARD_CONSISTENT iff in both: net>=native AND maxDD<=native; else FORWARD_INCONSISTENT. vm490 and arch567 reported, not decisive.",
+  "floor_vs_candidate": "same rule floor03 vs candidate, reported separately",
+  "absolute": "final_balance vs $200 reported, no pass/fail"
+ },
+ "causality": "each run, br474 base+stress: native/candidate/floor03 prefix runs at Wed 12:00 and Sat 00:00 cutoffs (finalize=False, ticks truncated, indicators re-prepared from bars before cutoff) must reproduce full-run admission events before cutoff; any mismatch or zero cutoffs -> INVALID",
+ "input_integrity": "build(): manifest removed first; previous build must be byte prefix of new build; run(): every input artifact re-hashed vs manifest; engine module set = transitive closure pinned; reports never overwritten (name includes manifest sha)",
+ "prior_peek": "native/B2/AB were run on 2026-10-24..11-11 earlier (seen). v1 protocol 173c07a8 produced one INTERIM report on 2026-10-24..11-17 where all three profiles had identical ledgers (8 SELL trades, risk<$25, floor not binding); review then found integrity defects and the vacuous-equality verdict, fixed in v2 before any verdict. Profiles, account, views, maturity and comparison thresholds unchanged from v1. v3 (2026-11-17, owner request): primary swap changed from vm490 to broker -474.3 after the cost renewal showed the broker rate; v2 INTERIM (identical ledgers, all SELL, swap_short 0) unaffected by swap_long; no other change.",
+ "owner_constraints": "real money PROHIBITED; no VM change; criteria fixed, no post-hoc change; no reselection on forward data",
+ "hashes": {
+  "scripts/__init__.py": "9ac22f9085dfe26b170b7faaf4d4b62e7e79e99b7d41097e950ebcf116099e30",
+  "scripts/research/__init__.py": "1aed5e1c4d2c8f4737456da362672bf8e96e02d8701855df21c299009451eda3",
+  "scripts/research/breakout_entry.py": "7459a3c6cbd0e8e3187de7658fb4eee82ca7daa4b51539a3a8cf83d606bd4b19",
+  "scripts/research/breakout_logic.py": "5224082a9c5bc8f8896131ec9fc60cc25dd9e145cffbd7f4c8ee2176a546a7fe",
+  "scripts/research/breakout_models.py": "a30abecb90bacdb88ee89c75add2e943dcf745cf18231242f86efd648a995f90",
+  "scripts/research/breakout_replay.py": "130521dd86c258a9cb6936a9792f96bd10afff4d3ef770bd3b993f4aa8cbe99b",
+  "scripts/research/breakout_signals.py": "63c40e0917f118bd96a4ba4c14254e5af594e8861deda21d7358e1fb724d9e92",
+  "scripts/research/c22_context.py": "013c3bc3ab707ebd407bbf12433c2586de3727aad59179d12069eacfbff0a0c1",
+  "scripts/research/c22_context_campaign.py": "d874c40a51cec66c705362a22bd63dfeeacde78cb7d98dc276d1f0b26bec014b",
+  "scripts/research/c22_frequency_adapter.py": "20477307bfc684edd4cb4ed940310a91ee05fe6f5fec5b04de6dc5e63dc42fb1",
+  "scripts/research/c22_frequency_data.py": "d5a49942f7aad72c2845249e73ef664e1eda086a2ebd8596c16134cfe354243e",
+  "scripts/research/c22_profit_preservation.py": "43a011ac63e73d4b4b1e97368c51d4c06569b5ccedcffde9b835a17e0e91282e",
+  "scripts/research/c22_profit_preservation_campaign.py": "7a6a03219925a268af1ee1a82b78cdbb13df8b089849c07f1e9048a9b1862355",
+  "scripts/research/c22_tuning_data.py": "dee384dec2557e9b45333956201b49849bb953b511edf27c2d5c2412dda9b41e",
+  "scripts/research/c22_virtual_admission.py": "b7d7655e7016d11c7b0570c2936a959ed011fc61591194a427a0f729f24522e9",
+  "scripts/research/campaign_signals.py": "cd1fbc9b5fec333171dc6b5baa0e2270716398c7e740606f126be1220b2eaebc",
+  "scripts/research/data.py": "541d00d3836454034ea77b9ed66b4a8386c391a0929ec87e013f502a4e8eeffe",
+  "scripts/research/public_exness_archive.py": "663c80b225f4b5aa66a71fa2fb08ec5ef1aeb06d4764fd2debe60207d5e36cd6",
+  "scripts/research/reward156_search.py": "33d80b8c6fe1f068d24210104d2e52e85aeeb11c11a3f2e3244daf7c62307f92",
+  "scripts/research/reward156_tuning.py": "05b50e60796a60eed56e20de3ec4938b637b60b7f5e5effcecd696b547f6296f",
+  "scripts/research/rollover.py": "448a4a63331d4921882f69e501c0a8473669280c2c7a444072e8c760753e3cfb",
+  "scripts/research/tune_breakout_logic.py": "75985c0dcc07555df4ff5a4ccbf955585ca0693006159160304fa53df870b24a",
+  "scripts/strategy.py": "a3aa1b61d1131880f3bd458225c0cf8a04cb1c49577dc3911684c5f5a0eb1bc5",
+  "runs/c22-matrix-tuning-2026-10-25/protocol.json": "23794a4dbbea0bbf23a3fb0cc1d4cce4b631c2b4992fb26e576c12b67be3c995",
+  "config/research-c22-terminal-profit-9e511d195c52ef3d.json": "c339746d947097a736d45f70bfcd55e726cf8eafc04d33264ffba3b9499bf051",
+  "runs/c22-matrix-tuning-2026-10-25/cells/26b8bcd69e043653-fee-raw.json": "edc3d341742deb124286c92657dd82fa49c96c9b29acecc8442ef63229135dc0",
+  "shadow.py": "2ab20a57bdda694dc14cc7729383542cefd2810bc1bcbfd01b9f8b9632c00d48"
+ }
+}

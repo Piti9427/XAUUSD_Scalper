@@ -1,0 +1,37 @@
+{
+ "zips": {
+  "Exness_XAUUSDm_2026_08.zip": "baa514c5a9422a0726164f0a6cbe0785dcd74da553951afe8ad31783c5902f2b",
+  "Exness_XAUUSDm_2026_09.zip": "2f85861bfc1cbacb5fabc241832a58a6552159ceee84f25952bfc0706a500df8",
+  "Exness_XAUUSDm_2026_10.zip": "f9066c09dc1d8d6e55b5a89dda37f33994fd69a605c96eccf29ead9c05278feb",
+  "Exness_XAUUSDm_2026_11.zip": "f4e0cd1ff101af998944ff390171ecaddb70c2d2326eb27b7eb022be1b348a04"
+ },
+ "months": [
+  "2026-08",
+  "2026-09",
+  "2026-10",
+  "2026-11"
+ ],
+ "ticks": 22577112,
+ "bars": 6892,
+ "last_quote_utc": "2026-11-16T23:59:58.380000+00:00",
+ "overlap_window": [
+  "2026-08-01 00:00:00+00:00",
+  "2026-11-10 00:00:00+00:00"
+ ],
+ "overlap_bar_parity": true,
+ "overlap_tick_parity": true,
+ "previous_manifest_last_quote": "2026-11-16T23:59:58.380000+00:00",
+ "previous_prefix_parity": true,
+ "prefix": {
+  "ticks": 22577112,
+  "bars": 6892,
+  "tape_raw_sha": "d79ae2fadbe26ba507c65abd918dafd4b2a045c82d1822fcb6dcf36b5ae0bb35",
+  "bars_raw_sha": "59295aa15c7f2163784d105b5e1b666eb28cd2ee1ef1fed6d8c1c1a802e3cf5f"
+ },
+ "artifacts": {
+  "bars.csv": "170e65fe4e44a1635e9fbd46f5055341f38a8cef9821feda555dd605a772f0de",
+  "tape/ask.npy": "43e92d6c19023db3304c2aa239f6ba089b5099b17de1786685c803263d30d562",
+  "tape/bid.npy": "8715b0952c5812db63884f2cc21953f5e5a2365abc1b0854d8f68442e1a82e2a",
+  "tape/time.npy": "93261c396d952d489c7d0cbee32f21e28ff0e8bdc9594efd28ad26ece8f917e1"
+ }
+}
