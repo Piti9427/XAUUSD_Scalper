@@ -66,10 +66,25 @@ def capture(journal, account, *, fingerprint, request_started, observed):
     return True
 
 
+# A full cycle on the QEMU/Wine host takes ~3 s (p99.9 ~5.5 s, 2026-11-11/12).
+# The first-second account read only happens if the loop is *idle* when the
+# UTC day turns, so do not start a cycle inside this guard before midnight.
+BOUNDARY_GUARD_SECONDS = 15.0
+
+
 def poll_delay(poll, now):
-    """Align a normal poll to just after UTC midnight without a second SDK reader."""
+    """Align a normal poll to just after UTC midnight without a second SDK reader.
+
+    If the next normal cycle would start within BOUNDARY_GUARD_SECONDS of the
+    boundary, idle until just after midnight instead, so the next cycle's
+    account read starts inside the existing first-second window. No window,
+    proof or risk predicate changes; only cycle scheduling near 00:00 UTC.
+    """
     now = _utc(now)
     if not _positive(poll):
         raise ValueError("positive poll required")
     boundary = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    return min(float(poll), (boundary-now).total_seconds() + 0.01)
+    remaining = (boundary-now).total_seconds()
+    if remaining <= float(poll) + BOUNDARY_GUARD_SECONDS:
+        return remaining + 0.01
+    return float(poll)

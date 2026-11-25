@@ -123,7 +123,7 @@ class SelectedRunnerTests(unittest.TestCase):
             (request["price"] - request["tp"]) / (request["sl"] - request["price"]), 1.35, delta=0.2
         )
         broker.order_send.assert_not_called()
-        self.assertEqual(runner.strategy.max_daily_losses, 2)
+        self.assertEqual(runner.strategy.max_daily_losses, 1)
         self.assertTrue(runner.strategy.protects(1))
 
     def test_ambiguous_selected_send_remains_unknown_after_restart(self):
@@ -159,7 +159,7 @@ class SelectedRunnerTests(unittest.TestCase):
         broker.closed_loss(broker.tick.time_msc - 30 * 60 * 1000 + 1)
         runner = self.runner(broker)
         result = runner.cycle(now=broker.now)
-        self.assertEqual(result.get("reason"), "cooldown", result)
+        self.assertEqual(result.get("reason"), "max_daily_losses", result)
         runner.close()
         restarted = self.runner(broker)
         duplicate = restarted.cycle(now=broker.now + timedelta(seconds=1))
@@ -173,7 +173,8 @@ class SelectedRunnerTests(unittest.TestCase):
         first.close()
         restarted = self.runner(broker)
         result = restarted.cycle(now=broker.now)
-        self.assertEqual(result["status"], "SHADOW_ADMIT", result)
+        self.assertEqual(result["status"], "BLOCKED", result)
+        self.assertEqual(result.get("reason"), "max_daily_losses", result)
         broker.order_send.assert_not_called()
 
     def test_two_net_losses_block_new_entry(self):

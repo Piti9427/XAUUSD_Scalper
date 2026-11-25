@@ -43,7 +43,7 @@ EXPECTED_RULES = {
     "target_rr": 1.35,
     "cooldown_bars": 2,
     "session_mode": "all",
-    "max_daily_losses": 2,
+    "max_daily_losses": 1,
     "protect_after_r": 1.0,
     "stop_atr": 2.5,
     "buy_stop_atr": 2.5,
@@ -82,12 +82,12 @@ class SelectedStrategyTests(unittest.TestCase):
         cache = SelectedBarCache()
         cache.append(bars())
         self.assertEqual(asdict(cache.rules), EXPECTED_RULES)
-        self.assertEqual(CANDIDATE_ID, "26b8bcd69e043653")
+        self.assertEqual(CANDIDATE_ID, "7fe09f7246068bc9")
         self.assertEqual(
             hashlib.sha256(json.dumps(asdict(cache.rules), sort_keys=True).encode()).hexdigest()[
                 :16
             ],
-            "26b8bcd69e043653",
+            "7fe09f7246068bc9",
         )
 
     def test_both_signal_directions_match_frozen_research_seed(self):
@@ -205,7 +205,7 @@ class SelectedStrategyTests(unittest.TestCase):
         self.assertTrue(strategy.protects(-1))
         self.assertFalse(strategy.protects(0))
         self.assertEqual(
-            (strategy.magic, strategy.max_daily_losses, strategy.cooldown_bars), (MAGIC, 2, 2)
+            (strategy.magic, strategy.max_daily_losses, strategy.cooldown_bars), (MAGIC, 1, 2)
         )
 
     def test_native_rules_mutation_cannot_change_live_geometry(self):

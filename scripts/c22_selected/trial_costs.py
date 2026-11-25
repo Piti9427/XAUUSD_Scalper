@@ -28,7 +28,7 @@ def _bound(document):
             "sha256": hashlib.sha256(json.dumps(document, sort_keys=True, allow_nan=False).encode()).hexdigest()}
 
 
-def build_trial_policy(broker_bytes: bytes, *, now, sources: dict) -> dict:
+def build_trial_policy(broker_bytes: bytes, *, now, sources: dict, swap_tolerance_points=None) -> dict:
     """Bind a fresh flat Demo export and public schedule without zero fallback.
 
     Regular published swap is an operational assumption. Account swap entitlement
@@ -36,9 +36,17 @@ def build_trial_policy(broker_bytes: bytes, *, now, sources: dict) -> dict:
     cost-drift checks are retained; actual swap differences can block new entries.
     """
     try:
-        return _build_trial_policy(broker_bytes, now=now, sources=sources)
+        policy = _build_trial_policy(broker_bytes, now=now, sources=sources)
     except (KeyError, TypeError, AttributeError, OverflowError) as exc:
         raise ValueError("trial_cost_evidence_missing_or_malformed") from exc
+    if swap_tolerance_points is not None:
+        # Optional bounded swap band (see demo_runtime.costs.swap_band); validated, hash-bound
+        # by the review through the whole-policy hash. Omitted => exact-only, as before.
+        from scripts.demo_runtime.costs import swap_band
+        candidate = dict(policy, swap_tolerance_points=dict(swap_tolerance_points))
+        swap_band(candidate)
+        policy = candidate
+    return policy
 
 
 def _build_trial_policy(broker_bytes, *, now, sources):

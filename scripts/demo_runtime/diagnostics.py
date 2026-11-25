@@ -147,7 +147,7 @@ DETAIL_CODES = {
     "cost_evidence_hash_mismatch", "cost_evidence_source_missing", "cost_tariff_contract_invalid",
     "cost_spec_required_fields_missing", "cost_spec_stored_value_invalid", "cost_spec_read_failed",
     "cost_spec_mismatch", "cost_calendar_contract_invalid", "cost_calendar_rollover_invalid",
-    "cost_calendar_value_invalid", "cost_evidence_input_invalid",
+    "cost_calendar_value_invalid", "cost_evidence_input_invalid", "cost_swap_tolerance_invalid",
 }
 SPEC_FIELDS = {
     "trade_contract_size", "trade_tick_size", "point", "volume_min", "volume_max",

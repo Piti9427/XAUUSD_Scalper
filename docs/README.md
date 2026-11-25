@@ -1,3 +1,5 @@
+เอกสารปฏิบัติการล่าสุดของบอทที่รันอยู่: [`C22-OPERATIONS-PROCESS.md`](C22-OPERATIONS-PROCESS.md)
+
 # เอกสารที่ใช้กับบอทตอนนี้
 
 บอท Demo ที่รันอยู่คือ C22 + H4 EMA200. อ่านสี่ไฟล์นี้พอ.
@@ -17,6 +19,10 @@
 
 
 ## โครงสร้างและงานวิจัยล่าสุด
+
+- กฎสำหรับเอเจนต์ (ต้องอัปเดตเอกสาร process ทุกครั้งที่ทำอะไร): [`../AGENTS.md`](../AGENTS.md) และ [`../CLAUDE.md`](../CLAUDE.md)
+- งานวิจัย 24 พ.ย. 2026: [`research/2026-11-24/README.md`](research/2026-11-24/README.md)
+- งานวิจัย 25 พ.ย. 2026 (จุดเข้า/SL; คงกฎ 7fe0; ตัวกรอง ATR 1/3 เป็นตัวเลือก shadow): [`research/2026-11-25/README.md`](research/2026-11-25/README.md)
 
 - [Folder map / module interfaces](architecture/codebase-layout.md)
 - [Tests แยกตามงาน](../tests/README.md)

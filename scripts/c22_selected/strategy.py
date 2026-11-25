@@ -20,7 +20,7 @@ from scripts.strategy import pure_b1_bars
 from scripts.c22_selected.history import load_seed, merge_history, save_manifest
 
 ROOT = Path(__file__).resolve().parents[2]
-CANDIDATE_ID = "26b8bcd69e043653"
+CANDIDATE_ID = "7fe09f7246068bc9"  # 26b8 recipe + max_daily_losses=1 (F3)
 CONFIG_PATH = ROOT / "config/c22-selected-demo.json"
 SNAPSHOT = "RESEARCH-C22-SELECTED-20261025-26B8"
 MAGIC = 22261025
@@ -31,13 +31,13 @@ CONTRACT = {
     "stop_atr": 2.5, "buy_stop_atr": 2.5, "buy_target_rr": 3.0,
     "sell_target": "r1.35", "protect_mode": "break_even",
     "buy_protect_mode": "break_even", "daily_loss_limit": 0.1,
-    "max_daily_losses": 2, "cooldown_bars": 2, "entry_session": "all",
+    "max_daily_losses": 1, "cooldown_bars": 2, "entry_session": "all",
     "risk_mode": "static", "risk_cap": 0.1,
+    # F2 (research loss-reduce-20261124): skip a NEW entry unless the signal close is
+    # at least this many M15 ATR14 on the trade side of the closed-H4 EMA200.
+    # Not a Rules field, so it never changes the recipe geometry or exits.
+    "min_macro_distance_atr": 10.0,
 }
-# Optional runtime management under the native contract. Observe-only records when a BUY
-# position first reaches the 1R BE trigger on a fresh intrabar quote; it never changes SL/TP.
-MANAGEMENT_ALLOWED = ({"buy_intrabar_be": "observe"},)
-INTRABAR_QUOTE_MAX_AGE_MS = 5000
 SOURCE_PATHS = (
     "scripts/research/reward156_search.py",
     "scripts/research/reward156_tuning.py",
@@ -83,9 +83,6 @@ def verify_sources(config: dict, *, root: Path = ROOT) -> None:
         or config.get("volume") != 0.01
         or config.get("real_money") != "PROHIBITED"
     ):
-        raise ValueError("source_drift")
-    if "management" in config and config["management"] not in MANAGEMENT_ALLOWED:
-        # Native 26b8 may only observe the BUY intrabar BE trigger; acting needs its own contract.
         raise ValueError("source_drift")
     hashes = config.get("source_hashes")
     if not isinstance(hashes, dict) or set(hashes) != set(SOURCE_PATHS):
@@ -144,10 +141,37 @@ class SelectedBarCache:
         if _rules_id(self.rules) != CANDIDATE_ID:
             raise ValueError("selected_rules_drift")
         self.frame["macro_ema"] = closed_h4_ema(bars, 200)
+        apply_macro_distance_gate(self.frame, CONTRACT["min_macro_distance_atr"])
         self.row = self.frame.iloc[-1]
         if pd.isna(self.row.macro_ema):
             raise ValueError(self.unavailable_reason())
         return self.row
+
+
+def apply_macro_distance_gate(frame, minimum):
+    """F2 entry-only gate on the causal signal row; never touches open positions.
+
+    distance = direction * (close - closed H4 EMA200) / M15 ATR14, identical to the
+    research ``h4dist``. A macro-admitted candidate always has distance > 0, so this
+    equals abs(close - EMA) / ATR. Unknown distance fails closed.
+    """
+    if not isinstance(minimum, float) or not minimum > 0:
+        raise ValueError("selected_rules_drift")
+    candidate = frame.direction != 0
+    distance = frame.direction * (frame.close - frame.macro_ema) / frame.atr
+    frame["macro_distance_atr"] = distance.where(candidate)
+    blocked = candidate & ~(distance >= minimum)
+    frame["macro_distance_blocked"] = blocked
+    frame.loc[blocked, "direction"] = 0
+    return frame
+
+
+def entry_wait_reason(row):
+    if bool(row.macro_blocked):
+        return "macro_gate"
+    if bool(row.get("macro_distance_blocked", False)):
+        return "macro_distance_too_small"
+    return "no_signal"
 
 
 def decide(cache, bid, ask, spec, costs, equity):
@@ -157,7 +181,7 @@ def decide(cache, bid, ask, spec, costs, equity):
     if cache.rules is None or _rules_id(cache.rules) != CANDIDATE_ID:
         return "selected_rules_drift"
     if int(cache.row.direction) == 0:
-        return "macro_gate" if bool(cache.row.macro_blocked) else "no_signal"
+        return entry_wait_reason(cache.row)
     return prepare_entry(
         cache.row, bid, ask, spec, cache.rules,
         Costs(slippage=costs["slippage_allowance_price"], commission_per_lot=costs["commission_per_lot"]),
@@ -172,10 +196,9 @@ class SelectedStrategy:
     allowed_sides = (-1, 1)
     daily_loss_limit = 0.1
     risk_cap = 0.1
-    max_daily_losses = 2
+    max_daily_losses = CONTRACT["max_daily_losses"]
     cooldown_bars = 2
     no_signal_reason = "no_signal"
-    intrabar_quote_max_age_ms = INTRABAR_QUOTE_MAX_AGE_MS
 
     def __init__(self, config, *, cache_path=None, fingerprint=None):
         self.config = config
@@ -230,7 +253,7 @@ class SelectedStrategy:
         row = self.cache.row
         if row is None or self.cache.frame is None:
             raise ValueError("macro_warmup_insufficient")
-        self.no_signal_reason = "macro_gate" if bool(row.macro_blocked) else "no_signal"
+        self.no_signal_reason = entry_wait_reason(row)
         return self.cache.frame
 
     def checkpoint(self, *, now):
@@ -272,15 +295,6 @@ class SelectedStrategy:
     def protects(self, direction):
         return direction in self.allowed_sides
 
-    def intrabar_protect(self, direction):
-        """Return the intrabar BE mode for this side, or None. BUY only; SELL keeps bar-close BE."""
-        if self.source_error or direction != 1:
-            return None
-        management = self.config.get("management")
-        if management not in MANAGEMENT_ALLOWED:
-            return None
-        return management["buy_intrabar_be"]
-
     def diagnostics(self):
         row = self.cache.row
         bars = self.cache.bars
@@ -289,6 +303,9 @@ class SelectedStrategy:
         return {
             "candidate_id": CANDIDATE_ID,
             "macro_ema": float(row.macro_ema) if row is not None and row.notna()["macro_ema"] else None,
+            "min_macro_distance_atr": CONTRACT["min_macro_distance_atr"],
+            "macro_distance_atr": (float(row.macro_distance_atr) if row is not None
+                                   and "macro_distance_atr" in row and row.notna()["macro_distance_atr"] else None),
             "cache_bars": len(bars),
             "history_seed_status": self.history_seed_status,
             **self.cache.h4_status,
@@ -304,8 +321,8 @@ class SelectedStrategy:
             "macro_ema": float(row.macro_ema), "atr": float(row.atr),
             "prior_low": None if buy else float(row.ll),
             "why": (
-                "Selected26b8: RSI7 crosses30 / EMA50 / closed H4 EMA200; BUY SL2.5ATR TP3R BE1R"
+                "Selected26b8 F2: RSI7 crosses30 / EMA50 / closed H4 EMA200 >=10ATR; BUY SL2.5ATR TP3R BE1R"
                 if buy else
-                "Selected26b8: prior48-bar breakout / EMA50 / closed H4 EMA200; SELL SL2.5ATR TP1.35R BE1R"
+                "Selected26b8 F2: prior48-bar breakout / EMA50 / closed H4 EMA200 >=10ATR; SELL SL2.5ATR TP1.35R BE1R"
             ),
         }

@@ -203,8 +203,26 @@ def install_execution_review(runner, path, *, now):
 
     An owned active/UNKNOWN position still gets the shared reconciler on restart
     when the review was revoked, corrupted or expired. New entries remain blocked.
+    A flat account with an invalid review now also starts (BLOCKED, no entries) instead
+    of exiting, so it is never restart-looped; admissions re-check the review each cycle.
     """
     review = ExecutionReview(path)
     if runner.journal.get("active") is None:
-        review.check(runner, now)
+        try:
+            review.check(runner, now)
+        except ValueError as error:
+            # Reliability fix: an invalid/expired/missing review on a FLAT account must
+            # not crash the process (systemd would reopen an MT5 session every restart,
+            # forever). Stay up BLOCKED: ReviewedAdmission re-checks the review on every
+            # cycle (new entries refused, owned-position protection untouched) and an
+            # installed renewed review is accepted in-process once it validates.
+            if str(error) != "selected_execution_review_invalid":
+                raise
+            diagnostics = dict(review.last_diagnostics)
+            runner.journal.audit(
+                "EXECUTION_REVIEW_STARTUP_BLOCKED",
+                code=diagnostics.get("code"), policy_due=diagnostics.get("policy_due"),
+                requires_operator=True, entries_blocked=True,
+                resume_condition="restore_valid_source_bound_owner_review",
+            )
     runner._admission = ReviewedAdmission(runner, review)

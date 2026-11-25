@@ -12,6 +12,111 @@ _SPEC_DIAGNOSTIC_FIELDS = frozenset({
 })
 
 
+# Bounded swap-rate tolerance (optional policy field ``swap_tolerance_points``).
+# Only swap_long / swap_short may drift; every other spec field stays exact. Swap is a
+# holding cost that is NOT part of the entry risk/SL math (risk uses slippage + commission),
+# so these caps only bound a few cents per 0.01 lot per rollover night.
+#
+# SWAP-WARN (owner-approved rule change 2026-11-24, owner message t166u): a broker swap_long /
+# swap_short RATE that differs from the stored policy value no longer refuses the policy.
+# It is classified (MATCH / WITHIN_BAND / DRIFT_WARN) by swap_observation() and journaled
+# by the runner as a warning. A swap value that is missing, non-numeric or non-finite is
+# still a fail-closed cost_spec_mismatch (unreadable broker data, not drift). swap_mode,
+# swap_rollover3days and every other spec field stay exact; the band itself is still
+# validated (malformed/oversized => cost_swap_tolerance_invalid).
+SWAP_BAND_FIELDS = ("swap_long", "swap_short")
+MAX_SWAP_ADVERSE_POINTS = 15.0     # observed rate WORSE (lower) than stored
+MAX_SWAP_FAVOURABLE_POINTS = 30.0  # observed rate BETTER (higher) than stored
+MAX_SWAP_RELATIVE = 0.10           # and never more than 10% of |stored rate|
+
+
+def _finite_float(value):
+    return type(value) is float and math.isfinite(value)
+
+
+def swap_band(raw):
+    """Validated (adverse, favourable) point bounds, or None when the policy is exact-only.
+
+    Raises ValueError for any malformed/oversized band so a bad policy fails closed.
+    """
+    band = raw.get("swap_tolerance_points")
+    if band is None:
+        return None
+    if (not isinstance(band, dict) or set(band) != {"adverse", "favourable"}
+            or not all(_finite_float(v) and v >= 0 for v in band.values())
+            or band["adverse"] > MAX_SWAP_ADVERSE_POINTS
+            or band["favourable"] > MAX_SWAP_FAVOURABLE_POINTS):
+        raise ValueError("cost_swap_tolerance_invalid")
+    return band["adverse"], band["favourable"]
+
+
+def swap_within_band(stored, observed, band):
+    """Exact match, or inside the bounded band with the same sign (no regime flip)."""
+    if observed == stored:
+        return True
+    if band is None or isinstance(observed, bool) or not isinstance(observed, (int, float)):
+        return False
+    if not (math.isfinite(stored) and math.isfinite(observed)) or stored == 0 or stored * observed <= 0:
+        return False
+    adverse, favourable = band
+    delta = observed - stored
+    cap = MAX_SWAP_RELATIVE * abs(stored)
+    return -delta <= min(adverse, cap) if delta < 0 else delta <= min(favourable, cap)
+
+
+def _swap_slack_points(stored, band):
+    """(adverse, favourable) point slack actually granted for a stored non-zero swap rate."""
+    if band is None or stored == 0:
+        return 0.0, 0.0
+    cap = MAX_SWAP_RELATIVE * abs(stored)
+    return min(band[0], cap), min(band[1], cap)
+
+
+def _readable_swap(value):
+    """A broker swap rate the cost model can use: a finite int/float (bool excluded)."""
+    return (not isinstance(value, bool) and isinstance(value, (int, float))
+            and math.isfinite(value))
+
+
+def swap_observation(raw, spec):
+    """Classify the live broker swap rates against the stored policy. Never raises.
+
+    Returns None when there is no v2 stored spec or no live spec. Otherwise a compact
+    dict per field: stored, observed, delta_points (observed - stored) and state
+    MATCH | WITHIN_BAND | DRIFT_WARN | UNREADABLE, plus an overall ``state``
+    (worst of the fields). Pure: no I/O, no journal write, grants nothing.
+    """
+    try:
+        fields = raw["evidence"]["spec"]["document"]["fields"]
+        if spec is None:
+            return None
+        try:
+            band = swap_band(raw)
+        except ValueError:
+            band = None
+        out, rank = {}, {"MATCH": 0, "WITHIN_BAND": 1, "DRIFT_WARN": 2, "UNREADABLE": 3}
+        worst = "MATCH"
+        for key in SWAP_BAND_FIELDS:
+            stored = float(fields[key])
+            try:
+                observed = getattr(spec, key, None)
+            except Exception:
+                observed = None
+            if not _readable_swap(observed):
+                state, delta, shown = "UNREADABLE", None, _safe_spec_number(observed)
+            else:
+                shown, delta = observed, round(float(observed) - stored, 6)
+                state = ("MATCH" if observed == stored
+                         else "WITHIN_BAND" if swap_within_band(stored, observed, band)
+                         else "DRIFT_WARN")
+            out[key] = dict(stored=stored, observed=shown, delta_points=delta, state=state)
+            worst = state if rank[state] > rank[worst] else worst
+        out["state"] = worst
+        return out
+    except Exception:
+        return None
+
+
 class CostPolicyError(ValueError):
     """Keep the legacy refusal text while carrying safe explanatory facts."""
 
@@ -145,6 +250,10 @@ def validate_evidence(raw, *, spec=None, diagnostics=None):
             return _diagnose(diagnostics, stage, "cost_spec_required_fields_missing")
         if any(not math.isfinite(float(v)) for v in fields.values()):
             return _diagnose(diagnostics, stage, "cost_spec_stored_value_invalid")
+        try:
+            band = swap_band(raw)
+        except ValueError:
+            return _diagnose(diagnostics, stage, "cost_swap_tolerance_invalid")
         if spec is not None:
             for key, value in fields.items():
                 try:
@@ -162,6 +271,11 @@ def validate_evidence(raw, *, spec=None, diagnostics=None):
                     except Exception:
                         pass
                     raise
+                if key in SWAP_BAND_FIELDS and _readable_swap(observed):
+                    # SWAP-WARN: any readable broker swap rate is accepted here; drift
+                    # versus the stored value is reported by swap_observation(), never
+                    # refused. Unreadable values fall through to cost_spec_mismatch.
+                    continue
                 if observed != value:
                     facts = {"field": "UNRECOGNIZED_SPEC_FIELD"}
                     if key in _SPEC_DIAGNOSTIC_FIELDS:
@@ -189,10 +303,20 @@ def validate_evidence(raw, *, spec=None, diagnostics=None):
 
 
 def validate_observed_costs(cost, deals, *, magic, now):
-    """Closed ledgers must match dated swap evidence; no zero fallback."""
+    """Closed ledgers must match the tariff (commission/fee); no zero fallback.
+
+    SWAP-WARN: realised swap that differs from the dated swap schedule is no longer
+    cost_broker_deal_drift. It is returned as a list of warning records (one per
+    closed native position outside the old tolerance) for the caller to journal.
+    Commission/fee overcharge still raises cost_broker_deal_drift and a missing
+    calendar day still raises cost_swap_calendar_missing (fail closed).
+    """
+    warnings = []
     if cost["version"] != 2:
-        return
+        return warnings
     calendar = cost["evidence"]["swap_calendar"]["document"]["days"]
+    spec_fields = cost["evidence"]["spec"]["document"]["fields"]
+    band = swap_band(cost)
     if now.date().isoformat() not in calendar:
         raise ValueError("cost_swap_calendar_missing")
     reviewed = datetime.fromisoformat(cost["reviewed_utc"])
@@ -212,6 +336,9 @@ def validate_observed_costs(cost, deals, *, magic, now):
         entry = datetime.fromtimestamp(int(opened.time_msc) / 1000, now.tzinfo)
         exit_at = datetime.fromtimestamp(max(int(d.time_msc) for d in exits) / 1000, now.tzinfo)
         expected_swap = 0.0
+        slack_adverse = slack_favourable = 0.0
+        stored_rate = float(spec_fields["swap_long" if int(opened.type) == 0 else "swap_short"])
+        band_points = _swap_slack_points(stored_rate, band)
         day = entry.replace(hour=0, minute=0, second=0, microsecond=0)
         while day.date() <= exit_at.date():
             row = calendar.get(day.date().isoformat())
@@ -224,15 +351,28 @@ def validate_observed_costs(cost, deals, *, magic, now):
                     for d in ledger
                     if int(d.time_msc) <= rollover.timestamp() * 1000
                 )
-                expected_swap += float(row["buy" if int(opened.type) == 0 else "sell"]) * abs(held)
+                night = float(row["buy" if int(opened.type) == 0 else "sell"]) * abs(held)
+                expected_swap += night
+                if stored_rate != 0:
+                    # Bounded band: realised swap may differ from the stored schedule by at most
+                    # the granted points for this night (adverse = more cost than scheduled).
+                    slack_adverse += abs(night) * band_points[0] / abs(stored_rate)
+                    slack_favourable += abs(night) * band_points[1] / abs(stored_rate)
             day += timedelta(days=1)
         observed_swap = sum(float(d.swap) for d in ledger)
+        if not math.isfinite(observed_swap):
+            raise ValueError("cost_broker_deal_drift")
         charges = sum(max(0.0, -float(d.commission)) + max(0.0, -float(d.fee)) for d in ledger)
         if (
-            abs(observed_swap - expected_swap) > 0.02
-            or charges
+            charges
             > float(cost["commission_per_lot"])
             * sum(float(d.volume) for d in ledger if int(d.entry) == 0)
             + 0.00000001
         ):
             raise ValueError("cost_broker_deal_drift")
+        if not -(0.02 + slack_adverse) <= observed_swap - expected_swap <= 0.02 + slack_favourable:
+            warnings.append(dict(position_id=ident, expected_swap=round(expected_swap, 6),
+                                 observed_swap=round(observed_swap, 6),
+                                 delta=round(observed_swap - expected_swap, 6),
+                                 state="SWAP_LEDGER_DRIFT_WARN"))
+    return warnings

@@ -11,13 +11,55 @@ from pathlib import Path
 from typing import Any, Callable
 
 from scripts.demo_runtime.market_data import completed_m15_from_m1
-from scripts.demo_runtime.journal import Journal
+from scripts.demo_runtime.journal import Journal, is_busy_error
 from scripts.demo_runtime.broker import BrokerView
 
 from scripts.demo_runtime.admission import Admission
+from scripts.demo_runtime.costs import swap_observation
 from scripts.demo_runtime.lifecycle import Lifecycle
 from scripts.demo_runtime.status import entry_availability
 from scripts.demo_runtime.diagnostics import failure_record, fallback, public_reason
+
+
+class _RoutineWrite:
+    """Context for one routine per-cycle journal write (fix A, D8).
+
+    Lock contention only (SQLITE_BUSY/LOCKED, e.g. the daily backup's read lock):
+    roll back the half-open transaction, log to stderr and the cycle result, and
+    suppress so the next cycle retries. Any other exception propagates unchanged,
+    and so does contention if the rollback cannot be proven."""
+
+    def __init__(self, runner, result, now, label):
+        self.runner, self.result, self.now, self.label = runner, result, now, label
+        self.written = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc is None:
+            self.written = True
+            return False
+        if not is_busy_error(exc):
+            return False
+        runner = self.runner
+        try:
+            runner.journal.abandon_failed_write()
+        except Exception:
+            return False
+        record = failure_record(exc, stage="journal.routine." + self.label,
+            code="journal_busy_routine_write_skipped", now=self.now,
+            correlation_id=runner.journal.audit_context.get("correlation_id"))
+        # Set here, not in diagnostics.RESUME: diagnostics.py is a pinned strategy
+        # source (config source_hashes) and must stay byte-identical.
+        record.update(requires_operator=False,
+                      resume_condition="next_sender_cycle_retries_routine_journal_write")
+        runner._journal_busy = record
+        runner._deferred_busy_record = record
+        self.result.setdefault("operational_errors", []).append(record)
+        self.result.setdefault("journal_busy_skipped", []).append(self.label)
+        fallback(record)
+        return True
 
 
 class DemoRunner:
@@ -117,6 +159,12 @@ class DemoRunner:
             details=getattr(error, "diagnostics", None))
         record["classification"] = "FAULT"
         result.setdefault("operational_errors", []).append(record)
+        if getattr(self, "_journal_busy", None) is not None:
+            # The journal is already lock-contended this cycle: do not wait another
+            # busy_timeout for supplemental evidence. stderr keeps the record.
+            result.setdefault("journal_busy_skipped", []).append("operational_failure:" + stage)
+            fallback(record)
+            return record
         try:
             self.journal.audit("OPERATIONAL_FAILURE", diagnostic=record,
                                financial_status=result.get("status"))
@@ -137,6 +185,9 @@ class DemoRunner:
         self._baseline_diagnostics = {}
         self.journal.audit_context["correlation_id"] = uuid.uuid4().hex
         self._diagnostic_stage = "cycle.financial"
+        self._journal_busy = None
+        self._swap_observation = None
+        self._swap_ledger_warnings = None
         try:
             result = self._cycle(now)
         except Exception as exc:
@@ -144,6 +195,11 @@ class DemoRunner:
                 "failure": failure_record(exc, stage=self._diagnostic_stage,
                     now=now, correlation_id=self.journal.audit_context["correlation_id"],
                     details=getattr(exc, "diagnostics", None))}
+            if is_busy_error(exc):
+                # Financial handling is unchanged (BLOCKED, as before). Only remember
+                # the contention so routine writes below do not wait again.
+                self._journal_busy = result["failure"]
+                self._deferred_busy_record = result["failure"]
         if result.get("reason") in ("quote_stale", "quote_invalid", "quote_unknown", "quote_clock_invalid"):
             result.update(self.broker.quote_diagnostics)
         if result.get("reason") in (
@@ -166,6 +222,13 @@ class DemoRunner:
         result.update(
             snapshot=self.strategy.snapshot, execute=self.execute, captured_utc=now.isoformat()
         )
+        # SWAP-WARN: every cycle that read the broker spec carries the swap
+        # observation (stored vs broker rate). It is evidence only; it never
+        # changes status/reason and never blocks or grants an entry.
+        if self._swap_observation is not None:
+            result["swap_observation"] = self._swap_observation
+        if self._swap_ledger_warnings:
+            result["swap_ledger_warnings"] = self._swap_ledger_warnings
         try:
             result.update(self.strategy.diagnostics())
         except Exception as exc:
@@ -240,19 +303,52 @@ class DemoRunner:
             self.journal.put("protection_alerted", True)
         elif not critical:
             self.journal.put("protection_alerted", False)
+        # Fix A (D8): the writes below are routine per-cycle observations. A transient
+        # SQLITE_BUSY/LOCKED (e.g. the daily backup's read lock) skips them for this
+        # cycle and the next cycle retries; it no longer exits the process. Protection,
+        # CRITICAL alert, order/lifecycle/transition and safety writes above and inside
+        # the financial cycle keep their unchanged fail-closed behaviour.
         if result["status"] == "BLOCKED":
             block_key = now.date().isoformat() + "|" + str(result.get("reason"))
-            if self.journal.get("last_alert_block") != block_key:
-                self.journal.audit("BLOCKER", reason=result.get("reason"), result=result)
-                self.journal.put("last_alert_block", block_key)
-        self.journal.put("last_result", result)
-        self.journal.audit("CYCLE", result=result, equity=getattr(self.broker, "last_equity", None))
+            if (self.journal.get("last_alert_block") != block_key
+                    and not self._busy_skip(result, "blocker_alert")):
+                with _RoutineWrite(self, result, now, "blocker_alert"):
+                    self.journal.audit("BLOCKER", reason=result.get("reason"), result=result)
+                    self.journal.put("last_alert_block", block_key)
+        warn_key = self._swap_warn_key(result, now)
+        if (warn_key is not None and self.journal.get("last_swap_warn") != warn_key
+                and not self._busy_skip(result, "swap_warn")):
+            with _RoutineWrite(self, result, now, "swap_warn"):
+                self.journal.audit("SWAP_DRIFT_WARN",
+                                   swap_observation=result.get("swap_observation"),
+                                   swap_ledger_warnings=result.get("swap_ledger_warnings"))
+                self.journal.put("last_swap_warn", warn_key)
+        if not self._busy_skip(result, "last_result"):
+            with _RoutineWrite(self, result, now, "last_result"):
+                self.journal.put("last_result", result)
+        if not self._busy_skip(result, "cycle_audit"):
+            with _RoutineWrite(self, result, now, "cycle_audit"):
+                self.journal.audit("CYCLE", result=result,
+                                   equity=getattr(self.broker, "last_equity", None))
         last_health = self.journal.get("last_health_event")
-        if last_health is None or now - datetime.fromisoformat(last_health) >= timedelta(
+        if (last_health is None or now - datetime.fromisoformat(last_health) >= timedelta(
             seconds=60
-        ):
-            self.journal.audit("HEALTH", result=result)
-            self.journal.put("last_health_event", now.isoformat())
+        )) and not self._busy_skip(result, "health_audit"):
+            with _RoutineWrite(self, result, now, "health_audit"):
+                self.journal.audit("HEALTH", result=result)
+                self.journal.put("last_health_event", now.isoformat())
+        deferred = getattr(self, "_deferred_busy_record", None)
+        if deferred is not None and not self._busy_skip(result, "deferred_busy_audit"):
+            with _RoutineWrite(self, result, now, "deferred_busy_audit") as write:
+                self.journal.audit("OPERATIONAL_FAILURE", diagnostic=deferred,
+                                   financial_status="RECORDED_NEXT_CYCLE")
+            if write.written:
+                self._deferred_busy_record = None
+        if self._journal_busy is not None:
+            # At-least-once deliveries retry next cycle; do not wait on the lock again.
+            for key in ("health_delivery", "alerts", "notification"):
+                result[key] = "deferred_journal_busy"
+            return result
         if self.health_notify is not None:
             try:
                 self.journal.consume(
@@ -279,6 +375,28 @@ class DemoRunner:
             self.record_operational_failure(result, now=now, stage="delivery.lifecycle",
                 error=exc, code="notification_failed")
         return result
+
+    @staticmethod
+    def _swap_warn_key(result, now):
+        """Dedupe key for the SWAP_DRIFT_WARN audit: once per UTC day per distinct
+        broker swap reading / ledger warning set; None when nothing to warn."""
+        obs = result.get("swap_observation") or {}
+        ledger = result.get("swap_ledger_warnings") or []
+        if obs.get("state") not in ("DRIFT_WARN", "UNREADABLE") and not ledger:
+            return None
+        parts = [now.date().isoformat()]
+        for key in ("swap_long", "swap_short"):
+            item = obs.get(key) or {}
+            parts.append("%s:%s" % (key, item.get("observed")))
+        parts.extend(str(w.get("position_id")) for w in ledger)
+        return "|".join(parts)
+
+    def _busy_skip(self, result, label):
+        """True (and noted) when this cycle already met journal lock contention."""
+        if self._journal_busy is None:
+            return False
+        result.setdefault("journal_busy_skipped", []).append(label)
+        return True
 
     def _cycle(self, now):
         # A complete owned exit can be read even when trading is disabled.
@@ -332,6 +450,7 @@ class DemoRunner:
                 account = self.broker.identity()
         self._diagnostic_stage = "broker.spec"
         info = self.broker._spec()
+        self._swap_observation = swap_observation(getattr(self, "policy", None), info)
         self.observe_broker_reads(account, positions, orders, deals, info, now)
         self._diagnostic_stage = "broker.quote"
         tick = self.broker._quote(self._send_clock(now))

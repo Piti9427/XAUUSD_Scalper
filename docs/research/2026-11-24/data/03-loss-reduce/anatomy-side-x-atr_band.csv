@@ -1,0 +1,7 @@
+side,atr_band,trades,losses,net
+BUY_rsi,low<20%,46,28,-29.84
+BUY_rsi,mid,142,79,666.34
+BUY_rsi,high>80%,60,40,370.7
+SELL_breakout,low<20%,17,5,118.88
+SELL_breakout,mid,128,57,731.53
+SELL_breakout,high>80%,56,36,-327.88

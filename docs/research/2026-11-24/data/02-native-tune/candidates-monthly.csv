@@ -1,0 +1,93 @@
+cand,window,month,net
+baseline,opt,2025-01,99.06
+baseline,opt,2025-02,115.33
+baseline,opt,2025-03,46.17
+baseline,opt,2025-04,60.36
+baseline,opt,2025-05,120.01
+baseline,opt,2025-06,25.56
+baseline,opt,2025-07,-41.94
+baseline,opt,2025-08,-84.48
+baseline,opt,2025-09,122.41
+baseline,opt,2025-10,241.33
+baseline,opt,2025-11,120.88
+baseline,opt,2025-12,68.09
+baseline,opt,2026-01,159.25
+baseline,opt,2026-02,6.62
+baseline,opt,2026-03,181.19
+baseline,opt,2026-04,-35.47
+baseline,opt,2026-05,-126.05
+baseline,opt,2026-06,318.1
+baseline,hold,2026-07,-49.63
+baseline,hold,2026-08,123.33
+baseline,hold,2026-09,-72.39
+baseline,hold,2026-10,134.08
+baseline,hold,2026-11,28.64
+C1 best plateau,opt,2025-01,93.58
+C1 best plateau,opt,2025-02,114.19
+C1 best plateau,opt,2025-03,7.32
+C1 best plateau,opt,2025-04,28.49
+C1 best plateau,opt,2025-05,139.2
+C1 best plateau,opt,2025-06,47.7
+C1 best plateau,opt,2025-07,-21.92
+C1 best plateau,opt,2025-08,-131.01
+C1 best plateau,opt,2025-09,128.67
+C1 best plateau,opt,2025-10,227.24
+C1 best plateau,opt,2025-11,30.92
+C1 best plateau,opt,2025-12,68.09
+C1 best plateau,opt,2026-01,224.27
+C1 best plateau,opt,2026-02,364.94
+C1 best plateau,opt,2026-03,343.75
+C1 best plateau,opt,2026-04,19.61
+C1 best plateau,opt,2026-05,-94.62
+C1 best plateau,opt,2026-06,279.31
+C1 best plateau,hold,2026-07,8.74
+C1 best plateau,hold,2026-08,33.13
+C1 best plateau,hold,2026-09,100.94
+C1 best plateau,hold,2026-10,59.75
+C1 best plateau,hold,2026-11,-48.55
+C2 best plateau with OPT win>=45%,opt,2025-01,91.77
+C2 best plateau with OPT win>=45%,opt,2025-02,91.21
+C2 best plateau with OPT win>=45%,opt,2025-03,123.39
+C2 best plateau with OPT win>=45%,opt,2025-04,85.72
+C2 best plateau with OPT win>=45%,opt,2025-05,-2.39
+C2 best plateau with OPT win>=45%,opt,2025-06,-14.44
+C2 best plateau with OPT win>=45%,opt,2025-07,-64.27
+C2 best plateau with OPT win>=45%,opt,2025-08,-13.62
+C2 best plateau with OPT win>=45%,opt,2025-09,89.43
+C2 best plateau with OPT win>=45%,opt,2025-10,63.07
+C2 best plateau with OPT win>=45%,opt,2025-11,195.31
+C2 best plateau with OPT win>=45%,opt,2025-12,43.24
+C2 best plateau with OPT win>=45%,opt,2026-01,157.42
+C2 best plateau with OPT win>=45%,opt,2026-02,100.05
+C2 best plateau with OPT win>=45%,opt,2026-03,381.42
+C2 best plateau with OPT win>=45%,opt,2026-04,74.73
+C2 best plateau with OPT win>=45%,opt,2026-05,-171.74
+C2 best plateau with OPT win>=45%,opt,2026-06,535.22
+C2 best plateau with OPT win>=45%,hold,2026-07,97.46
+C2 best plateau with OPT win>=45%,hold,2026-08,31.13
+C2 best plateau with OPT win>=45%,hold,2026-09,-195.48
+C2 best plateau with OPT win>=45%,hold,2026-10,94.81
+C2 best plateau with OPT win>=45%,hold,2026-11,147.04
+C3 best plateau with <=2 params changed,opt,2025-01,95.17
+C3 best plateau with <=2 params changed,opt,2025-02,115.83
+C3 best plateau with <=2 params changed,opt,2025-03,7.32
+C3 best plateau with <=2 params changed,opt,2025-04,48.45
+C3 best plateau with <=2 params changed,opt,2025-05,128.06
+C3 best plateau with <=2 params changed,opt,2025-06,53.46
+C3 best plateau with <=2 params changed,opt,2025-07,-13.09
+C3 best plateau with <=2 params changed,opt,2025-08,-130.17
+C3 best plateau with <=2 params changed,opt,2025-09,128.67
+C3 best plateau with <=2 params changed,opt,2025-10,274.8
+C3 best plateau with <=2 params changed,opt,2025-11,30.92
+C3 best plateau with <=2 params changed,opt,2025-12,68.09
+C3 best plateau with <=2 params changed,opt,2026-01,224.27
+C3 best plateau with <=2 params changed,opt,2026-02,220.47
+C3 best plateau with <=2 params changed,opt,2026-03,230.57
+C3 best plateau with <=2 params changed,opt,2026-04,1.91
+C3 best plateau with <=2 params changed,opt,2026-05,-104.2
+C3 best plateau with <=2 params changed,opt,2026-06,309.22
+C3 best plateau with <=2 params changed,hold,2026-07,9.43
+C3 best plateau with <=2 params changed,hold,2026-08,74.63
+C3 best plateau with <=2 params changed,hold,2026-09,72.86
+C3 best plateau with <=2 params changed,hold,2026-10,121.51
+C3 best plateau with <=2 params changed,hold,2026-11,-51.85

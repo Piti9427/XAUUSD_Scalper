@@ -1,0 +1,13 @@
+side,wd_ict,trades,losses,net
+BUY_rsi,0,40,20,271.69
+BUY_rsi,1,49,32,20.75
+BUY_rsi,2,48,27,141.25
+BUY_rsi,3,45,32,43.19
+BUY_rsi,4,52,30,225.39
+BUY_rsi,5,14,6,304.95
+SELL_breakout,0,34,16,-24.45
+SELL_breakout,1,36,16,138.75
+SELL_breakout,2,41,20,160.3
+SELL_breakout,3,45,24,-27.0
+SELL_breakout,4,41,20,248.21
+SELL_breakout,5,4,2,26.71

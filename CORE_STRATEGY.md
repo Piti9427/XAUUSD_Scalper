@@ -2062,3 +2062,14 @@ Phase 2 (acting) is staged, not active. It needs:
 
 Research evidence is COST_INCONCLUSIVE and in-sample on 2024-26. Real money remains PROHIBITED.
 No VM deployment is implied by this section.
+
+### 6.73 Selected26b8 F2+F3 live Demo contract (deployed 2026-11-24)
+
+The running Demo sender is release `selected-ff17a3a8c0890cb0`, deployed 2026-11-24 20:01 ICT. Contract `7fe09f7246068bc9` is the 26b8 recipe plus two entry gates. Real money remains PROHIBITED. The operations source of truth is `docs/C22-OPERATIONS-PROCESS.md`.
+
+- **F2:** `min_macro_distance_atr` is 10.0. A new entry is admitted only when `direction * (close - closed H4 EMA200) / M15 ATR14 >= 10`. Unknown distance fails closed (`macro_distance_too_small`). The gate does not manage or close an open position.
+- **F3:** `max_daily_losses` is 1 per UTC close day. Losses closed before this release started are not counted against it.
+- **Unchanged:** risk cap 0.1, daily loss limit 0.1, `cooldown_bars` 2, fixed 0.01 lot, SELL stop 2.5 ATR / target 1.35R, BUY stop 2.5 ATR / target 3R, break-even at 1R.
+- **Not in this release:** the observe-only BUY intrabar BE hook from section 6.66. Release `ff17` has no `intrabar_protect` path.
+- **Swap:** this release journals `SWAP_DRIFT_WARN` and does not block a new entry when broker `swap_long` / `swap_short` differ from the stored policy. Missing or non-finite swap still fails closed. The separate 5% `strategy.swap_band` edit was not part of this release.
+- **2026-11-25 decision:** keep this live contract. Skipping the top third of ATR is a shadow candidate only. It is not deployed.

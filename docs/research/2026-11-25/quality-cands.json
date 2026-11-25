@@ -1,0 +1,31 @@
+{
+ "top_singles": [
+  "B:ext20<=p50",
+  "SB:roc16<=p75",
+  "SB:rsi_dir<=p75",
+  "SB:h4dist<=p50",
+  "SB:atr_pct[0.0,0.67]",
+  "B:rng48<=p50",
+  "SB:h1+h4_aligned",
+  "B:no_london_07-13utc",
+  "B:no_wed",
+  "SB:h4_slope50>0",
+  "B:h4slope200>0",
+  "SB:h4_stack>0"
+ ],
+ "cand": [
+  "BASE",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50 + B:no_london_07-13utc",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50 + SB:h4_slope50>0",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50 + SB:h1+h4_aligned",
+  "SB:roc16<=p75 + SB:atr_pct[0.0,0.67] + B:rng48<=p50",
+  "SB:rsi_dir<=p75 + SB:h4dist<=p50 + B:h4slope200>0",
+  "SB:atr_pct[0.0,0.67] + SB:h4_slope50>0 + SB:h4_stack>0",
+  "B:ext20<=p50 + SB:h4dist<=p50",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50",
+  "SB:atr_pct[0.0,0.67] + SB:h1+h4_aligned + B:h4slope200>0",
+  "B:ext20<=p50 + SB:h4dist<=p50 + B:h4slope200>0",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50 + B:no_wed",
+  "SB:atr_pct[0.0,0.67] + B:rng48<=p50 + B:h4slope200>0"
+ ]
+}

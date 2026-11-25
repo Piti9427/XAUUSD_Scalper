@@ -1,0 +1,7 @@
+side,h4slope_band,trades,losses,net
+BUY_rsi,<=0,10,6,71.63
+BUY_rsi,0-1,92,56,440.06
+BUY_rsi,>1,125,70,612.0
+SELL_breakout,<=0,25,17,-184.09
+SELL_breakout,0-1,118,51,613.23
+SELL_breakout,>1,44,22,133.46

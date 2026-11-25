@@ -1,0 +1,9 @@
+side,session,trades,losses,net
+BUY_rsi,asia_00-07utc,56,34,-270.97
+BUY_rsi,late_21-24utc,19,8,178.55
+BUY_rsi,london_07-13utc,77,43,497.56
+BUY_rsi,ny_13-21utc,96,62,602.07
+SELL_breakout,asia_00-07utc,44,21,-0.17
+SELL_breakout,late_21-24utc,3,1,44.42
+SELL_breakout,london_07-13utc,60,25,499.8
+SELL_breakout,ny_13-21utc,94,51,-21.52

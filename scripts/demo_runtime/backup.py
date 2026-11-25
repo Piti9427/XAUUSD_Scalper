@@ -6,9 +6,23 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
+import time
 from tempfile import TemporaryDirectory
+
+BUSY_TIMEOUT_SECONDS = 60
+ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 20
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def verify(path):
@@ -22,22 +36,42 @@ def verify(path):
     return counts
 
 
-def backup(source, directory):
+def _copy_once(source, target):
+    # One backup step = one read transaction = a consistent snapshot. Page-limited
+    # steps are deliberately NOT used: SQLite restarts a stepped backup whenever any other
+    # connection (the live sender writes every cycle) modifies the source, so a stepped
+    # copy of a >1 GB journal would never finish. In rollback-journal mode the single step
+    # holds a read lock; the sender now waits up to 60 s for it (journal.BUSY_TIMEOUT_SECONDS).
+    with closing(sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True,
+                                 timeout=BUSY_TIMEOUT_SECONDS)) as conn:
+        conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_SECONDS * 1000}")
+        with closing(sqlite3.connect(target)) as dest:
+            conn.backup(dest)
+
+
+def backup(source, directory, *, attempts=ATTEMPTS, retry_delay=RETRY_DELAY_SECONDS, sleep=time.sleep):
     directory.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     target = directory / f"demo-{stamp}.sqlite3"
-    with closing(sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
-        with closing(sqlite3.connect(target)) as dest:
-            conn.backup(dest)
+    for attempt in range(1, attempts + 1):
+        try:
+            _copy_once(source, target)
+            break
+        except sqlite3.OperationalError:
+            # Transient busy/locked source: drop the partial copy, retry, never touch the source.
+            target.unlink(missing_ok=True)
+            if attempt == attempts:
+                raise
+            sleep(retry_delay)
     counts = verify(target)
-    with TemporaryDirectory() as temp:
+    with TemporaryDirectory(dir=directory) as temp:
         restored = Path(temp) / "restored.sqlite3"
-        restored.write_bytes(target.read_bytes())
+        shutil.copyfile(target, restored)
         if verify(restored) != counts:
             raise ValueError("backup_restore_mismatch")
     manifest = dict(
         file=target.name,
-        sha256=hashlib.sha256(target.read_bytes()).hexdigest(),
+        sha256=_sha256(target),
         tables=counts,
         restore_verified=True,
         captured_utc=stamp,

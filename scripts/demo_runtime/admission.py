@@ -69,7 +69,10 @@ class Admission:
         )
         if not cost:
             raise CostPolicyError("cost_policy_" + status, cost_diagnostics)
-        validate_observed_costs(cost, deals, magic=ctx.strategy.magic, now=now)
+        ledger_warnings = validate_observed_costs(cost, deals, magic=ctx.strategy.magic, now=now)
+        if ledger_warnings:
+            # SWAP-WARN: realised swap drift is journaled by the runner, never refused.
+            ctx._swap_ledger_warnings = list(ledger_warnings)
         if baseline - float(account.equity) >= baseline * ctx.strategy.daily_loss_limit:
             ctx.journal.put("last_bar", bar)
             raise ValueError("daily_loss_limit")

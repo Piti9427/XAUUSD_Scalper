@@ -19,6 +19,20 @@ def _cash(deal):
     return sum(float(getattr(deal, k)) for k in ("profit", "commission", "swap", "fee"))
 
 
+HELD_TICK_SOURCE = "reconstructed_held_boundary_from_broker_ticks"
+DAY_BASELINE_SOURCES = (
+    "captured_at_utc_boundary",
+    "reconstructed_flat_midnight_from_reconciled_history",
+    HELD_TICK_SOURCE,
+)
+# Broker tick at or before 00:00:00.000 UTC must be at most this old.
+BOUNDARY_TICK_MAX_AGE_MS = 60_000
+BOUNDARY_TICK_LOOKBACK_SECONDS = 120
+# Profit formula must reproduce the broker's own realized/floating profit.
+PROFIT_CHECK_TOLERANCE = 0.011
+RECONSTRUCT_RETRY_SECONDS = 60.0
+
+
 class BrokerView:
     def __init__(
         self, mt5, login, server, symbol, fingerprint, journal, *, restart_unknown_baseline=False
@@ -200,10 +214,7 @@ class BrokerView:
         if state and state["day"] == day:
             if state.get("account_fingerprint", self.fingerprint) != self.fingerprint or state.get(
                 "source"
-            ) not in (
-                "captured_at_utc_boundary",
-                "reconstructed_flat_midnight_from_reconciled_history",
-            ):
+            ) not in DAY_BASELINE_SOURCES:
                 raise ValueError("unproven_day_baseline")
             if not _finite(state["equity"], positive=True):
                 raise ValueError("invalid_day_baseline")
@@ -218,7 +229,16 @@ class BrokerView:
                         request_started=now, observed=getattr(self, "_boundary_observed", now))
                 boundary_proof = read_mark(self.journal, fingerprint=self.fingerprint, day=day)
             if boundary_proof is None:
-                raise ValueError("day_start_floating_unknown")
+                # Fail-closed broker-tick fallback; raises day_start_floating_unknown
+                # unless every consistency check passes.
+                baseline, evidence = self._reconstruct_held_boundary(
+                    account, positions, deals, midnight, day)
+                self.journal.put("day", {
+                    "day": day, "equity": baseline, "source": HELD_TICK_SOURCE,
+                    "account_fingerprint": self.fingerprint,
+                    "boundary_tick_time_msc": evidence["tick"]["time_msc"],
+                })
+                return baseline
             baseline = float(boundary_proof["equity"])
             source = "captured_at_utc_boundary"
         else:
@@ -240,6 +260,146 @@ class BrokerView:
             },
         )
         return baseline
+
+    def _reconstruct_held_boundary(self, account, positions, deals, midnight, day):
+        """Day-start equity when a position was held across 00:00 UTC but no
+        first-second account mark exists. Fail-closed: any gap or inconsistency
+        raises day_start_floating_unknown.
+
+        baseline = balance at boundary
+                   + sum(floating P/L of each held position valued at the broker's
+                         last tick at/before 00:00:00.000 UTC, close side:
+                         BUY at bid, SELL at ask)
+                   + sum(max(0, unrealized swap of each held position))
+
+        Conservatism: admission blocks when baseline - equity >= 10% * baseline,
+        so a HIGHER baseline triggers the daily stop EARLIER. Every ambiguous
+        term is therefore resolved upward, never downward:
+          * swap: the share accrued before 00:00 is unknown, so a negative swap
+            is ignored (adds 0 instead of a loss) and a positive swap is added in
+            full; both are >= the true pre-boundary accrual.
+          * close-side valuation equals the terminal's own equity definition;
+            no spread or tick is chosen in our favour.
+          * exit commission is excluded (not part of equity before the close).
+        """
+        retry = getattr(self, "_reconstruct_retry", None)
+        if retry and retry[0] == day and time.monotonic() < retry[1]:
+            raise ValueError("day_start_floating_unknown")
+        try:
+            baseline, evidence = self._held_boundary_value(account, positions, deals, midnight)
+        except ValueError as exc:
+            reason = str(exc)
+            self._reconstruct_retry = (day, time.monotonic() + RECONSTRUCT_RETRY_SECONDS)
+            if self.journal.get("held_boundary_reconstruct_last") != day + "|" + reason:
+                self.journal.audit("BOUNDARY_RECONSTRUCT_BLOCKED", day=day, reason=reason)
+                self.journal.put("held_boundary_reconstruct_last", day + "|" + reason)
+            raise ValueError("day_start_floating_unknown") from None
+        self.journal.audit("BOUNDARY_RECONSTRUCTED", day=day, source=HELD_TICK_SOURCE,
+                           baseline=baseline, evidence=evidence)
+        return baseline, evidence
+
+    def _held_boundary_value(self, account, positions, deals, midnight):
+        boundary = int(midnight.timestamp() * 1000)
+        if str(getattr(account, "currency", "")) != "USD":
+            raise ValueError("held_boundary_currency")
+        info = self._spec()
+        if str(getattr(info, "currency_profit", "")) != "USD":
+            raise ValueError("held_boundary_profit_currency")
+        contract = float(info.trade_contract_size)
+        balance_b = float(account.balance) - sum(
+            _cash(d) for d in deals if int(d.time_msc) >= boundary)
+        if not _finite(balance_b, positive=True):
+            raise ValueError("held_boundary_balance")
+        by_id: dict[int, list] = {}
+        for d in deals:
+            if int(d.type) in (0, 1):
+                by_id.setdefault(int(d.position_id), []).append(d)
+        live = {int(p.identifier): p for p in positions}
+        held = []
+        for ident, rows in by_id.items():
+            pre = [d for d in rows if int(d.time_msc) < boundary]
+            net = sum(float(d.volume) * (1 if int(d.type) == 0 else -1) for d in pre)
+            if abs(net) <= 1e-8:
+                continue
+            # Only a plain open held over midnight: one side, IN deals only,
+            # on this symbol. Partial closes/reversals before 00:00 -> unknown.
+            if (any(int(d.entry) != 0 for d in pre)
+                    or len({int(d.type) for d in pre}) != 1
+                    or any(str(d.symbol) != self.symbol for d in rows)):
+                raise ValueError("held_boundary_unsupported_position")
+            side = 1 if int(pre[0].type) == 0 else -1
+            volume = sum(float(d.volume) for d in pre)
+            open_price = sum(float(d.price) * float(d.volume) for d in pre) / volume
+            if not (_finite(volume, positive=True) and _finite(open_price, positive=True)):
+                raise ValueError("held_boundary_open_invalid")
+            post = [d for d in rows if int(d.time_msc) >= boundary]
+            if ident in live:
+                p = live[ident]
+                if post or abs(float(p.volume) - volume) > 1e-8 or abs(float(p.price_open) - open_price) > 1e-9:
+                    raise ValueError("held_boundary_live_mismatch")
+                expected = side * (float(p.price_current) - open_price) * volume * contract
+                if abs(float(p.profit) - expected) > PROFIT_CHECK_TOLERANCE:
+                    raise ValueError("held_boundary_profit_formula_mismatch")
+                swap = float(p.swap)
+            else:
+                exits = [d for d in post if int(d.entry) in (1, 3)]
+                if not exits or any(int(d.entry) not in (1, 3) or int(d.type) == int(pre[0].type) for d in post):
+                    raise ValueError("held_boundary_exit_mismatch")
+                if abs(sum(float(d.volume) for d in exits) - volume) > 1e-8:
+                    raise ValueError("held_boundary_exit_volume")
+                for d in exits:
+                    expected = side * (float(d.price) - open_price) * float(d.volume) * contract
+                    if abs(float(d.profit) - expected) > PROFIT_CHECK_TOLERANCE:
+                        raise ValueError("held_boundary_profit_formula_mismatch")
+                swap = sum(float(d.swap) for d in exits)
+            if not _finite(swap):
+                raise ValueError("held_boundary_swap_invalid")
+            held.append(dict(position_id=ident, side="BUY" if side == 1 else "SELL",
+                             volume=volume, open_price=open_price, swap_unrealized=swap,
+                             still_open=ident in live))
+        if not held:
+            raise ValueError("held_boundary_none")
+        ticks = self.mt5.copy_ticks_range(
+            self.symbol,
+            int(midnight.timestamp()) - BOUNDARY_TICK_LOOKBACK_SECONDS,
+            int(midnight.timestamp()) + 1,
+            self.mt5.COPY_TICKS_ALL,
+        )
+        if ticks is None or len(ticks) == 0:
+            raise ValueError("held_boundary_ticks_missing")
+        last = None
+        for t in ticks:
+            stamp = int(t["time_msc"])
+            bid, ask = float(t["bid"]), float(t["ask"])
+            if not (_finite(bid, positive=True) and _finite(ask, positive=True) and ask >= bid):
+                continue  # flag-only/invalid rows never supply a valuation
+            if stamp <= boundary and (last is None or stamp >= last[0]):
+                last = (stamp, bid, ask)
+        if last is None:
+            raise ValueError("held_boundary_ticks_missing")
+        stamp, bid, ask = last
+        if not (_finite(bid, positive=True) and _finite(ask, positive=True) and ask >= bid):
+            raise ValueError("held_boundary_tick_invalid")
+        if boundary - stamp > BOUNDARY_TICK_MAX_AGE_MS:
+            raise ValueError("held_boundary_tick_stale")
+        floating = 0.0
+        for h in held:
+            side = 1 if h["side"] == "BUY" else -1
+            price = bid if side == 1 else ask
+            h["boundary_price"] = price
+            h["floating"] = side * (price - h["open_price"]) * h["volume"] * contract
+            h["swap_added"] = max(0.0, h["swap_unrealized"])
+            floating += h["floating"] + h["swap_added"]
+        baseline = balance_b + floating
+        if not _finite(baseline, positive=True):
+            raise ValueError("held_boundary_baseline_invalid")
+        evidence = dict(
+            boundary_utc=midnight.isoformat(), balance_at_boundary=round(balance_b, 2),
+            contract_size=contract, tick=dict(time_msc=stamp, bid=bid, ask=ask,
+                                               age_ms=boundary - stamp),
+            positions=held, conservative_rules="swap=max(0,unrealized); close-side tick; higher baseline stops earlier",
+        )
+        return baseline, evidence
 
     def _quote(self, now):
         self.quote_diagnostics = {}

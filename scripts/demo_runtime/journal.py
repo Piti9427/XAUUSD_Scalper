@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 import sqlite3
 
+BUSY_TIMEOUT_SECONDS = 60
+
 
 def audit_value(value):
     """Lossless labels for invalid broker numerics; strict JSON remains readable."""
@@ -27,6 +29,27 @@ def audit_value(value):
     return repr(value)
 
 
+def is_busy_error(error):
+    """True only for SQLite lock contention (SQLITE_BUSY / SQLITE_LOCKED families).
+
+    Any other sqlite or I/O failure (full disk, I/O error, corruption, ...) is NOT
+    contention and keeps its existing fail-closed behaviour."""
+    if not isinstance(error, sqlite3.OperationalError):
+        return False
+    try:
+        code = getattr(error, "sqlite_errorcode", None)
+    except Exception:
+        code = None
+    if type(code) is int and code > 0:
+        return (code & 0xFF) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+    try:
+        text = str(error).lower()
+    except Exception:
+        return False
+    return text in ("database is locked", "database table is locked") or text.startswith(
+        "database table is locked:")
+
+
 class Journal:
     def __init__(self, path: Path):
         if str(path) == ":memory:":
@@ -40,7 +63,16 @@ class Journal:
             self.guard.close()
             raise ValueError("another trial30 writer owns journal") from None
         self.audit_context = {}
-        self.conn = sqlite3.connect(path)
+        # Reliability fix: the default 5 s lock wait crashed the sender whenever the daily
+        # backup held a read lock longer (OperationalError: database is locked, 2026-11-05).
+        # Wait up to BUSY_TIMEOUT_SECONDS instead. WAL is NOT requested here: switching
+        # journal_mode is an explicit offline migration (see wal_migrate.py); if the file is
+        # already WAL the pragmas below simply keep it healthy.
+        self.conn = sqlite3.connect(path, timeout=BUSY_TIMEOUT_SECONDS)
+        self.conn.execute(f"PRAGMA busy_timeout={int(BUSY_TIMEOUT_SECONDS * 1000)}")
+        if self.conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal":
+            self.conn.execute("PRAGMA wal_autocheckpoint=1000")
+            self.conn.execute("PRAGMA journal_size_limit=134217728")
         self.conn.executescript("""
             PRAGMA synchronous=FULL;
             CREATE TABLE IF NOT EXISTS audit_events (id INTEGER PRIMARY KEY, payload TEXT NOT NULL);
@@ -154,6 +186,12 @@ class Journal:
             notify(json.loads(raw))
             with self.conn:
                 self.conn.execute("UPDATE events SET sent=1 WHERE id=?", (ident,))
+
+    def abandon_failed_write(self):
+        """Release a half-open transaction left by a failed write (no-op otherwise)."""
+        conn = self.conn
+        if conn is not None and conn.in_transaction:
+            conn.rollback()
 
     def close(self):
         for name in ("conn", "guard"):

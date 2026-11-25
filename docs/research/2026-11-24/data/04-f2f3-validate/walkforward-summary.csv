@@ -1,0 +1,4 @@
+quarters,fixed10_net,fixed10_beats_base,fixed10_worse,fixed10_dd_lower,fixed10_meanDD,anch_net,anch_beats_base,anch_worse,anch_dd_lower,anch_meanDD,roll_net,roll_beats_base,roll_worse,roll_dd_lower,roll_meanDD,base_net,base_meanDD,label
+28,1429.78,21,7,26,62.16,1416.26,19,9,27,57.46,1531.13,20,8,27,58.72,842.37,100.9,2020Q1-2026Q4
+8,1763.38,6,2,7,80.62,1631.29,4,4,7,78.5,1704.03,6,2,7,78.66,1769.66,116.61,2025Q1-2026Q4
+20,-333.6,15,5,19,54.78,-215.03,15,5,20,49.04,-172.9,14,6,20,50.75,-927.29,94.62,2020Q1-2024Q4

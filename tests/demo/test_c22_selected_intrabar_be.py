@@ -1,4 +1,4 @@
-"""B2 slice 1: BUY intrabar break-even trigger, observe-only (no trading behaviour change)."""
+"""Release ff17 does not arm BUY intrabar break-even observation. Bar-close BE stays."""
 
 from datetime import timedelta
 import json
@@ -64,12 +64,11 @@ class SelectedIntrabarBeTests(unittest.TestCase):
         self.assertEqual(broker.order_send.call_count, sends)
         active = runner.journal.get("active")
         self.assertFalse(active.get("protection_active"))
-        self.assertEqual(active["intrabar_observed"]["source"], "intrabar")
-        self.assertEqual(self.kinds(runner), ["FILLED", "BE_TRIGGER_INTRABAR_OBSERVED"])
-        # Observed once per position; later fresh quotes add nothing.
+        self.assertNotIn("intrabar_observed", active)
+        self.assertNotIn("BE_TRIGGER_INTRABAR_OBSERVED", self.kinds(runner))
         self.intrabar(broker, 1, move=1)
         runner.cycle(now=broker.now)
-        self.assertEqual(self.kinds(runner).count("BE_TRIGGER_INTRABAR_OBSERVED"), 1)
+        self.assertNotIn("BE_TRIGGER_INTRABAR_OBSERVED", self.kinds(runner))
 
     def test_bar_close_be_still_moves_buy_after_observation(self):
         broker, runner = self.filled(1, "buy-then-bar")
@@ -78,7 +77,7 @@ class SelectedIntrabarBeTests(unittest.TestCase):
         broker.next_bar()
         moved = runner.cycle(now=broker.now)
         self.assertIn(moved["status"], ("BE_MOVED", "UNKNOWN"), moved)
-        self.assertIn("BE_TRIGGER_INTRABAR_OBSERVED", self.kinds(runner))
+        self.assertNotIn("BE_TRIGGER_INTRABAR_OBSERVED", self.kinds(runner))
 
     def test_sell_is_never_evaluated_intrabar(self):
         broker, runner = self.filled(-1, "sell-observe")
@@ -111,17 +110,14 @@ class SelectedIntrabarBeTests(unittest.TestCase):
         self.assertNotIn("intrabar_observed", runner.journal.get("active"))
         self.assertEqual(self.kinds(runner), ["FILLED"])
 
-    def test_act_mode_is_rejected_under_native_contract(self):
-        # Invalid management blocks new entries (source error) but never enables acting.
+    def test_management_key_does_not_arm_intrabar_acting(self):
+        # Release ff17 ignores a management key. It does not arm an intrabar BE path.
         broker = monday_broker(1)
         runner = self.runner(broker, "buy-act", management={"buy_intrabar_be": "act"})
-        self.assertEqual(runner.strategy.source_error, "source_drift")
-        self.assertIsNone(runner.strategy.intrabar_protect(1))
-        for bad in ({"buy_intrabar_be": "observe", "extra": 1}, {"buy_intrabar_be": "on"}, "observe"):
-            config = selected_config() | {"management": bad}
-            with self.assertRaises(ValueError):
-                from scripts.c22_selected.strategy import verify_sources
-                verify_sources(config)
+        self.assertIsNone(runner.strategy.source_error)
+        self.assertFalse(hasattr(runner.strategy, "intrabar_protect"))
+        from scripts.c22_selected.strategy import verify_sources
+        verify_sources(selected_config() | {"management": {"buy_intrabar_be": "act"}})
 
     def test_observation_survives_restart_without_duplicate(self):
         broker, runner = self.filled(1, "buy-restart")
@@ -132,7 +128,7 @@ class SelectedIntrabarBeTests(unittest.TestCase):
         resumed = self.runner(broker, "buy-restart", restart=True, policy=policy)
         self.intrabar(broker, 1, move=1)
         resumed.cycle(now=broker.now)
-        self.assertEqual(self.kinds(resumed).count("BE_TRIGGER_INTRABAR_OBSERVED"), 1)
+        self.assertEqual(self.kinds(resumed).count("BE_TRIGGER_INTRABAR_OBSERVED"), 0)
 
 
 if __name__ == "__main__":
