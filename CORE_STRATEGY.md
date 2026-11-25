@@ -2073,3 +2073,348 @@ The running Demo sender is release `selected-ff17a3a8c0890cb0`, deployed 2026-11
 - **Not in this release:** the observe-only BUY intrabar BE hook from section 6.66. Release `ff17` has no `intrabar_protect` path.
 - **Swap:** this release journals `SWAP_DRIFT_WARN` and does not block a new entry when broker `swap_long` / `swap_short` differ from the stored policy. Missing or non-finite swap still fails closed. The separate 5% `strategy.swap_band` edit was not part of this release.
 - **2026-11-25 decision:** keep this live contract. Skipping the top third of ATR is a shadow candidate only. It is not deployed.
+
+### 6.67 Selected26b8 availability fixes (2026-11-12)
+
+Root cause: `docs/reviews/2026-11-12-c22-availability-rootcause.md`. The live sender took 3 of 14 model
+signals from 2026-10-24 to 11-10. Owner decisions: **bot-only Demo account**, and a **swap tolerance band**
+instead of exact match.
+
+- **Swap band (owner decision):** `SelectedStrategy.swap_band = 0.05`. `validate_evidence` accepts live
+  `swap_long`/`swap_short` within 5% of the reviewed value. A stored zero must stay zero.
+  `swap_rollover3days` and every other spec field stay exact. `validate_observed_costs` tolerance becomes
+  max($0.02, 5% × expected swap). c22h4/trial30 stay exact. Motivation: Exness moved swap_long
+  −490.8 → −490.0 → −492.0 → −498.9 within 16 days, and each move blocked entries until a manual renewal.
+  The 168 h policy expiry is unchanged and still needs attended weekly renewal.
+- **Journal lock:** writer busy timeout raised from 5 s to 120 s. The daily verified backup holds a read lock
+  for about 32 s (journal_mode=delete), which crashed the sender at 21:50 UTC on 11-04/05.
+- **Startup with an invalid review while flat:** the CLI now stays alive with every admission gated by the
+  same review and journals `EXECUTION_REVIEW_STARTUP_INVALID`, instead of exiting. This replaces a systemd
+  crash loop (13,805 restarts on 11-05..11-10). `install_execution_review` keeps raising. An old review can
+  pass again only for an already-accepted digest.
+
+Unchanged: RulesID, entries/exits, fixed 0.01, the 10% cap, daily guards, cooldown and BE. Not addressed in
+code: the MT5 terminal reconnect loop (R2, ops) and the evidence_packet_context_mismatch noise. No VM
+deployment is implied.
+
+## Research addendum — C22 $200 profit preservation (2026-11-12)
+
+Owner requested offline implementation and bounded iterative rechecks of the
+[profit-preservation map](docs/wayfinder/c22-profit-preservation/map.md).
+Native reference remains RulesID `26b8bcd69e043653`; no Demo behavior changes.
+Each independent segment starts at $200; continuous evaluation starts at $200
+once and carries positions, equity peak, daily-loss/cooldown state and original
+entry swap accrual across boundaries. Only the final sample is liquidated.
+Signals for the continuous path are prepared once across the combined bar history.
+
+All cases retain fixed 0.01 lot, cost-inclusive 10% cap, native entries, daily
+10%/loss2 and cooldown. Two mechanisms are evaluated separately, never combined:
+BUY intrabar BE (1R, 5-second quote buckets) and suppression of new BUY entries
+after a realized loss earlier in the same UTC day. SELL management stays native;
+later SELL admissions may still change through position/equity path dependence.
+After primary failure and reconciled per-trade attribution, exactly one derived
+case per mechanism is allowed: BUY BE at 1.5R, or BUY suppression only after a
+realized BUY loss. Both derived catalogs are frozen before execution.
+
+Every segment must preserve native net profit and Max DD in both mandatory
+base+swap/stress+swap views, with some strict profit improvement. LOYO selection
+uses training segments only and falls back to native. The final fixed candidate
+must also preserve continuous net, DD, minimum equity and observed risk-cap
+rejection-span proxy. Raw numerical comparison tolerance is 1e-8.
+
+Costs remain COST_INCONCLUSIVE: archived POINTS swap assumptions long -567.4,
+short 0, point 0.001; UTC-midnight posting for preceding business day, Wednesday
+triple posted Thursday. These are not verified historical/current broker costs.
+Missing/unsupported swap metadata blocks execution. All history is already seen;
+no historical result authorizes runtime adoption or real-money use. Fresh shadow
+evidence and owner approval remain required. Research sources and input hashes,
+ledgers and source snapshots live under runs/c22-profit-preservation-200-2026-11-12/.
+
+Completed bounded campaign: both primary and both derived cases FAIL the declared
+improvement gate; LOYO retains native in every fold. No candidate adopted. See
+[the $200 verdict](docs/reviews/2026-11-12-c22-200-profit-preservation-verdict.md)
+for reconciled attribution, continuous-account losses and verification evidence.
+
+### Continued offline tuning authorization (2026-11-12)
+
+Owner subsequently requested continued tuning until the original performance
+gates pass. The initial campaign remains FAIL; its results and budgets are not
+rewritten. New blocks freeze parameters and source/input hashes prospectively.
+First continuation block tests BUY intrabar BE triggers 1.0/1.1/1.25/1.5R crossed
+with 1/15/30/60-second quote buckets (16 cases). Native entries, SELL management,
+fixed 0.01 lot, 10% cap, daily controls and swap-inclusive views remain intact.
+Reject a screened case as soon as any matched segment/view net falls or DD
+rises; all 14 cells must be checked before calling it a screen survivor. Equality
+without profit improvement rejects. Screening is not qualification: any survivor
+requires full original-catalog LOYO and continuous-account gates before a
+research pass. Later blocks require causal attribution and a new frozen protocol.
+No runtime activation, commit approval, real-money authorization or economic
+qualification follows from this continued offline search.
+
+The timing block rejected all 16 cases (12 regressions, four with no profit gain).
+Its single derived block limits added BUY intrabar BE to entry-time risk <=
+1.0/2.5/5.0 percent of equity (one tenth/quarter/half of the unchanged 10% cap),
+crossed with trigger/poll profiles (1R,5s) and (1.1R,60s). These six cases retain
+native bar-close BE for every position; the added headroom limit affects only the
+research intrabar trigger, never entry admission, sizing or SELL management.
+The rationale is to avoid premature exits and replacement losses while equity
+has little risk-cap headroom. Stored entry risk is causal, not a later outcome.
+
+Headroom screening rejected all six cases (four regressions, two with no profit
+gain). The next independent exit hypothesis preserves native bar-close BE
+activation and raises BUY protective SL to cover 25%/50%/100% of swap debit
+already accrued at that executable quote. It uses the original entry's swap
+calendar, never future holding charges or credits. Price arithmetic uses Decimal
+before tick-grid rounding; the existing executable-clearance check remains.
+An optional minimum accrued debit / initial risk can gate this adjustment in a
+separately frozen derived block. SELL, entries, lot, risk cap and daily controls
+remain native. This is offline research, not a change to the Demo BE contract.
+
+All three unrestricted swap-BE fractions regressed in a range-period cell.
+Their single derived cost-activation block crosses the same fractions with
+minimum known accrued debit of 0.1/0.25/0.5/1.0R (12 cases). The floor is tested
+at each native management quote using original risk, not final holding cost.
+Screens may reject but cannot qualify any candidate; the unchanged full-catalog
+LOYO and continuous gates still apply to any survivor.
+
+Engineering recheck supersedes the initial swap-BE and cost-floor screens:
+coverage must require strictly positive debit, never round below native BE, and
+fall back to native BE when the coverage price lacks executable clearance.
+Synthetic regressions reproduce both issues before fixes. The same frozen
+catalogs are rerun under swap-be-fixed/ and swap-cost-fixed/; superseded outputs
+remain preserved and cannot support an economic verdict.
+
+Corrected swap-BE and cost-floor blocks still produced no screen survivor.
+Next independent research block shortens BUY TP from native3R to existing Rules
+profiles 1.25/1.35/1.5/2R (four cases), without changing entry, SL, volume, cap,
+SELL target/protection or daily controls. Rationale: native BUY runs can reach2R
+then return to BE, while realized profit may preserve later cap headroom.
+Candidate target changes are research-only; native RulesID remains the control,
+and any adoption would require a distinct reviewed runtime contract.
+
+All four BUY-target cases regressed in 2026 base. A separate SELL-only target
+block tests existing Rules target_rr values 1.25/1.4/1.45/1.5/2/3R versus native
+1.35R. BUY target3R, both SLs and native bar-close BE remain unchanged. This
+block does not combine prior BUY/cost hypotheses. Target overrides are bound
+into carried candidate Rules and do not change admission risk or lot sizing.
+
+All six constant SELL targets regressed; SELL3R passed the first two trend cells
+but failed 2021 stress. Its single derived block applies SELL3R only when original
+admitted stop risk is >=$10/$15/$20 (three cases), an ex-ante fixed-lot volatility
+proxy. Below that floor the target stays native1.35R. BUY/native protection,
+entry eligibility, SL, sizing and cap stay unchanged. Conditional policy values
+are included in carry binding even though underlying base Rules stay native.
+
+All three conditional SELL3R cases regressed. The >=$20 case improved 2026 base
+net by $148.885 but raised DD by 0.5198 percentage points, so it did not pass.
+A newly declared joint mechanism couples SELL3R with bar-close BE0.5R inside
+the same >=$10/$15/$20 original-risk bands (three cases). Smaller SELL and every
+BUY remain native. This is a separate frozen block, not a silent combination or
+a relaxed DD gate. The conditional protection threshold is also bound into
+carry-state validation and uses original admitted risk only.
+
+The three coupled cases still regressed. Their derived block keeps SELL3R/BE0.5R
+but raises activation floors to original risk >=$25/$30/$40 (three cases),
+targeting higher volatility and leaving smaller trades native. Such trades still
+require enough actual equity to satisfy the unchanged 10% admission cap; this
+does not authorize larger lots, new risk or extra capital.
+
+Full original-catalog confirmation selected the >=$25 SELL3R/BE0.5R profile in
+all seven LOYO folds, but its continuous account worsened (base final $15.66
+versus native $17.301; stress minimum/final also slightly lower), so verdict FAIL.
+The >=$30/$40 profiles preserved continuous paths but improved only 2026 base;
+they are not promoted by discarding the selected profile or rewriting selection.
+
+Owner then explicitly selected broader C22 entry-parameter research. A new block
+tests RSI threshold25/35 and SELL Donchian lookback24/96 individually against
+native RSI7-cross30/48-bar SELL. Existing native entry family, EMA/H4 filters,
+all exits, fixed0.01, cap10%, daily10%/loss2 and cooldown stay intact. Only those
+two entry keys may be overridden; risk/exit overrides are rejected. Independent
+and continuous frames are prepared from the candidate recipe; continuous
+indicators do not reset at segment boundaries. Entry recipe IDs are recorded
+separately from the native exit/risk RulesID; no runtime contract is changed.
+
+All four single entry neighbors regressed in 2026 base. Their derived block
+tests the full RSI threshold25/30/35 x Donchian24/48/96 grid (native30/48 plus
+eight alternatives), including previously regressing singles in the original
+catalog. Missing native fills are attributed to changed/suppressed signals or
+actual admission events, separately from replacement-trade effects. Every exit,
+cost view and risk control remains native; full-catalog LOYO cannot prune known
+held-out losers before selection.
+
+The eight-alternative entry grid produced no survivor. A new one-factor block
+tests RSI period14/21 versus native7 while retaining threshold30, SELL48 and
+all native filters/exits/risk controls. Entry recipe IDs are now part of account
+carry binding, so switching prepared entry rules between chunks fails closed.
+The entry override whitelist permits only period/threshold/SELL-lookback keys;
+it cannot change financial risk or exit keys.
+
+RSI14/21 alone regressed 2026 base net despite lower DD (RSI14: -$13.524 net,
+-15.554 DD percentage points). Their derived block explicitly crosses RSI
+period7/14/21 with native exit or SELL3R/BE0.5R at risk floors25/30/40 (12 profiles
+including native). This tests signal/reward interactions rather than silently
+stacking improvements. The full original grid, including failed single profiles,
+must remain available to training-only LOYO if any screen survivor appears.
+
+The joint RSI/exit grid produced no new survivor beyond the already-confirmed
+RSI7 exit profiles; those are not relabelled as a new qualification. A separate
+entry-filter block tests BUY M15 EMA off, SELL M15 EMA off and SELL M15 EMA200
+(three single-factor cases) versus native M15 EMA50. H4 EMA200 remains mandatory,
+as do native RSI7-cross30, SELL48, exits and risk. Only M15 side-filter keys are
+added to the validated entry whitelist; macro-span overrides remain blocked.
+
+Benchmark-integrity guards now require catalog.native={} and the exact historical
+26b8 signal recipe at freeze/evaluation, independently of exit/risk RulesID.
+This prevents accidental benchmark redefinition. Existing valid cohorts already
+used an empty native spec and that pinned recipe; their outputs remain preserved.
+
+All three M15 EMA single-factor cases regressed in 2026 base. Their derived
+block tests the full BUY EMA0/50 x SELL EMA0/50/200 grid (native plus five
+alternatives), retaining the single-factor cases. H4 EMA200 and every native
+exit/risk field remain fixed.
+
+The five-alternative M15 EMA grid also regressed. A separate smoothing block
+tests RSI period7/14/21 x threshold25/30/35 (native plus eight alternatives),
+keeping SELL48, both M15 EMA50 filters, H4 EMA200 and every native exit/risk
+control. The hypothesis is that slower RSI needs a different crossing level to
+retain trend opportunities, not a new entry family or relaxed acceptance gate.
+
+All eight RSI smoothing alternatives regressed. A separate entry-admission block
+tests the existing avoid_rollover preset (suppress completed signal closes UTC
+21:00..23:59, retain all management bars) and native-engine body_dominant,
+close_extreme and prior_day guards (four cases). H4 EMA200, SL/TP/BE and every
+financial risk control stay native. The prior-day guard uses the preceding UTC
+calendar day's available completed bars; no future day data or outcome mask.
+
+All four admission cases regressed. The next closed entry grid prospectively
+enumerates RSI period7/14/21 x threshold25/30/35 x Donchian24/48/96 x BUY M15
+EMA0/50 x SELL M15 EMA0/50/200 x session all/avoid_rollover: 324 profiles including
+native. H4 EMA200 and all native exits/financial controls stay fixed. Every
+combination remains in the original catalog for any later train-only LOYO;
+screening can reject but cannot qualify. Source/config drift is checked before
+each candidate, and the process stops rather than mixing source cohorts.
+
+Closed static-entry screening completed all324profiles (323 alternatives): no
+profile dominated native under all matched-cell gates. A previously pending BUY
+target derived block uses TP2R only when original risk/equity >=5/7.5/9 percent,
+retaining native3R below that floor. It leaves SL, entries and financial cap fixed;
+the requested conditional policy joins carry binding.
+
+Owner separately and explicitly selected side-specific SL1.5/2ATR research while
+retaining fixed0.01 and cap10%. Four single-factor cases change BUY or SELL width
+only. Width is a declared strategy setting before admission, not a clamp after
+risk rejection; target R ratios remain native so price targets scale with width.
+Other-side effective stop width is preserved, including the implicit BUY fallback.
+No width below1.5ATR or above native2.5ATR is accepted by this adapter. No live
+strategy, capital top-up or risk-cap increase is authorized.
+
+Conditional BUY TP screening failed all three floors. The four side-specific SL
+profiles also failed; BUY2ATR gained $6.0082 in 2026 base but DD rose1.28256pp.
+SELL1.5ATR admitted more trades yet retained trade net fell$582.391. Smaller SL
+also shortens price target at fixed R. One derived geometry block prospectively
+crosses BUY SL1.5/2/2.5ATR x SELL SL1.5/2/2.5ATR x SELL target1.35/2/3R x
+SELL bar BE0.5/1R (54 profiles including native). BUY target3R and native BUY BE
+remain unchanged; protection uses the existing replay bar timing. Every stop is
+declared before admission. Fixed0.01, cost-inclusive10% cap and all acceptance
+rules remain fixed. This is research only, not authorization for runtime changes.
+
+All53 alternatives in the derived stop geometry grid regressed; stop geometry
+family ends without qualification. The next prospectively closed intersection
+crosses the full324 existing entry recipes (RSI7/14/21 x threshold25/30/35 x
+Donchian24/48/96 x BUY EMA0/50 x SELL EMA0/50/200 x all/avoid_rollover) with
+native SELL exits or conditional SELL3R/BE0.5R at initial risk >=25/30/40USD.
+This yields1296profiles including native. Stops remain native2.5ATR, BUY TP3R
+and native BUY BE, H4 EMA200, daily10%/loss2, cooldown2, fixed0.01 and cap10%.
+Rationale: entry changes alter retained/removed/replacement trades, while earlier
+high-volatility exits changed which later signals passed the equity cap. Separate
+entry and exit screens cannot establish that the intersection behaves additively.
+All prior pure-entry configurations and all three conditional exit controls remain
+in this catalog; no historical loser is pruned. Original-catalog training-only
+LOYO and continuous-account gates remain required for any proposed research pass.
+
+Owner decision2026-11-13 explicitly authorizes research H4 EMA100 and H4 filter
+off, compared with native closed H4 EMA200. The1296-profile EMA200 interaction
+screen completed with only the three previously studied native-entry conditional
+exit survivors; no novel survivor. Its fixed all-seven winner is equivalent to
+the earlier25USD-floor profile that failed continuous acceptance. No new full
+LOYO qualification is claimed for that1296-profile catalog.
+The next single-factor block is native plus macro_span100/0 with native entries,
+exits and all financial controls otherwise fixed. Existing closed-H4 preparation
+implements EMA100; span0 removes H4 entry masking but preserves all management
+bars. Research entry override allowlist now includes this owner-authorized key;
+native reference remains pinned to span200. Synthetic tests verify unchanged
+risk/exit Rules, unchanged raw signals, and no future-bar influence on past output.
+Fixed0.01/cost-inclusive10% cap, $200 start and unchanged qualification gates apply.
+
+H4 single-factor screens failed: EMA100 gained$168.673 with DD-3.44350pp in2026
+base, but lost$270.6248 in2024b25stress; H4off lost$462.5888 in2026base.
+EMA100's2024b25stress retained trade delta is zero; removed native winners net
++$99.735, replacements net-$170.8898. One derived H4 factorial crosses H4 span
+200/100/0 x RSI period7/14/21 x threshold25/30/35 x Donchian24/48/96 x native
+SELL exits or conditional SELL3R/BE0.5R at initial risk>=25/30/40USD:324profiles
+including native. Both M15 EMA50 filters and sessionall remain fixed. Native
+H4200 comparator profiles and all three previous conditional controls are retained.
+All stops/existing BUY exits, financial controls and qualification rules unchanged.
+
+H4 derived324-profile screen completed: only the three prior EMA200/native-entry
+conditional-exit controls survived. No new H4 profile qualified. Owner separately
+approved virtual-native entry-veto research2026-11-13. This stateful pre-entry
+rule requires native26b8 to admit at the same current quote millisecond/direction;
+the candidate still independently checks actual equity, fixed0.01, cost-inclusive
+10% cap and all existing limits. It cannot force an entry or combine book equity.
+Each independent segment/view has a fresh native virtual $200 book. Continuous
+mode uses one native virtual $200 book per view with all state carried once,
+separately from the candidate's single continuous $200 book. No resets/top-ups.
+Only native admission timestamp/direction/reason enter the veto; future profits,
+exits, MFE/MAE or swap outcomes never enter lookup. Prefix-invariance tests mutate
+future ticks and verify unchanged prior decisions and candidate prefix behavior.
+The frozen primary catalog contains native, native-veto parity control, the three
+prior conditional SELL3R/BE0.5R risk-floor25/30/40 controls, and their veto versions
+(eight profiles). Ungated controls remain, with unchanged full-catalog train-only
+LOYO/native fallback and fixed all-seven selection. All native signals/exits/risks
+are retained except each declared conditional exit and the additional veto.
+Actual and virtual cap rejections are reported separately. Veto continuous cap-span
+metric is max(actual observed proxy,required virtual native proxy), preserving both
+event streams' ordering. Native-self equals its original proxy exactly; candidate
+metric cannot fall below its raw actual proxy, so this cannot relax the original
+continuous gate. A merged-stream ordering bug was caught/fixed by regression before
+any economics and is not part of this policy. This remains an observed-span proxy,
+not proof of continuous inability. Forward-shadow evidence remains required before
+adoption; runtime/VM/orders/deployment remain outside this research authorization.
+
+Virtual-native primary campaign outcome2026-11-13: RESEARCH_PASS under the frozen
+modeled-cost comparison gates. Selected sell3R_risk25.0_BE05_veto passes all14 fixed
+net/DD cells, full eight-profile train-only LOYO held-out policy, and both selected
+fixed continuous views. LOYO2020 selects ungated25USD; other six folds select veto25.
+Fixed strict net gains:2020base+$25.418,2020stress+$25.492,2026base+$55.677; all other
+matched net/DD cells do not regress. Continuousbase final$17.301->$42.719,
+DD94.34532%->85.71997%, minimum$16.946->$42.364; stressfinal$16.5888->$42.0808,
+DD94.45372%->85.68227%. Both continuous accounts still lose capital from$200.
+Effective observed cap spans remain native1193.333328/1123.999998days; raw actual
+cap rejects0 are not improved availability because virtual rejects2769/2808 remain.
+Native14cell parity and native-exit veto14+2ledger/DD/final parity passed. All112
+non-native trade attributions reconcile; veto entries are subsets of native, with
+same retained entry/SL/lot/riskUSD. Sixteen pinned-prefix validations passed with
+future bars/ticks removed, supporting causality at those tested prefixes. Full
+serial1683tests OK(skipped2), mypy3modules passed; peer findings resolved before
+qualification. Cost status remainsCOST_INCONCLUSIVE, all history has been seen,
+and fresh forward shadow plus separate owner adoption approval remain mandatory.
+No runtime/VM/order/deployment change. Economic protocol SHA256:
+bf52b24042cff762e6de712b4f052c4283b461b541c79d1c6820d2b5aa2ebb90.
+See docs/reviews/2026-11-13-c22-200-virtual-native-veto-verdict.md for evidence.
+
+## Research addendum — Selected26b8 entry filters (2026-11-20, issue 35)
+
+`scripts/research/c22_native_entry_comparison.py` implements an offline comparison
+against the source-verified native detector (`26b8bcd69e043653`). The four
+research profiles use a closed H4 ADX(14) floor of 20 or 25, alone or with a
+32-bar breakout in either direction. Each rejects a directional price extension
+of more than 1 ATR beyond the prior 48-bar extreme or more than 1.5 ATR beyond
+either M15 EMA20 or EMA50. The additional breakout requires the native H4
+EMA200 side and M15 EMA50 slope over four bars. ADX uses H4 intervals with
+16 complete M15 bars and is read only after the H4 close. Native exit rules,
+fixed 0.01 lot, daily stops, cooldown and the 10% cap apply to all four.
+
+The main-window selection was ADX25 plus the 32-bar breakout. It reached
+8/25 positive exit months in the 2022–24 stress window against a 15/25 target.
+Its status is research only. [Comparison, input cutoffs and validation](docs/reviews/2026-11-20-issue35-native-entry-optimization.md).

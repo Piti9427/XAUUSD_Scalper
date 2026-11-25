@@ -4,7 +4,7 @@
 
 - ที่อยู่หลักใน repo บน Mac: [`docs/C22-OPERATIONS-PROCESS.md`](C22-OPERATIONS-PROCESS.md) (`~/my-agents/XAUUSD_Scalper/docs/C22-OPERATIONS-PROCESS.md`)
 - สำเนาบน box: `/workspace/c22-trade-journal/docs-living/C22-OPERATIONS-PROCESS.md`
-- อัปเดตล่าสุด: 25 พ.ย. 2026 16:21 ICT (เจ้าของสั่ง commit ซอร์สที่ settle แล้ว และ push branch; สถานะ VM ตรวจล่าสุดช่วง 11:52–11:55 ICT / 04:52–04:55 UTC)
+- อัปเดตล่าสุด: 25 พ.ย. 2026 16:29 ICT (commit โน้ตวิจัย offline ใน `CORE_STRATEGY.md` ต่อจากสัญญา live 6.73; สถานะ VM ตรวจล่าสุดช่วง 11:52–11:55 ICT / 04:52–04:55 UTC)
 - สถานะ git: เจ้าของสั่งเมื่อ 25 พ.ย. 2026 16:21 ICT ให้ commit ซอร์สของ release `selected-ff17a3a8c0890cb0` (สัญญา `7fe09f7246068bc9`, F2+F3) เข้า branch `feature/smc-v2-hardening` แล้ว push ให้ตรงกับ origin งาน local ที่ไม่ได้อยู่ใน release นี้ (แถบสวอป 5%, timeout 120 วินาที, intrabar BE แบบสังเกต) ไม่ได้ถูกใส่ใน commit นั้น
 - **ห้ามใส่ค่าลับในไฟล์นี้** (รหัสผ่าน MT5, webhook URL/token, เนื้อหา private key, API key) ใส่ได้เฉพาะชื่อไฟล์ ชื่อตัวแปร และที่อยู่ของไฟล์ลับ
 - ตัวเลขทุกตัวมาจาก VM, journal, repo, ไฟล์บน box, memory หรือบทสนทนา หากยังตรวจไม่ได้จะเขียนว่า **ยังไม่ยืนยัน**
@@ -604,6 +604,7 @@ du -sh ~/c22-demo/state/c22-selected-execution.sqlite3 ~/c22-demo/backups/select
 | 25 พ.ย. 2026 14:29 | ต่อท้ายหัวข้อ 7.4 ด้วยผลการผสมแล้วจูน (t202u, 1536 ชุด, walk-forward + bootstrap): ไม่มีชุดไหนชนะกฎปัจจุบันอย่างมั่นคง คงกฎเดิม ไม่ได้เปลี่ยน live และไม่ได้ commit |
 | 25 พ.ย. 2026 15:16 | คัดลอกงานวิจัยเข้า repo ที่ `docs/research/2026-11-25/` และ `docs/research/2026-11-24/sell-tp-trail/` (ไม่รวมไฟล์ `.npy` / `.pkl`) เพิ่มกฎบังคับให้อัปเดตเอกสารนี้ทุกครั้งที่ทำอะไรไว้ใน `AGENTS.md` และ `CLAUDE.md` ใส่ลิงก์ใน `docs/README.md` ไม่ได้เปลี่ยน live และไม่ได้ commit |
 | 25 พ.ย. 2026 16:21 | เจ้าของสั่ง commit และทำให้ branch เป็นปัจจุบัน ซอร์สที่ commit คือ release `ff17` ที่รันอยู่ (สัญญา `7fe09f7246068bc9` = 26b8 + F2 + F3) ไม่ได้เปลี่ยน VM และไม่ได้ deploy รอบนี้ งาน local ที่ไม่ตรง release (แถบสวอป 5%, journal timeout 120 วินาที, intrabar BE แบบสังเกต) ไม่ได้เข้า commit |
+| 25 พ.ย. 2026 16:29 | commit โน้ตวิจัย offline ที่ค้างใน `CORE_STRATEGY.md` (availability 12 พ.ย., profit preservation, entry filters) ต่อท้ายหัวข้อ 6.73 สัญญา live ยังเป็น `7fe09f7246068bc9` โน้ตแถบสวอป 5% และ timeout 120 วินาทีไม่ใช่โค้ดใน release `ff17` ไม่ได้เปลี่ยน VM |
 
 ---
 
