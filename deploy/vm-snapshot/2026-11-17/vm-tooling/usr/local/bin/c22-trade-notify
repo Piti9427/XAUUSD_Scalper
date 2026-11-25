@@ -1,0 +1,1158 @@
+#!/usr/bin/env python3
+"""Follow c22-selected-execution journald and POST trade / health events.
+
+Trade events: FILLED (OPEN), CLOSED (CLOSE), rising edge of foreign_exposure
+(FOREIGN). Health: HEARTBEAT, PROBLEM / RECOVERED. Stdlib only. Never logs
+webhook URL or auth.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import select
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+UNIT = "c22-selected-execution"
+STATE_DIR = Path(os.environ.get("C22_NOTIFY_STATE_DIR", "/var/lib/c22-trade-notify"))
+STATE_PATH = STATE_DIR / "seen.json"
+CURSOR_PATH = STATE_DIR / "cursor"
+SOURCE = "c22-trade-notify"
+SEEN_CAP = 500
+OWNED_STATUSES = ("FILLED", "MANAGING", "BE_MOVED")
+HEALTHY_STATUSES = {"WAIT", "MANAGING", "FILLED", "CLOSED", "BE_MOVED"}
+HEADER_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9-]*$")
+
+ICT = timezone(timedelta(hours=7))
+UTC = timezone.utc
+
+CHECK_INTERVAL_SEC = 60
+HEARTBEAT_EVERY_SEC = 6 * 3600
+HEARTBEAT_START_DELAY_SEC = 60
+HEARTBEAT_START_MIN_AGE_SEC = 3600
+PROBLEM_RATE_SEC = 30 * 60
+SERVICE_DOWN_CHECKS = 2
+AP1_MISSING_SEC = 5 * 60
+JOURNAL_SILENT_SEC = 3 * 60
+BLOCK_DEFAULT_SEC = 10 * 60
+MACRO_OUTSIDE_SEC = 20 * 60
+
+MONITORED_UNITS = (
+    "c22-selected-execution",
+    "c22-selected-terminal",
+    "mt5-ap-watchdog.timer",
+    "mt5-ap-lock.service",
+)
+RESTART_UNITS = ("c22-selected-execution", "c22-selected-terminal")
+AP1_HOSTPORT = "52.221.81.217:443"
+WATCHDOG_LOG = Path("/home/ubuntu/c22-demo/state/mt5-ap-watchdog.log")
+WATCHDOG_DISABLED = Path("/home/ubuntu/c22-demo/state/mt5-ap-watchdog.DISABLED")
+
+ALWAYS_EXPECTED_REASONS = {"armed_trial_new_closed_m15_required"}
+SKIP_BLOCK_REASONS = {"foreign_exposure"}
+# quote_stale expected 04:45-06:15 ICT; macro 06:00-11:15 ICT.
+QUOTE_STALE_WINDOW = ((4, 45), (6, 15))
+MACRO_WINDOW = ((6, 0), (11, 15))
+
+
+def log(msg: str) -> None:
+    print(msg, flush=True)
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def utc_iso(dt: datetime | None = None) -> str:
+    if dt is None:
+        dt = utc_now()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "+00:00"
+
+
+def parse_iso(value) -> datetime | None:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt
+
+
+def in_ict_window(when: datetime, window: tuple[tuple[int, int], tuple[int, int]]) -> bool:
+    local = when.astimezone(ICT)
+    minutes = local.hour * 60 + local.minute
+    (sh, sm), (eh, em) = window
+    return (sh * 60 + sm) <= minutes <= (eh * 60 + em)
+
+
+def parse_auth(raw: str) -> tuple[str, str]:
+    raw = (raw or "").strip()
+    if ":" in raw:
+        name, value = raw.split(":", 1)
+        name, value = name.strip(), value.strip()
+        if HEADER_NAME_RE.match(name) and value:
+            return name, value
+    return "Authorization", raw
+
+
+def sanitize_detail(text: str, limit: int = 240) -> str:
+    text = " ".join((text or "").split())
+    text = re.sub(r"/tmp/xvfb-run\.[^\s]+", "/tmp/xvfb-run.*", text)
+    return text[:limit]
+
+
+def default_state() -> dict:
+    return {
+        "seen": [],
+        "last_ticket": None,
+        "foreign_active": False,
+        "pending": [],
+        "last_heartbeat_utc": None,
+        "problems": {},
+        "nrestarts": {},
+        "watchdog_log_size": None,
+        "watchdog_log_last": None,
+        "watchdog_disabled": False,
+        "service_fail_streak": {},
+        "ap1_missing_since": None,
+        "health_initialized": False,
+    }
+
+
+def load_state() -> dict:
+    base = default_state()
+    try:
+        data = json.loads(STATE_PATH.read_text())
+        if not isinstance(data, dict):
+            raise ValueError("state not an object")
+    except FileNotFoundError:
+        data = {}
+    except Exception as exc:
+        log(f"state_load_error type={type(exc).__name__}; starting fresh")
+        data = {}
+    for key, value in base.items():
+        data.setdefault(key, value)
+    if not isinstance(data["seen"], list):
+        data["seen"] = []
+    if not isinstance(data["pending"], list):
+        data["pending"] = []
+    if not isinstance(data["problems"], dict):
+        data["problems"] = {}
+    if not isinstance(data["nrestarts"], dict):
+        data["nrestarts"] = {}
+    if not isinstance(data["service_fail_streak"], dict):
+        data["service_fail_streak"] = {}
+    return data
+
+
+def save_state(state: dict) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    if len(state["seen"]) > SEEN_CAP:
+        state["seen"] = state["seen"][-SEEN_CAP:]
+    tmp = STATE_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state, separators=(",", ":")))
+    os.replace(tmp, STATE_PATH)
+
+
+def dedupe_key(event: str, ticket=None, utc=None, kind=None) -> str:
+    if event == "FOREIGN":
+        return f"FOREIGN:{utc or ''}"
+    if event in ("PROBLEM", "RECOVERED", "HEARTBEAT"):
+        return f"{event}:{kind or ''}:{utc or ''}"
+    if ticket is None or ticket == "":
+        return event
+    return f"{event}:{ticket}"
+
+
+def payload_key(payload: dict) -> str:
+    return dedupe_key(
+        payload.get("event"),
+        payload.get("ticket"),
+        payload.get("utc"),
+        payload.get("kind"),
+    )
+
+
+# ----- trade classify (unchanged rules) -----
+
+def classify(obj: dict, state: dict) -> dict | None:
+    """Return a trade payload dict or None. Updates last_ticket / foreign_active."""
+    status = obj.get("status")
+    reason = obj.get("reason")
+    ticket = obj.get("ticket")
+    utc = obj.get("captured_utc") or obj.get("account_read_observed_utc")
+
+    if status in OWNED_STATUSES and ticket is not None:
+        state["last_ticket"] = ticket
+
+    is_foreign = reason == "foreign_exposure"
+    if is_foreign and not state.get("foreign_active"):
+        state["foreign_active"] = True
+        return {"event": "FOREIGN", "ticket": ticket, "utc": utc, "source": SOURCE}
+    if not is_foreign and state.get("foreign_active"):
+        state["foreign_active"] = False
+
+    if status == "FILLED" and ticket is not None:
+        return {"event": "OPEN", "ticket": ticket, "utc": utc, "source": SOURCE}
+    if status == "CLOSED":
+        close_ticket = ticket if ticket is not None else state.get("last_ticket")
+        return {"event": "CLOSE", "ticket": close_ticket, "utc": utc, "source": SOURCE}
+    return None
+
+
+def post_payload(payload: dict) -> int | None:
+    url = os.environ.get("WEBHOOK_URL") or ""
+    auth = os.environ.get("WEBHOOK_AUTH") or ""
+    if not url or not auth:
+        log("post_skipped missing_env")
+        return None
+    header_name, header_value = parse_auth(auth)
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    last_status: int | None = None
+    for attempt in range(1, 4):
+        req = urllib.request.Request(url, data=body, method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header(header_name, header_value)
+        req.add_header("User-Agent", SOURCE)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                last_status = int(resp.getcode())
+                resp.read()
+                return last_status
+        except urllib.error.HTTPError as exc:
+            last_status = int(exc.code)
+            try:
+                exc.read()
+            except Exception:
+                pass
+            log(
+                f"http_error status={last_status} attempt={attempt} "
+                f"event={payload.get('event')} kind={payload.get('kind')} "
+                f"ticket={payload.get('ticket')}"
+            )
+        except Exception as exc:
+            log(
+                f"post_error type={type(exc).__name__} attempt={attempt} "
+                f"event={payload.get('event')} kind={payload.get('kind')} "
+                f"ticket={payload.get('ticket')}"
+            )
+        if attempt < 3:
+            time.sleep(2 ** (attempt - 1))
+    return last_status
+
+
+def describe_payload(payload: dict) -> str:
+    parts = [f"event={payload.get('event')}"]
+    if payload.get("kind"):
+        parts.append(f"kind={payload.get('kind')}")
+    if payload.get("ticket") is not None:
+        parts.append(f"ticket={payload.get('ticket')}")
+    return " ".join(parts)
+
+
+def enqueue_or_mark(state: dict, payload: dict, http_status: int | None, persist: bool) -> None:
+    key = payload_key(payload)
+    if http_status is not None and 200 <= http_status < 300:
+        if key not in state["seen"]:
+            state["seen"].append(key)
+        state["pending"] = [p for p in state["pending"] if payload_key(p) != key]
+        log(f"posted {describe_payload(payload)} status={http_status}")
+    else:
+        if not any(payload_key(p) == key for p in state["pending"]):
+            state["pending"].append(payload)
+        log(f"post_failed {describe_payload(payload)} status={http_status} queued=1")
+    if persist:
+        save_state(state)
+
+
+def flush_pending(state: dict, persist: bool) -> None:
+    if not state["pending"]:
+        return
+    still = []
+    for payload in list(state["pending"]):
+        status = post_payload(payload)
+        if status is not None and 200 <= status < 300:
+            key = payload_key(payload)
+            if key not in state["seen"]:
+                state["seen"].append(key)
+            log(f"posted_pending {describe_payload(payload)} status={status}")
+        else:
+            still.append(payload)
+    state["pending"] = still
+    if persist:
+        save_state(state)
+
+
+def emit(state: dict, payload: dict, *, persist: bool, post: bool) -> dict | None:
+    key = payload_key(payload)
+    if key in state["seen"]:
+        return None
+    if any(payload_key(p) == key for p in state["pending"]):
+        return None
+    if post:
+        status = post_payload(payload)
+        enqueue_or_mark(state, payload, status, persist=persist)
+        return payload
+    if persist:
+        save_state(state)
+    return payload
+
+
+def handle_line(line: str, state: dict, *, persist: bool, post: bool) -> dict | None:
+    text = line.strip()
+    if not text or text[0] != "{":
+        return None
+    try:
+        obj = json.loads(text)
+    except Exception:
+        return None
+    if not isinstance(obj, dict):
+        return None
+    payload = classify(obj, state)
+    if payload is None:
+        return None
+    return emit(state, payload, persist=persist, post=post)
+
+
+# ----- blocked-long / journal_silent (pure, used live and offline) -----
+
+def block_delay_seconds(status, reason, when: datetime) -> int | None:
+    """Seconds of continuous same-reason before PROBLEM, or None if not a problem now."""
+    if status in HEALTHY_STATUSES:
+        return None
+    if reason in SKIP_BLOCK_REASONS:
+        return None
+    if reason in ALWAYS_EXPECTED_REASONS:
+        return None
+    if reason == "quote_stale":
+        if when is not None and in_ict_window(when, QUOTE_STALE_WINDOW):
+            return None
+        return BLOCK_DEFAULT_SEC
+    if reason == "macro_latest_h4_incomplete":
+        if when is not None and in_ict_window(when, MACRO_WINDOW):
+            return None
+        return MACRO_OUTSIDE_SEC
+    return BLOCK_DEFAULT_SEC
+
+
+def replay_blocked_long(events: list[tuple[datetime, dict | None]]) -> list[dict]:
+    """Replay (when, json_or_None) in time order. json_or_None is None for non-JSON lines.
+
+    Returns PROBLEM/RECOVERED payloads that would have been sent (no rate-limit
+    applied for journal_silent / bot_blocked_long so the historical list is complete;
+    live path still rate-limits).
+    """
+    fired: list[dict] = []
+    block_status = None
+    block_reason = None
+    block_since: datetime | None = None
+    blocked_active = False
+    silent_active = False
+    last_when: datetime | None = None
+
+    def problem(kind, detail, when):
+        fired.append(
+            {
+                "event": "PROBLEM",
+                "kind": kind,
+                "detail": sanitize_detail(detail),
+                "utc": utc_iso(when),
+                "source": SOURCE,
+            }
+        )
+
+    def recovered(kind, detail, when):
+        fired.append(
+            {
+                "event": "RECOVERED",
+                "kind": kind,
+                "detail": sanitize_detail(detail),
+                "utc": utc_iso(when),
+                "source": SOURCE,
+            }
+        )
+
+    def clear_block(when, why):
+        nonlocal block_status, block_reason, block_since, blocked_active
+        if blocked_active:
+            recovered("bot_blocked_long", why, when)
+            blocked_active = False
+        block_status = None
+        block_reason = None
+        block_since = None
+
+    for when, obj in events:
+        if last_when is not None:
+            gap = (when - last_when).total_seconds()
+            if gap > JOURNAL_SILENT_SEC and not silent_active:
+                problem(
+                    "journal_silent",
+                    f"no journal line for {int(gap)}s",
+                    last_when + timedelta(seconds=JOURNAL_SILENT_SEC),
+                )
+                silent_active = True
+                # A long gap breaks a blocked streak.
+                if blocked_active:
+                    recovered(
+                        "bot_blocked_long",
+                        "journal went silent",
+                        last_when + timedelta(seconds=JOURNAL_SILENT_SEC),
+                    )
+                    blocked_active = False
+                block_status = None
+                block_reason = None
+                block_since = None
+        if silent_active:
+            recovered("journal_silent", "journal resumed", when)
+            silent_active = False
+        last_when = when
+
+        if not obj:
+            continue
+        status = obj.get("status")
+        reason = obj.get("reason")
+        delay = block_delay_seconds(status, reason, when)
+        if delay is None:
+            if blocked_active:
+                clear_block(when, f"status={status} reason={reason}")
+            else:
+                block_status = None
+                block_reason = None
+                block_since = None
+            continue
+        if (status, reason) != (block_status, block_reason):
+            if blocked_active:
+                recovered(
+                    "bot_blocked_long",
+                    f"reason changed to {reason}",
+                    when,
+                )
+                blocked_active = False
+            block_status, block_reason, block_since = status, reason, when
+        elif block_since is None:
+            block_since = when
+        held = (when - block_since).total_seconds()
+        if not blocked_active and held >= delay:
+            problem(
+                "bot_blocked_long",
+                f"status={status} reason={reason} for {int(held)}s",
+                when,
+            )
+            blocked_active = True
+    return fired
+
+
+# ----- live health checks -----
+
+def _systemctl_is_active(unit: str):
+    """Return True/False, or None if the check itself failed."""
+    try:
+        r = subprocess.run(
+            ["systemctl", "is-active", "--quiet", unit],
+            timeout=5,
+            check=False,
+        )
+        # 0 = active, 3 = inactive; other codes can mean the query failed.
+        if r.returncode == 0:
+            return True
+        if r.returncode == 3:
+            return False
+        log(f"systemctl_is_active_unexpected unit={unit} code={r.returncode}")
+        return False
+    except Exception as exc:
+        log(f"systemctl_is_active_error unit={unit} type={type(exc).__name__}")
+        return None
+
+
+def _systemctl_nrestarts(unit: str) -> int | None:
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "show", unit, "-p", "NRestarts", "--value"],
+            text=True,
+            timeout=5,
+        )
+        return int((out or "0").strip() or "0")
+    except Exception as exc:
+        log(f"systemctl_nrestarts_error unit={unit} type={type(exc).__name__}")
+        return None
+
+
+def _mt5_on_ap1():
+    """Return True if ESTAB to AP#1, False if the query worked and none, None on error."""
+    queried = False
+    try:
+        out = subprocess.check_output(["ss", "-tnp"], text=True, timeout=5, stderr=subprocess.DEVNULL)
+        queried = True
+        for line in out.splitlines():
+            if "ESTAB" in line and AP1_HOSTPORT in line:
+                return True
+        return False
+    except Exception:
+        pass
+    try:
+        out = subprocess.check_output(
+            ["ss", "-tn", "dst", AP1_HOSTPORT],
+            text=True,
+            timeout=5,
+            stderr=subprocess.DEVNULL,
+        )
+        queried = True
+        for line in out.splitlines():
+            if "ESTAB" in line and AP1_HOSTPORT in line:
+                return True
+        return False
+    except Exception as exc:
+        log(f"ss_error type={type(exc).__name__}")
+    if not queried:
+        return None
+    return False
+
+
+def _read_watchdog_tail() -> tuple[int | None, str | None]:
+    try:
+        data = WATCHDOG_LOG.read_bytes()
+    except FileNotFoundError:
+        return 0, None
+    except Exception as exc:
+        log(f"watchdog_log_error type={type(exc).__name__}")
+        return None, None
+    size = len(data)
+    last = None
+    for raw in reversed(data.splitlines()):
+        line = raw.decode("utf-8", "replace").strip()
+        if line:
+            last = line
+            break
+    return size, last
+
+
+def _problem_record(state: dict, kind: str) -> dict:
+    rec = state["problems"].setdefault(kind, {})
+    rec.setdefault("active", False)
+    rec.setdefault("fired", False)
+    rec.setdefault("since_utc", None)
+    rec.setdefault("last_problem_utc", None)
+    rec.setdefault("detail", None)
+    return rec
+
+
+def consider_problem(
+    state: dict,
+    kind: str,
+    present: bool,
+    detail: str,
+    when: datetime,
+    *,
+    persist: bool,
+    post: bool,
+) -> list[dict]:
+    """Rising-edge PROBLEM / falling-edge RECOVERED, with persistence and rate limit."""
+    out: list[dict] = []
+    rec = _problem_record(state, kind)
+    detail = sanitize_detail(detail)
+    if present:
+        if not rec.get("since_utc"):
+            rec["since_utc"] = utc_iso(when)
+        rec["detail"] = detail
+        if rec.get("active") and rec.get("fired"):
+            # Same episode; do not re-fire.
+            state["problems"][kind] = rec
+            return out
+        last = parse_iso(rec.get("last_problem_utc"))
+        if last is not None and (when - last).total_seconds() < PROBLEM_RATE_SEC:
+            # Rate-limited: do not start a fired episode, so a later edge can fire.
+            log(f"problem_rate_limited kind={kind}")
+            state["problems"][kind] = rec
+            return out
+        payload = {
+            "event": "PROBLEM",
+            "kind": kind,
+            "detail": detail,
+            "utc": utc_iso(when),
+            "source": SOURCE,
+        }
+        sent = emit(state, payload, persist=persist, post=post)
+        rec["active"] = True
+        rec["fired"] = True
+        rec["last_problem_utc"] = utc_iso(when)
+        rec["detail"] = detail
+        state["problems"][kind] = rec
+        if sent is not None:
+            out.append(sent)
+        elif not post:
+            out.append(payload)
+        return out
+
+    # Condition clear.
+    if rec.get("active") and rec.get("fired"):
+        payload = {
+            "event": "RECOVERED",
+            "kind": kind,
+            "detail": detail or rec.get("detail") or kind,
+            "utc": utc_iso(when),
+            "source": SOURCE,
+        }
+        sent = emit(state, payload, persist=persist, post=post)
+        if sent is not None:
+            out.append(sent)
+        elif not post:
+            out.append(payload)
+    rec["active"] = False
+    rec["fired"] = False
+    rec["since_utc"] = None
+    rec["detail"] = None
+    state["problems"][kind] = rec
+    return out
+
+
+def maybe_heartbeat(state: dict, started_mono: float, *, persist: bool, post: bool) -> dict | None:
+    now = utc_now()
+    elapsed = time.monotonic() - started_mono
+    last = parse_iso(state.get("last_heartbeat_utc"))
+    if elapsed < HEARTBEAT_START_DELAY_SEC:
+        return None
+    if last is None:
+        due = True
+    elif elapsed < HEARTBEAT_START_DELAY_SEC + CHECK_INTERVAL_SEC and (now - last).total_seconds() > HEARTBEAT_START_MIN_AGE_SEC:
+        # Startup window: send once if last heartbeat was more than 1h ago.
+        due = True
+    elif (now - last).total_seconds() >= HEARTBEAT_EVERY_SEC:
+        due = True
+    else:
+        due = False
+    if not due:
+        return None
+    payload = {
+        "event": "HEARTBEAT",
+        "kind": "heartbeat",
+        "detail": "ok",
+        "utc": utc_iso(now),
+        "source": SOURCE,
+    }
+    sent = emit(state, payload, persist=persist, post=post)
+    # Record last heartbeat only after a successful post, or always in offline mode.
+    if not post or (sent is not None and not any(payload_key(p) == payload_key(payload) for p in state["pending"])):
+        state["last_heartbeat_utc"] = payload["utc"]
+        if persist:
+            save_state(state)
+    elif post and sent is not None:
+        # enqueue_or_mark already persisted; if queued, leave last_heartbeat unset so we retry.
+        if payload_key(payload) in state["seen"]:
+            state["last_heartbeat_utc"] = payload["utc"]
+            if persist:
+                save_state(state)
+    return sent
+
+
+def run_health_checks(
+    state: dict,
+    *,
+    last_journal_at: float,
+    persist: bool,
+    post: bool,
+    now: datetime | None = None,
+) -> list[dict]:
+    """Periodic checks. First call snapshots baselines and does not fire."""
+    when = now or utc_now()
+    events: list[dict] = []
+    first = not state.get("health_initialized")
+
+    # a. service_down
+    down = []
+    streaks = state.setdefault("service_fail_streak", {})
+    for unit in MONITORED_UNITS:
+        active = _systemctl_is_active(unit)
+        if active is None:
+            # Query failed; do not count as down.
+            continue
+        if active:
+            streaks[unit] = 0
+        else:
+            streaks[unit] = int(streaks.get(unit) or 0) + 1
+            if streaks[unit] >= SERVICE_DOWN_CHECKS:
+                down.append(unit)
+    state["service_fail_streak"] = streaks
+    if not first:
+        detail = ("not active: " + ", ".join(down)) if down else "all monitored units active"
+        events.extend(consider_problem(state, "service_down", bool(down), detail, when, persist=persist, post=post))
+
+    # b. execution_restarting
+    restarting = []
+    prev = state.setdefault("nrestarts", {})
+    for unit in RESTART_UNITS:
+        cur = _systemctl_nrestarts(unit)
+        if cur is None:
+            continue
+        old = prev.get(unit)
+        if not first and old is not None and cur > int(old):
+            restarting.append(f"{unit} NRestarts {old}->{cur}")
+        prev[unit] = cur
+    state["nrestarts"] = prev
+    if not first:
+        detail = ", ".join(restarting) if restarting else "NRestarts stable"
+        events.extend(
+            consider_problem(state, "execution_restarting", bool(restarting), detail, when, persist=persist, post=post)
+        )
+        # This kind is pulse-like: if we just fired because of an increase and the
+        # service is now active with a stable snapshot already stored, clear on the
+        # next check (restarting is false next time). consider_problem handles that.
+
+    # c. mt5_not_on_ap1
+    on_ap1 = _mt5_on_ap1()
+    missing_since = parse_iso(state.get("ap1_missing_since"))
+    held = 0
+    present = False
+    if on_ap1 is None:
+        # Query failed; do not start or extend a missing timer.
+        pass
+    elif on_ap1:
+        state["ap1_missing_since"] = None
+        missing_since = None
+        present = False
+        held = 0
+    else:
+        if missing_since is None:
+            missing_since = when
+            state["ap1_missing_since"] = utc_iso(when)
+        held = (when - missing_since).total_seconds()
+        present = held >= AP1_MISSING_SEC
+    if not first:
+        if on_ap1 is None:
+            detail = "ss query failed; skipped"
+        elif on_ap1:
+            detail = f"ESTAB to {AP1_HOSTPORT} present"
+        else:
+            detail = f"no ESTAB to {AP1_HOSTPORT} for {int(held)}s"
+        events.extend(consider_problem(state, "mt5_not_on_ap1", present, detail, when, persist=persist, post=post))
+
+    # e. watchdog_action
+    size, last_line = _read_watchdog_tail()
+    disabled_now = WATCHDOG_DISABLED.exists()
+    prev_size = state.get("watchdog_log_size")
+    prev_last = state.get("watchdog_log_last")
+    prev_disabled = bool(state.get("watchdog_disabled"))
+    new_log = False
+    if size is not None:
+        if first or prev_size is None:
+            pass
+        elif size < int(prev_size):
+            # rotated or truncated: resnapshot, do not fire
+            pass
+        elif last_line and last_line != prev_last and size >= int(prev_size):
+            # Ignore dry-run healthy no-action lines.
+            low = (last_line or "").lower()
+            if not (("healthy" in low) and ("no action" in low)):
+                new_log = True
+        state["watchdog_log_size"] = size
+        state["watchdog_log_last"] = last_line
+    flag_appeared = disabled_now and not (first or prev_disabled)
+    state["watchdog_disabled"] = disabled_now
+    present = (not first) and (new_log or disabled_now)
+    if new_log:
+        detail = last_line or "watchdog log grew"
+    elif disabled_now:
+        detail = f"DISABLED flag present: {WATCHDOG_DISABLED.name}"
+    else:
+        detail = "watchdog idle, no DISABLED flag"
+    if not first:
+        events.extend(consider_problem(state, "watchdog_action", present, detail, when, persist=persist, post=post))
+
+    # d. journal_silent (bot_blocked_long is updated from the journal loop)
+    silent_for = time.monotonic() - last_journal_at
+    present = silent_for >= JOURNAL_SILENT_SEC
+    detail = f"no journal line for {int(silent_for)}s" if present else "journal lines flowing"
+    if not first:
+        events.extend(consider_problem(state, "journal_silent", present, detail, when, persist=persist, post=post))
+
+    state["health_initialized"] = True
+    if persist:
+        save_state(state)
+    return events
+
+
+def update_blocked_live(
+    state: dict,
+    obj: dict,
+    when: datetime,
+    *,
+    persist: bool,
+    post: bool,
+) -> list[dict]:
+    """Feed one JSON cycle into live bot_blocked_long tracking."""
+    runtime = state.setdefault("_block_runtime", {})
+    status = obj.get("status")
+    reason = obj.get("reason")
+    delay = block_delay_seconds(status, reason, when)
+    events: list[dict] = []
+    if delay is None:
+        runtime["status"] = None
+        runtime["reason"] = None
+        runtime["since"] = None
+        state["_block_runtime"] = runtime
+        events.extend(
+            consider_problem(
+                state,
+                "bot_blocked_long",
+                False,
+                f"status={status} reason={reason}",
+                when,
+                persist=persist,
+                post=post,
+            )
+        )
+        return events
+    prev = (runtime.get("status"), runtime.get("reason"))
+    if prev != (status, reason) or not runtime.get("since"):
+        runtime["status"] = status
+        runtime["reason"] = reason
+        runtime["since"] = utc_iso(when)
+        # Reason change ends the prior episode before maybe starting a new one.
+        if prev != (status, reason) and prev != (None, None):
+            events.extend(
+                consider_problem(
+                    state,
+                    "bot_blocked_long",
+                    False,
+                    f"reason changed to {reason}",
+                    when,
+                    persist=persist,
+                    post=post,
+                )
+            )
+    since = parse_iso(runtime.get("since")) or when
+    held = (when - since).total_seconds()
+    present = held >= delay
+    detail = f"status={status} reason={reason} for {int(held)}s"
+    events.extend(consider_problem(state, "bot_blocked_long", present, detail, when, persist=persist, post=post))
+    state["_block_runtime"] = runtime
+    return events
+
+
+# ----- main loops -----
+
+def follow_journal() -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state = load_state()
+    # Health baselines must be taken after start, not immediately treated as a
+    # journal gap from a previous notify downtime.
+    flush_pending(state, persist=True)
+    cmd = [
+        "journalctl",
+        "-u",
+        UNIT,
+        "-f",
+        "-o",
+        "cat",
+        "--no-pager",
+        f"--cursor-file={CURSOR_PATH}",
+    ]
+    if not (CURSOR_PATH.exists() and CURSOR_PATH.stat().st_size > 0):
+        cmd.extend(["-n", "0"])
+    log(f"starting follow unit={UNIT} cursor_exists={CURSOR_PATH.exists()}")
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=False,
+        bufsize=0,
+    )
+    assert proc.stdout is not None
+    started_mono = time.monotonic()
+    last_journal_at = time.monotonic()
+    last_check = 0.0
+    last_persist = time.monotonic()
+    last_foreign = state.get("foreign_active")
+    last_ticket = state.get("last_ticket")
+    buf = b""
+    try:
+        while True:
+            if proc.poll() is not None and not buf:
+                # Drain already happened; journalctl died.
+                break
+            timeout = 1.0
+            ready, _, _ = select.select([proc.stdout], [], [], timeout)
+            if ready:
+                chunk = os.read(proc.stdout.fileno(), 65536)
+                if not chunk:
+                    # EOF
+                    if proc.poll() is not None:
+                        break
+                else:
+                    buf += chunk
+                    while b"\n" in buf:
+                        raw, buf = buf.split(b"\n", 1)
+                        line = raw.decode("utf-8", "replace")
+                        last_journal_at = time.monotonic()
+                        payload = handle_line(line, state, persist=True, post=True)
+                        text = line.strip()
+                        if text.startswith("{"):
+                            try:
+                                obj = json.loads(text)
+                            except Exception:
+                                obj = None
+                            if isinstance(obj, dict):
+                                when = parse_iso(obj.get("captured_utc")) or utc_now()
+                                update_blocked_live(state, obj, when, persist=True, post=True)
+                        nowm = time.monotonic()
+                        if (
+                            state.get("foreign_active") != last_foreign
+                            or state.get("last_ticket") != last_ticket
+                            or nowm - last_persist >= 30
+                        ):
+                            save_state(state)
+                            last_persist = nowm
+                            last_foreign = state.get("foreign_active")
+                            last_ticket = state.get("last_ticket")
+                        if payload is None and state.get("pending") and nowm - last_persist >= 30:
+                            flush_pending(state, persist=True)
+            nowm = time.monotonic()
+            if last_check == 0.0:
+                # First heartbeat / health pass ~60s after start.
+                if nowm - started_mono >= HEARTBEAT_START_DELAY_SEC:
+                    maybe_heartbeat(state, started_mono, persist=True, post=True)
+                    run_health_checks(state, last_journal_at=last_journal_at, persist=True, post=True)
+                    last_check = nowm
+            elif nowm - last_check >= CHECK_INTERVAL_SEC:
+                maybe_heartbeat(state, started_mono, persist=True, post=True)
+                run_health_checks(state, last_journal_at=last_journal_at, persist=True, post=True)
+                if state.get("pending"):
+                    flush_pending(state, persist=True)
+                last_check = nowm
+        rc = proc.wait()
+        log(f"journalctl_exited code={rc}")
+        sys.exit(1 if rc else 0)
+    except KeyboardInterrupt:
+        proc.terminate()
+        raise
+
+
+def self_test_stdin() -> int:
+    state = default_state()
+    fired = 0
+    for line in sys.stdin:
+        payload = handle_line(line, state, persist=False, post=False)
+        if payload is not None:
+            key = payload_key(payload)
+            if key not in state["seen"]:
+                state["seen"].append(key)
+                fired += 1
+                print(json.dumps(payload, separators=(",", ":")))
+    print(f"SELFTEST_FIRES={fired}", file=sys.stderr)
+    return 0
+
+
+def _parse_journal_line(line: str) -> tuple[datetime | None, dict | None, bool]:
+    """Return (timestamp, json_or_None, had_any_content). Accepts cat or short-iso."""
+    raw = line.rstrip("\n")
+    if not raw.strip():
+        return None, None, False
+    ts = None
+    msg = raw
+    if len(raw) > 25 and raw[0:4].isdigit() and raw[4] == "-":
+        parts = raw.split(" ", 2)
+        ts = parse_iso(parts[0])
+        msg = parts[2] if len(parts) > 2 else raw
+        if "]: " in msg:
+            msg = msg.split("]: ", 1)[1]
+    text = msg.strip()
+    obj = None
+    if text.startswith("{"):
+        try:
+            obj = json.loads(text)
+        except Exception:
+            obj = None
+        if isinstance(obj, dict):
+            cts = parse_iso(obj.get("captured_utc") or obj.get("account_read_observed_utc"))
+            if cts is not None:
+                ts = cts
+    return ts, obj, True
+
+
+def self_test_blocked() -> int:
+    events: list[tuple[datetime, dict | None]] = []
+    for line in sys.stdin:
+        ts, obj, ok = _parse_journal_line(line)
+        if not ok or ts is None:
+            continue
+        events.append((ts, obj if isinstance(obj, dict) else None))
+    events.sort(key=lambda x: x[0])
+    fired = replay_blocked_long(events)
+    for payload in fired:
+        print(json.dumps(payload, separators=(",", ":")))
+    print(f"BLOCKTEST_FIRES={len(fired)}", file=sys.stderr)
+    return 0
+
+
+def _synthetic_cycle(when: datetime, status: str, reason) -> dict:
+    return {
+        "status": status,
+        "reason": reason,
+        "captured_utc": utc_iso(when),
+    }
+
+
+def self_test_windows() -> int:
+    """Synthetic unit tests for blocked-long windows. No POST."""
+    failures = 0
+
+    def run(name, events, expect_kinds):
+        nonlocal failures
+        fired = replay_blocked_long(events)
+        kinds = [(p["event"], p["kind"]) for p in fired]
+        ok = kinds == expect_kinds
+        status = "PASS" if ok else "FAIL"
+        if not ok:
+            failures += 1
+        print(f"{status} {name} got={kinds} expect={expect_kinds}")
+        if not ok:
+            for p in fired:
+                print("   ", p)
+
+    def seq(start, status, reason, minutes, step=30):
+        out = []
+        t = start
+        end = start + timedelta(minutes=minutes)
+        while t <= end:
+            out.append((t, _synthetic_cycle(t, status, reason)))
+            t += timedelta(seconds=step)
+        return out
+
+    # 11 Nov 2026 is a Wednesday. Build ICT times then convert? captured as UTC.
+    def ict_dt(y, m, d, hh, mm, ss=0):
+        return datetime(y, m, d, hh, mm, ss, tzinfo=ICT).astimezone(UTC)
+
+    # quote_stale 04:59-06:00 ICT — must NOT fire
+    ev = seq(ict_dt(2026, 11, 11, 4, 59), "BLOCKED", "quote_stale", 62)
+    ev += seq(ict_dt(2026, 11, 11, 6, 1), "WAIT", "no_signal", 1)
+    run("quote_stale expected window", ev, [])
+
+    # quote_stale outside window 07:00-07:15 — fire after 10 min
+    ev = seq(ict_dt(2026, 11, 11, 7, 0), "BLOCKED", "quote_stale", 15)
+    run(
+        "quote_stale outside window",
+        ev,
+        [("PROBLEM", "bot_blocked_long")],
+    )
+
+    # macro 07:00-11:00 ICT — must NOT fire
+    ev = seq(ict_dt(2026, 11, 11, 7, 0), "BLOCKED", "macro_latest_h4_incomplete", 240, step=60)
+    ev += seq(ict_dt(2026, 11, 11, 11, 1), "WAIT", "no_signal", 1)
+    run("macro expected window", ev, [])
+
+    # macro outside 12:00-12:25 — fire after 20 min
+    ev = seq(ict_dt(2026, 11, 11, 12, 0), "BLOCKED", "macro_latest_h4_incomplete", 25)
+    run(
+        "macro outside window",
+        ev,
+        [("PROBLEM", "bot_blocked_long")],
+    )
+
+    # armed_trial 14 min — never a problem
+    ev = seq(ict_dt(2026, 11, 11, 6, 0), "BLOCKED", "armed_trial_new_closed_m15_required", 15)
+    run("armed_trial excluded", ev, [])
+
+    # transient first_quote_unknown 5 min — no fire
+    ev = seq(ict_dt(2026, 11, 11, 15, 0), "BLOCKED", "first_quote_unknown", 5)
+    ev += seq(ict_dt(2026, 11, 11, 15, 6), "MANAGING", None, 1)
+    run("transient 5min", ev, [])
+
+    # transient 11 min — fire
+    ev = seq(ict_dt(2026, 11, 11, 15, 0), "BLOCKED", "first_quote_unknown", 11)
+    run(
+        "transient 11min",
+        ev,
+        [("PROBLEM", "bot_blocked_long")],
+    )
+
+    # WAIT duplicate_bar 2 hours — no fire
+    ev = seq(ict_dt(2026, 11, 11, 12, 0), "WAIT", "duplicate_bar", 120, step=60)
+    run("wait duplicate_bar", ev, [])
+
+    # foreign_exposure 1 hour — no bot_blocked_long (FOREIGN is separate)
+    ev = seq(ict_dt(2026, 11, 2, 15, 34), "BLOCKED", "foreign_exposure", 60, step=60)
+    ev += seq(ict_dt(2026, 11, 2, 16, 35), "WAIT", "no_signal", 1)
+    run("foreign_exposure skipped", ev, [])
+
+    # journal gap 4 min
+    start = ict_dt(2026, 11, 10, 12, 18)
+    ev = [
+        (start, _synthetic_cycle(start, "WAIT", "no_signal")),
+        (start + timedelta(minutes=4), _synthetic_cycle(start + timedelta(minutes=4), "WAIT", "no_signal")),
+    ]
+    run(
+        "journal_silent 4min gap",
+        ev,
+        [("PROBLEM", "journal_silent"), ("RECOVERED", "journal_silent")],
+    )
+
+    # gap 2 min — no fire
+    ev = [
+        (start, _synthetic_cycle(start, "WAIT", "no_signal")),
+        (start + timedelta(minutes=2), _synthetic_cycle(start + timedelta(minutes=2), "WAIT", "no_signal")),
+    ]
+    run("journal gap 2min", ev, [])
+
+    print(f"WINDOWTEST_FAILURES={failures}")
+    return 0 if failures == 0 else 1
+
+
+def test_post() -> int:
+    payload = {"event": "TEST", "utc": utc_iso(), "source": SOURCE}
+    status = post_payload(payload)
+    log(f"test_post event=TEST status={status}")
+    if status is not None and 200 <= status < 300:
+        return 0
+    return 2
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="C22 trade event webhook notifier")
+    parser.add_argument(
+        "--self-test-stdin",
+        action="store_true",
+        help="Classify JSON journal lines from stdin; print trade fires; do not POST",
+    )
+    parser.add_argument(
+        "--self-test-blocked",
+        action="store_true",
+        help="Replay stdin journal (cat or short-iso) through blocked-long logic; no POST",
+    )
+    parser.add_argument(
+        "--self-test-windows",
+        action="store_true",
+        help="Run synthetic blocked-long window unit tests; no POST",
+    )
+    parser.add_argument(
+        "--test-post",
+        action="store_true",
+        help="Send a single TEST webhook POST and exit",
+    )
+    args = parser.parse_args()
+    if args.self_test_stdin:
+        return self_test_stdin()
+    if args.self_test_blocked:
+        return self_test_blocked()
+    if args.self_test_windows:
+        return self_test_windows()
+    if args.test_post:
+        return test_post()
+    follow_journal()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

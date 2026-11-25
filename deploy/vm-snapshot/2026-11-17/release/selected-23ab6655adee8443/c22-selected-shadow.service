@@ -1,0 +1,29 @@
+[Unit]
+Description=Selected C22 26b8 Demo shadow (orders disabled)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/c22-demo/releases/selected-8de9baeca0446d16
+EnvironmentFile=/home/ubuntu/c22-private/c22-shadow.env
+Environment=DEMO_TELEGRAM_TOKEN= DEMO_TELEGRAM_CHAT_ID= DEMO_HEALTHCHECK_URL=
+UnsetEnvironment=DEMO_TELEGRAM_TOKEN DEMO_TELEGRAM_CHAT_ID DEMO_HEALTHCHECK_URL
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStartPre=/bin/sh -c '! systemctl is-active --quiet c22-demo-shadow.service && ! systemctl is-active --quiet c22-demo-execution.service'
+ExecStartPre=/bin/sh -c 'test "$(readlink -f data)" = /home/ubuntu/c22-demo/releases/d091bc6b810e792c/data'
+ExecStart=/usr/bin/env MT5_ENABLE_DEMO_ORDER_SEND=0 /usr/bin/xvfb-run -a ${DEMO_WINE_BIN} ${DEMO_WINDOWS_PYTHON} -u Z:/home/ubuntu/c22-demo/releases/selected-8de9baeca0446d16/scripts/ops/mt5_wine_c22_selected.py --watch --initialize-timeout-ms 90000 --journal Z:/home/ubuntu/c22-demo/state/c22-selected-shadow.sqlite3 --cost-policy Z:/home/ubuntu/c22-demo/state/cost-policy-runtime.json --cache-output Z:/home/ubuntu/c22-demo/state/c22-selected-shadow-bars.csv
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGINT
+KillMode=control-group
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

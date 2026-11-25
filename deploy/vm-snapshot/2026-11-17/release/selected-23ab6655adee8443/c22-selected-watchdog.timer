@@ -1,0 +1,10 @@
+[Unit]
+Description=Independent Selected C22 Demo health checks
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+Unit=c22-selected-watchdog.service
+
+[Install]
+WantedBy=timers.target

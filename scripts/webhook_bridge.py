@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from scripts.smc.mt5_adapter import SMCExecutionAdapter
 from scripts.smc.broker_identity import BrokerIdentityReport
 from scripts.smc.risk_halt import load_risk_halt_state, new_risk_halt_state
-from scripts.webhook.auth import make_verify_auth
+from scripts.webhook.auth import make_verify_auth, require_usable_secret, resolve_webhook_secret
 from scripts.webhook.clock_routes import register_clock_route
 from scripts.webhook.idempotency import make_idempotency_helpers
 from scripts.webhook.runtime import WebhookRuntime
@@ -21,7 +21,7 @@ logger = logging.getLogger("webhook_bridge")
 
 
 def create_app(
-    auth_token: str = "XAUUSD_DEFAULT_SECRET",
+    auth_token: Optional[str] = None,
     dry_run: bool = True,
     db_path: str = "data/smc_trades.db",
     account_balance: float = 200.0,
@@ -53,6 +53,7 @@ def create_app(
     """
     Factory creating the FastAPI Webhook Bridge application with non-blocking async architecture.
     """
+    require_usable_secret(auth_token)  # SEC-17: fail closed, no default secret
     app = FastAPI(
         title="XAUUSD Master Pro Webhook Bridge",
         version="1.1.0",
@@ -156,7 +157,7 @@ if __name__ == "__main__":
 
     from scripts.smc.news import NewsManager
 
-    secret = os.environ.get("WEBHOOK_SECRET", "DEV_SECRET_123")
+    secret = resolve_webhook_secret(os.environ.get("WEBHOOK_SECRET"), None)
     hold_raw = os.environ.get("SMC_MAX_HOLD_BARS")
     max_hold_bars = int(hold_raw) if hold_raw not in (None, "") else None
     bar_minutes = int(os.environ.get("SMC_BAR_MINUTES", "5"))

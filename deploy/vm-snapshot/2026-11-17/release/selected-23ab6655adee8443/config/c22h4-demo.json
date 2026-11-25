@@ -1,0 +1,42 @@
+{
+  "snapshot": "RESEARCH-C22-H4EMA200-20261004",
+  "contract_id": "1af968e9ac6a26ea",
+  "contract": {
+    "strategy": "reward156",
+    "formula": "archived",
+    "rsi_period": 14,
+    "rsi_threshold": 25,
+    "sell_lookback": 96,
+    "sell_ema": 50,
+    "macro_span": 200,
+    "buy_pause_drawdown": 0.0,
+    "stop_atr": 2.5,
+    "buy_stop_atr": 1.5,
+    "buy_target_rr": 2.0,
+    "sell_target": "atr3",
+    "protect_mode": "break_even",
+    "buy_protect_mode": "off",
+    "daily_loss_limit": 0.1,
+    "max_daily_losses": 1,
+    "cooldown_bars": 0,
+    "entry_session": "all",
+    "risk_mode": "static",
+    "risk_cap": 0.1
+  },
+  "source_hashes": {
+    "scripts/research/reward156_search.py": "33d80b8c6fe1f068d24210104d2e52e85aeeb11c11a3f2e3244daf7c62307f92",
+    "scripts/research/reward156_tuning.py": "05b50e60796a60eed56e20de3ec4938b637b60b7f5e5effcecd696b547f6296f",
+    "scripts/research/campaign_signals.py": "cd1fbc9b5fec333171dc6b5baa0e2270716398c7e740606f126be1220b2eaebc",
+    "scripts/research/breakout_entry.py": "7459a3c6cbd0e8e3187de7658fb4eee82ca7daa4b51539a3a8cf83d606bd4b19",
+    "scripts/research/breakout_models.py": "a30abecb90bacdb88ee89c75add2e943dcf745cf18231242f86efd648a995f90",
+    "scripts/strategy.py": "a3aa1b61d1131880f3bd458225c0cf8a04cb1c49577dc3911684c5f5a0eb1bc5",
+    "scripts/research/breakout_logic.py": "5224082a9c5bc8f8896131ec9fc60cc25dd9e145cffbd7f4c8ee2176a546a7fe",
+    "scripts/research/breakout_signals.py": "63c40e0917f118bd96a4ba4c14254e5af594e8861deda21d7358e1fb724d9e92",
+    "scripts/pure_b1/broker_data.py": "bd46a464cc1611918144696aab9755316e3b05a70bc401e820491d32a542e0eb"
+  },
+  "symbol": "XAUUSDm",
+  "volume": 0.01,
+  "research_only": true,
+  "real_money": "PROHIBITED",
+  "commission_unit": "USD_per_lot_round_trip"
+}

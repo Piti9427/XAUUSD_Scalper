@@ -1,0 +1,16 @@
+[Unit]
+Description=Read-only Selected C22 Demo health observer
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/c22-demo/releases/selected-8de9baeca0446d16
+Environment=DEMO_TELEGRAM_TOKEN= DEMO_TELEGRAM_CHAT_ID=
+UnsetEnvironment=DEMO_TELEGRAM_TOKEN DEMO_TELEGRAM_CHAT_ID
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStart=/usr/bin/python3 -m scripts.ops.c22_selected_watchdog --journal /home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3 --state /home/ubuntu/c22-demo/state/c22-selected-watchdog.sqlite3 --expected-fingerprint c4020d69b754dfb5 --service c22-selected-execution.service --stale-seconds 180
+ReadOnlyPaths=-/home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3
+UMask=0077
+NoNewPrivileges=true
+TimeoutStartSec=45

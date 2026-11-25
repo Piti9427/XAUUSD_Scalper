@@ -1,0 +1,18 @@
+{
+  "snapshot": "RESEARCH-D48-SELL-BE1R-20261001-T030",
+  "symbol": "XAUUSDm",
+  "donchian": 48,
+  "atr": 14,
+  "side": "SELL",
+  "volume": 0.01,
+  "sl_atr": 2.5,
+  "tp_atr": 3.0,
+  "risk_cap": 0.10,
+  "daily_loss_limit": 0.20,
+  "protect_after_r": 1.0,
+  "commission_unit": "USD_per_lot_round_trip",
+  "journal": "data/trial30-demo.sqlite3",
+  "cost_policy": "data/trial30-demo-cost-policy.json",
+  "research_only": true,
+  "real_money": "PROHIBITED"
+}

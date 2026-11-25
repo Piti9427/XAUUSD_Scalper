@@ -1,0 +1,14 @@
+[Unit]
+Description=C22 selected execution journal verified cumulative backup
+ConditionPathExists=/home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/c22-demo/releases/selected-8de9baeca0446d16
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStart=/usr/bin/python3 /home/ubuntu/c22-demo/releases/selected-8de9baeca0446d16/scripts/demo_runtime/backup.py --journal /home/ubuntu/c22-demo/state/c22-selected-execution.sqlite3 --directory /home/ubuntu/c22-demo/backups/selected-execution
+UMask=0077
+NoNewPrivileges=true
+Nice=10
+TimeoutStartSec=90

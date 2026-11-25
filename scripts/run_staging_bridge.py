@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import uvicorn
 from scripts.webhook_bridge import create_app
+from scripts.webhook.auth import resolve_webhook_secret
 from scripts.smc.notifier import SMCTelegramNotifier
 from scripts.smc.news import NewsManager
 from scripts.smc.real_money_approval import require_real_money_approval
@@ -54,9 +55,7 @@ def main():
 
     host = wh_cfg.get("host", "0.0.0.0")
     port = args.port or wh_cfg.get("port", 8000)
-    secret_token = os.environ.get("WEBHOOK_SECRET") or wh_cfg.get(
-        "secret_token", "XAUUSD_MASTER_SECRET_2026"
-    )
+    secret_token = resolve_webhook_secret(os.environ.get("WEBHOOK_SECRET"), wh_cfg.get("secret_token"))
     dry_run = args.dry_run if args.dry_run is not None else wh_cfg.get("dry_run", True)
     # Story 49: Demo readiness ≠ real-money. Live non-demo needs dual approval.
     allow_demo_only = bool(
@@ -81,7 +80,7 @@ def main():
     logger.info("=" * 60)
     logger.info("🚀 Starting XAUUSD Webhook Bridge Service")
     logger.info(f"📍 Binding: http://{host}:{port}")
-    logger.info(f"🛡️ Security Token: {'*' * (len(secret_token) - 4) + secret_token[-4:]}")
+    logger.info("🛡️ Security Token: configured (value not logged)")
     logger.info(f"💼 Mode: {'DRY-RUN (Simulated)' if dry_run else 'LIVE BROKER (MetaTrader 5)'}")
     logger.info(
         f"💰 Account Equity: ${account_balance:,.2f} | Risk per Trade: {risk_pct * 100:.1f}%"

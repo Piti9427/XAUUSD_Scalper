@@ -1,0 +1,10 @@
+[Unit]
+Description=Lock MT5 to Exness AP1
+After=network-online.target ufw.service netfilter-persistent.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/ubuntu/c22-demo/ops-local/mt5_ap_lock.sh apply
+ExecStop=/home/ubuntu/c22-demo/ops-local/mt5_ap_lock.sh remove
+[Install]
+WantedBy=multi-user.target

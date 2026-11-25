@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily C22 Oracle cumulative journal snapshot
+
+[Timer]
+OnCalendar=*-*-* 02:10:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+Unit=c22-demo-backup.service
+
+[Install]
+WantedBy=timers.target

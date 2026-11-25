@@ -20,6 +20,16 @@ config/settings.yaml
 .env
 .env.local
 .env.*.local
+# Secrets / keys / private runtime material (SEC-19, 2026-11-17)
+*.env
+!.env.example
+*.key
+*.pem
+*.p12
+id_rsa*
+id_ed25519*
+demo-account.json
+c22-private/
 
 # Databases & Runtime SQLite
 *.db

@@ -1,0 +1,18 @@
+# Local cumulative snapshots only; private bucket qualification remains separate.
+[Unit]
+Description=C22 Oracle Windows SQLite online backup
+After=c22-demo-shadow.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/c22-demo/current
+EnvironmentFile=/home/ubuntu/c22-private/c22-backup.env
+ExecStartPre=/usr/bin/sha256sum --check --status release.sha256
+ExecStart=/usr/bin/xvfb-run -a ${DEMO_WINE_BIN} ${DEMO_WINDOWS_PYTHON} -m scripts.demo_runtime.backup --journal Z:/home/ubuntu/c22-demo/state/c22h4-shadow.sqlite3 --directory Z:/home/ubuntu/c22-demo/backups
+TimeoutStartSec=90
+KillMode=control-group
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+Nice=10

@@ -1,0 +1,29 @@
+[Unit]
+Description=C22 trade event notify (webhook on trade and health events)
+Documentation=file:/usr/local/bin/c22-trade-notify
+After=network-online.target
+# Standalone: do not Require, BindTo, or PartOf the live bot units.
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+# EnvironmentFile is read by systemd; the process never opens the secret file.
+EnvironmentFile=/etc/c22-trade-notify.env
+ExecStart=/usr/bin/python3 -u /usr/local/bin/c22-trade-notify
+Restart=always
+RestartSec=10
+Nice=10
+CPUQuota=5%
+MemoryMax=50M
+TasksMax=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/c22-trade-notify
+UMask=0077
+SyslogIdentifier=c22-trade-notify
+
+[Install]
+WantedBy=multi-user.target

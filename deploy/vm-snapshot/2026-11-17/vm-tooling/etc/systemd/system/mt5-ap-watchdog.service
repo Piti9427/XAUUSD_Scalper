@@ -1,0 +1,7 @@
+[Unit]
+Description=MT5 access point watchdog (clicks Access Point #1 when bot stuck)
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/c22-demo/ops-local/mt5_ap_watchdog.sh
+TimeoutStartSec=420

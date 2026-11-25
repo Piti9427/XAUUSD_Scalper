@@ -1,0 +1,8 @@
+[Unit]
+Description=Run MT5 AP watchdog every 30s
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30s
+AccuracySec=5s
+[Install]
+WantedBy=timers.target

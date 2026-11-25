@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic selected Demo journal snapshots
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00 UTC
+Persistent=true
+Unit=c22-selected-backup.service
+
+[Install]
+WantedBy=timers.target
