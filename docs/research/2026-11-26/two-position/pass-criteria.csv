@@ -1,0 +1,8 @@
+criterion,pass
+1 net > base 2025-26 and 2024-26,True
+2 maxDD <= base both periods,False
+3 net/DD > base both periods,False
+4 best-month-removed diff > 0 in 2025-26,True
+5 months better >= worse (both periods),True
+6 m3_set and m2_pos net >= base 2025-26,True
+7 hold-out 2019-24 net >= base,True

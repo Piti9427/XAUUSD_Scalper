@@ -1,0 +1,61 @@
+fam,cell,criterion,passed
+A,b0.4_e2.0,0 TUNE plateau > 0,True
+A,b0.4_e2.0,1 WR > base 25-26 & 24-26,True
+A,b0.4_e2.0,2 wins/losses >= base both,True
+A,b0.4_e2.0,3 expectancy >= base-0.5 both,True
+A,b0.4_e2.0,4 net > 0 and >= 90% base both,True
+A,b0.4_e2.0,5 maxDD < base both,False
+A,b0.4_e2.0,6 kept >= 70% both,True
+A,b0.4_e2.0,7 neighbours WR >= base both,True
+A,b0.4_e2.0,8 hold-out 2019-24 WR >= base,True
+A,b0.4_e2.0,9 WF 2023-24 WR >= base,False
+A,b0.4_e2.0,info: d_net ex best month 2025-26,-26.93
+A,b0.4_e2.0,info: months better/worse 2025-26 (net),1/2
+B,p8_e2.0,0 TUNE plateau > 0,True
+B,p8_e2.0,1 WR > base 25-26 & 24-26,False
+B,p8_e2.0,2 wins/losses >= base both,False
+B,p8_e2.0,3 expectancy >= base-0.5 both,True
+B,p8_e2.0,4 net > 0 and >= 90% base both,True
+B,p8_e2.0,5 maxDD < base both,False
+B,p8_e2.0,6 kept >= 70% both,True
+B,p8_e2.0,7 neighbours WR >= base both,False
+B,p8_e2.0,8 hold-out 2019-24 WR >= base,False
+B,p8_e2.0,9 WF 2023-24 WR >= base,True
+B,p8_e2.0,info: d_net ex best month 2025-26,-45.69
+B,p8_e2.0,info: months better/worse 2025-26 (net),1/4
+C,m2_k0,0 TUNE plateau > 0,False
+C,m2_k0,1 WR > base 25-26 & 24-26,True
+C,m2_k0,2 wins/losses >= base both,False
+C,m2_k0,3 expectancy >= base-0.5 both,False
+C,m2_k0,4 net > 0 and >= 90% base both,True
+C,m2_k0,5 maxDD < base both,False
+C,m2_k0,6 kept >= 70% both,True
+C,m2_k0,7 neighbours WR >= base both,False
+C,m2_k0,8 hold-out 2019-24 WR >= base,True
+C,m2_k0,9 WF 2023-24 WR >= base,True
+C,m2_k0,info: d_net ex best month 2025-26,418.85
+C,m2_k0,info: months better/worse 2025-26 (net),14/8
+D,wk3.25_n4,0 TUNE plateau > 0,False
+D,wk3.25_n4,1 WR > base 25-26 & 24-26,True
+D,wk3.25_n4,2 wins/losses >= base both,True
+D,wk3.25_n4,3 expectancy >= base-0.5 both,True
+D,wk3.25_n4,4 net > 0 and >= 90% base both,True
+D,wk3.25_n4,5 maxDD < base both,False
+D,wk3.25_n4,6 kept >= 70% both,True
+D,wk3.25_n4,7 neighbours WR >= base both,True
+D,wk3.25_n4,8 hold-out 2019-24 WR >= base,True
+D,wk3.25_n4,9 WF 2023-24 WR >= base,True
+D,wk3.25_n4,info: d_net ex best month 2025-26,-31.1
+D,wk3.25_n4,info: months better/worse 2025-26 (net),1/4
+E,buy1.5,0 TUNE plateau > 0,True
+E,buy1.5,1 WR > base 25-26 & 24-26,True
+E,buy1.5,2 wins/losses >= base both,True
+E,buy1.5,3 expectancy >= base-0.5 both,False
+E,buy1.5,4 net > 0 and >= 90% base both,False
+E,buy1.5,5 maxDD < base both,False
+E,buy1.5,6 kept >= 70% both,True
+E,buy1.5,7 neighbours WR >= base both,True
+E,buy1.5,8 hold-out 2019-24 WR >= base,True
+E,buy1.5,9 WF 2023-24 WR >= base,True
+E,buy1.5,info: d_net ex best month 2025-26,-596.33
+E,buy1.5,info: months better/worse 2025-26 (net),5/12

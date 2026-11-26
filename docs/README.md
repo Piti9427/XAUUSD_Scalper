@@ -23,6 +23,7 @@
 - กฎสำหรับเอเจนต์ (ต้องอัปเดตเอกสาร process ทุกครั้งที่ทำอะไร): [`../AGENTS.md`](../AGENTS.md) และ [`../CLAUDE.md`](../CLAUDE.md)
 - งานวิจัย 24 พ.ย. 2026: [`research/2026-11-24/README.md`](research/2026-11-24/README.md)
 - งานวิจัย 25 พ.ย. 2026 (จุดเข้า/SL; คงกฎ 7fe0; ตัวกรอง ATR 1/3 เป็นตัวเลือก shadow): [`research/2026-11-25/README.md`](research/2026-11-25/README.md)
+- งานวิจัย 26 พ.ย. 2026 (ML walk-forward 3 รอบ; ไม่มี ML ผ่าน 7/7; คงกฎ 7fe0; แพ็กยังอยู่บน box): [`research/2026-11-26/README.md`](research/2026-11-26/README.md)
 
 - [Folder map / module interfaces](architecture/codebase-layout.md)
 - [Tests แยกตามงาน](../tests/README.md)

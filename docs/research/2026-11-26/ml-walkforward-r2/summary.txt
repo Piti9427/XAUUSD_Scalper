@@ -1,0 +1,238 @@
+                    arm              run  window   n  wins  losses  ties    wr  d_wr     net  net_pct_base    exp  maxdd   d_dd  net_dd  kept_pct
+         base live 7fe0             main 2025-26 313   121     156    36 38.66  0.00 1898.96         100.0  6.067 224.89   0.00    8.44     100.0
+         base live 7fe0             main 2024-26 429   146     237    46 34.03  0.00 1826.95         100.0  4.259 224.89   0.00    8.12     100.0
+         base live 7fe0             main 2020-24 658   177     419    62 26.90  0.00 -333.61           NaN -0.507 180.75   0.00   -1.85     100.0
+ref BUY TP 2.0R (no ML)             main 2025-26 332   144     162    26 43.37  4.72 1587.93          83.6  4.783 197.08 -27.81    8.06     106.1
+ref BUY TP 2.0R (no ML)             main 2024-26 453   171     245    37 37.75  3.72 1359.94          74.4  3.002 227.98   3.09    5.97     105.6
+ref BUY TP 2.0R (no ML)             main 2020-24 682   214     421    47 31.38  4.48 -466.08           NaN -0.683 227.98  47.23   -2.04     103.6
+           RegAll-Ridge main (forced ON) 2025-26 235    93     116    26 39.57  0.92 1615.69          85.1  6.875 174.61 -50.28    9.25      75.1
+           RegAll-Ridge main (forced ON) 2024-26 327   111     181    35 33.94 -0.09 1544.62          84.5  4.724 174.61 -50.28    8.85      76.2
+           RegAll-Ridge main (forced ON) 2020-24 535   144     345    46 26.92  0.02 -285.19           NaN -0.533 172.41  -8.34   -1.65      81.3
+           RegAll-Ridge           q-0.05 2025-26 262   102     130    30 38.93  0.27 1711.83          90.1  6.534 201.05 -23.83    8.51      83.7
+           RegAll-Ridge           q-0.05 2024-26 360   122     199    39 33.89 -0.14 1654.28          90.5  4.595 201.05 -23.83    8.23      83.9
+           RegAll-Ridge           q-0.05 2020-24 563   155     359    49 27.53  0.63 -207.23           NaN -0.368 147.78 -32.97   -1.40      85.6
+           RegAll-Ridge           q+0.05 2025-26 217    83     110    24 38.25 -0.41 1375.37          72.4  6.338 169.29 -55.60    8.12      69.3
+           RegAll-Ridge           q+0.05 2024-26 309   101     175    33 32.69 -1.35 1294.96          70.9  4.191 169.29 -55.60    7.65      72.0
+           RegAll-Ridge           q+0.05 2020-24 505   136     323    46 26.93  0.03 -270.04           NaN -0.535 164.43 -16.32   -1.64      76.7
+           RegAll-Ridge allow-OFF (info) 2025-26 235    93     116    26 39.57  0.92 1615.69          85.1  6.875 174.61 -50.28    9.25      75.1
+           RegAll-Ridge allow-OFF (info) 2024-26 327   111     181    35 33.94 -0.09 1544.62          84.5  4.724 174.61 -50.28    8.85      76.2
+           RegAll-Ridge allow-OFF (info) 2020-24 535   144     345    46 26.92  0.02 -285.19           NaN -0.533 172.41  -8.34   -1.65      81.3
+            RegAll-HGBR main (forced ON) 2025-26 264    97     131    36 36.74 -1.92 1510.71          79.6  5.722 192.35 -32.54    7.85      84.3
+            RegAll-HGBR main (forced ON) 2024-26 346   112     189    45 32.37 -1.66 1424.43          78.0  4.117 192.35 -32.54    7.41      80.7
+            RegAll-HGBR main (forced ON) 2020-24 508   137     320    51 26.97  0.07 -311.08           NaN -0.612 160.87 -19.88   -1.93      77.2
+            RegAll-HGBR           q-0.05 2025-26 278   100     140    38 35.97 -2.69 1505.46          79.3  5.415 224.89   0.00    6.69      88.8
+            RegAll-HGBR           q-0.05 2024-26 364   116     200    48 31.87 -2.16 1411.67          77.3  3.878 224.89   0.00    6.28      84.8
+            RegAll-HGBR           q-0.05 2020-24 533   145     336    52 27.20  0.30 -282.69           NaN -0.530 164.36 -16.39   -1.72      81.0
+            RegAll-HGBR           q+0.05 2025-26 253    94     125    34 37.15 -1.50 1531.28          80.6  6.052 192.35 -32.54    7.96      80.8
+            RegAll-HGBR           q+0.05 2024-26 330   105     182    43 31.82 -2.21 1367.68          74.9  4.144 207.56 -17.33    6.59      76.9
+            RegAll-HGBR           q+0.05 2020-24 473   127     302    44 26.85 -0.05 -340.05           NaN -0.719 199.99  19.24   -1.70      71.9
+            RegAll-HGBR allow-OFF (info) 2025-26 292   113     142    37 38.70  0.04 1651.43          87.0  5.656 224.89   0.00    7.34      93.3
+            RegAll-HGBR allow-OFF (info) 2024-26 374   128     200    46 34.22  0.19 1565.15          85.7  4.185 224.89   0.00    6.96      87.2
+            RegAll-HGBR allow-OFF (info) 2020-24 508   137     320    51 26.97  0.07 -311.08           NaN -0.612 160.87 -19.88   -1.93      77.2
+           RegBUY-Ridge main (forced ON) 2025-26 233    95     117    21 40.77  2.11  987.62          52.0  4.239 233.70   8.81    4.23      74.4
+           RegBUY-Ridge main (forced ON) 2024-26 332   111     193    28 33.43 -0.60  622.77          34.1  1.876 357.89 133.00    1.74      77.4
+           RegBUY-Ridge main (forced ON) 2020-24 595   163     375    57 27.39  0.50 -338.96           NaN -0.570 177.47  -3.28   -1.91      90.4
+           RegBUY-Ridge           q-0.05 2025-26 245    99     122    24 40.41  1.75 1150.98          60.6  4.698 258.95  34.06    4.44      78.3
+           RegBUY-Ridge           q-0.05 2024-26 345   115     199    31 33.33 -0.70  788.16          43.1  2.285 376.36 151.47    2.09      80.4
+           RegBUY-Ridge           q-0.05 2020-24 604   164     382    58 27.15  0.25 -362.66           NaN -0.600 177.47  -3.28   -2.04      91.8
+           RegBUY-Ridge           q+0.05 2025-26 219    93     108    18 42.47  3.81 1073.30          56.5  4.901 185.96 -38.93    5.77      70.0
+           RegBUY-Ridge           q+0.05 2024-26 318   110     183    25 34.59  0.56  791.32          43.3  2.488 241.73  16.85    3.27      74.1
+           RegBUY-Ridge           q+0.05 2020-24 577   159     364    54 27.56  0.66 -313.91           NaN -0.544 186.02   5.27   -1.69      87.7
+           RegBUY-Ridge allow-OFF (info) 2025-26 313   121     156    36 38.66  0.00 1898.96         100.0  6.067 224.89   0.00    8.44     100.0
+           RegBUY-Ridge allow-OFF (info) 2024-26 418   141     233    44 33.73 -0.30 1763.87          96.5  4.220 224.89   0.00    7.84      97.4
+           RegBUY-Ridge allow-OFF (info) 2020-24 595   163     375    57 27.39  0.50 -338.96           NaN -0.570 177.47  -3.28   -1.91      90.4
+            RegBUY-HGBR main (forced ON) 2025-26 264   104     130    30 39.39  0.74 1453.39          76.5  5.505 168.45 -56.44    8.63      84.3
+            RegBUY-HGBR main (forced ON) 2024-26 345   122     186    37 35.36  1.33 1440.02          78.8  4.174 168.45 -56.44    8.55      80.4
+            RegBUY-HGBR main (forced ON) 2020-24 593   164     373    56 27.66  0.76 -301.87           NaN -0.509 217.57  36.82   -1.39      90.1
+            RegBUY-HGBR           q-0.05 2025-26 273   107     134    32 39.19  0.54 1537.76          81.0  5.633 168.45 -56.44    9.13      87.2
+            RegBUY-HGBR           q-0.05 2024-26 356   125     190    41 35.11  1.08 1529.20          83.7  4.296 168.45 -56.44    9.08      83.0
+            RegBUY-HGBR           q-0.05 2020-24 600   164     378    58 27.33  0.43 -314.13           NaN -0.524 217.57  36.82   -1.44      91.2
+            RegBUY-HGBR           q+0.05 2025-26 257   104     126    27 40.47  1.81 1528.55          80.5  5.948 168.45 -56.44    9.07      82.1
+            RegBUY-HGBR           q+0.05 2024-26 335   123     178    34 36.72  2.68 1558.33          85.3  4.652 168.45 -56.44    9.25      78.1
+            RegBUY-HGBR           q+0.05 2020-24 581   163     364    54 28.06  1.16 -255.43           NaN -0.440 224.73  43.98   -1.14      88.3
+            RegBUY-HGBR allow-OFF (info) 2025-26 264   104     130    30 39.39  0.74 1453.39          76.5  5.505 168.45 -56.44    8.63      84.3
+            RegBUY-HGBR allow-OFF (info) 2024-26 345   122     186    37 35.36  1.33 1440.02          78.8  4.174 168.45 -56.44    8.55      80.4
+            RegBUY-HGBR allow-OFF (info) 2020-24 593   164     373    56 27.66  0.76 -301.87           NaN -0.509 217.57  36.82   -1.39      90.1
+           Cls1R-BUY-LR main (forced ON) 2025-26 293   116     146    31 39.59  0.93 1841.32          97.0  6.284 224.89   0.00    8.19      93.6
+           Cls1R-BUY-LR main (forced ON) 2024-26 391   135     216    40 34.53  0.49 1724.48          94.4  4.410 224.89   0.00    7.67      91.1
+           Cls1R-BUY-LR main (forced ON) 2020-24 568   158     360    50 27.82  0.92 -317.56           NaN -0.559 165.91 -14.84   -1.91      86.3
+           Cls1R-BUY-LR           q-0.05 2025-26 297   115     151    31 38.72  0.06 1763.47          92.9  5.938 224.89   0.00    7.84      94.9
+           Cls1R-BUY-LR           q-0.05 2024-26 398   135     223    40 33.92 -0.11 1674.80          91.7  4.208 224.89   0.00    7.45      92.8
+           Cls1R-BUY-LR           q-0.05 2020-24 591   162     373    56 27.41  0.51 -294.12           NaN -0.498 164.00 -16.75   -1.79      89.8
+           Cls1R-BUY-LR           q+0.05 2025-26 291   117     145    29 40.21  1.55 1870.05          98.5  6.426 224.89   0.00    8.32      93.0
+           Cls1R-BUY-LR           q+0.05 2024-26 388   136     214    38 35.05  1.02 1760.41          96.4  4.537 224.89   0.00    7.83      90.4
+           Cls1R-BUY-LR           q+0.05 2020-24 549   155     347    47 28.23  1.33 -304.52           NaN -0.555 181.75   1.00   -1.68      83.4
+           Cls1R-BUY-LR allow-OFF (info) 2025-26 293   116     146    31 39.59  0.93 1841.32          97.0  6.284 224.89   0.00    8.19      93.6
+           Cls1R-BUY-LR allow-OFF (info) 2024-26 391   135     216    40 34.53  0.49 1724.48          94.4  4.410 224.89   0.00    7.67      91.1
+           Cls1R-BUY-LR allow-OFF (info) 2020-24 568   158     360    50 27.82  0.92 -317.56           NaN -0.559 165.91 -14.84   -1.91      86.3
+          Cls1R-BUY-HGB main (forced ON) 2025-26 270   107     133    30 39.63  0.97 1397.79          73.6  5.177 286.76  61.88    4.87      86.3
+          Cls1R-BUY-HGB main (forced ON) 2024-26 358   127     192    39 35.47  1.44 1373.20          75.2  3.836 286.76  61.88    4.79      83.4
+          Cls1R-BUY-HGB main (forced ON) 2020-24 552   160     346    46 28.99  2.09 -202.78           NaN -0.367 202.85  22.10   -1.00      83.9
+          Cls1R-BUY-HGB           q-0.05 2025-26 277   110     136    31 39.71  1.05 1519.96          80.0  5.487 286.76  61.88    5.30      88.5
+          Cls1R-BUY-HGB           q-0.05 2024-26 371   131     200    40 35.31  1.28 1510.95          82.7  4.073 286.76  61.88    5.27      86.5
+          Cls1R-BUY-HGB           q-0.05 2020-24 579   163     364    52 28.15  1.25 -192.62           NaN -0.333 203.11  22.36   -0.95      88.0
+          Cls1R-BUY-HGB           q+0.05 2025-26 259   102     127    30 39.38  0.72 1306.95          68.8  5.046 277.10  52.21    4.72      82.7
+          Cls1R-BUY-HGB           q+0.05 2024-26 343   121     182    40 35.28  1.24 1287.63          70.5  3.754 277.10  52.21    4.65      80.0
+          Cls1R-BUY-HGB           q+0.05 2020-24 529   159     326    44 30.06  3.16 -161.97           NaN -0.306 194.15  13.41   -0.83      80.4
+          Cls1R-BUY-HGB allow-OFF (info) 2025-26 275   111     133    31 40.36  1.71 1666.93          87.8  6.062 224.89   0.00    7.41      87.9
+          Cls1R-BUY-HGB allow-OFF (info) 2024-26 363   131     192    40 36.09  2.06 1642.35          89.9  4.524 224.89   0.00    7.30      84.6
+          Cls1R-BUY-HGB allow-OFF (info) 2020-24 552   160     346    46 28.99  2.09 -202.78           NaN -0.367 202.85  22.10   -1.00      83.9
+           Cls1R-All-LR main (forced ON) 2025-26 243    83     129    31 34.16 -4.50 1362.86          71.8  5.608 290.82  65.93    4.69      77.6
+           Cls1R-All-LR main (forced ON) 2024-26 349   106     201    42 30.37 -3.66 1325.96          72.6  3.799 290.82  65.93    4.56      81.4
+           Cls1R-All-LR main (forced ON) 2020-24 514   138     324    52 26.85 -0.05 -194.97           NaN -0.379 126.84 -53.91   -1.54      78.1
+           Cls1R-All-LR           q-0.05 2025-26 252    88     133    31 34.92 -3.74 1442.74          76.0  5.725 233.86   8.97    6.17      80.5
+           Cls1R-All-LR           q-0.05 2024-26 363   111     210    42 30.58 -3.45 1368.81          74.9  3.771 233.86   8.97    5.85      84.6
+           Cls1R-All-LR           q-0.05 2020-24 542   141     349    52 26.01 -0.88 -293.11           NaN -0.541 136.98 -43.77   -2.14      82.4
+           Cls1R-All-LR           q+0.05 2025-26 238    82     126    30 34.45 -4.20 1371.97          72.2  5.765 288.17  63.28    4.76      76.0
+           Cls1R-All-LR           q+0.05 2024-26 342   104     198    40 30.41 -3.62 1321.86          72.4  3.865 288.17  63.28    4.59      79.7
+           Cls1R-All-LR           q+0.05 2020-24 494   131     314    49 26.52 -0.38 -209.14           NaN -0.423 140.64 -40.11   -1.49      75.1
+           Cls1R-All-LR allow-OFF (info) 2025-26 297   114     149    34 38.38 -0.27 1732.65          91.2  5.834 224.89   0.00    7.70      94.9
+           Cls1R-All-LR allow-OFF (info) 2024-26 403   137     221    45 34.00 -0.04 1695.75          92.8  4.208 224.89   0.00    7.54      93.9
+           Cls1R-All-LR allow-OFF (info) 2020-24 514   138     324    52 26.85 -0.05 -194.97           NaN -0.379 126.84 -53.91   -1.54      78.1
+          Cls1R-All-HGB main (forced ON) 2025-26 223    83     110    30 37.22 -1.44 1492.51          78.6  6.693 154.38 -70.51    9.67      71.2
+          Cls1R-All-HGB main (forced ON) 2024-26 323   103     179    41 31.89 -2.14 1441.48          78.9  4.463 154.38 -70.51    9.34      75.3
+          Cls1R-All-HGB main (forced ON) 2020-24 466   118     302    46 25.32 -1.58 -309.59           NaN -0.664 146.93 -33.82   -2.11      70.8
+          Cls1R-All-HGB           q-0.05 2025-26 235    87     117    31 37.02 -1.64 1499.71          79.0  6.382 177.06 -47.83    8.47      75.1
+          Cls1R-All-HGB           q-0.05 2024-26 339   109     188    42 32.15 -1.88 1470.35          80.5  4.337 177.06 -47.83    8.30      79.0
+          Cls1R-All-HGB           q-0.05 2020-24 506   130     328    48 25.69 -1.21 -299.27           NaN -0.591 169.23 -11.52   -1.77      76.9
+          Cls1R-All-HGB           q+0.05 2025-26 214    80     106    28 37.38 -1.27 1471.96          77.5  6.878 154.38 -70.51    9.53      68.4
+          Cls1R-All-HGB           q+0.05 2024-26 309    99     172    38 32.04 -1.99 1407.71          77.1  4.556 154.38 -70.51    9.12      72.0
+          Cls1R-All-HGB           q+0.05 2020-24 437   111     285    41 25.40 -1.50 -311.48           NaN -0.713 146.93 -33.82   -2.12      66.4
+          Cls1R-All-HGB allow-OFF (info) 2025-26 271   107     134    30 39.48  0.83 1500.63          79.0  5.537 224.89  -0.00    6.67      86.6
+          Cls1R-All-HGB allow-OFF (info) 2024-26 371   127     203    41 34.23  0.20 1449.59          79.3  3.907 224.89  -0.00    6.45      86.5
+          Cls1R-All-HGB allow-OFF (info) 2020-24 466   118     302    46 25.32 -1.58 -309.59           NaN -0.664 146.93 -33.82   -2.11      70.8
+            BUY20-Ridge main (forced ON) 2025-26 310   135     152    23 43.55  4.89 1326.54          69.9  4.279 145.69 -79.20    9.11      99.0
+            BUY20-Ridge main (forced ON) 2024-26 412   155     224    33 37.62  3.59  982.12          53.8  2.384 211.42 -13.47    4.65      96.0
+            BUY20-Ridge main (forced ON) 2020-24 608   190     371    47 31.25  4.35 -425.26           NaN -0.699 211.42  30.67   -2.01      92.4
+            BUY20-Ridge           q-0.05 2025-26 318   138     157    23 43.40  4.74 1396.03          73.5  4.390 191.76 -33.12    7.28     101.6
+            BUY20-Ridge           q-0.05 2024-26 426   160     233    33 37.56  3.53 1167.78          63.9  2.741 228.24   3.36    5.12      99.3
+            BUY20-Ridge           q-0.05 2020-24 617   192     379    46 31.12  4.22 -446.25           NaN -0.723 228.24  47.49   -1.96      93.8
+            BUY20-Ridge           q+0.05 2025-26 300   131     146    23 43.67  5.01 1269.73          66.9  4.232 145.69 -79.20    8.72      95.8
+            BUY20-Ridge           q+0.05 2024-26 392   146     213    33 37.24  3.21  768.65          42.1  1.961 253.69  28.80    3.03      91.4
+            BUY20-Ridge           q+0.05 2020-24 588   187     357    44 31.80  4.90 -393.74           NaN -0.670 206.73  25.98   -1.90      89.4
+            BUY20-Ridge allow-OFF (info) 2025-26 311   136     153    22 43.73  5.07 1346.46          70.9  4.329 197.08 -27.81    6.83      99.4
+            BUY20-Ridge allow-OFF (info) 2024-26 409   153     224    32 37.41  3.38  840.69          46.0  2.055 332.79 107.90    2.53      95.3
+            BUY20-Ridge allow-OFF (info) 2020-24 608   190     371    47 31.25  4.35 -425.26           NaN -0.699 211.42  30.67   -2.01      92.4
+         BUY20-Cls1R-LR main (forced ON) 2025-26 290   126     141    23 43.45  4.79 1352.60          71.2  4.664 197.08 -27.81    6.86      92.7
+         BUY20-Cls1R-LR main (forced ON) 2024-26 390   149     208    33 38.21  4.17 1221.25          66.8  3.131 197.08 -27.81    6.20      90.9
+         BUY20-Cls1R-LR main (forced ON) 2020-24 628   202     380    46 32.17  5.27 -312.08           NaN -0.497 157.46 -23.29   -1.98      95.4
+         BUY20-Cls1R-LR           q-0.05 2025-26 299   128     149    22 42.81  4.15 1327.81          69.9  4.441 197.08 -27.81    6.74      95.5
+         BUY20-Cls1R-LR           q-0.05 2024-26 400   150     218    32 37.50  3.47 1164.66          63.7  2.912 197.08 -27.81    5.91      93.2
+         BUY20-Cls1R-LR           q-0.05 2020-24 640   203     391    46 31.72  4.82 -375.82           NaN -0.587 164.85 -15.90   -2.28      97.3
+         BUY20-Cls1R-LR           q+0.05 2025-26 276   120     135    21 43.48  4.82 1256.18          66.2  4.551 197.08 -27.81    6.37      88.2
+         BUY20-Cls1R-LR           q+0.05 2024-26 372   142     199    31 38.17  4.14 1124.08          61.5  3.022 197.08 -27.81    5.70      86.7
+         BUY20-Cls1R-LR           q+0.05 2020-24 605   193     366    46 31.90  5.00 -346.92           NaN -0.573 158.43 -22.32   -2.19      91.9
+         BUY20-Cls1R-LR allow-OFF (info) 2025-26 290   126     141    23 43.45  4.79 1352.60          71.2  4.664 197.08 -27.81    6.86      92.7
+         BUY20-Cls1R-LR allow-OFF (info) 2024-26 390   149     208    33 38.21  4.17 1221.25          66.8  3.131 197.08 -27.81    6.20      90.9
+         BUY20-Cls1R-LR allow-OFF (info) 2020-24 628   202     380    46 32.17  5.27 -312.08           NaN -0.497 157.46 -23.29   -1.98      95.4
+                Rule-WF             main 2025-26 313   121     156    36 38.66  0.00 1898.96         100.0  6.067 224.89   0.00    8.44     100.0
+                Rule-WF             main 2024-26 428   146     237    45 34.11  0.08 1815.90          99.4  4.243 224.89   0.00    8.07      99.8
+                Rule-WF             main 2020-24 619   170     396    53 27.46  0.56 -300.98           NaN -0.486 169.47 -11.28   -1.78      94.1
+           arm  P1_wr  P2_dd  P3_net90  P4_exp  P5_kept60  P7_2020_24  P6_plateau  passed_n  PASS  tradeoff_candidate                                 neighbours
+  RegAll-Ridge  False   True     False    True       True        True       False         4 False               False                                        NaN
+   RegAll-HGBR  False   True     False    True       True        True       False         4 False               False                                        NaN
+  RegBUY-Ridge  False  False     False   False       True       False       False         1 False               False                                        NaN
+   RegBUY-HGBR   True   True     False   False       True        True        True         5 False               False                                        NaN
+  Cls1R-BUY-LR   True  False      True    True       True        True       False         5 False               False                                        NaN
+ Cls1R-BUY-HGB   True  False     False   False       True        True       False         3 False               False                                        NaN
+  Cls1R-All-LR  False  False     False    True       True       False       False         2 False               False                                        NaN
+ Cls1R-All-HGB  False   True     False    True       True       False       False         3 False               False                                        NaN
+   BUY20-Ridge   True   True     False   False       True       False       False         3 False               False                                        NaN
+BUY20-Cls1R-LR   True   True     False   False       True        True        True         5 False               False                                        NaN
+     rule Ls_2  False  False      True    True       True        True       False         4 False               False                                       Ls_4
+     rule Lb_2  False  False      True    True       True        True       False         4 False               False                                       Lb_4
+     rule Ls_4  False  False      True    True       True       False       False         3 False               False                                  Ls_2,Ls_8
+     rule Lb_4  False  False      True    True       True        True       False         4 False               False                                  Lb_2,Lb_8
+     rule Ls_8   True  False      True    True       True       False       False         4 False               False                                       Ls_4
+     rule Lb_8   True  False      True    True       True        True       False         5 False               False                                       Lb_4
+    rule G_1.5   True   True      True    True       True        True       False         6 False               False                                      G_2.0
+    rule G_2.0   True  False      True    True       True        True       False         5 False               False                                G_1.5,G_2.5
+    rule G_2.5  False  False      True    True       True        True       False         4 False               False                                      G_2.0
+rule LsG_2_1.5   True   True      True    True       True        True       False         6 False               False                        LsG_2_2.0,LsG_4_1.5
+rule LsG_2_2.0   True  False      True    True       True        True       False         5 False               False              LsG_2_1.5,LsG_2_2.5,LsG_4_2.0
+rule LsG_2_2.5  False  False      True    True       True        True       False         4 False               False                        LsG_2_2.0,LsG_4_2.5
+rule LsG_4_1.5   True   True      True    True       True        True       False         6 False               False              LsG_2_1.5,LsG_4_2.0,LsG_8_1.5
+rule LsG_4_2.0   True  False      True    True       True        True       False         5 False               False    LsG_2_2.0,LsG_4_1.5,LsG_4_2.5,LsG_8_2.0
+rule LsG_4_2.5   True  False      True    True       True        True       False         5 False               False              LsG_2_2.5,LsG_4_2.0,LsG_8_2.5
+rule LsG_8_1.5   True   True      True    True       True        True       False         6 False               False                        LsG_4_1.5,LsG_8_2.0
+rule LsG_8_2.0   True  False      True    True       True        True       False         5 False               False              LsG_4_2.0,LsG_8_1.5,LsG_8_2.5
+rule LsG_8_2.5   True  False      True    True       True        True       False         5 False               False                        LsG_4_2.5,LsG_8_2.0
+       Rule-WF  False  False      True    True       True        True       False         4 False               False most-chosen LsG_8_1.5: LsG_4_1.5,LsG_8_2.0
+           arm  test_year                                chosen_hp  chosen_q  smoothed  feasible                                       allow_off oos_metric  oos_value  n_test chosen_cell
+  RegAll-Ridge       2020                         {'alpha': 100.0}      0.40    16.055      True                          {'alpha': 100.0} q=0.4   spearman    -0.0688   256.0         NaN
+  RegAll-Ridge       2021                         {'alpha': 100.0}      0.35    11.909      True                         {'alpha': 100.0} q=0.35   spearman     0.0501   301.0         NaN
+  RegAll-Ridge       2022                           {'alpha': 1.0}      0.30     3.516      True                            {'alpha': 1.0} q=0.3   spearman    -0.1063   408.0         NaN
+  RegAll-Ridge       2023                           {'alpha': 1.0}      0.20     7.145      True                            {'alpha': 1.0} q=0.2   spearman    -0.0715   249.0         NaN
+  RegAll-Ridge       2024                           {'alpha': 1.0}      0.25     9.757      True                           {'alpha': 1.0} q=0.25   spearman    -0.0936   236.0         NaN
+  RegAll-Ridge       2025                           {'alpha': 1.0}      0.15     3.992      True                           {'alpha': 1.0} q=0.15   spearman    -0.0425   273.0         NaN
+  RegAll-Ridge       2026                           {'alpha': 1.0}      0.10     0.769      True                            {'alpha': 1.0} q=0.1   spearman     0.0364   452.0         NaN
+   RegAll-HGBR       2020 {'max_depth': 2, 'min_samples_leaf': 50}      0.40    15.772      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.4   spearman     0.0452   256.0         NaN
+   RegAll-HGBR       2021 {'max_depth': 2, 'min_samples_leaf': 50}      0.30     5.058      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.3   spearman     0.0538   301.0         NaN
+   RegAll-HGBR       2022 {'max_depth': 2, 'min_samples_leaf': 50}      0.30     2.644      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.3   spearman     0.0193   408.0         NaN
+   RegAll-HGBR       2023 {'max_depth': 2, 'min_samples_leaf': 20}      0.40    11.485      True  {'max_depth': 2, 'min_samples_leaf': 20} q=0.4   spearman    -0.2772   249.0         NaN
+   RegAll-HGBR       2024 {'max_depth': 2, 'min_samples_leaf': 50}      0.35     7.689      True {'max_depth': 2, 'min_samples_leaf': 50} q=0.35   spearman    -0.0768   236.0         NaN
+   RegAll-HGBR       2025 {'max_depth': 3, 'min_samples_leaf': 50}      0.15     4.035      True {'max_depth': 3, 'min_samples_leaf': 50} q=0.15   spearman    -0.1125   273.0         NaN
+   RegAll-HGBR       2026 {'max_depth': 2, 'min_samples_leaf': 20}      0.40     3.330     False                                             OFF   spearman     0.0504   452.0         NaN
+  RegBUY-Ridge       2020                           {'alpha': 1.0}      0.40     8.271      True                            {'alpha': 1.0} q=0.4   spearman     0.1813   256.0         NaN
+  RegBUY-Ridge       2021                         {'alpha': 100.0}      0.25     8.151      True                         {'alpha': 100.0} q=0.25   spearman    -0.1710   301.0         NaN
+  RegBUY-Ridge       2022                          {'alpha': 10.0}      0.10     3.810      True                           {'alpha': 10.0} q=0.1   spearman     0.2134   408.0         NaN
+  RegBUY-Ridge       2023                          {'alpha': 10.0}      0.20     5.241      True                           {'alpha': 10.0} q=0.2   spearman    -0.1592   249.0         NaN
+  RegBUY-Ridge       2024                           {'alpha': 1.0}      0.30    10.981      True                            {'alpha': 1.0} q=0.3   spearman    -0.0921   236.0         NaN
+  RegBUY-Ridge       2025                           {'alpha': 1.0}      0.40     2.506     False                                             OFF   spearman    -0.0760   273.0         NaN
+  RegBUY-Ridge       2026                          {'alpha': 10.0}      0.15     1.786     False                                             OFF   spearman     0.0212   452.0         NaN
+   RegBUY-HGBR       2020 {'max_depth': 2, 'min_samples_leaf': 50}      0.40     4.740      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.4   spearman     0.1205   256.0         NaN
+   RegBUY-HGBR       2021 {'max_depth': 2, 'min_samples_leaf': 20}      0.40     8.752      True  {'max_depth': 2, 'min_samples_leaf': 20} q=0.4   spearman     0.0275   301.0         NaN
+   RegBUY-HGBR       2022 {'max_depth': 2, 'min_samples_leaf': 50}      0.10     0.301      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.1   spearman     0.1893   408.0         NaN
+   RegBUY-HGBR       2023 {'max_depth': 2, 'min_samples_leaf': 50}      0.10     0.382      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.1   spearman    -0.2248   249.0         NaN
+   RegBUY-HGBR       2024 {'max_depth': 2, 'min_samples_leaf': 20}      0.40     5.372      True  {'max_depth': 2, 'min_samples_leaf': 20} q=0.4   spearman     0.0491   236.0         NaN
+   RegBUY-HGBR       2025 {'max_depth': 3, 'min_samples_leaf': 20}      0.40     9.125      True  {'max_depth': 3, 'min_samples_leaf': 20} q=0.4   spearman    -0.0038   273.0         NaN
+   RegBUY-HGBR       2026 {'max_depth': 3, 'min_samples_leaf': 50}      0.40     4.329      True  {'max_depth': 3, 'min_samples_leaf': 50} q=0.4   spearman    -0.0693   452.0         NaN
+  Cls1R-BUY-LR       2020                               {'C': 0.1}      0.40     6.434      True                                {'C': 0.1} q=0.4        auc     0.5190   256.0         NaN
+  Cls1R-BUY-LR       2021                               {'C': 1.0}      0.35     4.179      True                               {'C': 1.0} q=0.35        auc     0.5560   301.0         NaN
+  Cls1R-BUY-LR       2022                               {'C': 1.0}      0.30     3.265      True                                {'C': 1.0} q=0.3        auc     0.5808   408.0         NaN
+  Cls1R-BUY-LR       2023                               {'C': 1.0}      0.30     6.586      True                                {'C': 1.0} q=0.3        auc     0.5154   249.0         NaN
+  Cls1R-BUY-LR       2024                               {'C': 1.0}      0.40     9.171      True                                {'C': 1.0} q=0.4        auc     0.4938   236.0         NaN
+  Cls1R-BUY-LR       2025                              {'C': 0.01}      0.30     5.148      True                               {'C': 0.01} q=0.3        auc     0.4938   273.0         NaN
+  Cls1R-BUY-LR       2026                              {'C': 0.01}      0.20     1.413      True                               {'C': 0.01} q=0.2        auc     0.4463   452.0         NaN
+ Cls1R-BUY-HGB       2020 {'max_depth': 3, 'min_samples_leaf': 20}      0.40     4.430      True  {'max_depth': 3, 'min_samples_leaf': 20} q=0.4        auc     0.5778   256.0         NaN
+ Cls1R-BUY-HGB       2021 {'max_depth': 2, 'min_samples_leaf': 20}      0.25     5.485      True {'max_depth': 2, 'min_samples_leaf': 20} q=0.25        auc     0.4746   301.0         NaN
+ Cls1R-BUY-HGB       2022 {'max_depth': 2, 'min_samples_leaf': 50}      0.40     7.630      True  {'max_depth': 2, 'min_samples_leaf': 50} q=0.4        auc     0.6210   408.0         NaN
+ Cls1R-BUY-HGB       2023 {'max_depth': 3, 'min_samples_leaf': 50}      0.40     4.584      True  {'max_depth': 3, 'min_samples_leaf': 50} q=0.4        auc     0.4890   249.0         NaN
+ Cls1R-BUY-HGB       2024 {'max_depth': 2, 'min_samples_leaf': 20}      0.40     4.061      True  {'max_depth': 2, 'min_samples_leaf': 20} q=0.4        auc     0.5247   236.0         NaN
+ Cls1R-BUY-HGB       2025 {'max_depth': 3, 'min_samples_leaf': 50}      0.40     6.010      True  {'max_depth': 3, 'min_samples_leaf': 50} q=0.4        auc     0.4845   273.0         NaN
+ Cls1R-BUY-HGB       2026 {'max_depth': 3, 'min_samples_leaf': 50}      0.40     6.736     False                                             OFF        auc     0.4942   452.0         NaN
+  Cls1R-All-LR       2020                              {'C': 0.01}      0.40     9.127      True                               {'C': 0.01} q=0.4        auc     0.5100   256.0         NaN
+  Cls1R-All-LR       2021                               {'C': 0.1}      0.40     9.148      True                                {'C': 0.1} q=0.4        auc     0.6041   301.0         NaN
+  Cls1R-All-LR       2022                               {'C': 0.1}      0.40     5.847      True                                {'C': 0.1} q=0.4        auc     0.4837   408.0         NaN
+  Cls1R-All-LR       2023                               {'C': 1.0}      0.10     5.927      True                                {'C': 1.0} q=0.1        auc     0.5339   249.0         NaN
+  Cls1R-All-LR       2024                               {'C': 0.1}      0.10     6.726      True                                {'C': 0.1} q=0.1        auc     0.5513   236.0         NaN
+  Cls1R-All-LR       2025                               {'C': 0.1}      0.20     3.988      True                                {'C': 0.1} q=0.2        auc     0.5053   273.0         NaN
+  Cls1R-All-LR       2026                              {'C': 0.01}      0.40     0.611     False                                             OFF        auc     0.4722   452.0         NaN
+ Cls1R-All-HGB       2020 {'max_depth': 2, 'min_samples_leaf': 20}      0.35     9.598      True {'max_depth': 2, 'min_samples_leaf': 20} q=0.35        auc     0.4949   256.0         NaN
+ Cls1R-All-HGB       2021 {'max_depth': 3, 'min_samples_leaf': 20}      0.40     9.493      True  {'max_depth': 3, 'min_samples_leaf': 20} q=0.4        auc     0.5803   301.0         NaN
+ Cls1R-All-HGB       2022 {'max_depth': 3, 'min_samples_leaf': 50}      0.40     6.509      True  {'max_depth': 3, 'min_samples_leaf': 50} q=0.4        auc     0.4847   408.0         NaN
+ Cls1R-All-HGB       2023 {'max_depth': 2, 'min_samples_leaf': 20}      0.40     8.755      True  {'max_depth': 2, 'min_samples_leaf': 20} q=0.4        auc     0.4748   249.0         NaN
+ Cls1R-All-HGB       2024 {'max_depth': 2, 'min_samples_leaf': 50}      0.25     4.929      True {'max_depth': 2, 'min_samples_leaf': 50} q=0.25        auc     0.4674   236.0         NaN
+ Cls1R-All-HGB       2025 {'max_depth': 3, 'min_samples_leaf': 20}      0.40     5.861      True  {'max_depth': 3, 'min_samples_leaf': 20} q=0.4        auc     0.5230   273.0         NaN
+ Cls1R-All-HGB       2026 {'max_depth': 3, 'min_samples_leaf': 20}      0.40     3.233     False                                             OFF        auc     0.4735   452.0         NaN
+   BUY20-Ridge       2020                           {'alpha': 1.0}      0.40     2.988      True                            {'alpha': 1.0} q=0.4   spearman     0.1733   256.0         NaN
+   BUY20-Ridge       2021                         {'alpha': 100.0}      0.10     3.362      True                          {'alpha': 100.0} q=0.1   spearman    -0.1095   301.0         NaN
+   BUY20-Ridge       2022                         {'alpha': 100.0}      0.15     1.098      True                         {'alpha': 100.0} q=0.15   spearman    -0.0295   408.0         NaN
+   BUY20-Ridge       2023                           {'alpha': 1.0}      0.25     3.371      True                           {'alpha': 1.0} q=0.25   spearman    -0.1635   249.0         NaN
+   BUY20-Ridge       2024                           {'alpha': 1.0}      0.40     7.914      True                            {'alpha': 1.0} q=0.4   spearman    -0.0943   236.0         NaN
+   BUY20-Ridge       2025                         {'alpha': 100.0}      0.10     1.478      True                          {'alpha': 100.0} q=0.1   spearman    -0.1079   273.0         NaN
+   BUY20-Ridge       2026                         {'alpha': 100.0}      0.20     2.141     False                                             OFF   spearman     0.0700   452.0         NaN
+BUY20-Cls1R-LR       2020                               {'C': 1.0}      0.15     4.300      True                               {'C': 1.0} q=0.15        auc     0.5402   256.0         NaN
+BUY20-Cls1R-LR       2021                               {'C': 1.0}      0.10     2.166      True                                {'C': 1.0} q=0.1        auc     0.5652   301.0         NaN
+BUY20-Cls1R-LR       2022                               {'C': 0.1}      0.10     0.053      True                                {'C': 0.1} q=0.1        auc     0.5272   408.0         NaN
+BUY20-Cls1R-LR       2023                               {'C': 1.0}      0.25     4.615      True                               {'C': 1.0} q=0.25        auc     0.5201   249.0         NaN
+BUY20-Cls1R-LR       2024                               {'C': 0.1}      0.40     7.065      True                                {'C': 0.1} q=0.4        auc     0.4868   236.0         NaN
+BUY20-Cls1R-LR       2025                               {'C': 0.1}      0.40     5.431      True                                {'C': 0.1} q=0.4        auc     0.4885   273.0         NaN
+BUY20-Cls1R-LR       2026                              {'C': 0.01}      0.20     1.490      True                               {'C': 0.01} q=0.2        auc     0.4299   452.0         NaN
+       Rule-WF       2020                                      NaN       NaN     5.551      True                                       LsG_8_1.5        NaN        NaN     NaN   LsG_8_1.5
+       Rule-WF       2021                                      NaN       NaN     5.493      True                                       LsG_8_1.5        NaN        NaN     NaN   LsG_8_1.5
+       Rule-WF       2022                                      NaN       NaN     4.159      True                                       LsG_2_1.5        NaN        NaN     NaN   LsG_2_1.5
+       Rule-WF       2023                                      NaN       NaN     1.778      True                                       LsG_2_1.5        NaN        NaN     NaN   LsG_2_1.5
+       Rule-WF       2024                                      NaN       NaN     0.872      True                                            Ls_8        NaN        NaN     NaN        Ls_8
+       Rule-WF       2025                                      NaN       NaN     0.000      True                                             OFF        NaN        NaN     NaN        Lb_2
+       Rule-WF       2026                                      NaN       NaN     0.000      True                                             OFF        NaN        NaN     NaN        Lb_2

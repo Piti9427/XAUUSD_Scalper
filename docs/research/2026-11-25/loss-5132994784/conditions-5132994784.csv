@@ -1,0 +1,17 @@
+condition,value_at_signal,threshold,pass,vs_live_SELL
+48-bar low breakout (SELL close < prior_low_48),yes: close 3490.673 < 3508.531,close below prior 48-bar low,yes,all 18 bot trades are SELL breakouts
+extension past breakout (close),1.808 ATR (17.858 pts),none (no cap on live),n/a,winners median 1.02; SL median 0.68; this is the 2nd largest of 18
+extension past breakout (fill),1.691 ATR (fill 3491.828),none,n/a,winners median 0.82; SL median 0.52
+wick extension (signal-bar low vs breakout),2.458 ATR (low 3484.256),none,n/a,"signal-bar range 3.32 ATR; live SL median range 1.56, TP median 1.68"
+EMA50 (SELL: close below EMA50),yes: close-EMA50 = -4.739 ATR (EMA50 3537.483),close below EMA50,yes,winners median -4.28 ATR; SL median -4.58
+F2 macro distance |close-H4 EMA200|,49.000 ATR (signed -49.000),>= 10 ATR,yes,winners median -20.56; SL median -40.27
+F3 max 1 loss / UTC day,first loss of 2026-11-25 UTC (previous same-day trade was a TP),block a second loss the same UTC day,allowed,"after this SL, F3 blocks new entries until ~07:00 ICT 26 Nov"
+ATR(14) M15,9.878,none,n/a,winners median 8.479; SL median 8.892
+ATR as % of price,0.283%,none,n/a,top third of 18 live trades (cut 0.243%); winners median 0.215%; SL median 0.242%
+"20-day ATR percentile (Exness M15, rank of 96*20 bars)",0.778,none (research cut often 2/3),n/a,winners median 0.721; SL median 0.752
+RSI7 at signal close,4.430,none on SELL,n/a,winners median 17.14; SL median 17.76
+minutes since previous exit,2.09 min (prev ticket 5130044984 TP +33.24 at 18:58:48 ICT),cooldown 30 min applies after a loss only; after TP re-entry is allowed,allowed,6 live SELLs entered within 30 min after a TP (see comparison table)
+consecutive SELLs,18th consecutive bot SELL; 2nd SELL on 25 Nov ICT,none (bot has no BUY fill in this journal),n/a,all 18 bot trades are SELL
+session / time,"london_ny, 19:00 ICT (12:00 UTC, Wed)",none,n/a,"london_ny live: 8 trades, 4 TP / 4 SL, net +2.53 (from TRADE_ANALYSIS)"
+signal-to-fill delay,"54.6s (10 quote-changed retries, 11 cycles)",n/a,filled,"spread 0.221, slippage -0.060 (minus = filled better than request)"
+risk cap 10%,risk 24.63 USD = 5.93% of equity 415.40,<= 10%,yes,lot 0.01 as usual

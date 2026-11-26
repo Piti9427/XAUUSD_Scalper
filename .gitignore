@@ -44,6 +44,7 @@ data/risk_halt_state.json
 # Logs and generated tester artifacts
 *.log
 logs/
+*.pkl
 *.jsonl
 *.state
 *.ex5

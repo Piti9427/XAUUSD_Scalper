@@ -1,0 +1,144 @@
+cell,criterion,passed
+s1_all_x1.5,0 TUNE plateau > 0,False
+s1_all_x1.5,1 WR > base 25-26 & 24-26,False
+s1_all_x1.5,2 wins/losses >= base both,False
+s1_all_x1.5,3 expectancy >= base-0.5 both,True
+s1_all_x1.5,4 net > 0 and >= 90% base both,True
+s1_all_x1.5,5 maxDD < base both,False
+s1_all_x1.5,6 kept >= 70% both,True
+s1_all_x1.5,7 neighbours WR >= base both,False
+s1_all_x1.5,8 hold-out 2019-24 WR >= base,True
+s1_all_x1.5,9 WF 2023-24 WR >= base,False
+s1_all_x1.5,info: TUNE plateau score,-0.34
+s1_all_x1.5,info: neighbours,s1_all_x1.25;s1_all_x1.75
+s1_all_x1.5,info: months better/worse 2025-26 (net),3/4
+s2_m15,0 TUNE plateau > 0,False
+s2_m15,1 WR > base 25-26 & 24-26,False
+s2_m15,2 wins/losses >= base both,False
+s2_m15,3 expectancy >= base-0.5 both,True
+s2_m15,4 net > 0 and >= 90% base both,True
+s2_m15,5 maxDD < base both,False
+s2_m15,6 kept >= 70% both,True
+s2_m15,7 neighbours WR >= base both,False
+s2_m15,8 hold-out 2019-24 WR >= base,True
+s2_m15,9 WF 2023-24 WR >= base,True
+s2_m15,info: TUNE plateau score,-0.96
+s2_m15,info: neighbours,s2_m7.5;s2_m30
+s2_m15,info: months better/worse 2025-26 (net),2/6
+s3_L,0 TUNE plateau > 0,True
+s3_L,1 WR > base 25-26 & 24-26,False
+s3_L,2 wins/losses >= base both,False
+s3_L,3 expectancy >= base-0.5 both,True
+s3_L,4 net > 0 and >= 90% base both,False
+s3_L,5 maxDD < base both,True
+s3_L,6 kept >= 70% both,True
+s3_L,7 neighbours WR >= base both,False
+s3_L,8 hold-out 2019-24 WR >= base,True
+s3_L,9 WF 2023-24 WR >= base,False
+s3_L,info: TUNE plateau score,0.08
+s3_L,info: neighbours,s3_0.85L;s3_1.15L
+s3_L,info: months better/worse 2025-26 (net),8/8
+s4_winf,0 TUNE plateau > 0,False
+s4_winf,1 WR > base 25-26 & 24-26,False
+s4_winf,2 wins/losses >= base both,False
+s4_winf,3 expectancy >= base-0.5 both,False
+s4_winf,4 net > 0 and >= 90% base both,False
+s4_winf,5 maxDD < base both,True
+s4_winf,6 kept >= 70% both,False
+s4_winf,7 neighbours WR >= base both,False
+s4_winf,8 hold-out 2019-24 WR >= base,False
+s4_winf,9 WF 2023-24 WR >= base,False
+s4_winf,info: TUNE plateau score,-inf
+s4_winf,info: neighbours,s4_w240
+s4_winf,info: months better/worse 2025-26 (net),5/18
+pair_ext_atr,0 TUNE plateau > 0,False
+pair_ext_atr,1 WR > base 25-26 & 24-26,True
+pair_ext_atr,2 wins/losses >= base both,False
+pair_ext_atr,3 expectancy >= base-0.5 both,True
+pair_ext_atr,4 net > 0 and >= 90% base both,True
+pair_ext_atr,5 maxDD < base both,False
+pair_ext_atr,6 kept >= 70% both,True
+pair_ext_atr,7 neighbours WR >= base both,False
+pair_ext_atr,8 hold-out 2019-24 WR >= base,True
+pair_ext_atr,9 WF 2023-24 WR >= base,True
+pair_ext_atr,info: TUNE plateau score,-0.13
+pair_ext_atr,info: neighbours,s1_all_x1.5;s3_L
+pair_ext_atr,info: months better/worse 2025-26 (net),2/3
+pair_leg_blk,0 TUNE plateau > 0,False
+pair_leg_blk,1 WR > base 25-26 & 24-26,False
+pair_leg_blk,2 wins/losses >= base both,False
+pair_leg_blk,3 expectancy >= base-0.5 both,True
+pair_leg_blk,4 net > 0 and >= 90% base both,True
+pair_leg_blk,5 maxDD < base both,False
+pair_leg_blk,6 kept >= 70% both,True
+pair_leg_blk,7 neighbours WR >= base both,False
+pair_leg_blk,8 hold-out 2019-24 WR >= base,True
+pair_leg_blk,9 WF 2023-24 WR >= base,True
+pair_leg_blk,info: TUNE plateau score,-inf
+pair_leg_blk,info: neighbours,s2_m15;s4_winf
+pair_leg_blk,info: months better/worse 2025-26 (net),2/6
+s4b_k1,0 TUNE plateau > 0,False
+s4b_k1,1 WR > base 25-26 & 24-26,False
+s4b_k1,2 wins/losses >= base both,False
+s4b_k1,3 expectancy >= base-0.5 both,False
+s4b_k1,4 net > 0 and >= 90% base both,False
+s4b_k1,5 maxDD < base both,False
+s4b_k1,6 kept >= 70% both,False
+s4b_k1,7 neighbours WR >= base both,False
+s4b_k1,8 hold-out 2019-24 WR >= base,False
+s4b_k1,9 WF 2023-24 WR >= base,False
+s4b_k1,info: TUNE plateau score,-inf
+s4b_k1,info: neighbours,s4b_k2
+s4b_k1,info: months better/worse 2025-26 (net),3/6
+s2_m15_once,0 TUNE plateau > 0,False
+s2_m15_once,1 WR > base 25-26 & 24-26,False
+s2_m15_once,2 wins/losses >= base both,False
+s2_m15_once,3 expectancy >= base-0.5 both,True
+s2_m15_once,4 net > 0 and >= 90% base both,True
+s2_m15_once,5 maxDD < base both,False
+s2_m15_once,6 kept >= 70% both,True
+s2_m15_once,7 neighbours WR >= base both,False
+s2_m15_once,8 hold-out 2019-24 WR >= base,True
+s2_m15_once,9 WF 2023-24 WR >= base,True
+s2_m15_once,info: TUNE plateau score,-0.44
+s2_m15_once,info: neighbours,s2_m7.5_once;s2_m30_once
+s2_m15_once,info: months better/worse 2025-26 (net),2/6
+s4b_k1_once,0 TUNE plateau > 0,False
+s4b_k1_once,1 WR > base 25-26 & 24-26,False
+s4b_k1_once,2 wins/losses >= base both,False
+s4b_k1_once,3 expectancy >= base-0.5 both,True
+s4b_k1_once,4 net > 0 and >= 90% base both,True
+s4b_k1_once,5 maxDD < base both,False
+s4b_k1_once,6 kept >= 70% both,True
+s4b_k1_once,7 neighbours WR >= base both,True
+s4b_k1_once,8 hold-out 2019-24 WR >= base,True
+s4b_k1_once,9 WF 2023-24 WR >= base,False
+s4b_k1_once,info: TUNE plateau score,-0.5
+s4b_k1_once,info: neighbours,s4b_k2_once
+s4b_k1_once,info: months better/worse 2025-26 (net),4/5
+s4_winf_once,0 TUNE plateau > 0,False
+s4_winf_once,1 WR > base 25-26 & 24-26,False
+s4_winf_once,2 wins/losses >= base both,False
+s4_winf_once,3 expectancy >= base-0.5 both,False
+s4_winf_once,4 net > 0 and >= 90% base both,False
+s4_winf_once,5 maxDD < base both,False
+s4_winf_once,6 kept >= 70% both,True
+s4_winf_once,7 neighbours WR >= base both,False
+s4_winf_once,8 hold-out 2019-24 WR >= base,True
+s4_winf_once,9 WF 2023-24 WR >= base,False
+s4_winf_once,info: TUNE plateau score,-0.65
+s4_winf_once,info: neighbours,s4_w240_once
+s4_winf_once,info: months better/worse 2025-26 (net),9/14
+pair_leg_blk_once,0 TUNE plateau > 0,False
+pair_leg_blk_once,1 WR > base 25-26 & 24-26,True
+pair_leg_blk_once,2 wins/losses >= base both,False
+pair_leg_blk_once,3 expectancy >= base-0.5 both,True
+pair_leg_blk_once,4 net > 0 and >= 90% base both,True
+pair_leg_blk_once,5 maxDD < base both,False
+pair_leg_blk_once,6 kept >= 70% both,True
+pair_leg_blk_once,7 neighbours WR >= base both,False
+pair_leg_blk_once,8 hold-out 2019-24 WR >= base,False
+pair_leg_blk_once,9 WF 2023-24 WR >= base,False
+pair_leg_blk_once,info: TUNE plateau score,-0.5
+pair_leg_blk_once,info: neighbours,s2_m15_once;s4b_k1_once
+pair_leg_blk_once,info: months better/worse 2025-26 (net),4/3

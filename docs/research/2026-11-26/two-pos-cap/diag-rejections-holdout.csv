@@ -1,0 +1,7 @@
+variant,window,cands,trades,net,rej_cap,rej_cap_second,rej_daily_stop,max_conc_risk_pct
+base_live,2025-26H1 (OPT),502,233,1608.78,0,0,0,4.8
+base_live,2026H2 (HOLD),223,80,290.19,0,0,0,7.81
+m2_set,2025-26H1 (OPT),502,339,2387.96,0,0,0,7.44
+m2_set,2026H2 (HOLD),223,109,356.82,31,31,0,9.9
+m3_set,2025-26H1 (OPT),502,370,2593.83,0,0,0,8.61
+m3_set,2026H2 (HOLD),223,123,341.72,48,48,0,9.92

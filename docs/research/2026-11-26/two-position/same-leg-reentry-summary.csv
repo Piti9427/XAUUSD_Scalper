@@ -1,0 +1,4 @@
+period,sell_trades,sell_win_pct,same_leg_n,same_leg_win_pct,same_leg_net,same_leg_avg,other_avg,after_tp_n,after_tp_win_pct,after_sl_n,after_sl_win_pct,after_be_n,after_be_win_pct
+2015-26,828,40.1,211,42.7,-180.29,-0.85,1.08,211,42.7,0,,0,
+2024-26,141,49.6,46,41.3,-120.66,-2.62,9.15,46,41.3,0,,0,
+2025-26,126,52.4,43,39.5,-142.56,-3.32,11.15,43,39.5,0,,0,

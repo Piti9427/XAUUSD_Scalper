@@ -1,0 +1,1667 @@
+arm,test_year,hp,q,score,smoothed,feasible_smoothed
+RegAll-Ridge,2020,{'alpha': 1.0},0.1,4.544,4.833,False
+RegAll-Ridge,2020,{'alpha': 1.0},0.15,5.122,5.006,False
+RegAll-Ridge,2020,{'alpha': 1.0},0.2,5.352,7.035,True
+RegAll-Ridge,2020,{'alpha': 1.0},0.25,10.629,9.202,True
+RegAll-Ridge,2020,{'alpha': 1.0},0.3,11.624,12.295,True
+RegAll-Ridge,2020,{'alpha': 1.0},0.35,14.633,13.29,True
+RegAll-Ridge,2020,{'alpha': 1.0},0.4,13.614,14.123,True
+RegAll-Ridge,2020,{'alpha': 10.0},0.1,3.848,4.805,False
+RegAll-Ridge,2020,{'alpha': 10.0},0.15,5.762,5.289,False
+RegAll-Ridge,2020,{'alpha': 10.0},0.2,6.256,7.554,True
+RegAll-Ridge,2020,{'alpha': 10.0},0.25,10.645,9.61,True
+RegAll-Ridge,2020,{'alpha': 10.0},0.3,11.93,12.248,True
+RegAll-Ridge,2020,{'alpha': 10.0},0.35,14.171,13.667,True
+RegAll-Ridge,2020,{'alpha': 10.0},0.4,14.9,14.535,True
+RegAll-Ridge,2020,{'alpha': 100.0},0.1,4.271,3.132,False
+RegAll-Ridge,2020,{'alpha': 100.0},0.15,1.993,4.012,False
+RegAll-Ridge,2020,{'alpha': 100.0},0.2,5.773,5.954,False
+RegAll-Ridge,2020,{'alpha': 100.0},0.25,10.096,10.471,True
+RegAll-Ridge,2020,{'alpha': 100.0},0.3,15.544,13.281,True
+RegAll-Ridge,2020,{'alpha': 100.0},0.35,14.203,15.884,True
+RegAll-Ridge,2020,{'alpha': 100.0},0.4,17.906,16.055,True
+RegAll-Ridge,2021,{'alpha': 1.0},0.1,2.258,2.956,False
+RegAll-Ridge,2021,{'alpha': 1.0},0.15,3.654,3.14,False
+RegAll-Ridge,2021,{'alpha': 1.0},0.2,3.509,4.518,True
+RegAll-Ridge,2021,{'alpha': 1.0},0.25,6.392,5.699,True
+RegAll-Ridge,2021,{'alpha': 1.0},0.3,7.197,7.807,True
+RegAll-Ridge,2021,{'alpha': 1.0},0.35,9.832,8.587,False
+RegAll-Ridge,2021,{'alpha': 1.0},0.4,8.731,9.281,False
+RegAll-Ridge,2021,{'alpha': 10.0},0.1,2.258,3.237,False
+RegAll-Ridge,2021,{'alpha': 10.0},0.15,4.217,3.569,False
+RegAll-Ridge,2021,{'alpha': 10.0},0.2,4.231,4.848,True
+RegAll-Ridge,2021,{'alpha': 10.0},0.25,6.097,5.997,True
+RegAll-Ridge,2021,{'alpha': 10.0},0.3,7.662,7.863,True
+RegAll-Ridge,2021,{'alpha': 10.0},0.35,9.832,8.89,True
+RegAll-Ridge,2021,{'alpha': 10.0},0.4,9.176,9.504,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.1,2.596,3.729,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.15,4.862,4.006,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.2,4.56,5.067,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.25,5.778,7.611,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.3,12.494,9.763,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.35,11.018,11.909,True
+RegAll-Ridge,2021,{'alpha': 100.0},0.4,12.214,11.616,True
+RegAll-Ridge,2022,{'alpha': 1.0},0.1,-1.214,0.636,False
+RegAll-Ridge,2022,{'alpha': 1.0},0.15,2.486,1.285,False
+RegAll-Ridge,2022,{'alpha': 1.0},0.2,2.583,3.079,True
+RegAll-Ridge,2022,{'alpha': 1.0},0.25,4.167,3.119,True
+RegAll-Ridge,2022,{'alpha': 1.0},0.3,2.606,3.516,True
+RegAll-Ridge,2022,{'alpha': 1.0},0.35,3.774,2.53,False
+RegAll-Ridge,2022,{'alpha': 1.0},0.4,1.209,2.492,False
+RegAll-Ridge,2022,{'alpha': 10.0},0.1,-1.214,0.445,False
+RegAll-Ridge,2022,{'alpha': 10.0},0.15,2.104,1.009,False
+RegAll-Ridge,2022,{'alpha': 10.0},0.2,2.138,2.618,True
+RegAll-Ridge,2022,{'alpha': 10.0},0.25,3.611,2.498,True
+RegAll-Ridge,2022,{'alpha': 10.0},0.3,1.745,3.202,True
+RegAll-Ridge,2022,{'alpha': 10.0},0.35,4.25,2.635,True
+RegAll-Ridge,2022,{'alpha': 10.0},0.4,1.911,3.081,True
+RegAll-Ridge,2022,{'alpha': 100.0},0.1,-0.289,0.499,False
+RegAll-Ridge,2022,{'alpha': 100.0},0.15,1.288,0.677,False
+RegAll-Ridge,2022,{'alpha': 100.0},0.2,1.033,1.6,True
+RegAll-Ridge,2022,{'alpha': 100.0},0.25,2.479,2.916,True
+RegAll-Ridge,2022,{'alpha': 100.0},0.3,5.236,3.5,False
+RegAll-Ridge,2022,{'alpha': 100.0},0.35,2.785,2.994,False
+RegAll-Ridge,2022,{'alpha': 100.0},0.4,0.96,1.872,False
+RegAll-Ridge,2023,{'alpha': 1.0},0.1,3.51,4.937,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.15,6.363,5.863,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.2,7.717,7.145,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.25,7.356,6.393,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.3,4.105,5.351,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.35,4.592,4.579,True
+RegAll-Ridge,2023,{'alpha': 1.0},0.4,5.038,4.815,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.1,3.547,4.866,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.15,6.186,5.668,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.2,7.271,6.37,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.25,5.653,5.553,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.3,3.733,5.168,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.35,6.117,4.768,True
+RegAll-Ridge,2023,{'alpha': 10.0},0.4,4.455,5.286,True
+RegAll-Ridge,2023,{'alpha': 100.0},0.1,3.171,3.428,False
+RegAll-Ridge,2023,{'alpha': 100.0},0.15,3.685,4.046,False
+RegAll-Ridge,2023,{'alpha': 100.0},0.2,5.281,5.405,True
+RegAll-Ridge,2023,{'alpha': 100.0},0.25,7.247,7.129,True
+RegAll-Ridge,2023,{'alpha': 100.0},0.3,8.858,6.446,False
+RegAll-Ridge,2023,{'alpha': 100.0},0.35,3.232,4.966,False
+RegAll-Ridge,2023,{'alpha': 100.0},0.4,2.809,3.02,False
+RegAll-Ridge,2024,{'alpha': 1.0},0.1,7.48,7.716,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.15,7.952,8.736,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.2,10.777,9.702,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.25,10.377,9.757,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.3,8.117,9.083,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.35,8.754,8.603,True
+RegAll-Ridge,2024,{'alpha': 1.0},0.4,8.937,8.846,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.1,6.244,7.2,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.15,8.157,8.169,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.2,10.107,9.027,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.25,8.816,8.563,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.3,6.766,8.155,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.35,8.882,8.025,True
+RegAll-Ridge,2024,{'alpha': 10.0},0.4,8.427,8.655,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.1,6.326,5.49,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.15,4.653,6.135,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.2,7.425,7.067,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.25,9.123,8.693,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.3,9.532,7.63,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.35,4.237,6.455,True
+RegAll-Ridge,2024,{'alpha': 100.0},0.4,5.595,4.916,True
+RegAll-Ridge,2025,{'alpha': 1.0},0.1,3.844,3.216,True
+RegAll-Ridge,2025,{'alpha': 1.0},0.15,2.588,3.992,True
+RegAll-Ridge,2025,{'alpha': 1.0},0.2,5.545,3.597,False
+RegAll-Ridge,2025,{'alpha': 1.0},0.25,2.657,3.393,False
+RegAll-Ridge,2025,{'alpha': 1.0},0.3,1.979,2.671,False
+RegAll-Ridge,2025,{'alpha': 1.0},0.35,3.378,2.856,False
+RegAll-Ridge,2025,{'alpha': 1.0},0.4,3.211,3.295,False
+RegAll-Ridge,2025,{'alpha': 10.0},0.1,2.474,2.531,True
+RegAll-Ridge,2025,{'alpha': 10.0},0.15,2.588,3.312,True
+RegAll-Ridge,2025,{'alpha': 10.0},0.2,4.874,3.975,False
+RegAll-Ridge,2025,{'alpha': 10.0},0.25,4.462,3.475,False
+RegAll-Ridge,2025,{'alpha': 10.0},0.3,1.089,2.63,False
+RegAll-Ridge,2025,{'alpha': 10.0},0.35,2.338,1.852,False
+RegAll-Ridge,2025,{'alpha': 10.0},0.4,2.128,2.233,False
+RegAll-Ridge,2025,{'alpha': 100.0},0.1,3.669,2.849,True
+RegAll-Ridge,2025,{'alpha': 100.0},0.15,2.03,2.746,True
+RegAll-Ridge,2025,{'alpha': 100.0},0.2,2.541,2.753,True
+RegAll-Ridge,2025,{'alpha': 100.0},0.25,3.69,2.986,True
+RegAll-Ridge,2025,{'alpha': 100.0},0.3,2.729,1.496,False
+RegAll-Ridge,2025,{'alpha': 100.0},0.35,-1.93,-0.497,False
+RegAll-Ridge,2025,{'alpha': 100.0},0.4,-2.291,-2.11,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.1,0.87,0.769,True
+RegAll-Ridge,2026,{'alpha': 1.0},0.15,0.667,0.933,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.2,1.26,-0.152,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.25,-2.382,-1.521,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.3,-3.441,-5.263,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.35,-9.966,-8.302,False
+RegAll-Ridge,2026,{'alpha': 1.0},0.4,-11.498,-10.732,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.1,0.324,0.341,True
+RegAll-Ridge,2026,{'alpha': 10.0},0.15,0.359,0.8,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.2,1.719,0.524,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.25,-0.505,-0.611,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.3,-3.045,-5.108,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.35,-11.772,-8.525,False
+RegAll-Ridge,2026,{'alpha': 10.0},0.4,-10.757,-11.264,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.1,1.591,1.717,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.15,1.842,1.202,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.2,0.173,1.831,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.25,3.477,2.153,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.3,2.811,-0.162,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.35,-6.773,-3.833,False
+RegAll-Ridge,2026,{'alpha': 100.0},0.4,-7.536,-7.154,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-1.877,-1.902,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-1.927,-0.602,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,1.996,4.068,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,12.134,9.094,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,13.151,11.028,True
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,7.8,9.439,True
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,7.365,7.583,True
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.641,1.922,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,2.204,2.894,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,4.836,3.154,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,2.422,4.313,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,5.68,7.53,False
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,14.488,12.408,True
+RegAll-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,17.057,15.772,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,1.148,1.743,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,2.338,2.494,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,3.996,4.315,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,6.61,6.198,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,7.989,8.602,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,11.208,9.465,False
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,9.198,10.203,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,2.988,4.429,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,5.871,5.603,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,7.949,7.166,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,7.679,7.444,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,6.705,7.312,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,7.553,8.707,True
+RegAll-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,11.864,9.708,True
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-2.033,-1.027,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.02,0.064,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,2.246,2.025,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,3.849,5.38,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,10.043,8.306,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,11.025,8.426,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,4.21,7.618,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.55,1.214,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.877,1.86,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.151,3.014,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,4.014,3.923,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,4.602,5.058,True
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,6.556,5.587,False
+RegAll-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,5.603,6.08,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,1.518,1.884,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,2.25,1.63,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,1.121,2.148,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,3.073,3.753,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,7.064,5.81,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,7.292,8.08,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,9.883,8.588,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.717,1.569,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.42,2.217,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,3.515,3.932,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,6.861,4.041,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,1.746,3.837,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,2.905,2.953,False
+RegAll-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,4.207,3.556,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,0.346,1.464,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,2.582,2.295,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,3.959,2.704,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,1.57,4.628,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,8.354,7.085,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,11.331,7.055,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,1.479,6.405,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.624,0.769,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.086,1.399,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.657,1.623,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,2.297,2.113,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,1.386,2.644,True
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,4.249,1.914,False
+RegAll-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,0.105,2.177,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,1.495,1.03,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,0.566,0.515,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-0.517,-0.055,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-0.212,0.68,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,2.769,1.785,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,2.799,3.877,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,6.063,4.431,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,2.08,0.988,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.105,0.94,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.846,1.279,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,3.095,1.588,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,0.822,2.723,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.251,2.34,False
+RegAll-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,1.947,3.099,False
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,4.908,5.718,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,6.529,6.708,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,8.688,7.924,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,8.556,8.806,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,9.174,9.728,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,11.453,10.715,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,11.517,11.485,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,6.222,6.198,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,6.174,6.721,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,7.766,6.599,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,5.858,6.633,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,6.274,7.206,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,9.488,7.926,True
+RegAll-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,8.018,8.753,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,4.629,4.992,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,5.354,5.124,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,5.388,5.546,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,5.896,6.281,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,7.559,6.876,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,7.173,8.15,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,9.716,8.445,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,5.575,5.836,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,6.096,5.713,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,5.469,5.432,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,4.732,5.557,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,6.469,5.833,True
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,6.299,6.076,False
+RegAll-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,5.461,5.88,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,3.251,2.807,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,2.362,3.908,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,6.11,3.863,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,3.116,5.349,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,6.82,4.924,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,4.837,5.865,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.938,5.387,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,4.197,5.765,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,7.333,6.279,False
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,7.307,6.775,True
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,5.684,7.133,True
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,8.408,7.412,True
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,8.144,7.689,True
+RegAll-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,6.515,7.33,True
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,0.938,1.384,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,1.831,1.406,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,1.449,1.653,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,1.679,2.022,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,2.938,3.397,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,5.573,3.932,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,3.286,4.43,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,5.038,5.022,True
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,5.006,5.49,True
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,6.426,4.619,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,2.424,3.8,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,2.551,2.281,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,1.868,2.302,False
+RegAll-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,2.486,2.177,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,1.253,0.38,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.493,0.63,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,1.129,-0.578,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-2.371,0.826,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,3.719,0.025,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,-1.273,1.087,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,0.814,-0.229,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.772,2.231,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,3.69,2.842,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,4.066,1.691,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-2.683,0.447,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-0.04,-0.985,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-0.23,-3.199,False
+RegAll-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,-9.326,-4.778,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,0.517,-1.34,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-3.196,-1.649,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-2.267,-2.742,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-2.762,-1.903,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-0.68,-2.049,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,-2.705,-3.666,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,-7.614,-5.159,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,3.519,3.444,True
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,3.369,4.035,True
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,5.218,3.748,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,2.656,2.039,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-1.757,0.707,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,1.223,0.036,False
+RegAll-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,0.642,0.932,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-3.895,-3.507,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-3.119,-2.479,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-0.422,-1.008,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,0.517,0.156,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,0.372,0.945,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,1.947,2.344,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,4.713,3.33,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.611,2.385,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,3.159,2.223,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,1.897,0.612,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-3.222,-1.321,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-2.638,-3.488,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-4.605,-6.053,False
+RegAll-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,-10.916,-7.76,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,0.687,-3.728,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-8.144,-4.09,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-4.813,-3.678,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,1.923,0.432,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,4.186,2.035,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,-0.005,0.357,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,-3.111,-1.558,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,3.192,3.214,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,3.235,3.028,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,2.656,3.149,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,3.557,1.14,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-2.792,-2.351,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,-7.818,-6.4,False
+RegAll-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,-8.591,-8.204,False
+RegBUY-Ridge,2020,{'alpha': 1.0},0.1,2.247,2.916,False
+RegBUY-Ridge,2020,{'alpha': 1.0},0.15,3.585,3.671,False
+RegBUY-Ridge,2020,{'alpha': 1.0},0.2,5.181,4.915,False
+RegBUY-Ridge,2020,{'alpha': 1.0},0.25,5.979,5.748,False
+RegBUY-Ridge,2020,{'alpha': 1.0},0.3,6.082,6.514,True
+RegBUY-Ridge,2020,{'alpha': 1.0},0.35,7.482,7.541,True
+RegBUY-Ridge,2020,{'alpha': 1.0},0.4,9.06,8.271,True
+RegBUY-Ridge,2020,{'alpha': 10.0},0.1,2.642,3.424,False
+RegBUY-Ridge,2020,{'alpha': 10.0},0.15,4.207,4.067,False
+RegBUY-Ridge,2020,{'alpha': 10.0},0.2,5.352,5.324,False
+RegBUY-Ridge,2020,{'alpha': 10.0},0.25,6.413,6.282,True
+RegBUY-Ridge,2020,{'alpha': 10.0},0.3,7.081,7.025,True
+RegBUY-Ridge,2020,{'alpha': 10.0},0.35,7.579,7.572,True
+RegBUY-Ridge,2020,{'alpha': 10.0},0.4,8.057,7.818,True
+RegBUY-Ridge,2020,{'alpha': 100.0},0.1,2.085,3.056,False
+RegBUY-Ridge,2020,{'alpha': 100.0},0.15,4.026,3.654,False
+RegBUY-Ridge,2020,{'alpha': 100.0},0.2,4.851,4.976,False
+RegBUY-Ridge,2020,{'alpha': 100.0},0.25,6.052,5.679,False
+RegBUY-Ridge,2020,{'alpha': 100.0},0.3,6.136,5.979,True
+RegBUY-Ridge,2020,{'alpha': 100.0},0.35,5.749,6.106,True
+RegBUY-Ridge,2020,{'alpha': 100.0},0.4,6.434,6.091,True
+RegBUY-Ridge,2021,{'alpha': 1.0},0.1,6.085,5.795,True
+RegBUY-Ridge,2021,{'alpha': 1.0},0.15,5.504,6.224,True
+RegBUY-Ridge,2021,{'alpha': 1.0},0.2,7.082,6.445,True
+RegBUY-Ridge,2021,{'alpha': 1.0},0.25,6.748,6.862,False
+RegBUY-Ridge,2021,{'alpha': 1.0},0.3,6.757,6.82,False
+RegBUY-Ridge,2021,{'alpha': 1.0},0.35,6.956,7.729,False
+RegBUY-Ridge,2021,{'alpha': 1.0},0.4,9.475,8.215,False
+RegBUY-Ridge,2021,{'alpha': 10.0},0.1,6.631,7.206,True
+RegBUY-Ridge,2021,{'alpha': 10.0},0.15,7.781,7.11,True
+RegBUY-Ridge,2021,{'alpha': 10.0},0.2,6.919,7.486,True
+RegBUY-Ridge,2021,{'alpha': 10.0},0.25,7.757,7.994,True
+RegBUY-Ridge,2021,{'alpha': 10.0},0.3,9.307,7.816,False
+RegBUY-Ridge,2021,{'alpha': 10.0},0.35,6.383,8.323,False
+RegBUY-Ridge,2021,{'alpha': 10.0},0.4,9.279,7.831,False
+RegBUY-Ridge,2021,{'alpha': 100.0},0.1,6.15,6.16,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.15,6.171,6.475,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.2,7.105,7.371,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.25,8.837,8.151,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.3,8.51,8.144,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.35,7.086,7.524,True
+RegBUY-Ridge,2021,{'alpha': 100.0},0.4,6.975,7.031,True
+RegBUY-Ridge,2022,{'alpha': 1.0},0.1,3.773,2.938,True
+RegBUY-Ridge,2022,{'alpha': 1.0},0.15,2.103,2.787,True
+RegBUY-Ridge,2022,{'alpha': 1.0},0.2,2.485,2.092,True
+RegBUY-Ridge,2022,{'alpha': 1.0},0.25,1.687,1.437,False
+RegBUY-Ridge,2022,{'alpha': 1.0},0.3,0.139,0.416,False
+RegBUY-Ridge,2022,{'alpha': 1.0},0.35,-0.576,0.772,False
+RegBUY-Ridge,2022,{'alpha': 1.0},0.4,2.754,1.089,False
+RegBUY-Ridge,2022,{'alpha': 10.0},0.1,4.017,3.81,True
+RegBUY-Ridge,2022,{'alpha': 10.0},0.15,3.602,3.368,True
+RegBUY-Ridge,2022,{'alpha': 10.0},0.2,2.485,3.019,True
+RegBUY-Ridge,2022,{'alpha': 10.0},0.25,2.97,2.444,False
+RegBUY-Ridge,2022,{'alpha': 10.0},0.3,1.876,1.504,False
+RegBUY-Ridge,2022,{'alpha': 10.0},0.35,-0.335,1.325,False
+RegBUY-Ridge,2022,{'alpha': 10.0},0.4,2.433,1.049,False
+RegBUY-Ridge,2022,{'alpha': 100.0},0.1,3.773,3.278,True
+RegBUY-Ridge,2022,{'alpha': 100.0},0.15,2.782,3.314,True
+RegBUY-Ridge,2022,{'alpha': 100.0},0.2,3.386,3.561,True
+RegBUY-Ridge,2022,{'alpha': 100.0},0.25,4.514,3.815,False
+RegBUY-Ridge,2022,{'alpha': 100.0},0.3,3.545,3.888,False
+RegBUY-Ridge,2022,{'alpha': 100.0},0.35,3.605,3.041,False
+RegBUY-Ridge,2022,{'alpha': 100.0},0.4,1.972,2.788,False
+RegBUY-Ridge,2023,{'alpha': 1.0},0.1,3.104,3.76,True
+RegBUY-Ridge,2023,{'alpha': 1.0},0.15,4.415,4.115,True
+RegBUY-Ridge,2023,{'alpha': 1.0},0.2,4.826,4.808,True
+RegBUY-Ridge,2023,{'alpha': 1.0},0.25,5.183,4.78,False
+RegBUY-Ridge,2023,{'alpha': 1.0},0.3,4.33,4.755,False
+RegBUY-Ridge,2023,{'alpha': 1.0},0.35,4.75,5.053,False
+RegBUY-Ridge,2023,{'alpha': 1.0},0.4,6.08,5.415,False
+RegBUY-Ridge,2023,{'alpha': 10.0},0.1,4.052,4.368,True
+RegBUY-Ridge,2023,{'alpha': 10.0},0.15,4.684,4.663,True
+RegBUY-Ridge,2023,{'alpha': 10.0},0.2,5.254,5.241,True
+RegBUY-Ridge,2023,{'alpha': 10.0},0.25,5.786,5.186,False
+RegBUY-Ridge,2023,{'alpha': 10.0},0.3,4.517,5.191,False
+RegBUY-Ridge,2023,{'alpha': 10.0},0.35,5.271,5.437,False
+RegBUY-Ridge,2023,{'alpha': 10.0},0.4,6.523,5.897,False
+RegBUY-Ridge,2023,{'alpha': 100.0},0.1,1.82,1.82,True
+RegBUY-Ridge,2023,{'alpha': 100.0},0.15,1.82,2.495,True
+RegBUY-Ridge,2023,{'alpha': 100.0},0.2,3.845,3.373,True
+RegBUY-Ridge,2023,{'alpha': 100.0},0.25,4.453,4.165,False
+RegBUY-Ridge,2023,{'alpha': 100.0},0.3,4.195,4.406,False
+RegBUY-Ridge,2023,{'alpha': 100.0},0.35,4.569,4.101,False
+RegBUY-Ridge,2023,{'alpha': 100.0},0.4,3.538,4.053,False
+RegBUY-Ridge,2024,{'alpha': 1.0},0.1,4.929,5.232,True
+RegBUY-Ridge,2024,{'alpha': 1.0},0.15,5.535,5.922,True
+RegBUY-Ridge,2024,{'alpha': 1.0},0.2,7.303,7.375,True
+RegBUY-Ridge,2024,{'alpha': 1.0},0.25,9.287,9.188,True
+RegBUY-Ridge,2024,{'alpha': 1.0},0.3,10.973,10.981,True
+RegBUY-Ridge,2024,{'alpha': 1.0},0.35,12.681,11.01,False
+RegBUY-Ridge,2024,{'alpha': 1.0},0.4,9.376,11.028,False
+RegBUY-Ridge,2024,{'alpha': 10.0},0.1,5.742,6.073,True
+RegBUY-Ridge,2024,{'alpha': 10.0},0.15,6.405,6.188,True
+RegBUY-Ridge,2024,{'alpha': 10.0},0.2,6.416,7.277,True
+RegBUY-Ridge,2024,{'alpha': 10.0},0.25,9.009,6.614,False
+RegBUY-Ridge,2024,{'alpha': 10.0},0.3,4.417,6.838,False
+RegBUY-Ridge,2024,{'alpha': 10.0},0.35,7.089,6.699,False
+RegBUY-Ridge,2024,{'alpha': 10.0},0.4,8.593,7.841,False
+RegBUY-Ridge,2024,{'alpha': 100.0},0.1,3.292,3.336,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.15,3.381,3.563,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.2,4.018,4.351,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.25,5.655,5.496,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.3,6.816,7.103,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.35,8.838,8.46,True
+RegBUY-Ridge,2024,{'alpha': 100.0},0.4,9.727,9.283,True
+RegBUY-Ridge,2025,{'alpha': 1.0},0.1,1.787,0.268,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.15,-1.252,-0.304,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.2,-1.446,-0.83,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.25,0.208,0.055,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.3,1.402,1.658,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.35,3.363,2.138,False
+RegBUY-Ridge,2025,{'alpha': 1.0},0.4,1.65,2.506,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.1,1.654,0.853,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.15,0.053,0.646,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.2,0.232,0.873,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.25,2.335,-0.603,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.3,-4.377,-1.494,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.35,-2.44,-2.652,False
+RegBUY-Ridge,2025,{'alpha': 10.0},0.4,-1.137,-1.789,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.1,1.643,1.052,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.15,0.461,0.387,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.2,-0.945,-0.674,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.25,-1.54,-1.206,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.3,-1.135,-0.626,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.35,0.797,0.739,False
+RegBUY-Ridge,2025,{'alpha': 100.0},0.4,2.554,1.676,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.1,1.125,0.822,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.15,0.52,0.328,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.2,-0.662,-0.997,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.25,-2.849,-1.717,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.3,-1.641,-2.861,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.35,-4.091,-3.482,False
+RegBUY-Ridge,2026,{'alpha': 1.0},0.4,-4.715,-4.403,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.1,1.916,1.258,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.15,0.6,1.786,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.2,2.843,-0.744,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.25,-5.676,-2.396,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.3,-4.354,-4.034,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.35,-2.073,-3.161,False
+RegBUY-Ridge,2026,{'alpha': 10.0},0.4,-3.055,-2.564,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.1,1.832,1.418,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.15,1.003,1.644,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.2,2.095,1.141,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.25,0.325,-0.343,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.3,-3.449,-3.861,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.35,-8.458,-5.705,False
+RegBUY-Ridge,2026,{'alpha': 100.0},0.4,-5.207,-6.833,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,1.416,0.174,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-1.069,0.607,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,1.475,0.427,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,0.875,1.502,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,2.155,2.201,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,3.572,3.962,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,6.159,4.865,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.731,0.869,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.008,0.438,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,-0.424,0.43,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,0.707,1.016,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,2.764,2.376,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.656,4.081,False
+RegBUY-HGBR,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,5.823,4.74,True
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.18,1.062,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-0.057,0.177,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-1.592,-0.6,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-0.151,-0.328,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,0.76,0.433,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,0.692,1.408,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,2.773,1.733,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-1.905,-0.931,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,0.043,0.979,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,4.8,3.468,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,5.561,5.795,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,7.022,6.42,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,6.676,6.548,False
+RegBUY-HGBR,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,5.946,6.311,False
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,3.22,2.599,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,1.978,3.533,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,5.402,4.229,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,5.308,5.93,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,7.081,6.68,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,7.651,8.195,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,9.853,8.752,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.787,1.644,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.501,2.069,True
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.919,2.335,False
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,2.583,3.024,False
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,3.569,3.21,False
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.478,4.28,False
+RegBUY-HGBR,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,5.795,4.636,True
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,4.374,3.875,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.376,3.534,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.852,3.574,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,4.495,3.932,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,4.449,4.76,True
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,5.337,5.376,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,6.341,5.839,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-1.312,0.58,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,2.472,1.635,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,3.744,4.105,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,6.098,5.66,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,7.137,6.297,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,5.655,6.817,False
+RegBUY-HGBR,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,7.658,6.657,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,1.479,1.506,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,1.533,1.853,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,2.546,2.088,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,2.185,2.224,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,1.94,1.964,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,1.767,2.255,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,3.058,2.412,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.014,0.301,True
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,0.587,0.586,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,1.158,0.451,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-0.392,0.159,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-0.287,-0.645,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-1.256,0.097,False
+RegBUY-HGBR,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,1.836,0.29,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.092,2.841,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.591,2.632,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.215,2.605,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,2.011,1.081,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-0.983,0.481,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,0.416,-0.047,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,0.428,0.422,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-0.035,1.056,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,2.147,0.684,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,-0.061,0.648,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,-0.143,-0.102,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-0.101,-0.046,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,0.105,0.696,False
+RegBUY-HGBR,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,2.084,1.094,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-0.096,-0.176,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.256,-0.349,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-0.696,-0.539,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-0.667,-0.906,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,-1.356,-0.407,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,0.802,0.249,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,1.3,1.051,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.21,0.382,True
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,0.553,-0.055,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,-0.928,-0.655,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-1.591,-1.229,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-1.168,-0.838,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,0.245,0.795,False
+RegBUY-HGBR,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,3.309,1.777,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,0.002,0.249,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,0.496,-0.24,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-1.217,-0.546,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-0.918,-1.358,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-1.939,-0.96,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,-0.024,-0.397,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,0.772,0.374,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,0.557,0.172,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.213,-0.057,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,-0.516,-0.299,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,-0.169,-0.392,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-0.492,0.725,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,2.837,1.738,False
+RegBUY-HGBR,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,2.867,2.852,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,0.047,-0.327,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.702,-0.032,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,0.558,0.507,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,1.664,1.325,True
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,1.751,2.708,True
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,4.708,4.165,True
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,6.037,5.372,True
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,-0.67,-0.547,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.424,-0.326,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,0.114,0.004,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,0.32,0.358,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,0.638,1.509,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.57,2.283,False
+RegBUY-HGBR,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,2.639,3.105,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-0.803,-0.165,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,0.472,-0.173,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-0.19,0.389,True
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,0.886,0.708,True
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,1.428,2.11,True
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,4.017,3.506,True
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,5.073,4.545,True
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-0.651,-0.467,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.283,-0.067,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.732,0.44,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,0.87,1.352,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,2.453,2.354,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,3.739,3.278,False
+RegBUY-HGBR,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,3.643,3.691,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,0.64,0.016,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.608,0.874,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,2.591,2.075,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,4.242,2.975,True
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,2.092,4.046,True
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,5.805,4.971,True
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,7.017,6.411,True
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,-0.498,-0.472,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.445,0.659,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.919,1.737,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,2.736,2.662,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,2.331,2.806,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.35,2.085,False
+RegBUY-HGBR,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,0.573,1.961,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-0.504,1.148,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,2.801,1.662,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.689,3.937,True
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,6.322,5.022,True
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,6.056,6.999,True
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,8.62,8.102,True
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,9.631,9.125,True
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-0.304,-0.341,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.378,0.925,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,3.458,2.128,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,3.304,3.716,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,4.385,3.806,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,3.728,3.36,False
+RegBUY-HGBR,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,1.967,2.847,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,1.015,0.808,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,0.6,1.7,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,3.484,2.829,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,4.403,3.174,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,1.636,3.632,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,4.859,3.917,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.257,5.058,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.725,1.147,True
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.57,1.977,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.637,2.92,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,3.554,3.046,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,1.948,3.163,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.986,2.966,False
+RegBUY-HGBR,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,2.965,3.475,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.226,2.89,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.555,3.381,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,4.362,4.98,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,7.024,5.59,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,5.384,6.522,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,7.159,6.694,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,7.54,7.349,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.552,1.175,True
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,0.797,2.061,True
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,3.835,3.042,True
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,4.495,4.103,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,3.979,4.471,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.939,4.212,False
+RegBUY-HGBR,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,3.718,4.329,True
+Cls1R-BUY-LR,2020,{'C': 0.01},0.1,0.271,0.725,False
+Cls1R-BUY-LR,2020,{'C': 0.01},0.15,1.179,1.781,False
+Cls1R-BUY-LR,2020,{'C': 0.01},0.2,3.892,3.176,False
+Cls1R-BUY-LR,2020,{'C': 0.01},0.25,4.457,4.431,True
+Cls1R-BUY-LR,2020,{'C': 0.01},0.3,4.944,4.709,True
+Cls1R-BUY-LR,2020,{'C': 0.01},0.35,4.726,5.23,True
+Cls1R-BUY-LR,2020,{'C': 0.01},0.4,6.02,5.373,True
+Cls1R-BUY-LR,2020,{'C': 0.1},0.1,2.627,3.021,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.15,3.415,2.642,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.2,1.885,2.482,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.25,2.145,2.42,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.3,3.23,3.522,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.35,5.19,5.366,False
+Cls1R-BUY-LR,2020,{'C': 0.1},0.4,7.678,6.434,True
+Cls1R-BUY-LR,2020,{'C': 1.0},0.1,2.707,3.597,False
+Cls1R-BUY-LR,2020,{'C': 1.0},0.15,4.487,3.761,False
+Cls1R-BUY-LR,2020,{'C': 1.0},0.2,4.091,3.91,False
+Cls1R-BUY-LR,2020,{'C': 1.0},0.25,3.152,4.078,False
+Cls1R-BUY-LR,2020,{'C': 1.0},0.3,4.991,4.622,False
+Cls1R-BUY-LR,2020,{'C': 1.0},0.35,5.723,5.363,True
+Cls1R-BUY-LR,2020,{'C': 1.0},0.4,5.373,5.548,True
+Cls1R-BUY-LR,2021,{'C': 0.01},0.1,-1.206,-1.0,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.15,-0.794,0.178,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.2,2.535,1.55,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.25,2.908,2.462,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.3,1.943,2.322,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.35,2.114,2.083,False
+Cls1R-BUY-LR,2021,{'C': 0.01},0.4,2.192,2.153,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.1,1.218,0.515,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.15,-0.187,0.406,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.2,0.187,0.648,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.25,1.945,1.834,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.3,3.369,3.067,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.35,3.887,3.275,False
+Cls1R-BUY-LR,2021,{'C': 0.1},0.4,2.571,3.229,False
+Cls1R-BUY-LR,2021,{'C': 1.0},0.1,1.709,2.436,False
+Cls1R-BUY-LR,2021,{'C': 1.0},0.15,3.162,2.345,False
+Cls1R-BUY-LR,2021,{'C': 1.0},0.2,2.164,2.728,True
+Cls1R-BUY-LR,2021,{'C': 1.0},0.25,2.859,3.181,True
+Cls1R-BUY-LR,2021,{'C': 1.0},0.3,4.52,3.821,True
+Cls1R-BUY-LR,2021,{'C': 1.0},0.35,4.086,4.179,True
+Cls1R-BUY-LR,2021,{'C': 1.0},0.4,3.931,4.008,True
+Cls1R-BUY-LR,2022,{'C': 0.01},0.1,-1.681,-1.046,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.15,-0.411,-0.282,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.2,1.247,0.949,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.25,2.01,1.132,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.3,0.14,0.707,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.35,-0.028,-0.055,False
+Cls1R-BUY-LR,2022,{'C': 0.01},0.4,-0.279,-0.153,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.1,-0.055,-0.499,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.15,-0.942,-0.525,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.2,-0.577,-0.501,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.25,0.017,0.399,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.3,1.758,1.226,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.35,1.902,1.55,False
+Cls1R-BUY-LR,2022,{'C': 0.1},0.4,0.99,1.446,False
+Cls1R-BUY-LR,2022,{'C': 1.0},0.1,0.25,1.069,False
+Cls1R-BUY-LR,2022,{'C': 1.0},0.15,1.889,1.267,False
+Cls1R-BUY-LR,2022,{'C': 1.0},0.2,1.662,2.098,True
+Cls1R-BUY-LR,2022,{'C': 1.0},0.25,2.744,2.65,True
+Cls1R-BUY-LR,2022,{'C': 1.0},0.3,3.545,3.265,True
+Cls1R-BUY-LR,2022,{'C': 1.0},0.35,3.507,3.495,False
+Cls1R-BUY-LR,2022,{'C': 1.0},0.4,3.433,3.47,False
+Cls1R-BUY-LR,2023,{'C': 0.01},0.1,1.82,2.23,True
+Cls1R-BUY-LR,2023,{'C': 0.01},0.15,2.639,2.436,True
+Cls1R-BUY-LR,2023,{'C': 0.01},0.2,2.85,2.851,True
+Cls1R-BUY-LR,2023,{'C': 0.01},0.25,3.063,2.785,False
+Cls1R-BUY-LR,2023,{'C': 0.01},0.3,2.441,2.4,False
+Cls1R-BUY-LR,2023,{'C': 0.01},0.35,1.695,2.285,False
+Cls1R-BUY-LR,2023,{'C': 0.01},0.4,2.72,2.207,False
+Cls1R-BUY-LR,2023,{'C': 0.1},0.1,1.646,2.318,True
+Cls1R-BUY-LR,2023,{'C': 0.1},0.15,2.99,3.412,True
+Cls1R-BUY-LR,2023,{'C': 0.1},0.2,5.602,4.517,False
+Cls1R-BUY-LR,2023,{'C': 0.1},0.25,4.96,4.865,False
+Cls1R-BUY-LR,2023,{'C': 0.1},0.3,4.033,4.378,False
+Cls1R-BUY-LR,2023,{'C': 0.1},0.35,4.142,4.484,False
+Cls1R-BUY-LR,2023,{'C': 0.1},0.4,5.277,4.709,False
+Cls1R-BUY-LR,2023,{'C': 1.0},0.1,4.355,4.68,True
+Cls1R-BUY-LR,2023,{'C': 1.0},0.15,5.006,4.889,True
+Cls1R-BUY-LR,2023,{'C': 1.0},0.2,5.307,5.479,True
+Cls1R-BUY-LR,2023,{'C': 1.0},0.25,6.124,5.972,True
+Cls1R-BUY-LR,2023,{'C': 1.0},0.3,6.484,6.586,True
+Cls1R-BUY-LR,2023,{'C': 1.0},0.35,7.149,7.062,False
+Cls1R-BUY-LR,2023,{'C': 1.0},0.4,7.554,7.351,False
+Cls1R-BUY-LR,2024,{'C': 0.01},0.1,1.407,1.959,False
+Cls1R-BUY-LR,2024,{'C': 0.01},0.15,2.511,2.178,False
+Cls1R-BUY-LR,2024,{'C': 0.01},0.2,2.614,2.825,False
+Cls1R-BUY-LR,2024,{'C': 0.01},0.25,3.35,3.395,False
+Cls1R-BUY-LR,2024,{'C': 0.01},0.3,4.221,4.119,True
+Cls1R-BUY-LR,2024,{'C': 0.01},0.35,4.785,4.16,True
+Cls1R-BUY-LR,2024,{'C': 0.01},0.4,3.473,4.129,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.1,3.718,4.326,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.15,4.933,5.489,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.2,7.817,6.876,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.25,7.879,7.496,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.3,6.794,6.702,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.35,5.434,5.758,True
+Cls1R-BUY-LR,2024,{'C': 0.1},0.4,5.045,5.239,True
+Cls1R-BUY-LR,2024,{'C': 1.0},0.1,6.533,6.899,True
+Cls1R-BUY-LR,2024,{'C': 1.0},0.15,7.264,6.911,True
+Cls1R-BUY-LR,2024,{'C': 1.0},0.2,6.935,6.519,False
+Cls1R-BUY-LR,2024,{'C': 1.0},0.25,5.359,6.885,False
+Cls1R-BUY-LR,2024,{'C': 1.0},0.3,8.361,7.215,False
+Cls1R-BUY-LR,2024,{'C': 1.0},0.35,7.925,8.901,True
+Cls1R-BUY-LR,2024,{'C': 1.0},0.4,10.417,9.171,True
+Cls1R-BUY-LR,2025,{'C': 0.01},0.1,-1.382,-0.052,False
+Cls1R-BUY-LR,2025,{'C': 0.01},0.15,1.279,0.481,False
+Cls1R-BUY-LR,2025,{'C': 0.01},0.2,1.547,2.352,False
+Cls1R-BUY-LR,2025,{'C': 0.01},0.25,4.231,3.88,False
+Cls1R-BUY-LR,2025,{'C': 0.01},0.3,5.862,5.148,True
+Cls1R-BUY-LR,2025,{'C': 0.01},0.35,5.35,5.008,True
+Cls1R-BUY-LR,2025,{'C': 0.01},0.4,3.811,4.58,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.1,2.244,2.292,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.15,2.339,2.401,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.2,2.621,2.61,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.25,2.87,3.239,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.3,4.226,3.228,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.35,2.587,3.227,True
+Cls1R-BUY-LR,2025,{'C': 0.1},0.4,2.867,2.727,True
+Cls1R-BUY-LR,2025,{'C': 1.0},0.1,1.765,1.764,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.15,1.763,1.966,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.2,2.37,1.572,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.25,0.584,1.956,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.3,2.914,1.56,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.35,1.183,1.279,False
+Cls1R-BUY-LR,2025,{'C': 1.0},0.4,-0.26,0.462,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.1,-1.04,-0.235,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.15,0.571,0.145,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.2,0.904,1.413,True
+Cls1R-BUY-LR,2026,{'C': 0.01},0.25,2.765,1.794,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.3,1.712,1.854,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.35,1.086,1.181,False
+Cls1R-BUY-LR,2026,{'C': 0.01},0.4,0.744,0.915,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.1,-2.248,-2.693,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.15,-3.138,-2.891,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.2,-3.287,-2.91,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.25,-2.305,-2.229,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.3,-1.095,-2.345,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.35,-3.635,-2.711,False
+Cls1R-BUY-LR,2026,{'C': 0.1},0.4,-3.403,-3.519,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.1,-3.204,-3.643,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.15,-4.081,-4.3,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.2,-5.615,-6.2,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.25,-8.903,-6.147,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.3,-3.923,-6.493,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.35,-6.654,-5.2,False
+Cls1R-BUY-LR,2026,{'C': 1.0},0.4,-5.022,-5.838,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,2.834,2.568,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,2.303,2.504,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,2.377,3.16,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,4.801,3.96,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,4.704,3.914,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.236,3.308,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,2.985,2.611,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.218,0.563,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.091,1.072,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.089,1.824,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,3.475,2.86,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,3.015,3.423,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.779,2.781,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,1.547,2.663,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.935,3.011,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.086,2.917,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.729,2.602,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,1.989,2.795,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,3.667,2.893,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,3.024,4.176,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,5.837,4.43,True
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.69,1.679,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.669,1.65,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,1.592,1.481,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,1.181,2.051,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,3.379,2.573,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,3.159,3.299,False
+Cls1R-BUY-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,3.358,3.259,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,4.079,4.174,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,4.27,4.72,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,5.81,5.247,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,5.663,5.485,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,4.984,5.383,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,5.504,5.012,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,4.55,5.027,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.328,1.614,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.9,2.13,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.163,2.775,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,3.263,3.317,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,3.524,4.255,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,5.979,4.558,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,4.172,5.075,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,3.7,3.809,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.919,4.02,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,4.441,3.956,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,3.508,4.169,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,4.558,4.175,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,4.458,4.627,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,4.864,4.661,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.285,1.922,True
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,2.56,1.833,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,1.655,1.999,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,1.782,2.4,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,3.763,3.188,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.018,3.782,False
+Cls1R-BUY-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,3.564,3.791,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,4.056,3.859,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,3.662,3.665,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,3.278,3.286,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,2.918,3.48,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,4.243,3.993,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,4.819,4.904,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.65,5.234,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.817,2.625,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,3.433,3.051,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.902,4.067,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,4.867,4.992,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,6.209,6.119,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,7.281,7.156,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,7.979,7.63,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.659,2.213,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,1.767,2.507,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,3.095,2.63,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,3.027,2.899,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,2.575,2.774,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,2.72,3.007,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,3.727,3.223,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.071,2.071,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,3.071,2.882,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,4.505,4.186,True
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,4.983,4.753,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,4.771,5.755,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,7.51,5.873,False
+Cls1R-BUY-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,5.337,6.424,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,0.313,0.028,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-0.258,-0.345,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-1.089,-0.665,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-0.649,-0.372,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,0.622,0.089,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,0.295,1.284,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,2.935,1.615,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.622,0.723,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,0.823,1.139,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,1.971,1.729,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,2.392,2.371,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,2.748,2.799,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,3.258,3.46,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,4.375,3.816,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,0.313,-0.145,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-0.603,-0.264,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-0.503,-0.427,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-0.175,-0.493,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-0.802,-0.275,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,0.153,0.649,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,2.598,1.375,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,0.538,0.584,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,0.63,0.81,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,1.262,1.189,True
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,1.673,1.554,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,1.728,2.742,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.825,3.632,False
+Cls1R-BUY-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,4.343,4.584,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-0.028,0.528,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,1.084,0.452,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,0.302,1.081,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,1.859,1.604,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,2.65,2.45,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.841,3.591,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.282,4.061,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.81,0.906,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.003,0.86,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,0.767,0.881,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,0.873,0.412,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-0.403,-0.379,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-1.606,-0.103,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,1.699,0.047,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-1.684,-1.389,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-1.095,-0.85,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,0.228,-0.04,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,0.746,0.906,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,1.743,1.397,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,1.702,2.554,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,4.218,2.96,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,0.404,0.904,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.403,0.988,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,1.155,1.016,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,0.491,1.279,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,2.192,1.685,False
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,2.372,3.289,True
+Cls1R-BUY-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,5.302,3.837,True
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-1.563,-0.652,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,0.258,-0.516,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-0.242,0.645,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,1.918,1.779,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,3.663,3.513,True
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,4.959,4.669,True
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.385,5.172,True
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,-1.887,-1.365,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.843,-1.427,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,-1.552,-1.265,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-1.4,-1.142,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-0.474,-0.323,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,0.904,1.175,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,3.095,2.0,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-2.236,-1.872,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-1.509,-1.552,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,-0.91,-0.622,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,0.554,0.398,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,1.549,1.6,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,2.698,2.637,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,3.665,3.181,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-1.744,0.073,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.889,0.244,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.587,0.57,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,-0.765,-0.73,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-2.012,0.735,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.982,3.336,False
+Cls1R-BUY-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,7.039,6.01,True
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-1.21,-1.864,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-2.517,-1.476,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-0.702,-0.92,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,0.459,0.788,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,2.607,1.958,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.807,3.017,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,3.638,3.223,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,-1.277,-0.826,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-0.375,-0.689,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,-0.416,0.01,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,0.821,1.571,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,4.307,3.6,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,5.674,5.21,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,5.649,5.661,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-0.108,0.357,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,0.822,0.333,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,0.286,0.934,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,1.694,1.417,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,2.271,2.523,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,3.604,2.96,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,3.005,3.304,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-1.383,0.03,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.442,0.327,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.922,0.885,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,0.291,-0.16,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-1.694,1.695,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,6.489,3.926,False
+Cls1R-BUY-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,6.983,6.736,False
+Cls1R-All-LR,2020,{'C': 0.01},0.1,3.858,4.876,True
+Cls1R-All-LR,2020,{'C': 0.01},0.15,5.894,5.566,True
+Cls1R-All-LR,2020,{'C': 0.01},0.2,6.946,6.072,False
+Cls1R-All-LR,2020,{'C': 0.01},0.25,5.377,5.197,False
+Cls1R-All-LR,2020,{'C': 0.01},0.3,3.268,5.062,False
+Cls1R-All-LR,2020,{'C': 0.01},0.35,6.54,7.174,False
+Cls1R-All-LR,2020,{'C': 0.01},0.4,11.715,9.127,True
+Cls1R-All-LR,2020,{'C': 0.1},0.1,1.928,2.12,False
+Cls1R-All-LR,2020,{'C': 0.1},0.15,2.313,1.852,False
+Cls1R-All-LR,2020,{'C': 0.1},0.2,1.315,3.302,False
+Cls1R-All-LR,2020,{'C': 0.1},0.25,6.278,4.925,False
+Cls1R-All-LR,2020,{'C': 0.1},0.3,7.183,6.737,False
+Cls1R-All-LR,2020,{'C': 0.1},0.35,6.752,8.036,False
+Cls1R-All-LR,2020,{'C': 0.1},0.4,10.174,8.463,False
+Cls1R-All-LR,2020,{'C': 1.0},0.1,0.811,1.339,False
+Cls1R-All-LR,2020,{'C': 1.0},0.15,1.867,1.113,False
+Cls1R-All-LR,2020,{'C': 1.0},0.2,0.661,1.093,False
+Cls1R-All-LR,2020,{'C': 1.0},0.25,0.752,2.722,False
+Cls1R-All-LR,2020,{'C': 1.0},0.3,6.752,5.65,False
+Cls1R-All-LR,2020,{'C': 1.0},0.35,9.446,7.737,False
+Cls1R-All-LR,2020,{'C': 1.0},0.4,7.012,8.229,False
+Cls1R-All-LR,2021,{'C': 0.01},0.1,-0.224,2.228,False
+Cls1R-All-LR,2021,{'C': 0.01},0.15,4.681,3.576,False
+Cls1R-All-LR,2021,{'C': 0.01},0.2,6.27,5.928,False
+Cls1R-All-LR,2021,{'C': 0.01},0.25,6.834,6.555,False
+Cls1R-All-LR,2021,{'C': 0.01},0.3,6.561,6.197,False
+Cls1R-All-LR,2021,{'C': 0.01},0.35,5.195,7.132,False
+Cls1R-All-LR,2021,{'C': 0.01},0.4,9.641,7.418,False
+Cls1R-All-LR,2021,{'C': 0.1},0.1,2.427,3.14,False
+Cls1R-All-LR,2021,{'C': 0.1},0.15,3.853,3.918,False
+Cls1R-All-LR,2021,{'C': 0.1},0.2,5.473,5.232,False
+Cls1R-All-LR,2021,{'C': 0.1},0.25,6.369,6.466,True
+Cls1R-All-LR,2021,{'C': 0.1},0.3,7.555,7.389,True
+Cls1R-All-LR,2021,{'C': 0.1},0.35,8.244,8.617,True
+Cls1R-All-LR,2021,{'C': 0.1},0.4,10.051,9.148,True
+Cls1R-All-LR,2021,{'C': 1.0},0.1,2.074,3.902,False
+Cls1R-All-LR,2021,{'C': 1.0},0.15,5.73,3.867,False
+Cls1R-All-LR,2021,{'C': 1.0},0.2,3.797,5.025,False
+Cls1R-All-LR,2021,{'C': 1.0},0.25,5.547,5.429,True
+Cls1R-All-LR,2021,{'C': 1.0},0.3,6.942,6.491,False
+Cls1R-All-LR,2021,{'C': 1.0},0.35,6.984,7.179,False
+Cls1R-All-LR,2021,{'C': 1.0},0.4,7.61,7.297,False
+Cls1R-All-LR,2022,{'C': 0.01},0.1,1.318,2.289,False
+Cls1R-All-LR,2022,{'C': 0.01},0.15,3.259,1.847,False
+Cls1R-All-LR,2022,{'C': 0.01},0.2,0.962,1.652,False
+Cls1R-All-LR,2022,{'C': 0.01},0.25,0.733,1.552,False
+Cls1R-All-LR,2022,{'C': 0.01},0.3,2.959,2.862,False
+Cls1R-All-LR,2022,{'C': 0.01},0.35,4.894,4.98,False
+Cls1R-All-LR,2022,{'C': 0.01},0.4,7.086,5.99,False
+Cls1R-All-LR,2022,{'C': 0.1},0.1,0.229,0.663,False
+Cls1R-All-LR,2022,{'C': 0.1},0.15,1.096,1.842,False
+Cls1R-All-LR,2022,{'C': 0.1},0.2,4.2,2.832,False
+Cls1R-All-LR,2022,{'C': 0.1},0.25,3.199,3.139,True
+Cls1R-All-LR,2022,{'C': 0.1},0.3,2.019,3.157,True
+Cls1R-All-LR,2022,{'C': 0.1},0.35,4.253,4.571,True
+Cls1R-All-LR,2022,{'C': 0.1},0.4,7.44,5.847,True
+Cls1R-All-LR,2022,{'C': 1.0},0.1,-0.186,1.192,False
+Cls1R-All-LR,2022,{'C': 1.0},0.15,2.569,2.175,False
+Cls1R-All-LR,2022,{'C': 1.0},0.2,4.141,3.399,False
+Cls1R-All-LR,2022,{'C': 1.0},0.25,3.486,3.834,True
+Cls1R-All-LR,2022,{'C': 1.0},0.3,3.875,3.765,False
+Cls1R-All-LR,2022,{'C': 1.0},0.35,3.933,4.676,False
+Cls1R-All-LR,2022,{'C': 1.0},0.4,6.222,5.077,False
+Cls1R-All-LR,2023,{'C': 0.01},0.1,5.959,4.741,True
+Cls1R-All-LR,2023,{'C': 0.01},0.15,3.522,2.51,False
+Cls1R-All-LR,2023,{'C': 0.01},0.2,-1.952,0.66,False
+Cls1R-All-LR,2023,{'C': 0.01},0.25,0.41,-0.325,False
+Cls1R-All-LR,2023,{'C': 0.01},0.3,0.568,0.689,False
+Cls1R-All-LR,2023,{'C': 0.01},0.35,1.09,1.415,False
+Cls1R-All-LR,2023,{'C': 0.01},0.4,2.588,1.839,False
+Cls1R-All-LR,2023,{'C': 0.1},0.1,6.675,5.539,True
+Cls1R-All-LR,2023,{'C': 0.1},0.15,4.403,4.581,True
+Cls1R-All-LR,2023,{'C': 0.1},0.2,2.664,1.965,False
+Cls1R-All-LR,2023,{'C': 0.1},0.25,-1.173,0.464,False
+Cls1R-All-LR,2023,{'C': 0.1},0.3,-0.101,0.921,False
+Cls1R-All-LR,2023,{'C': 0.1},0.35,4.036,3.591,False
+Cls1R-All-LR,2023,{'C': 0.1},0.4,6.836,5.436,True
+Cls1R-All-LR,2023,{'C': 1.0},0.1,6.154,5.927,True
+Cls1R-All-LR,2023,{'C': 1.0},0.15,5.7,4.928,True
+Cls1R-All-LR,2023,{'C': 1.0},0.2,2.929,3.825,False
+Cls1R-All-LR,2023,{'C': 1.0},0.25,2.847,3.578,False
+Cls1R-All-LR,2023,{'C': 1.0},0.3,4.956,3.968,False
+Cls1R-All-LR,2023,{'C': 1.0},0.35,4.102,5.49,False
+Cls1R-All-LR,2023,{'C': 1.0},0.4,7.411,5.756,False
+Cls1R-All-LR,2024,{'C': 0.01},0.1,5.114,3.203,True
+Cls1R-All-LR,2024,{'C': 0.01},0.15,1.292,1.148,False
+Cls1R-All-LR,2024,{'C': 0.01},0.2,-2.961,0.068,False
+Cls1R-All-LR,2024,{'C': 0.01},0.25,1.872,-0.024,False
+Cls1R-All-LR,2024,{'C': 0.01},0.3,1.015,0.242,False
+Cls1R-All-LR,2024,{'C': 0.01},0.35,-2.16,-0.636,False
+Cls1R-All-LR,2024,{'C': 0.01},0.4,-0.762,-1.461,False
+Cls1R-All-LR,2024,{'C': 0.1},0.1,7.4,6.726,True
+Cls1R-All-LR,2024,{'C': 0.1},0.15,6.051,5.802,True
+Cls1R-All-LR,2024,{'C': 0.1},0.2,3.955,3.052,False
+Cls1R-All-LR,2024,{'C': 0.1},0.25,-0.851,1.176,False
+Cls1R-All-LR,2024,{'C': 0.1},0.3,0.424,1.319,False
+Cls1R-All-LR,2024,{'C': 0.1},0.35,4.385,2.001,False
+Cls1R-All-LR,2024,{'C': 0.1},0.4,1.193,2.789,True
+Cls1R-All-LR,2024,{'C': 1.0},0.1,7.929,5.646,True
+Cls1R-All-LR,2024,{'C': 1.0},0.15,3.364,4.685,True
+Cls1R-All-LR,2024,{'C': 1.0},0.2,2.761,2.925,False
+Cls1R-All-LR,2024,{'C': 1.0},0.25,2.65,3.259,False
+Cls1R-All-LR,2024,{'C': 1.0},0.3,4.365,3.306,False
+Cls1R-All-LR,2024,{'C': 1.0},0.35,2.902,3.093,False
+Cls1R-All-LR,2024,{'C': 1.0},0.4,2.012,2.457,False
+Cls1R-All-LR,2025,{'C': 0.01},0.1,1.381,1.422,True
+Cls1R-All-LR,2025,{'C': 0.01},0.15,1.462,1.192,True
+Cls1R-All-LR,2025,{'C': 0.01},0.2,0.732,1.318,True
+Cls1R-All-LR,2025,{'C': 0.01},0.25,1.759,2.11,True
+Cls1R-All-LR,2025,{'C': 0.01},0.3,3.84,1.875,False
+Cls1R-All-LR,2025,{'C': 0.01},0.35,0.026,1.583,False
+Cls1R-All-LR,2025,{'C': 0.01},0.4,0.881,0.454,False
+Cls1R-All-LR,2025,{'C': 0.1},0.1,2.659,3.145,True
+Cls1R-All-LR,2025,{'C': 0.1},0.15,3.631,3.628,True
+Cls1R-All-LR,2025,{'C': 0.1},0.2,4.595,3.988,True
+Cls1R-All-LR,2025,{'C': 0.1},0.25,3.739,3.934,True
+Cls1R-All-LR,2025,{'C': 0.1},0.3,3.469,3.411,True
+Cls1R-All-LR,2025,{'C': 0.1},0.35,3.026,2.465,True
+Cls1R-All-LR,2025,{'C': 0.1},0.4,0.9,1.963,True
+Cls1R-All-LR,2025,{'C': 1.0},0.1,3.294,2.097,True
+Cls1R-All-LR,2025,{'C': 1.0},0.15,0.899,2.317,True
+Cls1R-All-LR,2025,{'C': 1.0},0.2,2.757,2.421,True
+Cls1R-All-LR,2025,{'C': 1.0},0.25,3.608,3.16,True
+Cls1R-All-LR,2025,{'C': 1.0},0.3,3.114,3.038,True
+Cls1R-All-LR,2025,{'C': 1.0},0.35,2.392,2.127,True
+Cls1R-All-LR,2025,{'C': 1.0},0.4,0.874,1.633,True
+Cls1R-All-LR,2026,{'C': 0.01},0.1,-5.078,-3.451,False
+Cls1R-All-LR,2026,{'C': 0.01},0.15,-1.824,-2.195,False
+Cls1R-All-LR,2026,{'C': 0.01},0.2,0.317,-1.145,False
+Cls1R-All-LR,2026,{'C': 0.01},0.25,-1.927,-0.582,False
+Cls1R-All-LR,2026,{'C': 0.01},0.3,-0.135,-0.466,False
+Cls1R-All-LR,2026,{'C': 0.01},0.35,0.663,0.363,False
+Cls1R-All-LR,2026,{'C': 0.01},0.4,0.559,0.611,False
+Cls1R-All-LR,2026,{'C': 0.1},0.1,-5.419,-5.848,False
+Cls1R-All-LR,2026,{'C': 0.1},0.15,-6.277,-5.904,False
+Cls1R-All-LR,2026,{'C': 0.1},0.2,-6.016,-5.661,False
+Cls1R-All-LR,2026,{'C': 0.1},0.25,-4.691,-5.053,False
+Cls1R-All-LR,2026,{'C': 0.1},0.3,-4.451,-4.368,False
+Cls1R-All-LR,2026,{'C': 0.1},0.35,-3.963,-3.181,False
+Cls1R-All-LR,2026,{'C': 0.1},0.4,-1.13,-2.547,False
+Cls1R-All-LR,2026,{'C': 1.0},0.1,-2.696,-4.406,False
+Cls1R-All-LR,2026,{'C': 1.0},0.15,-6.117,-5.019,False
+Cls1R-All-LR,2026,{'C': 1.0},0.2,-6.243,-5.908,False
+Cls1R-All-LR,2026,{'C': 1.0},0.25,-5.362,-5.743,False
+Cls1R-All-LR,2026,{'C': 1.0},0.3,-5.623,-5.944,False
+Cls1R-All-LR,2026,{'C': 1.0},0.35,-6.847,-5.035,False
+Cls1R-All-LR,2026,{'C': 1.0},0.4,-2.637,-4.742,False
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-0.217,1.706,False
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,3.629,3.53,False
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,7.178,6.275,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,8.016,8.304,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,9.718,9.166,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,9.766,9.598,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,9.31,9.538,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.665,3.305,False
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,4.946,4.367,False
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,6.491,6.334,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,7.564,7.378,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,8.078,7.767,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,7.658,7.228,True
+Cls1R-All-HGB,2020,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,5.948,6.803,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,1.796,2.369,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,2.942,3.36,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,5.343,5.677,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,8.747,6.439,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,5.228,7.258,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,7.799,7.114,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,8.314,8.057,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,2.946,4.174,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,5.401,5.895,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,9.337,6.627,True
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,5.141,5.405,False
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,1.736,4.417,False
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,6.375,5.331,False
+Cls1R-All-HGB,2020,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,7.882,7.129,True
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,2.852,2.451,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,2.05,2.859,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,3.675,4.857,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,8.848,7.224,True
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,9.15,6.853,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.562,4.084,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,0.54,1.551,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,1.217,2.73,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,4.243,3.368,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,4.646,5.413,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,7.351,6.174,False
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,6.525,6.647,True
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,6.065,5.741,True
+Cls1R-All-HGB,2021,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,4.633,5.349,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,4.742,4.758,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,4.774,5.477,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,6.916,7.083,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,9.558,7.835,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,7.029,8.76,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,9.691,8.672,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,9.295,9.493,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.15,1.406,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,1.662,2.474,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,4.61,3.237,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,3.44,4.525,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,5.526,5.408,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,7.258,6.554,True
+Cls1R-All-HGB,2021,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,6.876,7.067,True
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,3.248,2.996,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,2.743,3.409,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,4.235,3.987,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,4.982,6.498,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,10.278,6.991,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,5.711,7.164,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,5.503,5.607,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,3.923,3.049,True
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,2.174,3.252,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.66,3.405,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,4.382,4.283,False
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,4.809,3.544,True
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,1.441,4.152,True
+Cls1R-All-HGB,2022,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,6.206,3.823,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,5.526,5.811,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,6.096,5.688,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,5.441,4.932,False
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,3.258,3.941,False
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,3.124,4.008,False
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,5.64,4.371,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,4.35,4.995,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.511,2.134,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,2.758,2.62,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,3.593,2.572,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,1.367,3.146,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,4.477,3.55,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,4.804,5.832,True
+Cls1R-All-HGB,2022,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,8.213,6.509,True
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-0.572,0.127,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,0.827,1.047,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,2.886,1.865,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,1.882,4.414,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,8.475,6.544,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,9.276,8.662,True
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,8.234,8.755,True
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,2.256,1.431,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,0.606,2.841,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,5.662,4.151,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,6.186,6.258,True
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,6.925,3.939,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-1.293,3.193,False
+Cls1R-All-HGB,2023,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,3.946,1.327,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,2.212,2.76,True
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,3.308,2.745,True
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.714,0.284,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-5.171,-2.633,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-5.443,-3.432,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,0.318,-2.438,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,-2.187,-0.935,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-0.039,-0.037,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.035,0.082,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.32,-0.716,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,-2.434,-3.075,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-7.109,-4.402,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,-3.662,-1.469,False
+Cls1R-All-HGB,2023,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,6.364,1.351,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-3.451,-3.511,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-3.571,-3.087,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-2.24,-2.474,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-1.61,-1.061,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,0.667,0.179,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,1.48,0.881,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,0.496,0.988,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,2.009,2.692,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,3.374,2.981,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,3.56,4.059,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,5.241,4.929,True
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,5.984,4.021,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,0.837,2.959,False
+Cls1R-All-HGB,2024,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,2.057,1.447,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,3.98,3.33,True
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,2.681,3.22,True
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,3.0,0.359,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,-4.604,-1.724,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,-3.569,-3.214,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,-1.469,-2.09,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,-1.232,-1.35,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,1.667,0.449,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.77,-0.104,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,-1.208,-1.316,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,-1.97,-3.418,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,-7.077,-4.433,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,-4.253,-2.676,False
+Cls1R-All-HGB,2024,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,3.3,-0.476,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-4.48,-4.382,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-4.284,-3.806,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-2.653,-3.274,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-2.884,-3.03,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,-3.552,-1.377,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.305,0.06,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,1.426,1.866,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,0.543,1.121,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,1.699,1.74,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.979,2.188,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,1.885,2.321,True
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,2.099,1.601,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,0.819,0.726,False
+Cls1R-All-HGB,2025,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,-0.74,0.04,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,3.574,2.612,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,1.649,2.644,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,2.709,1.758,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,0.917,2.227,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,3.056,3.07,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,5.236,4.926,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,6.485,5.861,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-0.028,-0.242,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,-0.455,0.12,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.843,1.103,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,2.921,1.999,False
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,2.232,2.404,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,2.058,2.944,True
+Cls1R-All-HGB,2025,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,4.543,3.3,True
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.1,-2.559,-2.16,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.15,-1.761,-1.651,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.2,-0.634,-1.21,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.25,-1.235,-1.202,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.3,-1.736,-0.038,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.35,2.857,0.595,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 20}",0.4,0.665,1.761,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.1,-2.243,-1.858,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.15,-1.472,-0.571,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.2,2.001,0.107,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.25,-0.209,0.117,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.3,-1.441,-1.157,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.35,-1.821,-3.453,False
+Cls1R-All-HGB,2026,"{'max_depth': 2, 'min_samples_leaf': 50}",0.4,-7.098,-4.46,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.1,-1.467,-1.296,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.15,-1.125,-0.848,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.2,0.05,0.572,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.25,2.791,1.922,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.3,2.925,3.198,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.35,3.876,3.13,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 20}",0.4,2.59,3.233,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.1,-1.011,-0.409,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.15,0.193,-0.133,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.2,0.418,0.935,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.25,2.195,1.317,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.3,1.338,1.049,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.35,-0.386,0.687,False
+Cls1R-All-HGB,2026,"{'max_depth': 3, 'min_samples_leaf': 50}",0.4,1.107,0.361,False
+BUY20-Ridge,2020,{'alpha': 1.0},0.1,1.24,1.308,True
+BUY20-Ridge,2020,{'alpha': 1.0},0.15,1.377,1.28,False
+BUY20-Ridge,2020,{'alpha': 1.0},0.2,1.223,0.963,False
+BUY20-Ridge,2020,{'alpha': 1.0},0.25,0.288,0.883,False
+BUY20-Ridge,2020,{'alpha': 1.0},0.3,1.138,1.68,False
+BUY20-Ridge,2020,{'alpha': 1.0},0.35,3.614,2.371,True
+BUY20-Ridge,2020,{'alpha': 1.0},0.4,2.362,2.988,True
+BUY20-Ridge,2020,{'alpha': 10.0},0.1,1.103,-0.013,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.15,-1.128,0.248,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.2,0.771,-0.002,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.25,0.352,0.714,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.3,1.019,1.373,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.35,2.748,2.141,False
+BUY20-Ridge,2020,{'alpha': 10.0},0.4,2.655,2.702,True
+BUY20-Ridge,2020,{'alpha': 100.0},0.1,1.933,2.149,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.15,2.365,1.315,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.2,-0.354,1.257,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.25,1.759,1.1,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.3,1.895,1.424,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.35,0.619,1.453,False
+BUY20-Ridge,2020,{'alpha': 100.0},0.4,1.846,1.232,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.1,0.992,1.64,True
+BUY20-Ridge,2021,{'alpha': 1.0},0.15,2.288,0.828,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.2,-0.796,0.512,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.25,0.043,0.276,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.3,1.581,0.906,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.35,1.094,0.699,False
+BUY20-Ridge,2021,{'alpha': 1.0},0.4,-0.578,0.258,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.1,1.622,0.715,True
+BUY20-Ridge,2021,{'alpha': 10.0},0.15,-0.192,-0.061,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.2,-1.613,-0.633,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.25,-0.093,-0.855,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.3,-0.859,-0.591,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.35,-0.819,-0.855,False
+BUY20-Ridge,2021,{'alpha': 10.0},0.4,-0.887,-0.853,False
+BUY20-Ridge,2021,{'alpha': 100.0},0.1,2.238,3.362,True
+BUY20-Ridge,2021,{'alpha': 100.0},0.15,4.485,2.867,True
+BUY20-Ridge,2021,{'alpha': 100.0},0.2,1.877,1.593,False
+BUY20-Ridge,2021,{'alpha': 100.0},0.25,-1.584,-0.058,False
+BUY20-Ridge,2021,{'alpha': 100.0},0.3,-0.466,-1.535,False
+BUY20-Ridge,2021,{'alpha': 100.0},0.35,-2.557,-1.44,False
+BUY20-Ridge,2021,{'alpha': 100.0},0.4,-1.298,-1.927,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.1,-1.211,0.257,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.15,1.724,0.236,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.2,0.194,1.186,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.25,1.641,1.474,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.3,2.588,1.097,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.35,-0.939,-0.242,False
+BUY20-Ridge,2022,{'alpha': 1.0},0.4,-2.375,-1.657,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.1,0.128,-0.539,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.15,-1.207,-0.691,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.2,-0.993,-0.186,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.25,1.641,0.054,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.3,-0.487,-0.116,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.35,-1.502,-0.906,False
+BUY20-Ridge,2022,{'alpha': 10.0},0.4,-0.728,-1.115,False
+BUY20-Ridge,2022,{'alpha': 100.0},0.1,-0.145,0.717,True
+BUY20-Ridge,2022,{'alpha': 100.0},0.15,1.579,1.098,True
+BUY20-Ridge,2022,{'alpha': 100.0},0.2,1.861,0.245,False
+BUY20-Ridge,2022,{'alpha': 100.0},0.25,-2.704,-1.0,False
+BUY20-Ridge,2022,{'alpha': 100.0},0.3,-2.158,-2.229,False
+BUY20-Ridge,2022,{'alpha': 100.0},0.35,-1.825,-1.77,False
+BUY20-Ridge,2022,{'alpha': 100.0},0.4,-1.327,-1.576,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.1,1.664,2.146,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.15,2.628,2.16,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.2,2.189,2.796,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.25,3.57,3.371,True
+BUY20-Ridge,2023,{'alpha': 1.0},0.3,4.353,3.659,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.35,3.054,3.267,False
+BUY20-Ridge,2023,{'alpha': 1.0},0.4,2.395,2.725,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.1,2.399,1.939,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.15,1.478,1.902,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.2,1.83,2.147,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.25,3.133,2.648,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.3,2.981,3.174,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.35,3.41,3.251,False
+BUY20-Ridge,2023,{'alpha': 10.0},0.4,3.361,3.386,False
+BUY20-Ridge,2023,{'alpha': 100.0},0.1,0.539,0.731,True
+BUY20-Ridge,2023,{'alpha': 100.0},0.15,0.924,0.808,True
+BUY20-Ridge,2023,{'alpha': 100.0},0.2,0.96,0.99,False
+BUY20-Ridge,2023,{'alpha': 100.0},0.25,1.087,1.112,False
+BUY20-Ridge,2023,{'alpha': 100.0},0.3,1.288,1.933,False
+BUY20-Ridge,2023,{'alpha': 100.0},0.35,3.424,2.363,False
+BUY20-Ridge,2023,{'alpha': 100.0},0.4,2.376,2.9,False
+BUY20-Ridge,2024,{'alpha': 1.0},0.1,3.61,2.778,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.15,1.946,2.156,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.2,0.91,1.675,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.25,2.169,2.675,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.3,4.945,4.432,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.35,6.182,6.924,True
+BUY20-Ridge,2024,{'alpha': 1.0},0.4,9.645,7.914,True
+BUY20-Ridge,2024,{'alpha': 10.0},0.1,1.475,1.796,False
+BUY20-Ridge,2024,{'alpha': 10.0},0.15,2.117,1.733,False
+BUY20-Ridge,2024,{'alpha': 10.0},0.2,1.605,1.869,True
+BUY20-Ridge,2024,{'alpha': 10.0},0.25,1.885,2.55,True
+BUY20-Ridge,2024,{'alpha': 10.0},0.3,4.16,3.989,True
+BUY20-Ridge,2024,{'alpha': 10.0},0.35,5.923,4.235,False
+BUY20-Ridge,2024,{'alpha': 10.0},0.4,2.623,4.273,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.1,1.753,1.965,True
+BUY20-Ridge,2024,{'alpha': 100.0},0.15,2.177,1.302,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.2,-0.024,1.291,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.25,1.719,0.882,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.3,0.95,2.138,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.35,3.745,2.991,False
+BUY20-Ridge,2024,{'alpha': 100.0},0.4,4.277,4.011,True
+BUY20-Ridge,2025,{'alpha': 1.0},0.1,1.592,0.506,True
+BUY20-Ridge,2025,{'alpha': 1.0},0.15,-0.58,-0.395,False
+BUY20-Ridge,2025,{'alpha': 1.0},0.2,-2.197,-1.766,False
+BUY20-Ridge,2025,{'alpha': 1.0},0.25,-2.521,-1.831,False
+BUY20-Ridge,2025,{'alpha': 1.0},0.3,-0.775,-0.764,False
+BUY20-Ridge,2025,{'alpha': 1.0},0.35,1.004,1.45,False
+BUY20-Ridge,2025,{'alpha': 1.0},0.4,4.122,2.563,False
+BUY20-Ridge,2025,{'alpha': 10.0},0.1,-0.389,0.203,False
+BUY20-Ridge,2025,{'alpha': 10.0},0.15,0.795,0.164,False
+BUY20-Ridge,2025,{'alpha': 10.0},0.2,0.087,0.25,True
+BUY20-Ridge,2025,{'alpha': 10.0},0.25,-0.132,-0.1,True
+BUY20-Ridge,2025,{'alpha': 10.0},0.3,-0.254,0.478,True
+BUY20-Ridge,2025,{'alpha': 10.0},0.35,1.82,-0.842,False
+BUY20-Ridge,2025,{'alpha': 10.0},0.4,-4.091,-1.136,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.1,0.773,1.478,True
+BUY20-Ridge,2025,{'alpha': 100.0},0.15,2.184,0.526,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.2,-1.379,0.43,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.25,0.483,-1.191,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.3,-2.676,-0.926,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.35,-0.586,-0.592,False
+BUY20-Ridge,2025,{'alpha': 100.0},0.4,1.485,0.45,True
+BUY20-Ridge,2026,{'alpha': 1.0},0.1,-3.053,-0.719,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.15,1.616,-0.358,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.2,0.363,0.054,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.25,-1.817,-0.179,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.3,0.915,0.231,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.35,1.595,1.571,False
+BUY20-Ridge,2026,{'alpha': 1.0},0.4,2.202,1.899,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.1,2.99,0.165,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.15,-2.661,0.335,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.2,0.675,0.151,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.25,2.438,0.641,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.3,-1.19,-0.636,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.35,-3.157,-1.983,False
+BUY20-Ridge,2026,{'alpha': 10.0},0.4,-1.601,-2.379,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.1,-0.293,0.505,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.15,1.304,0.785,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.2,1.344,2.141,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.25,3.775,1.759,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.3,0.158,0.173,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.35,-3.415,-1.196,False
+BUY20-Ridge,2026,{'alpha': 100.0},0.4,-0.33,-1.873,False
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.1,1.21,1.852,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.15,2.493,2.208,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.2,2.921,3.235,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.25,4.29,2.958,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.3,1.663,3.109,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.35,3.373,3.113,True
+BUY20-Cls1R-LR,2020,{'C': 0.01},0.4,4.304,3.839,True
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.1,4.107,2.925,True
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.15,1.742,2.204,True
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.2,0.764,0.858,False
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.25,0.067,1.129,False
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.3,2.556,2.043,False
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.35,3.507,3.114,True
+BUY20-Cls1R-LR,2020,{'C': 0.1},0.4,3.28,3.394,True
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.1,3.427,3.998,True
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.15,4.569,4.3,True
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.2,4.903,3.748,True
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.25,1.77,2.347,True
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.3,0.366,1.184,False
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.35,1.415,1.958,False
+BUY20-Cls1R-LR,2020,{'C': 1.0},0.4,4.093,2.754,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.1,0.829,1.065,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.15,1.301,1.141,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.2,1.292,0.777,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.25,-0.263,-0.104,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.3,-1.341,-0.736,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.35,-0.605,-0.051,False
+BUY20-Cls1R-LR,2021,{'C': 0.01},0.4,1.792,0.593,False
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.1,2.569,1.16,True
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.15,-0.248,0.95,True
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.2,0.529,-0.045,False
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.25,-0.417,-0.137,False
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.3,-0.522,-0.241,False
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.35,0.216,-2.062,False
+BUY20-Cls1R-LR,2021,{'C': 0.1},0.4,-5.88,-2.832,False
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.1,1.892,2.166,True
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.15,2.44,2.119,True
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.2,2.025,1.339,True
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.25,-0.447,-0.379,False
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.3,-2.716,-1.801,False
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.35,-2.239,-2.021,False
+BUY20-Cls1R-LR,2021,{'C': 1.0},0.4,-1.109,-1.674,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.1,-0.216,0.096,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.15,0.408,0.381,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.2,0.951,0.1,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.25,-1.057,-0.67,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.3,-1.903,-1.805,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.35,-2.455,-1.966,False
+BUY20-Cls1R-LR,2022,{'C': 0.01},0.4,-1.539,-1.997,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.1,-0.006,0.053,True
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.15,0.112,0.053,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.2,0.053,0.073,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.25,0.053,-0.359,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.3,-1.182,-0.961,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.35,-1.754,-2.775,False
+BUY20-Cls1R-LR,2022,{'C': 0.1},0.4,-5.389,-3.572,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.1,0.397,0.256,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.15,0.115,0.122,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.2,-0.146,-0.045,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.25,-0.103,-0.235,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.3,-0.457,-0.785,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.35,-1.796,-1.579,False
+BUY20-Cls1R-LR,2022,{'C': 1.0},0.4,-2.484,-2.14,False
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.1,1.035,1.682,True
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.15,2.33,1.802,True
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.2,2.042,2.388,True
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.25,2.791,2.273,False
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.3,1.986,2.211,False
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.35,1.856,1.498,False
+BUY20-Cls1R-LR,2023,{'C': 0.01},0.4,0.652,1.254,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.1,0.933,2.042,True
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.15,3.151,2.114,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.2,2.257,3.153,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.25,4.051,3.22,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.3,3.352,3.493,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.35,3.077,3.767,False
+BUY20-Cls1R-LR,2023,{'C': 0.1},0.4,4.872,3.974,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.1,3.855,3.568,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.15,3.28,3.663,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.2,3.853,3.714,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.25,4.009,4.615,True
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.3,5.982,4.704,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.35,4.121,4.708,False
+BUY20-Cls1R-LR,2023,{'C': 1.0},0.4,4.022,4.072,False
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.1,1.024,1.763,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.15,2.502,1.712,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.2,1.609,2.301,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.25,2.791,2.877,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.3,4.232,3.931,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.35,4.77,3.943,True
+BUY20-Cls1R-LR,2024,{'C': 0.01},0.4,2.826,3.798,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.1,2.468,3.187,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.15,3.907,3.466,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.2,4.024,4.668,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.25,6.073,5.449,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.3,6.25,6.741,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.35,7.9,6.793,True
+BUY20-Cls1R-LR,2024,{'C': 0.1},0.4,6.23,7.065,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.1,4.97,5.269,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.15,5.569,5.417,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.2,5.713,5.178,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.25,4.253,5.013,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.3,5.075,5.218,True
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.35,6.326,5.042,False
+BUY20-Cls1R-LR,2024,{'C': 1.0},0.4,3.725,5.025,False
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.1,-0.2,1.046,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.15,2.292,1.428,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.2,2.192,2.372,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.25,2.632,3.493,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.3,5.655,4.727,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.35,5.894,5.211,True
+BUY20-Cls1R-LR,2025,{'C': 0.01},0.4,4.082,4.988,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.1,1.56,1.795,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.15,2.03,2.158,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.2,2.884,2.823,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.25,3.556,3.813,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.3,4.998,4.796,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.35,5.832,5.287,True
+BUY20-Cls1R-LR,2025,{'C': 0.1},0.4,5.031,5.431,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.1,2.785,3.159,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.15,3.533,3.832,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.2,5.177,3.548,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.25,1.932,2.555,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.3,0.555,1.315,True
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.35,1.458,0.136,False
+BUY20-Cls1R-LR,2025,{'C': 1.0},0.4,-1.605,-0.074,False
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.1,-0.199,0.674,True
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.15,1.547,0.834,True
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.2,1.153,1.49,True
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.25,1.771,1.444,False
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.3,1.408,0.354,False
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.35,-2.117,-0.179,False
+BUY20-Cls1R-LR,2026,{'C': 0.01},0.4,0.173,-0.972,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.1,-2.091,-1.758,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.15,-1.426,-1.529,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.2,-1.072,-1.035,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.25,-0.607,-1.484,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.3,-2.772,-2.214,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.35,-3.264,-1.076,False
+BUY20-Cls1R-LR,2026,{'C': 0.1},0.4,2.806,-0.229,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.1,-0.922,-0.71,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.15,-0.499,-1.088,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.2,-1.843,-1.066,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.25,-0.855,-1.443,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.3,-1.63,-1.275,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.35,-1.341,-1.668,False
+BUY20-Cls1R-LR,2026,{'C': 1.0},0.4,-2.032,-1.687,False

@@ -1,0 +1,16 @@
+arm,P1_wr,P2_dd,P3_net90,P4_exp,P5_kept60,P6_plateau,P7_oos2020_24,passed_n,PASS,tradeoff_candidate,years_filter_on
+U-LR,False,False,True,True,True,False,True,4,False,False,5
+U-HGB,False,False,True,True,True,False,False,3,False,False,2
+U-RF,False,False,True,True,True,False,True,4,False,False,3
+S-LR,False,False,False,True,True,False,True,3,False,False,4
+S-HGB,False,False,True,True,True,False,False,3,False,False,4
+S-RF,False,False,True,True,True,False,True,4,False,False,1
+B-LR,False,False,True,True,True,False,False,3,False,False,2
+B-HGB,False,False,True,True,True,False,True,4,False,False,4
+B-RF,False,False,True,True,True,False,True,4,False,False,3
+U20-LR,True,False,False,False,True,False,False,2,False,False,6
+U20-HGB,True,False,False,False,True,False,False,2,False,False,5
+U20-RF,True,False,False,False,True,False,False,2,False,False,5
+U25-LR,True,False,False,False,True,False,True,3,False,False,5
+U25-HGB,True,False,False,False,True,False,False,2,False,False,2
+U25-RF,True,False,False,False,True,False,False,2,False,False,3

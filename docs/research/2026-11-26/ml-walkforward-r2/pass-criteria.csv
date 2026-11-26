@@ -1,0 +1,30 @@
+arm,P1_wr,P2_dd,P3_net90,P4_exp,P5_kept60,P7_2020_24,P6_plateau,passed_n,PASS,tradeoff_candidate,neighbours
+RegAll-Ridge,False,True,False,True,True,True,False,4,False,False,
+RegAll-HGBR,False,True,False,True,True,True,False,4,False,False,
+RegBUY-Ridge,False,False,False,False,True,False,False,1,False,False,
+RegBUY-HGBR,True,True,False,False,True,True,True,5,False,False,
+Cls1R-BUY-LR,True,False,True,True,True,True,False,5,False,False,
+Cls1R-BUY-HGB,True,False,False,False,True,True,False,3,False,False,
+Cls1R-All-LR,False,False,False,True,True,False,False,2,False,False,
+Cls1R-All-HGB,False,True,False,True,True,False,False,3,False,False,
+BUY20-Ridge,True,True,False,False,True,False,False,3,False,False,
+BUY20-Cls1R-LR,True,True,False,False,True,True,True,5,False,False,
+rule Ls_2,False,False,True,True,True,True,False,4,False,False,Ls_4
+rule Lb_2,False,False,True,True,True,True,False,4,False,False,Lb_4
+rule Ls_4,False,False,True,True,True,False,False,3,False,False,"Ls_2,Ls_8"
+rule Lb_4,False,False,True,True,True,True,False,4,False,False,"Lb_2,Lb_8"
+rule Ls_8,True,False,True,True,True,False,False,4,False,False,Ls_4
+rule Lb_8,True,False,True,True,True,True,False,5,False,False,Lb_4
+rule G_1.5,True,True,True,True,True,True,False,6,False,False,G_2.0
+rule G_2.0,True,False,True,True,True,True,False,5,False,False,"G_1.5,G_2.5"
+rule G_2.5,False,False,True,True,True,True,False,4,False,False,G_2.0
+rule LsG_2_1.5,True,True,True,True,True,True,False,6,False,False,"LsG_2_2.0,LsG_4_1.5"
+rule LsG_2_2.0,True,False,True,True,True,True,False,5,False,False,"LsG_2_1.5,LsG_2_2.5,LsG_4_2.0"
+rule LsG_2_2.5,False,False,True,True,True,True,False,4,False,False,"LsG_2_2.0,LsG_4_2.5"
+rule LsG_4_1.5,True,True,True,True,True,True,False,6,False,False,"LsG_2_1.5,LsG_4_2.0,LsG_8_1.5"
+rule LsG_4_2.0,True,False,True,True,True,True,False,5,False,False,"LsG_2_2.0,LsG_4_1.5,LsG_4_2.5,LsG_8_2.0"
+rule LsG_4_2.5,True,False,True,True,True,True,False,5,False,False,"LsG_2_2.5,LsG_4_2.0,LsG_8_2.5"
+rule LsG_8_1.5,True,True,True,True,True,True,False,6,False,False,"LsG_4_1.5,LsG_8_2.0"
+rule LsG_8_2.0,True,False,True,True,True,True,False,5,False,False,"LsG_4_2.0,LsG_8_1.5,LsG_8_2.5"
+rule LsG_8_2.5,True,False,True,True,True,True,False,5,False,False,"LsG_4_2.5,LsG_8_2.0"
+Rule-WF,False,False,True,True,True,True,False,4,False,False,"most-chosen LsG_8_1.5: LsG_4_1.5,LsG_8_2.0"

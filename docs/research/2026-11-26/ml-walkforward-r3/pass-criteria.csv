@@ -1,0 +1,25 @@
+arm,P1_wr,P2_dd,P3_net90,P4_exp,P5_kept60,P7_2020_24,P6_plateau,passed_n,PASS,tradeoff_candidate
+MFE-MAE-Filter-Ridge-All,False,False,False,False,True,False,False,1,False,False
+MFE-MAE-Filter-Ridge-BUY,True,True,False,True,True,True,True,6,False,True
+MFE-MAE-Filter-Huber-All,False,False,False,False,False,False,False,0,False,False
+MFE-MAE-Filter-Huber-BUY,True,True,False,False,True,True,True,5,False,False
+MFE-MAE-Filter-HGBR-All,False,False,False,False,True,False,False,1,False,False
+MFE-MAE-Filter-HGBR-BUY,True,False,False,False,True,True,False,3,False,False
+MFE-DynamicTP-Ridge,True,False,True,True,True,False,False,4,False,False
+MFE-DynamicTP-HGBR,True,False,True,True,True,True,False,5,False,False
+Sparse-LR-BUY,True,False,True,True,True,True,False,5,False,False
+Sparse-LR-All,False,False,False,False,True,True,False,2,False,False
+Sparse-LR-BUY20,True,True,False,False,True,False,True,4,False,False
+Sparse-HGB-BUY,True,True,False,True,True,True,True,6,False,False
+Sparse-HGB-All,False,False,False,False,True,True,False,2,False,False
+Sparse-HGB-BUY20,True,True,False,False,True,True,True,5,False,False
+GMM-K3-Gate,False,False,False,False,False,False,False,0,False,False
+GMM-K3-TPswitch,True,False,False,False,True,False,False,2,False,False
+GMM-K4-Gate,False,True,False,True,False,False,False,2,False,False
+GMM-K4-TPswitch,True,False,False,False,True,False,False,2,False,False
+rule G_1.25,True,True,True,True,True,True,True,7,True,False
+rule G_1.5,True,True,True,True,True,True,True,7,True,False
+rule G_1.75,True,True,True,True,True,True,True,7,True,False
+rule LsG_8_1.25,True,True,True,True,True,True,True,7,True,False
+rule LsG_8_1.5,True,True,True,True,True,True,True,7,True,False
+rule LsG_8_1.75,True,True,True,True,True,True,True,7,True,False
